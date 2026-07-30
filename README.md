@@ -120,15 +120,19 @@ código:
 
 ## O motor
 
-Este projeto consome `@brucesantos/design-space`, hoje por link local:
+Este projeto consome o motor publicado no npm:
 
 ```json
-"@brucesantos/design-space": "link:../design-space/packages/core"
+"@brucesantos/design-space": "^0.1.0"
 ```
 
-Quando o pacote for publicado no npm, troque por `"^0.1.0"`. O motor não contém
-nenhuma UI, token ou regra do Bloomy — a fronteira está descrita no
-[`AGENTS.md`](AGENTS.md).
+Para desenvolver o motor e o produto ao mesmo tempo, aponte temporariamente para a
+pasta local com `pnpm add @brucesantos/design-space@link:../design-space/packages/core`
+— e lembre de voltar antes de commitar, senão o build da Vercel quebra: lá não
+existe a sua pasta.
+
+O motor não contém nenhuma UI, token ou regra do Bloomy — a fronteira está descrita
+no [`AGENTS.md`](AGENTS.md).
 
 ## Preview
 

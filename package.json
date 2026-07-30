@@ -14,7 +14,7 @@
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
-    "@brucesantos/design-space": "link:../design-space/packages/core",
+    "@brucesantos/design-space": "^0.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -28,7 +28,7 @@
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^5.0.0",
     "axe-core": "^4.10.3",
-    "feedback-collector": "link:../feedback-collector",
+    "feedback-collector": "^0.1.1",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
     "vite": "^7.0.0",

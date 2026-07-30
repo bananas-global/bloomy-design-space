@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@brucesantos/design-space':
-        specifier: link:../design-space/packages/core
-        version: link:../design-space/packages/core
+        specifier: ^0.1.0
+        version: 0.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react:
         specifier: ^19.1.0
         version: 19.2.8
@@ -46,8 +46,8 @@ importers:
         specifier: ^4.10.3
         version: 4.12.1
       feedback-collector:
-        specifier: link:../feedback-collector
-        version: link:../feedback-collector
+        specifier: ^0.1.1
+        version: 0.1.1
       tailwindcss:
         specifier: ^4.1.11
         version: 4.3.3
@@ -154,6 +154,12 @@ packages:
   '@babel/types@7.29.7':
     resolution: {integrity: sha512-4zBIxpPzowiZpusoFkyGVwakdRJUyuH5PxQ/PrqghfdFWWasvnCdPfQXHrenDai+gyLARulZjZowCOj6fjT4pA==}
     engines: {node: '>=6.9.0'}
+
+  '@brucesantos/design-space@0.1.0':
+    resolution: {integrity: sha512-ElzExxZpHGSRLghUsGEw001lwyQJHG5IlV9fFPvVPC8Uy3ZbJEozXfgaX7VqliMmd0OhCBHtBhqCs4rEbV18WA==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
 
   '@esbuild/aix-ppc64@0.28.1':
     resolution: {integrity: sha512-Svl7tq8k/08+p6CXPpRjQ1fKX+1odH/BQbb48fV6fj3CWHhsoIOoY87w1oHXm0qEpkIK3ZfVgp0hed3XBXzXMQ==}
@@ -712,6 +718,9 @@ packages:
       picomatch:
         optional: true
 
+  feedback-collector@0.1.1:
+    resolution: {integrity: sha512-PZ4spZS72HoAVJRurg7hfJ/R2dA+SXf0dTahNKkv/zxA9jRnvotU0mFuw/8EH//+3ObgPrz3fQmdIY0k4UEshg==}
+
   fsevents@2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -1162,6 +1171,11 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
+  '@brucesantos/design-space@0.1.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+
   '@esbuild/aix-ppc64@0.28.1':
     optional: true
 
@@ -1603,6 +1617,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
       picomatch: 4.0.5
+
+  feedback-collector@0.1.1: {}
 
   fsevents@2.3.2:
     optional: true
