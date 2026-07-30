@@ -1,3 +1,5 @@
+import { ageInYears as ageAt, parseIsoDate } from "@brucesantos/design-space";
+
 /**
  * Contratos do domínio Bloomy.
  *
@@ -168,20 +170,8 @@ export function formatMoney(amountCents: number, locale = "pt-BR"): string {
 
 export function formatTime(iso: string, locale = "pt-BR"): string {
   return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
-    parseDate(iso),
+    parseIsoDate(iso),
   );
-}
-
-/**
- * Interpreta uma string de data.
- *
- * `new Date("2011-09-08")` é parseado como meia-noite **UTC** e, formatado em
- * qualquer fuso a oeste de Greenwich, exibe o dia anterior. É por isso que uma
- * data de nascimento aparecia com um dia de atraso no Brasil. Data sem horário
- * não tem fuso: precisa ser lida como local.
- */
-function parseDate(iso: string): Date {
-  return new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
 }
 
 export function formatDate(iso: string, locale = "pt-BR"): string {
@@ -189,7 +179,7 @@ export function formatDate(iso: string, locale = "pt-BR"): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(parseDate(iso));
+  }).format(parseIsoDate(iso));
 }
 
 export function formatDateTime(iso: string, locale = "pt-BR"): string {
@@ -199,16 +189,15 @@ export function formatDateTime(iso: string, locale = "pt-BR"): string {
 /**
  * Idade em anos completos, medida contra {@link TODAY} e não contra o relógio.
  *
- * Usar `new Date()` aqui quebraria o determinismo de um jeito especialmente
- * traiçoeiro: o cenário "menor sem responsável" deixaria de existir no
- * aniversário de 18 anos da fixture, meses depois de alguém tê-lo aprovado.
+ * A implementação vive no motor desde a versão 0.1.0: os dois primeiros produtos
+ * escreveram a mesma correção de fuso separadamente, e o motor é o lugar de uma
+ * correção que já se provou genérica. O que fica aqui é só o padrão de referência
+ * do Bloomy — usar `new Date()` quebraria o determinismo de um jeito traiçoeiro:
+ * o cenário "menor sem responsável" deixaria de existir no aniversário de 18 anos
+ * da fixture, meses depois de alguém tê-lo aprovado.
  */
 export function ageInYears(birthDate: string, reference = TODAY): number {
-  const [by, bm, bd] = birthDate.split("-").map(Number);
-  const [ry, rm, rd] = reference.split("-").map(Number);
-  let age = ry! - by!;
-  if (rm! < bm! || (rm === bm && rd! < bd!)) age -= 1;
-  return age;
+  return ageAt(birthDate, reference);
 }
 
 export function isMinor(patient: PatientRef, reference = TODAY): boolean {
