@@ -132,21 +132,25 @@ nenhuma UI, token ou regra do Bloomy — a fronteira está descrita no
 
 ## Preview
 
-Todo push gera preview automático na Vercel, **público e sem login**: o ambiente
-roda só com fixture sintética, então não há dado de paciente a proteger, e
-qualquer barreira cobraria atrito de quem mais precisa revisar sem esforço.
-
-⚠️ **Antes do primeiro preview**, confirme o contrato do Bloomy. Saúde costuma ter
-cláusula de confidencialidade cobrindo materiais e telas do projeto, não apenas
-dados pessoais. Se houver, ligue Vercel Authentication neste projeto — é um
-toggle, e o resto do desenho segue igual.
+Todo push gera preview automático na Vercel, **público e sem login**. O contrato do
+Bloomy foi conferido e não tem cláusula que impeça — decisão registrada em
+[`docs/decisions/0004`](docs/decisions/0004-preview-publico-sem-autenticacao.md).
 
 - **URL de branch** — revisão em andamento.
 - **URL de commit** — aprovação e handoff. Imutável.
+
+⚠️ **A contrapartida.** Com o preview aberto, "não existe dado real neste
+repositório" deixa de ser boa prática e passa a ser a única contramedida que resta.
+Fixture sintética, nenhum segredo commitado, e nenhum adapter apontando para
+staging em branch com preview público. Se alguma dessas quatro coisas mudar, a
+decisão 0004 tem que ser revisitada **antes** da mudança.
+
+O header `noindex` permanece: preview aberto não é preview indexado.
 
 ## Ver também
 
 - [`AGENTS.md`](AGENTS.md) — instruções e guardrails para agentes de IA.
 - [`docs/product.md`](docs/product.md) — visão, vocabulário, personas e cobertura.
 - [`docs/handoff.md`](docs/handoff.md) — modelo de entrega para engenharia.
+- [`docs/pauta-contraste.md`](docs/pauta-contraste.md) — pauta de design sobre contraste, para levar ao time.
 - [`docs/decisions/`](docs/decisions/) — decisões e consequências.

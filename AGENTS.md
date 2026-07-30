@@ -53,6 +53,11 @@ encaixe. Nunca `ClaimDeniedState` nem "registro do paciente".
 
 - **Nunca** usar dado real de paciente. Fixture é sintética, sanitizada e
   determinística. Os CPFs têm dígito verificador inválido de propósito.
+  Isto não é higiene: o preview deste projeto é **público e sem login** (decisão
+  0004), então a ausência de dado real é a única contramedida que resta. Vale
+  também para teste, comentário e mensagem de commit.
+- **Não** criar adapter apontando para staging. Além de contrariar o padrão de
+  fixture, um preview público com dado de staging expõe dado real.
 - **Nunca** `new Date()`, `Date.now()` ou `Math.random()` em fixture, regra ou
   tela. A data de referência é `TODAY` em `src/contracts/index.ts`; a agenda
   carrega um `now` declarado. Determinismo é critério de aceite.
