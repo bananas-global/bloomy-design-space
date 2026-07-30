@@ -132,18 +132,11 @@ nenhuma UI, token ou regra do Bloomy — a fronteira está descrita no
 
 ## Preview
 
-Todo push gera preview automático na Vercel, **público e sem login**. O contrato do
-Bloomy foi conferido e não tem cláusula que impeça — decisão registrada em
-[`docs/decisions/0004`](docs/decisions/0004-preview-publico-sem-autenticacao.md).
+Todo push gera preview automático na Vercel, **público e sem login**. Quem tem o
+link abre e revisa, sem conta e sem convite.
 
 - **URL de branch** — revisão em andamento.
 - **URL de commit** — aprovação e handoff. Imutável.
-
-⚠️ **A contrapartida.** Com o preview aberto, "não existe dado real neste
-repositório" deixa de ser boa prática e passa a ser a única contramedida que resta.
-Fixture sintética, nenhum segredo commitado, e nenhum adapter apontando para
-staging em branch com preview público. Se alguma dessas quatro coisas mudar, a
-decisão 0004 tem que ser revisitada **antes** da mudança.
 
 O header `noindex` permanece: preview aberto não é preview indexado.
 
