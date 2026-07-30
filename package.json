@@ -14,7 +14,7 @@
     "check": "pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
-    "@brucesantos/design-space": "^0.1.0",
+    "@brucesantos/design-space": "^0.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

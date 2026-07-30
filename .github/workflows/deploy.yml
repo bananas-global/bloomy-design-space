@@ -81,13 +81,20 @@ jobs:
       # `VITE_VERCEL_URL` não entra: no momento do build o deploy ainda não existe.
       # O motor cai para `window.location.origin` em tempo de execução e chega ao
       # mesmo resultado, então o botão de copiar link continua correto.
-      - name: Gravar o contexto do deployment para o build
+      # Gravado como arquivo lido pelo `vite.config.ts`, e não como variável de
+      # ambiente: o `vercel build` não repassa o ambiente do shell ao build do Vite,
+      # e sobrescreve um `.env` na raiz com o arquivo que ele mesmo gera. Ambos
+      # foram testados e falharam; o log do build imprime o que foi resolvido.
+      - name: Gravar o contexto do deployment
         run: |
+          cat > build-info.json <<JSON
           {
-            echo "VITE_VERCEL_ENV=${{ steps.ambiente.outputs.alvo }}"
-            echo "VITE_VERCEL_GIT_COMMIT_REF=${{ github.ref_name }}"
-            echo "VITE_VERCEL_GIT_COMMIT_SHA=${{ github.sha }}"
-          } > .env.production.local
+            "env": "${{ steps.ambiente.outputs.alvo }}",
+            "ref": "${{ github.ref_name }}",
+            "sha": "${{ github.sha }}"
+          }
+          JSON
+          cat build-info.json
 
       # O build roda aqui, no runner do GitHub. Para a Vercel sobe só o resultado.
       - name: Build
