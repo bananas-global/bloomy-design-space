@@ -71,6 +71,31 @@ jobs:
       - name: Puxar a configuração do projeto
         run: vercel pull --yes --environment=${{ steps.ambiente.outputs.alvo }} --token=${{ secrets.VERCEL_TOKEN }}
 
+      # `vercel build` não repassa as variáveis do shell para o build do Vite —
+      # verificado no bundle publicado, chegavam vazias. O caminho que funciona é um
+      # arquivo `.env` que o próprio Vite carrega, com o prefixo `VITE_`.
+      #
+      # Sem isso o cabeçalho da revisão mostra "development" e fica sem branch nem
+      # commit, e é o commit que torna uma aprovação rastreável.
+      #
+      # `VITE_VERCEL_URL` não entra: no momento do build o deploy ainda não existe.
+      # O motor cai para `window.location.origin` em tempo de execução e chega ao
+      # mesmo resultado, então o botão de copiar link continua correto.
+      # Gravado como arquivo lido pelo `vite.config.ts`, e não como variável de
+      # ambiente: o `vercel build` não repassa o ambiente do shell ao build do Vite,
+      # e sobrescreve um `.env` na raiz com o arquivo que ele mesmo gera. Ambos
+      # foram testados e falharam; o log do build imprime o que foi resolvido.
+      - name: Gravar o contexto do deployment
+        run: |
+          cat > build-info.json <<JSON
+          {
+            "env": "${{ steps.ambiente.outputs.alvo }}",
+            "ref": "${{ github.ref_name }}",
+            "sha": "${{ github.sha }}"
+          }
+          JSON
+          cat build-info.json
+
       # O build roda aqui, no runner do GitHub. Para a Vercel sobe só o resultado.
       - name: Build
         run: vercel build ${{ steps.ambiente.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }}

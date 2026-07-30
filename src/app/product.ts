@@ -38,6 +38,17 @@ export const productDefinition: ProductDefinition = {
     { path: "/finance/claims/:id", screen: ClaimDetail },
   ],
 
+  // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build
+  // deste repositório — o `import.meta.env` dele foi resolvido quando o pacote foi
+  // publicado. Quem tem acesso ao próprio build é o produto, então o contexto vem
+  // daqui. Sem isso o cabeçalho da revisão mostra "development", sem branch nem
+  // commit, e a URL de commit deixa de tornar a aprovação rastreável.
+  deploy: {
+    env: import.meta.env.VITE_VERCEL_ENV,
+    branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
+    commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+  },
+
   theme: {
     contrastPairs,
     locales: ["pt-BR"],
