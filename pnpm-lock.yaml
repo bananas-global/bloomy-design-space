@@ -46,8 +46,8 @@ importers:
         specifier: ^4.10.3
         version: 4.12.1
       feedback-collector:
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: link:../feedback-collector
+        version: link:../feedback-collector
       tailwindcss:
         specifier: ^4.1.11
         version: 4.3.3
@@ -711,9 +711,6 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
-
-  feedback-collector@0.1.0:
-    resolution: {integrity: sha512-Weo5bmhkX9m2TL0+CWig76ehS2KGU83r5xcyBBIhHR9XNJTk359WY/cC4oi2kcUG2ilZpSj28nPOkJwWKqTTMg==}
 
   fsevents@2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
@@ -1606,8 +1603,6 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
       picomatch: 4.0.5
-
-  feedback-collector@0.1.0: {}
 
   fsevents@2.3.2:
     optional: true

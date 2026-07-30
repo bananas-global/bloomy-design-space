@@ -52,7 +52,6 @@ test.describe("acessibilidade por cenário", () => {
 
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-        .exclude("[data-fbc]")
         .analyze();
 
       const blocking = results.violations.filter((violation) =>
