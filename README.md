@@ -75,6 +75,9 @@ O Design Space usa a versão corrigida, porque descreve a experiência
 ainda falham — se o Bloomy corrigir a origem, o teste quebra e avisa que o
 registro ficou obsoleto.
 
+Para levar ao time: [`docs/pauta-contraste.md`](docs/pauta-contraste.md), com uma
+[versão visual para apresentar](https://claude.ai/code/artifact/8c5ae249-1097-43af-894e-c3fb849a9abe).
+
 ## Qualidade
 
 ```bash
