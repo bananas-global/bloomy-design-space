@@ -72,7 +72,20 @@ jobs:
         run: vercel pull --yes --environment=${{ steps.ambiente.outputs.alvo }} --token=${{ secrets.VERCEL_TOKEN }}
 
       # O build roda aqui, no runner do GitHub. Para a Vercel sobe só o resultado.
+      #
+      # As variáveis `VERCEL_*` precisam ser passadas à mão. Quem as injetava era a
+      # integração Git da Vercel, que está desligada — sem elas o cabeçalho da
+      # revisão mostraria "development" e ficaria sem branch nem commit, e é o
+      # commit que torna uma aprovação rastreável.
+      #
+      # `VERCEL_URL` não entra: no momento do build o deploy ainda não existe, então
+      # a URL não é conhecida. O motor resolve isso caindo para
+      # `window.location.origin` em tempo de execução, que dá o mesmo resultado.
       - name: Build
+        env:
+          VERCEL_ENV: ${{ steps.ambiente.outputs.alvo }}
+          VERCEL_GIT_COMMIT_REF: ${{ github.ref_name }}
+          VERCEL_GIT_COMMIT_SHA: ${{ github.sha }}
         run: vercel build ${{ steps.ambiente.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Publicar
