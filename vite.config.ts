@@ -33,17 +33,20 @@ const isDev = process.env.NODE_ENV !== "production";
 // projeto, não padrão.
 const sourceMappingInBuild = process.env.DESIGN_SPACE_SOURCE_MAPPING === "1";
 
-const deployEnv = {
-  "import.meta.env.VITE_VERCEL_ENV": JSON.stringify(process.env.VERCEL_ENV ?? ""),
-  "import.meta.env.VITE_VERCEL_URL": JSON.stringify(process.env.VERCEL_URL ?? ""),
-  "import.meta.env.VITE_VERCEL_BRANCH_URL": JSON.stringify(process.env.VERCEL_BRANCH_URL ?? ""),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_REF": JSON.stringify(
-    process.env.VERCEL_GIT_COMMIT_REF ?? "",
-  ),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA": JSON.stringify(
-    process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-  ),
-};
+// Só entram as variáveis que realmente têm valor. Definir `""` para as ausentes
+// clobberia o que o Vite já carrega dos arquivos `.env` — foi o que fez o
+// cabeçalho da revisão mostrar "development" mesmo com a variável configurada.
+const deployEnv = Object.fromEntries(
+  Object.entries({
+    VITE_VERCEL_ENV: process.env.VERCEL_ENV,
+    VITE_VERCEL_URL: process.env.VERCEL_URL,
+    VITE_VERCEL_BRANCH_URL: process.env.VERCEL_BRANCH_URL,
+    VITE_VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF,
+    VITE_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA,
+  })
+    .filter(([, value]) => Boolean(value))
+    .map(([key, value]) => [`import.meta.env.${key}`, JSON.stringify(value)]),
+);
 
 export default defineConfig({
   plugins: [
