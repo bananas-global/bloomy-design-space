@@ -6,8 +6,8 @@ import { devPort } from "./dev-port.js";
  *
  * Isso é consequência de D-11: como o preview é público, não há proteção de
  * acesso, então não há segredo de bypass, header de automação nem shareable link
- * a emitir e revogar. `PREVIEW_URL` chega pronta do gatilho `deployment_status`
- * no CI (§10.6).
+ * a emitir e revogar. No CI, `PREVIEW_URL` é a URL que o `deploy.yml` acabou de
+ * publicar — a jornada testa o artefato real, não um build local.
  *
  * Sem `PREVIEW_URL`, sobe o dev server local — mesmo teste, mesma jornada.
  */

@@ -136,13 +136,40 @@ no [`AGENTS.md`](AGENTS.md).
 
 ## Preview
 
-Todo push gera preview automático na Vercel, **público e sem login**. Quem tem o
-link abre e revisa, sem conta e sem convite.
+Todo push publica um preview na Vercel, **público e sem login**. Quem tem o link
+abre e revisa, sem conta e sem convite.
 
 - **URL de branch** — revisão em andamento.
 - **URL de commit** — aprovação e handoff. Imutável.
 
 O header `noindex` permanece: preview aberto não é preview indexado.
+
+### Quem publica é o GitHub Actions, não a Vercel
+
+O `vercel.json` tem `git.deploymentEnabled: false` — a integração Git da Vercel está
+desligada de propósito. Quem publica é o [`deploy.yml`](.github/workflows/deploy.yml).
+
+**O motivo é dinheiro.** No plano Pro, a Vercel só publica um commit se o autor do
+commit for membro pago do time. Com um assento só, apenas os commits do dono viravam
+deploy. Publicando pelo Actions com um token, quem aparece como autor do deploy é o
+token — então qualquer pessoa com push no repositório dispara um preview, e o time
+continua sem consumir assento.
+
+O que o workflow faz, em ordem: typecheck e testes (falha barata, antes de gastar um
+deploy), build no runner do GitHub, publica só o resultado na Vercel, e roda a
+jornada Playwright com axe **contra a URL recém-publicada**. O link aparece no resumo
+da execução.
+
+Se o workflow parar de rodar, nada é publicado. É deslocamento de responsabilidade,
+não redundância.
+
+**Secrets necessários** no repositório (Settings → Secrets and variables → Actions):
+
+| Secret | De onde vem |
+| --- | --- |
+| `VERCEL_TOKEN` | vercel.com → Account Settings → Tokens |
+| `VERCEL_ORG_ID` | `.vercel/project.json`, depois de rodar `vercel link` |
+| `VERCEL_PROJECT_ID` | o mesmo arquivo |
 
 ## Ver também
 

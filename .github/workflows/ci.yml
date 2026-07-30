@@ -4,13 +4,14 @@
 # por mudança. Este workflow existe para o que é barato e pega erro caro —
 # typecheck, contrato de cenário, contraste dos tokens e build.
 #
-# A jornada Playwright com axe roda contra o preview, em `preview-tests.yml`, e
-# não aqui: rodar contra um build local testaria um artefato que ninguém revisa.
+# A jornada Playwright com axe não roda aqui: ela precisa de uma URL publicada, e
+# quem publica é o `deploy.yml`. Rodar contra um build local testaria um artefato
+# que ninguém revisa.
 name: CI
 
+# Só em pull request. Em push, quem roda typecheck e testes é o `deploy.yml`, antes
+# de publicar — rodar nos dois seria pagar duas vezes pela mesma verificação.
 on:
-  push:
-    branches: [main]
   pull_request:
 
 jobs:
