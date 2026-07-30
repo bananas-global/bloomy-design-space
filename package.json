@@ -1,0 +1,42 @@
+{
+  "name": "bloomy-design-space",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Design Space do Bloomy: especificação executável da experiência pretendida. Agenda, pacientes e financeiro em cenários controlados, abertos por link.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "pnpm typecheck && pnpm test && pnpm build"
+  },
+  "dependencies": {
+    "@brucesantos/design-space": "link:../design-space/packages/core",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.55.0",
+    "@react-dev-inspector/babel-plugin": "^2.0.1",
+    "@tailwindcss/vite": "^4.1.11",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^5.0.0",
+    "axe-core": "^4.10.3",
+    "feedback-collector": "^0.1.0",
+    "tailwindcss": "^4.1.11",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

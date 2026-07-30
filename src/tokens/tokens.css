@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+/* =====================================================================
+   Bloomy — tokens do produto
+   =====================================================================
+   Derivados de `bloomy/assets/css/app.css` e do design system em
+   `prototipo-sistema-bloomy`. A identidade é a mesma: navy roxo como cor
+   de texto e de chrome, ciano como acento de marca, e a família de cinco
+   acentos frutados nos chips.
+
+   **Onde este arquivo diverge do produto em produção**, e por quê, está
+   registrado em `docs/decisions/0001-tokens-corrigidos-para-contraste.md`.
+   Resumo: alguns tokens do produto real não atingem WCAG 2.2 AA quando
+   usados como texto ou como preenchimento de botão. Aqui eles aparecem
+   corrigidos, porque o Design Space descreve a experiência **pretendida**
+   — corrigir na origem é mais barato que perseguir o mesmo problema em
+   trinta telas.
+
+   Todo par que vira texto sobre fundo está declarado em
+   `src/tokens/contrast.ts`, e `tests/tokens.test.ts` quebra o build
+   quando algum cai abaixo do alvo.
+   ===================================================================== */
+
+@font-face {
+  font-family: "Mulish";
+  src: url("../assets/fonts/Mulish-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mulish";
+  src: url("../assets/fonts/Mulish-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mulish";
+  src: url("../assets/fonts/Mulish-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mulish";
+  src: url("../assets/fonts/Mulish-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mulish";
+  src: url("../assets/fonts/Mulish-ExtraBold.ttf") format("truetype");
+  font-weight: 800;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Mulish";
+  src: url("../assets/fonts/Mulish-Black.ttf") format("truetype");
+  font-weight: 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: "Mulish", system-ui, -apple-system, sans-serif;
+
+  /* ---------------------------------------------------------- marca */
+  /* Navy roxo: cor de texto, de chrome e do drawer. Sem alteração. */
+  --color-navy: #2b235b;
+  --color-navy-700: #44365c;
+  --color-navy-600: #5d507a;
+  --color-navy-500: #776b99;
+
+  /* Ciano de assinatura. Preservado para superfície escura, ícone e
+     preenchimento decorativo — onde ele funciona. Como texto sobre branco
+     ou como fundo de botão com texto branco ele fica em 2.22:1, então
+     existe um token de ação separado. */
+  --color-cyan-brand: #58bada;
+
+  /* Ação: o azul do CTA e do link. Escurecido a partir do
+     `--brand-blue-dark` original (#4094bb, 3.40:1) até passar AA nas duas
+     direções — texto sobre branco e branco sobre preenchimento. */
+  --color-action: #276e8c;
+  --color-action-hover: #1f5a73;
+
+  --color-accent: #6144c5;
+
+  /* --------------------------------------------------------- neutros */
+  /* Escala roxo-tingida, não cinza. Vem do produto sem alteração. */
+  --color-ink-50: #f0eef5;
+  --color-ink-100: #e1deeb;
+  --color-ink-200: #d2cde1;
+  --color-ink-300: #c3bdd7;
+
+  /* ------------------------------------------------------- superfícies */
+  --color-app: #f0f6f8;
+  --color-surface: #ffffff;
+
+  /* ------------------------------------------------------------ chips */
+  /* Pares fundo/texto, sempre usados juntos. Verde, vermelho, azul e roxo
+     vêm do produto; laranja e amarelo foram escurecidos. */
+  --color-ok-fg: #256a23;
+  --color-ok-bg: #e2f3e1;
+  --color-danger-fg: #902a2a;
+  --color-danger-bg: #fde3e3;
+  --color-warn-fg: #854d0e;
+  --color-warn-bg: #fff8e1;
+  --color-pending-fg: #a8542a;
+  --color-pending-bg: #fdeee1;
+  --color-info-fg: #086b89;
+  --color-info-bg: #dbf3fb;
+  --color-neutral-fg: #463589;
+  --color-neutral-bg: #eae6fb;
+
+  /* ------------------------------------------------------------ raios */
+  --radius-field: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+
+  /* ---------------------------------------------------------- sombras */
+  --shadow-card: 2px 2px 12px 0 rgb(0 0 0 / 0.04);
+  --shadow-panel: 0 14px 14px 0 rgb(43 35 91 / 0.1);
+}
+
+:root {
+  color-scheme: light;
+
+  /* Texto secundário e placeholder. O produto usa alfa 0.6 e 0.45 sobre o
+     navy, que dão 4.01:1 e 2.65:1 — ambos abaixo de AA para texto. Aqui
+     ficam em 0.72 e 0.66. A hierarquia visual se mantém; a legibilidade
+     deixa de depender de quem está olhando. */
+  --fg-1: var(--color-navy);
+  --fg-2: rgb(43 35 91 / 0.72);
+  --fg-3: rgb(43 35 91 / 0.66);
+
+  --border-soft: rgb(43 35 91 / 0.1);
+  --border-mid: var(--color-ink-100);
+  --border-strong: var(--color-ink-200);
+}
+
+body {
+  margin: 0;
+  background: var(--color-app);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Foco visível é responsabilidade do produto. O motor reforça o foco no
+   modo teclado, mas quem garante que ele existe em condição normal é este
+   bloco — e removê-lo para resolver um pedido de layout é violação de
+   guardrail declarada no AGENTS.md. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Superfície escura do drawer: o foco roxo desapareceria contra o navy. */
+.bloomy-drawer :where(a, button, [tabindex]):focus-visible {
+  outline-color: var(--color-cyan-brand);
+}
