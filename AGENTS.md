@@ -36,7 +36,7 @@ pnpm check        # typecheck + test + build — rode antes de concluir qualquer
 | `src/fixtures/` | Dados sintéticos e determinísticos. |
 | `src/contracts/` | Tipos do domínio e formatação. |
 | `src/tokens/` | `tokens.css` e os pares de contraste declarados. |
-| `docs/decisions/` | Decisões e consequências. Comece por 0001. |
+| `docs/decisions/` | Decisões **deste produto**. As do modelo vivem no repositório do motor. |
 
 **Por que `catalog.ts` é separado de `product.ts`:** o Playwright carrega os testes
 com esbuild puro, sem os plugins do Vite, então um `import` de SVG ou CSS na
@@ -63,8 +63,8 @@ encaixe. Nunca `ClaimDeniedState` nem "registro do paciente".
   para resolver um pedido de layout. Se um item do backlog exigir isso, **pare e
   pergunte** — não escolha o layout.
 - **Não** esconder ação bloqueada. Use `unavailableReason` no `Button`: o controle
-  fica visível, desabilitado, com o motivo associado por `aria-describedby`. Ver
-  `docs/decisions/0002`.
+  fica visível, desabilitado, com o motivo associado por `aria-describedby`. É
+  convenção do modelo — decisão 0006 no repositório do motor.
 - **Não** clarear token para "melhorar o visual" sem rodar `pnpm test`. Os pares
   de contraste falham o build, e é assim que deve ser.
 - **Não** adicionar adapter de backend. O Bloomy não tem API pública, e o padrão é

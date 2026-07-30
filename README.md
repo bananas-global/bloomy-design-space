@@ -146,4 +146,6 @@ O header `noindex` permanece: preview aberto não é preview indexado.
 - [`docs/product.md`](docs/product.md) — visão, vocabulário, personas e cobertura.
 - [`docs/handoff.md`](docs/handoff.md) — modelo de entrega para engenharia.
 - [`docs/pauta-contraste.md`](docs/pauta-contraste.md) — pauta de design sobre contraste, para levar ao time.
-- [`docs/decisions/`](docs/decisions/) — decisões e consequências.
+- [`docs/decisions/`](docs/decisions/) — decisões **deste produto**.
+- [Decisões do modelo](https://github.com/bananas-global/design-space/tree/main/docs/decisions) — fixture sintética, preview público, source
+  mapping e as demais, que valem para todos os Design Spaces e vivem uma vez só.
