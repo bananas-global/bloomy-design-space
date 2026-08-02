@@ -227,9 +227,13 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
                   placeholder="Ex.: paciente remarcou por conflito de trabalho"
                 />
                 <div className="mt-3 flex flex-wrap gap-2.5">
+                  {/* Perigo, e não primária: quem abriu este painel já clicou
+                      num botão de perigo, e é *este* que executa. Vestir o
+                      passo irreversível com a cor da ação afirmativa inverte a
+                      leitura justo onde ela mais custa. */}
                   <Button
                     type="submit"
-                    variant="primary"
+                    variant="danger"
                     unavailableReason={
                       cancelReason.trim().length === 0
                         ? "Escreva a justificativa para confirmar."

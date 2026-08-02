@@ -964,6 +964,36 @@ que a tela de destino é: o cadastro do paciente.
 1 jornada de varredura (186 cenários), 5 cenários com o texto corrigido.
 
 
+### 33. Ação destrutiva vestida de afirmativa — `porte/variante-destrutiva`
+
+Mesma lógica das rodadas anteriores: em vez de olhar dez telas do bloco
+financeiro, transformar em varredura o defeito que a revisão visual tinha
+achado à mão.
+
+Percorridos os 36 botões das 30 telas, um escapava — e era o pior possível:
+em **Cancelar atendimento**, o botão que abre o painel usa a variante de perigo
+e o botão que **executa** usava a primária. O passo irreversível vestido com a
+cor da ação afirmativa, um clique depois de um aviso vermelho.
+
+`scripts/check-button-variants.mjs` entrou no `pnpm check`. Ele tem uma lista de
+exceções — rótulos que contêm palavra destrutiva sem serem a ação destrutiva,
+como "Voltar" dentro do painel de cancelamento — e cada exceção carrega o
+motivo. É a lista que impede o verificador de virar ruído, e é onde ele apodrece
+se ninguém a revisar.
+
+**O verificador foi provado por mutação, não por asserção.** Troquei
+`variant="danger"` por `primary` em `Team.tsx`, confirmei que ele reprova com a
+linha certa, e restaurei. Depois da varredura que media o nada, afirmar que um
+verificador funciona sem vê-lo falhar deixou de ser aceitável aqui.
+
+Um detalhe que a jornada fixou: o botão de confirmar nasce **indisponível** por
+falta de justificativa, e o estilo de indisponível vence a variante — que é o
+comportamento certo. A cor de perigo só se verifica depois que a ação passa a
+ser possível, e o teste mede os dois estados.
+
+1 script, 1 jornada.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
