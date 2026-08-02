@@ -2291,3 +2291,22 @@ test.describe("supervisão e inativação, revisão visual", () => {
     await expect(botao).toHaveCSS("color", "rgb(144, 42, 42)");
   });
 });
+
+test.describe("cancelar atendimento", () => {
+  test("o botão que executa o cancelamento também é de perigo", async ({ page }) => {
+    await page.goto(urlFor("agenda.cancel-requires-reason"));
+
+    // Quem chega aqui já clicou num botão de perigo, e é este que executa.
+    // Vestir o passo irreversível com a cor da ação afirmativa inverte a
+    // leitura justo onde ela mais custa.
+    await page.getByRole("button", { name: "Cancelar atendimento" }).click();
+    const confirmar = page.getByRole("button", { name: "Confirmar cancelamento" });
+
+    // Ele nasce indisponível por falta de justificativa, e o estilo de
+    // indisponível vence a variante — que é o comportamento certo. A cor de
+    // perigo só se verifica depois que a ação passa a ser possível.
+    await expect(confirmar).toHaveCSS("color", "rgba(43, 35, 91, 0.72)");
+    await page.getByLabel("Justificativa do cancelamento").fill("Paciente remarcou.");
+    await expect(confirmar).toHaveCSS("color", "rgb(144, 42, 42)");
+  });
+});

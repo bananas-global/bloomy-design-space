@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "check:citations": "node scripts/check-citations.mjs",
-    "check": "pnpm typecheck && pnpm test && pnpm check:citations && pnpm build"
+    "check:variants": "node scripts/check-button-variants.mjs",
+    "check": "pnpm typecheck && pnpm test && pnpm check:citations && pnpm check:variants && pnpm build"
   },
   "dependencies": {
     "@brucesantos/design-space": "^0.1.1",
