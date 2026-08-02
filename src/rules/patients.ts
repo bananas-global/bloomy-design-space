@@ -406,3 +406,61 @@ export function shareOfActive(data: PatientGapsData): number | undefined {
   if (data.activePatients <= 0) return undefined;
   return Math.round((data.patients.length / data.activePatients) * 100);
 }
+
+/* ================================== Os dois caminhos da inativação */
+
+/**
+ * Regras dos dois caminhos.
+ *
+ * Inativar um paciente acontece de duas formas: alguém troca o status na tela
+ * (`ChangePatientStatus`), ou a data marcada chega e o
+ * `DeactivatePatientWorker` roda sozinho. O resultado pretendido é o mesmo. O
+ * que os dois códigos fazem, não.
+ */
+export const deactivationPathRules: Rule[] = [
+  {
+    id: "the-unattended-path-destroys-more",
+    statement:
+      "O worker apaga os vínculos profissional–paciente com `delete_all`. O caminho manual não os toca. Mesma inativação, dois códigos, e o que roda sem ninguém presente destrói mais.",
+    rationale:
+      "Duas rotas para o mesmo resultado é normal; divergirem no que destroem não é. E a rota mais destrutiva é justamente a que ninguém acompanha — a diferença só aparece semanas depois, quando alguém procura quem atendeu a criança.",
+    source: "src/rules/patients.ts",
+  },
+  {
+    id: "the-bond-carries-clinical-context",
+    statement:
+      "O vínculo tem um campo de observação em texto livre. Apagar a linha apaga também o que alguém escreveu sobre aquela relação.",
+    rationale:
+      "Famílias em ABA pausam e voltam. Quem atendia, e o que se anotou sobre a relação, é exatamente o que se procura no retorno — e é a única parte do histórico que a inativação remove em vez de encerrar.",
+    source: "src/rules/patients.ts",
+  },
+];
+
+/** Implementação de `the-unattended-path-destroys-more`. */
+export function bondsDeletedBy(impact: DeactivationImpact): DeactivationImpact["professionalBonds"] {
+  return impact.path === "worker" ? impact.professionalBonds : [];
+}
+
+/** Implementação de `the-bond-carries-clinical-context`. */
+export function bondsWithNotes(
+  impact: DeactivationImpact,
+): DeactivationImpact["professionalBonds"] {
+  return bondsDeletedBy(impact).filter((bond) => (bond.observation ?? "").trim().length > 0);
+}
+
+/**
+ * O que muda entre os dois caminhos, dito em uma frase.
+ *
+ * Devolve `undefined` no caminho manual quando não há vínculo nenhum: aí os
+ * dois caminhos coincidem e comparar seria ruído.
+ */
+export function pathDifference(impact: DeactivationImpact): string | undefined {
+  if (impact.professionalBonds.length === 0) return undefined;
+
+  const quantos = impact.professionalBonds.length;
+  const plural = quantos === 1 ? "vínculo" : "vínculos";
+
+  return impact.path === "worker"
+    ? `Por este caminho, ${quantos} ${plural} profissional–paciente ${quantos === 1 ? "é apagado" : "são apagados"}. Inativando pela tela, ${quantos === 1 ? "ele permanece" : "eles permanecem"}.`
+    : `Inativando pela tela, ${quantos} ${plural} profissional–paciente ${quantos === 1 ? "permanece" : "permanecem"}. Se a data chegar e o worker rodar, ${quantos === 1 ? "ele é apagado" : "eles são apagados"}.`;
+}

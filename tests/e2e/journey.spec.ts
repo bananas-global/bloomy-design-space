@@ -2667,3 +2667,35 @@ test.describe("a rotina que acusa o paciente", () => {
     ).toHaveCount(3);
   });
 });
+
+test.describe("os dois caminhos da inativação", () => {
+  test("o caminho automático nomeia os vínculos que apaga, com as observações", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-by-worker"));
+
+    await expect(page.getByText("Este caminho apaga os vínculos com os profissionais")).toBeVisible();
+    await expect(page.getByText(/Responde pela fonoaudiologia desde a entrada/)).toBeVisible();
+    await expect(page.getByText(/Supervisiona o caso desde março/)).toBeVisible();
+  });
+
+  test("e diz o que o outro caminho faria com os mesmos vínculos", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-by-worker"));
+
+    await expect(page.getByText(/Inativando pela tela, eles permanecem/)).toBeVisible();
+  });
+
+  test("a justificativa clínica é dita, e não deduzida", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-by-worker"));
+
+    await expect(page.getByText(/Famílias em terapia ABA pausam e voltam/)).toBeVisible();
+    await expect(page.getByText(/2 desses vínculos têm observação escrita/)).toBeVisible();
+  });
+
+  test("pelo caminho manual, a tela diz que os vínculos permanecem", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-impact"));
+
+    await expect(
+      page.getByText("Este caminho preserva os vínculos com os profissionais"),
+    ).toBeVisible();
+    await expect(page.getByText(/Se a data chegar e o worker rodar/)).toBeVisible();
+  });
+});

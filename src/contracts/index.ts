@@ -1868,6 +1868,20 @@ export interface DeactivationImpact {
   hourMapsToClose: { id: string; durationEnd: string }[];
   /** Mapas que perdem a renovação automática — todos, sem filtro de data. */
   hourMapsLosingAutoRenew: number;
+  /**
+   * Vínculos profissional–paciente.
+   *
+   * O caminho manual não os toca. O worker que roda na data marcada os
+   * **apaga** — `delete_all`, com o campo de observação junto.
+   */
+  professionalBonds: { id: string; professionalName: string; observation?: string }[];
+  /**
+   * Por qual caminho a inativação vai acontecer.
+   *
+   * Mesmo resultado pretendido, dois códigos diferentes, e o desatendido
+   * destrói mais.
+   */
+  path: "manual" | "worker";
 }
 
 /**

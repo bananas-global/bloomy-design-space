@@ -45,7 +45,12 @@ import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
 import { inClinicRules } from "../rules/inClinic.js";
-import { patientRules, therapyPhaseRules, patientGapRules } from "../rules/patients.js";
+import {
+  patientRules,
+  therapyPhaseRules,
+  patientGapRules,
+  deactivationPathRules,
+} from "../rules/patients.js";
 import { authorizationRules } from "../rules/authorizations.js";
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
@@ -258,6 +263,7 @@ export const modules: Module[] = [
             decision: "O que mais acontece que não está na data escolhida?",
             branches: {
               "O corte pega a véspera": "patients.deactivation-eve",
+              "O caminho automático apaga vínculos": "patients.deactivation-by-worker",
               "A data futura não adia": "patients.deactivation-scheduled",
             },
           },
@@ -1032,6 +1038,7 @@ export const rules: Rule[] = [
   ...patientRules,
   ...therapyPhaseRules,
   ...patientGapRules,
+  ...deactivationPathRules,
   ...authorizationRules,
   ...closureRules,
   ...invoiceRules,
