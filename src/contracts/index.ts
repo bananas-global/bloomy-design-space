@@ -2146,3 +2146,41 @@ export interface DistributionData {
   /** Saldo que havia no início da distribuição, por pacote. */
   packages: { name: string; startingBalance: number }[];
 }
+
+/**
+ * Resumo automático da reunião.
+ *
+ * `AutoRegenerateAppointmentContent` roda às 3h, junta os comentários da
+ * reunião, pede um resumo ao modelo e **grava em `appointment.content`** — o
+ * registro oficial. O campo que controla a fila chama-se `comments_reviewed`,
+ * e quem o marca como revisado é a própria rotina.
+ */
+export interface MeetingComment {
+  id: string;
+  professionalName: string;
+  writtenAt: string;
+  content: string;
+}
+
+export interface MeetingRecord {
+  id: string;
+  patientName: string;
+  meetingKind: string;
+  finishedAt: string;
+  /** `comments_reviewed` no monólito. `false` põe o registro na fila das 3h. */
+  commentsReviewed: boolean;
+  /** `appointment.content` — o registro oficial da reunião. */
+  officialContent?: string;
+  /** Quem escreveu o texto que está lá agora. */
+  contentWrittenBy?: "ai" | "professional";
+  contentWrittenAt?: string;
+  comments: MeetingComment[];
+  /** Noites seguidas em que a geração falhou para este registro. */
+  failedNights: number;
+}
+
+export interface MeetingSummaryData {
+  /** Quando a rotina roda. Cron `0 3 * * *`, fuso da clínica. */
+  runsAt: string;
+  records: MeetingRecord[];
+}

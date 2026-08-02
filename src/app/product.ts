@@ -37,6 +37,7 @@ import { ClosureGeneration } from "../screens/ClosureGeneration.js";
 import { AbsenceOriginScreen } from "../screens/AbsenceOrigin.js";
 import { AutoCheckout } from "../screens/AutoCheckout.js";
 import { AuthorizationRenewal } from "../screens/AuthorizationRenewal.js";
+import { MeetingSummary } from "../screens/MeetingSummary.js";
 import { TissBatch } from "../screens/TissBatch.js";
 import { Distribution } from "../screens/Distribution.js";
 import { Prospects } from "../screens/Prospects.js";
@@ -87,6 +88,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/agenda/absences", screen: AbsenceOriginScreen },
     { path: "/in-clinic/auto-checkout", screen: AutoCheckout },
     { path: "/authorizations/renewal", screen: AuthorizationRenewal },
+    { path: "/sessions/meeting-summary", screen: MeetingSummary },
     { path: "/closures/tiss-batch", screen: TissBatch },
     { path: "/authorizations/distribution", screen: Distribution },
     { path: "/patients/:id/reports", screen: Reports },

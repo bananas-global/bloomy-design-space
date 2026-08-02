@@ -1813,6 +1813,57 @@ depois de saber que existia pelo menos um.
 1 achado corrigido, 1 fortalecido, 4 confirmados.
 
 
+### 59. O resumo da reunião, escrito por uma rotina às 3h
+
+O último worker que eu ainda não tinha lido, e o de maior consequência clínica.
+`AutoRegenerateAppointmentContent` roda no cron `0 3 * * *`, junta os
+comentários de uma reunião, pede um resumo ao modelo e **grava em
+`appointment.content`** — o registro oficial da reunião.
+
+O que devolve um registro para essa fila é alguém comentar. `ComentManager`
+tem um `mark_comments_as_unreviewed` que põe `comments_reviewed: false` a cada
+comentário criado. Então: uma coordenadora escreve à mão o resumo da reunião de
+pais; à noite alguém acrescenta “anexei o quadro de rotina”; às 3h o texto dela
+é substituído por um gerado. **Sem aviso, sem histórico, sem desfazer.** As duas
+metades são razoáveis sozinhas — comentar torna o resumo desatualizado, e regerar
+é a resposta certa. Ninguém decidiu o encontro das duas com a substituição direta.
+
+Seis achados saíram deste caminho, e cinco deles são padrões que eu já tinha
+visto separados neste sistema:
+
+- O nome que mente (`comments_reviewed`, marcado como revisado pela própria
+  rotina, com valor padrão `true`).
+- A conta que é descartada (`Enum.each` engole cada resultado; a rotina devolve
+  `{:ok, length(fila)}`, que é o que **entrou**).
+- A consulta sem limite (sem data, sem unidade, sem `limit` — o acervo inteiro
+  num laço).
+- A falha silenciosa que se repete (falhar deixa a marca em `false`, então o
+  registro volta toda madrugada, para sempre).
+
+O sexto é novo aqui: o conteúdo do comentário é interpolado **cru** entre
+`<conteudo>` e `</conteudo>` no pedido. Um comentário que feche a etiqueta e
+escreva depois dela deixa de ser observação e vira instrução para o modelo que
+redige o registro oficial. Não é hipótese de invasor — é o campo de texto livre
+que qualquer profissional preenche, sem escape e sem leitura humana depois.
+
+**A tela me corrigiu no meio.** Eu tinha escrito um aviso só para o comentário
+que escapa, e a jornada do cenário “madrugada sem fila” falhou: o aviso
+aparecia com a fila vazia. Fui consertar o filtro e percebi que o erro escondia
+um achado melhor. São **dois estados, não um**. Com o registro na fila, ainda dá
+para prevenir. Com a marca já em `true` e o texto gerado pela rotina, o pedido
+que produziu o prontuário **já continha** o comentário — não há o que prevenir, e
+a marca diz que foi revisado. O segundo caso é o pior, e era o que eu ia deixar
+de fora. Virou aviso próprio, cenário próprio e cinco testes de regra, um deles
+fixando que os dois conjuntos nunca se sobrepõem.
+
+Os oito varredores estouraram os 30 segundos quando os cenários novos entraram.
+Eles percorrem **todos** os cenários, e o catálogo cresce a cada módulo — encurtar
+a varredura para caber no prazo seria exatamente a armadilha que registrei na
+rodada 44. O prazo passou a acompanhar o catálogo.
+
+6 achados, 6 cenários, 5 regras testáveis, 22 testes de regra, 10 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1881,3 +1932,9 @@ bugs do Design Space; são observações sobre o produto.
 | 59 | `Distributor.distribute/2` ordena os atendimentos do dia por `start_time` e consome os pacotes nessa ordem. Com saldo menor que a demanda, quem é atendido de manhã fica com guia e quem é atendido à tarde fica sem — a ordem do relógio decide o que a clínica consegue cobrar, sem que ninguém a tenha escolhido. | `lib/bloomy/authorizations/distributor.ex:28-30` |
 | 60 | O distribuidor acumula `skipped_schedule_ids` e devolve a lista no resultado; `DistributorWorker` chama `Distributor.run()` e ignora o retorno. A lista dos atendimentos que não serão faturados existe formada no instante da decisão e é descartada. Quarta ocorrência do padrão dos achados 14, 30, 48 e 52. | `lib/bloomy/authorizations/workers/distributor_worker.ex:6-10` |
 | 61 | `DeactivateProfessionalWorker` também faz `Multi.delete_all` nos vínculos profissional–paciente. Somado ao achado 53, os dois lados da relação apagam o vínculo na desativação — quem for desativado primeiro leva o registro de quem atendeu quem. | `lib/bloomy/professionals/workers/deactivate_professional_worker.ex:77-85` |
+| 62 | Comentar numa reunião encerrada devolve o registro para a fila da madrugada, e às 3h `appointment.content` — o registro oficial — é substituído por um resumo gerado. Um texto escrito ou corrigido à mão some sem aviso, sem histórico e sem desfazer. | `lib/bloomy/custom_services/comments/comment_manager.ex:63-66`, `lib/bloomy/custom_services/regenerate_appointment_content.ex:20-23` |
+| 63 | O campo que governa essa fila chama-se `comments_reviewed`, e quem o marca como revisado é a própria rotina ao terminar de gerar. Nenhuma pessoa lê nada em nenhum ponto do caminho. O valor padrão do campo é `true`, então registros que ninguém olhou nascem marcados como revisados. | `lib/bloomy/custom_services/custom_service.ex:32`, `lib/bloomy/custom_services/regenerate_appointment_content.ex:22` |
+| 64 | A busca da fila não filtra por data, por unidade, nem tem `limit`: é todo atendimento finalizado com a marca em `false`, da história inteira, num `Enum.each` só. Uma noite em que a rotina falha, ou um ambiente novo, manda o acervo inteiro ao modelo de uma vez. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:38-49` |
+| 65 | O laço descarta o resultado de cada geração, e a rotina devolve `{:ok, length(custom_services_to_review)}` — a quantidade que **entrou** na fila, medida antes de gerar. Quarenta sucessos e quarenta fracassos registram o mesmo número. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:10-14` |
+| 66 | Quando a geração falha, a marca continua em `false`, então o mesmo registro volta à fila na noite seguinte — sem limite de tentativas e sem ninguém ser avisado. Uma falha permanente é reenviada ao modelo toda madrugada para sempre, e a reunião fica sem registro oficial em silêncio. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:17-35` |
+| 67 | O conteúdo de cada comentário é interpolado cru entre `<conteudo>` e `</conteudo>` no pedido ao modelo. Um comentário que feche a etiqueta e escreva depois dela vira instrução para quem redige o registro oficial. Dois estados: na fila ainda dá para prevenir; com a marca já em `true`, o prontuário **já saiu** daquele pedido. | `lib/bloomy/custom_services/generate_appointment_content.ex:36-48` |

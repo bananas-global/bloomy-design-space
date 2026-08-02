@@ -13,6 +13,11 @@ import { scenarios } from "../../src/app/catalog.js";
  * carregar fica piscando indefinidamente para quem tem enxaqueca ou distúrbio
  * vestibular, e a pessoa não tem como parar.
  */
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test.describe("movimento", () => {
   test("com movimento reduzido, nada anima nem transiciona", async ({ browser }) => {
     const contexto = await browser.newContext({ reducedMotion: "reduce" });

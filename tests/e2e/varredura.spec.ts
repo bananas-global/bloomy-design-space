@@ -16,6 +16,11 @@ import { scenarios } from "../../src/app/catalog.js";
  * existir, porque produz confiança. Por isso o teste conta as páginas vazias e
  * falha se houver alguma.
  */
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test("nenhum cenário renderiza vazio, salta nível de título ou vaza jargão", async ({
   page,
 }) => {

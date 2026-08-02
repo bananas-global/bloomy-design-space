@@ -17,6 +17,11 @@ import { scenarios } from "../../src/app/catalog.js";
  * 2. **Nada transborda na horizontal.** Texto maior pode empurrar layout para
  *    fora, e aí a pessoa que precisava de letra maior recebe rolagem lateral.
  */
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test("com a fonte padrão dobrada, o texto dobra e nada transborda", async ({ page }) => {
   const naoEscalou: string[] = [];
   const transborda: string[] = [];

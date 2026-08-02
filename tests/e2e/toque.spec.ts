@@ -15,6 +15,11 @@ import { scenarios } from "../../src/app/catalog.js";
  * real é o label, de 47×49. Medir o elemento em vez do alvo produz onze falsos
  * positivos numa tela sozinha — e um relatório com onze ruídos não é lido.
  */
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test("nenhum alvo abaixo de 24px e nenhuma rolagem horizontal a 375px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 
