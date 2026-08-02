@@ -10,6 +10,9 @@ import {
 } from "../components/bloomy/Layout.js";
 import { Dropdown, DropdownMenu, Modal } from "../components/bloomy/Overlay.js";
 import { CheckboxGroup, RadioGroup, RadioSelector, Tooltip } from "../components/bloomy/Choice.js";
+import {
+  MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
+} from "../components/bloomy/DatePickers.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -104,6 +107,26 @@ function DemoEscolhas() {
       />
     </div>
   );
+}
+
+function DemoRangeDatePicker() {
+  const [valor, setValor] = useState({ inicio: "2026-08-03", fim: "2026-08-09" });
+  return <div className="space-y-3"><RangeDatePicker id="g-periodo-dias" label="Período" value={valor} onChange={setValor} minDate="2026-08-01" maxDate="2026-09-30" disable={["2026-08-15"]} static className="max-w-sm" /><Button size="small" variant="outline" onClick={() => setValor({ inicio: "2026-09-07", fim: "2026-09-13" })}>Carregar período externo</Button></div>;
+}
+
+function DemoRangeMonthPicker() {
+  const [valor, setValor] = useState({ inicio: "2026-01-01", fim: "2026-06-30" });
+  return <div className="space-y-3"><RangeMonthPicker id="g-periodo-meses" label="Período dos programas" value={valor} onChange={setValor} disable={["2026-02-01"]} className="max-w-sm" /><Button size="small" variant="outline" onClick={() => setValor({ inicio: "2024-01-01", fim: "2024-02-29" })}>Carregar intervalo bissexto</Button></div>;
+}
+
+function DemoMonthPicker() {
+  const [valor, setValor] = useState("2026-08-01");
+  return <div className="space-y-3"><MonthPicker id="g-mes-avaliacao" label="Mês da avaliação" value={valor} onChange={setValor} errors={["Informe o mês da avaliação"]} className="max-w-sm" /><Button size="small" variant="outline" onClick={() => setValor("2027-02-01")}>Carregar mês externo</Button></div>;
+}
+
+function DemoWeekSelector() {
+  const [valor, setValor] = useState({ inicio: "2025-12-29", fim: "2026-01-04" });
+  return <WeekSelector first={valor.inicio} last={valor.fim} onChange={setValor} />;
 }
 
 export const GALLERY: GalleryEntry[] = [
@@ -578,10 +601,10 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "range_datepicker", origem: "lib/bloomy_web/components/core_components.ex:2348", descricao: "Seleção de intervalo de datas." },
-  { name: "range_monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2394", descricao: "Seleção de intervalo de meses." },
-  { name: "monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2420", descricao: "Seleção de um mês." },
-  { name: "week_selector", origem: "lib/bloomy_web/components/core_components.ex:2450", descricao: "Navegação por semana." },
+  { name: "range_datepicker", origem: "lib/bloomy_web/components/core_components.ex:2348", descricao: "Seleção de intervalo de datas.", demos: [{ titulo: "Intervalo diário", nota: "Só publica o valor escondido quando as duas pontas foram escolhidas; 15 de agosto está desabilitado.", render: () => <DemoRangeDatePicker /> }] },
+  { name: "range_monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2394", descricao: "Seleção de intervalo de meses.", demos: [{ titulo: "Intervalo mensal", nota: "A segunda ponta é gravada como o último dia do mês, como no hook do original.", render: () => <DemoRangeMonthPicker /> }] },
+  { name: "monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2420", descricao: "Seleção de um mês.", demos: [{ titulo: "Mês único", nota: "A visão usa “Ago 2026”; o valor enviado é `2026-08-01`.", render: () => <DemoMonthPicker /> }] },
+  { name: "week_selector", origem: "lib/bloomy_web/components/core_components.ex:2450", descricao: "Navegação por semana.", demos: [{ titulo: "Navegação por semana", nota: "As duas setas deslocam início e fim por exatamente sete dias.", render: () => <DemoWeekSelector /> }] },
   { name: "tooltip", origem: "lib/bloomy_web/components/core_components.ex:2498", descricao: "Dica de contexto ancorada num elemento.",
     demos: [
       {
