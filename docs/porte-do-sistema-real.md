@@ -45,22 +45,22 @@ Superfície medida em 2026-08-01:
 
 ## Onde o porte chegou
 
-Números de 2026-08-02, 09:00 — fim da janela de trabalho contínuo.
+Números do fim da janela de trabalho contínuo, em 2026-08-02.
 
 | | |
 | --- | --- |
-| Cenários | 247 |
-| Regras declaradas | 186 |
-| Fixtures determinísticas | 304 |
-| Telas React | 46 |
-| Testes de regra | 656 |
-| Jornadas Playwright | 850 |
-| Achados sobre o sistema real | 92 |
-| Rodadas registradas | 67 |
+| Cenários | 251 |
+| Regras declaradas | 189 |
+| Fixtures determinísticas | 313 |
+| Telas React | 47 |
+| Testes de regra | 661 |
+| Jornadas Playwright | 863 |
+| Achados sobre o sistema real | 95 |
+| Rodadas registradas | 68 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
-citado, e um script confere as 95 citações a cada verificação.
+citado, e um script confere as 98 citações a cada verificação.
 
 **O que sustenta isso não são os cenários, são as varreduras.** Nove testes
 percorrem *todos* os cenários a cada execução: nenhum renderiza vazio, nenhum
@@ -2362,6 +2362,57 @@ custado um achado retratado.
 3 achados, 3 cenários, 3 regras testáveis, 8 testes de regra, 5 jornadas.
 
 
+### 68. Quem enxerga quais pacientes
+
+Fui ao portal da operadora esperando encontrar um vazamento de escopo, e não
+encontrei: `PatientPolicy.scope(HealthCares.User, user)` junta o plano e filtra
+por `health_care_id`. Está certo. O que achei foi outra coisa, uma camada acima.
+
+`scope/2` casa cláusulas na ordem, e **`supervisor` aparece em duas**:
+
+```elixir
+def scope("supervisor", current_user) do          # esta roda
+  # ... where: pu.unit_id in ^unit_ids
+end
+
+def scope(role, current_user)                     # esta não
+    when role in ~W(therapeutic_companion applicator supervisor specialist) do
+  # ... where: pr.user_id == ^current_user.id
+end
+```
+
+A primeira vence. O supervisor vê **a unidade inteira**, e a segunda cláusula
+continua listando o papel dizendo que ele veria só os pacientes das próprias
+agendas. As duas regras são defensáveis e a diferença entre elas é grande. O
+problema não é qual foi escolhida — é que quem for conferir o alcance de acesso
+de um supervisor, numa auditoria ou numa dúvida sobre sigilo, pode ler a parte
+errada e concluir o oposto.
+
+Um cenário existe só para medir isso: **removida a cláusula morta, o
+comportamento é idêntico.** Muda quem consegue conferir, não quem vê quem. É a
+única forma honesta de propor a mudança.
+
+**E encontrei um acerto que precisa ser protegido.** Não há cláusula final em
+`scope/2`. Um papel novo, ainda não previsto, **derruba a chamada** em vez de
+devolver `Patient`. É o único lugar do sistema em que a falta de tratamento erra
+para o lado seguro. Dei a ele um aviso com tom de acerto e nomeei a correção
+perigosa: acrescentar um caso final transformaria um erro barulhento num
+vazamento silencioso — o papel novo passaria a ver a base inteira sem que
+ninguém tivesse decidido isso.
+
+Foi a primeira vez na noite inteira que escrevi um aviso para dizer “está
+certo, não mexa”. Depois de 92 achados, isso parecia valer mais que o
+nonagésimo terceiro.
+
+O terceiro é pequeno e da família dos nomes: `scope("people", _)` devolve
+`where: is_nil(p.id)`. O resultado é o certo — pessoas não vê paciente nenhum —
+e a intenção precisa ser deduzida de uma condição impossível. “Quisemos zero” é
+para manter; “a condição está errada” é para consertar. Na dúvida ninguém mexe,
+e a regra sobrevive sem nunca ter sido confirmada.
+
+3 achados, 4 cenários, 3 regras testáveis, 5 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2461,3 +2512,6 @@ bugs do Design Space; são observações sobre o produto.
 | 90 | `BehaviorInterventionPlans.accept/3` grava `signed_at: Date.utc_today()`. É a data do aceite do responsável ao plano de intervenção comportamental, colhida pela API do portal. Quem assina das 21h à meia-noite fica com o documento datado do dia seguinte. | `lib/bloomy/patients/behavior_intervention_plans/context.ex:76`, `lib/bloomy_web/legal_guardian/api/behavior_intervention_plans/behavior_intervention_plan_controller.ex:25` |
 | 91 | A janela de três horas coincide com o horário em que este público existe: o responsável assina de casa, à noite. As ocorrências do achado 82 não têm o mesmo alcance — numa tela interna a janela pega o fim do expediente; aqui pega o horário principal. | `lib/bloomy/patients/behavior_intervention_plans/context.ex:76` |
 | 92 | Um plano que termina hoje, aceito às 23h, fica registrado como **aceito depois do próprio fim**. Deixa de ser erro de um dia e vira contradição interna: o documento afirma o fim e o aceite posterior ao mesmo tempo. | `lib/bloomy/patients/behavior_intervention_plans/context.ex:60-77` |
+| 93 | `PatientPolicy.scope/2` casa cláusulas na ordem, e `supervisor` aparece em duas. A primeira — por unidade — é a que roda; a segunda continua listando o papel e afirma que ele veria só os pacientes das próprias agendas. Quem conferir o alcance de acesso pode ler a parte errada. Remover a cláusula morta não muda o comportamento. | `lib/bloomy/patients/patient_policy.ex:49-67` |
+| 94 | `scope("people", _)` devolve `from(p in Patient, where: is_nil(p.id))`. O resultado está certo — o papel não enxerga paciente nenhum —, mas a intenção precisa ser deduzida de uma condição impossível, e “quisemos zero” é para manter enquanto “a condição está errada” é para consertar. | `lib/bloomy/patients/patient_policy.ex:47` |
+| 95 | **Acerto, e vale protegê-lo.** Não há cláusula final em `scope/2`: um papel não previsto derruba a chamada em vez de devolver `Patient`. A correção intuitiva — um caso final permissivo — trocaria um erro barulhento por um vazamento silencioso. | `lib/bloomy/patients/patient_policy.ex:43-84` |

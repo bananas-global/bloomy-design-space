@@ -1,4 +1,16 @@
 import type {
+  PatientScopeData as EscopoData,
+  ScopeRule as RegraEscopo,
+} from "../src/contracts/index.js";
+import {
+  contradictory,
+  raises,
+  reachLabel,
+  rolesCovered,
+  seesEverything,
+  seesNobody,
+} from "../src/rules/patientScope.js";
+import type {
   PlanSignature as AssinaturaPlano,
   PlanSignatureData as AssinaturaData,
 } from "../src/contracts/index.js";
@@ -7174,5 +7186,81 @@ describe("aceite do plano — a proporção, que é o achado", () => {
     // Se lesse a do carimbo, as 23h20 virariam 2h e a conta da noite quebraria.
     expect(signingHour(assinaturaPlano({ id: "a", signedAt: "2026-07-30T23:20:00.000-03:00" })))
       .toBe(23);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Escopo de pacientes
+// ---------------------------------------------------------------------------
+
+function regraEscopo(o: Partial<RegraEscopo> & { id: string }): RegraEscopo {
+  return {
+    role: "Supervisão",
+    effective: "Filtra pelas unidades de quem entrou.",
+    shape: "by-unit",
+    source: "lib/bloomy/patients/patient_policy.ex:49-57",
+    ...o,
+  };
+}
+
+const escopos = (rules: RegraEscopo[]): EscopoData => ({ rules });
+
+describe("escopo de pacientes — o papel que aparece em duas cláusulas", () => {
+  it("acusa só quem tem uma segunda leitura escrita", () => {
+    const dados = escopos([
+      regraEscopo({ id: "a", shadowed: "filtraria pelas próprias agendas" }),
+      regraEscopo({ id: "b" }),
+    ]);
+    expect(contradictory(dados).map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("removida a cláusula morta, o alcance não muda", () => {
+    // O ponto do achado: remover a contradição muda quem consegue conferir,
+    // não quem vê quem.
+    const com = regraEscopo({ id: "a", shadowed: "outra coisa" });
+    const { shadowed: _s, ...sem } = com;
+    expect(contradictory(escopos([sem]))).toEqual([]);
+    expect(reachLabel(sem)).toBe(reachLabel(com));
+  });
+});
+
+describe("escopo de pacientes — os alcances", () => {
+  it("diz o alcance em pessoas, e não em nome de tabela", () => {
+    expect(reachLabel(regraEscopo({ id: "a", shape: "all" }))).toBe(
+      "todos os pacientes da clínica",
+    );
+    expect(reachLabel(regraEscopo({ id: "a", shape: "by-unit" }))).toBe(
+      "todos os pacientes da unidade",
+    );
+    expect(reachLabel(regraEscopo({ id: "a", shape: "by-own-schedules" }))).toBe(
+      "só os pacientes das próprias agendas",
+    );
+    expect(reachLabel(regraEscopo({ id: "a", shape: "by-link" }))).toBe(
+      "só os pacientes ligados a quem entrou",
+    );
+    expect(reachLabel(regraEscopo({ id: "a", shape: "empty" }))).toBe("nenhum paciente");
+    expect(reachLabel(regraEscopo({ id: "a", shape: "raises" }))).toBe("a tela não abre");
+  });
+
+  it("separa quem vê tudo, quem não vê ninguém e quem derruba", () => {
+    const dados = escopos([
+      regraEscopo({ id: "tudo", shape: "all" }),
+      regraEscopo({ id: "nada", shape: "empty" }),
+      regraEscopo({ id: "derruba", shape: "raises" }),
+      regraEscopo({ id: "unidade" }),
+    ]);
+    expect(seesEverything(dados).map((r) => r.id)).toEqual(["tudo"]);
+    expect(seesNobody(dados).map((r) => r.id)).toEqual(["nada"]);
+    expect(raises(dados).map((r) => r.id)).toEqual(["derruba"]);
+  });
+
+  it("o papel sem cláusula não conta como papel coberto", () => {
+    // Ele não é uma regra: é a ausência de regra, e é isso que o protege.
+    const dados = escopos([
+      regraEscopo({ id: "a" }),
+      regraEscopo({ id: "b", shape: "empty" }),
+      regraEscopo({ id: "c", shape: "raises" }),
+    ]);
+    expect(rolesCovered(dados)).toBe(2);
   });
 });
