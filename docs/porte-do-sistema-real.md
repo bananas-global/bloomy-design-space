@@ -1268,6 +1268,36 @@ estrago de trabalho novo.
 4 cenários, 9 testes de regra, 7 jornadas.
 
 
+### 43. O mapa que vence sem sucessor — `porte/mapa-vencendo`
+
+Dos dezesseis filtros de paciente, `hour_map_status=expiring` é o mais denso:
+mapa ativo terminando em sete dias **e sem nenhum mapa começando depois**. É a
+única consulta do sistema que enxerga **interrupção de intervenção antes de ela
+acontecer** — e, como as do módulo anterior, só existe como parâmetro.
+
+Numa clínica ABA isso não é aviso administrativo. Continuidade é parte do
+método: programa em aquisição interrompido regride. Uma semana sem mapa é
+terapia que para.
+
+Duas coisas seguem daí:
+
+- **A ordem das perguntas é a ordem do risco.** `expiryState/3` pergunta
+  primeiro se renova sozinho e se há sucessor — as duas resolvem o vencimento —
+  e só então mede os dias. Medir primeiro produziria alarme em mapa que estava
+  resolvido.
+- **Só o caso seguro fica calado.** Mapa que renova sozinho não recebe aviso;
+  todos os outros recebem, inclusive o que tem sucessor. **Ausência de aviso não
+  distingue "está resolvido" de "ninguém olhou"** — e a renovação automática é
+  desligada em massa quando um paciente é inativado, então o estado perigoso
+  chega sem ninguém ter escolhido.
+
+Um detalhe de escrita que a jornada pegou: a primeira versão da frase repetia o
+título do aviso, e o leitor de tela ouviria a mesma afirmação duas vezes. O
+título afirma o quê; o corpo traz o prazo e a razão.
+
+2 cenários, 9 testes de regra, 3 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

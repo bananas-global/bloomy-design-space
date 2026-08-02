@@ -10,6 +10,49 @@ import type { Scenario } from "@brucesantos/design-space";
  */
 export const hourMapScenarios: Scenario[] = [
   {
+    id: "hour-map.expiring-without-successor",
+    title: "A semana do paciente deixa de existir em cinco dias",
+    intent:
+      "Trazer para a tela a única consulta do sistema que enxerga interrupção de intervenção antes de ela acontecer.",
+    route: "/patients/pac-theo/hour-map",
+    persona: "coordinator",
+    fixture: "hour-map-expiring",
+    rules: [
+      "expiring-map-without-successor-is-a-gap-in-therapy",
+      "auto-renew-off-is-invisible",
+    ],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: [
+      "`hour_map_status=expiring` procura mapa ativo terminando em sete dias sem sucessor.",
+      "Este mapa termina em 04/08, não renova sozinho e não tem sucessor.",
+    ],
+    expected: [
+      "O aviso vem antes da grade, porque decide o que fazer com a tela toda.",
+      "A frase diz a consequência clínica: programa em aquisição interrompido regride.",
+      "O tom é de perigo, e não informativo.",
+    ],
+    tags: ["regra", "exceção", "decisão"],
+  },
+  {
+    id: "hour-map.expiring-with-successor",
+    title: "Vence, e já existe o próximo",
+    intent:
+      "Dizer o caso seguro em voz alta — ausência de aviso não distingue “está resolvido” de “ninguém olhou”.",
+    route: "/patients/pac-theo/hour-map",
+    persona: "coordinator",
+    fixture: "hour-map-expiring-with-successor",
+    rules: ["auto-renew-off-is-invisible"],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: ["O mesmo vencimento, com um mapa começando depois."],
+    expected: [
+      "A tela afirma que a semana continua, em vez de calar.",
+      "O tom é informativo: não há nada a fazer.",
+    ],
+    tags: ["sucesso", "decisão"],
+  },
+  {
     id: "hour-map.with-conflicts",
     title: "Mapa desenhado, com conflitos",
     intent:

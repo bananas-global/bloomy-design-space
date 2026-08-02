@@ -2380,3 +2380,31 @@ test.describe("pendências de cadastro", () => {
     await expect(page.getByText(/vale conferir mesmo quando ninguém reclamou/)).toBeVisible();
   });
 });
+
+test.describe("vencimento do mapa de horas", () => {
+  test("o aviso de interrupção vem antes da grade e diz a consequência clínica", async ({ page }) => {
+    await page.goto(urlFor("hour-map.expiring-without-successor"));
+
+    await expect(
+      page.getByRole("heading", { name: "A semana do paciente deixa de existir" }),
+    ).toBeVisible();
+    // O corpo traz o prazo e a razão, sem repetir o título.
+    await expect(page.getByText(/Programa em aquisição interrompido regride/)).toBeVisible();
+    await expect(page.getByText(/Termina em 5 dias/)).toBeVisible();
+  });
+
+  test("com sucessor, a tela diz que a semana continua em vez de calar", async ({ page }) => {
+    await page.goto(urlFor("hour-map.expiring-with-successor"));
+
+    // Ausência de aviso não distingue "está resolvido" de "ninguém olhou".
+    await expect(page.getByText("Vencimento do mapa")).toBeVisible();
+    await expect(page.getByText(/já existe outro começando depois. A semana continua/)).toBeVisible();
+  });
+
+  test("um mapa que renova sozinho não recebe aviso nenhum", async ({ page }) => {
+    await page.goto(urlFor("hour-map.applied"));
+
+    await expect(page.getByText("A semana do paciente deixa de existir")).toHaveCount(0);
+    await expect(page.getByText("Vencimento do mapa")).toHaveCount(0);
+  });
+});

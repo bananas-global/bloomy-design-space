@@ -220,3 +220,90 @@ export function weeklyMinutes(map: HourMap): number {
     return total + (endHour! * 60 + endMinute!) - (startHour! * 60 + startMinute!);
   }, 0);
 }
+
+/* ============================================== vencimento sem sucessor */
+
+/**
+ * Regras do vencimento do mapa.
+ *
+ * `PatientFilters` tem `hour_map_status=expiring`: mapa ativo que termina em
+ * sete dias **e não tem nenhum mapa começando depois dele**. É a única consulta
+ * do sistema que enxerga interrupção de intervenção antes de ela acontecer — e
+ * ela também só existe como parâmetro.
+ */
+export const hourMapExpiryRules: Rule[] = [
+  {
+    id: "expiring-map-without-successor-is-a-gap-in-therapy",
+    statement:
+      "Um mapa que termina em sete dias sem nenhum mapa começando depois significa que a semana do paciente deixa de existir. Não é aviso administrativo: é intervenção que para.",
+    rationale:
+      "Numa clínica ABA a continuidade é parte do método — programa em aquisição interrompido regride. O sistema sabe detectar isto sete dias antes e não avisa ninguém; a informação vive num filtro que alguém precisa saber digitar.",
+    source: "src/rules/hourMap.ts",
+  },
+  {
+    id: "auto-renew-off-is-invisible",
+    statement:
+      "Um mapa que renova sozinho e um que vence sem sucessor diferem por um campo booleano, e na tela isso é uma etiqueta de presença — quando ela falta, nada aparece no lugar.",
+    rationale:
+      "Ausência de etiqueta não é sinal: ninguém repara no que não está lá. E a renovação automática é desligada em massa quando um paciente é inativado, então o estado perigoso chega sem ninguém ter escolhido.",
+    source: "src/rules/hourMap.ts",
+  },
+];
+
+export type ExpiryState =
+  | "renews"
+  | "has-successor"
+  | "expiring-without-successor"
+  | "far"
+  | "over";
+
+/**
+ * Implementação de `expiring-map-without-successor-is-a-gap-in-therapy`.
+ *
+ * A ordem das perguntas é a ordem do risco: renovar sozinho e ter sucessor
+ * resolvem o vencimento, então vêm antes de medir os dias.
+ */
+export function expiryState(
+  map: HourMap,
+  now: string,
+  hasSuccessor = false,
+): ExpiryState {
+  const fim = new Date(`${map.durationEnd}T12:00:00.000Z`).getTime();
+  const hoje = new Date(`${now.slice(0, 10)}T12:00:00.000Z`).getTime();
+  const dias = Math.round((fim - hoje) / 86_400_000);
+
+  if (dias < 0) return "over";
+  if (map.autoRenew) return "renews";
+  if (hasSuccessor) return "has-successor";
+  if (dias <= 7) return "expiring-without-successor";
+  return "far";
+}
+
+export function daysToExpiry(map: HourMap, now: string): number {
+  const fim = new Date(`${map.durationEnd}T12:00:00.000Z`).getTime();
+  const hoje = new Date(`${now.slice(0, 10)}T12:00:00.000Z`).getTime();
+  return Math.round((fim - hoje) / 86_400_000);
+}
+
+/**
+ * Implementação de `auto-renew-off-is-invisible`.
+ *
+ * Devolve frase para **todos** os estados que não são "renova sozinho", porque
+ * o problema é justamente a ausência de sinal. Só o caso seguro fica calado.
+ */
+export function expiryMessage(state: ExpiryState, dias: number): string | undefined {
+  switch (state) {
+    case "renews":
+      return undefined;
+    case "has-successor":
+      return `Este mapa termina em ${dias} ${dias === 1 ? "dia" : "dias"} e já existe outro começando depois. A semana continua.`;
+    case "expiring-without-successor":
+      // O título já afirma o quê. Aqui vai o porquê e o prazo — repetir a
+      // afirmação faria o leitor de tela ouvir a mesma frase duas vezes.
+      return `Termina em ${dias} ${dias === 1 ? "dia" : "dias"}, não renova sozinho e não há nenhum mapa começando depois. Programa em aquisição interrompido regride: a continuidade é parte do método, não conforto de agenda.`;
+    case "far":
+      return `Este mapa não renova sozinho. Faltam ${dias} dias, e alguém precisa desenhar o próximo antes disso.`;
+    case "over":
+      return `A vigência deste mapa terminou há ${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}. Não há semana pretendida em vigor.`;
+  }
+}

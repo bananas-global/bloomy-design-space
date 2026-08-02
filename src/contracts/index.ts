@@ -1358,6 +1358,14 @@ export type HourMapData = {
   map: HourMap;
   /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
   now: string;
+  /**
+   * Existe um mapa que começa depois deste?
+   *
+   * O sistema real responde a isso num filtro — `hour_map_status=expiring`
+   * procura mapa ativo terminando em sete dias **sem sucessor**. A ausência de
+   * sucessor é o que transforma um vencimento em interrupção de intervenção.
+   */
+  hasSuccessor?: boolean;
 };
 
 /* ================================================================== *

@@ -44,7 +44,7 @@ import { insurerPortalRules } from "../rules/insurerPortal.js";
 import { structureRules } from "../rules/structure.js";
 import { recordRules } from "../rules/record.js";
 import { managementRules } from "../rules/management.js";
-import { hourMapRules } from "../rules/hourMap.js";
+import { hourMapRules, hourMapExpiryRules } from "../rules/hourMap.js";
 import { chatRules } from "../rules/chat.js";
 import { prospectRules } from "../rules/prospects.js";
 import { reportRules } from "../rules/reports.js";
@@ -947,6 +947,7 @@ export const rules: Rule[] = [
   ...recordRules,
   ...managementRules,
   ...hourMapRules,
+  ...hourMapExpiryRules,
   ...chatRules,
   ...prospectRules,
   ...reportRules,
