@@ -598,42 +598,95 @@ export type PatientsData = {
 };
 
 /* ================================================================== *
- * Financeiro
+ * Autorizações — o TISS, e o que decide se a sessão pode ser marcada
  * ================================================================== */
 
-export type ClaimStatus = "under_review" | "denied" | "pending_documents" | "approved" | "resubmitted";
+/**
+ * Situação da autorização.
+ *
+ * Dez valores de `Bloomy.Authorizations.Authorization`, e a lista importa mais
+ * que o normal porque quatro delas são frequentemente lidas como "recusado"
+ * quando não são:
+ *
+ * - `analysing` — o convênio recebeu e está avaliando. Não há ação da clínica.
+ * - `waiting_requester_justification` — falta justificativa de quem pediu.
+ * - `waiting_provider_documentation` — falta documento da clínica.
+ * - `sync_error` — a integração falhou. É problema técnico, não decisão do
+ *   convênio, e reenviar resolve; tratar como recusa manda a clínica remontar
+ *   um pedido que estava correto.
+ *
+ * `partially_authorized` é a mais traiçoeira: o convênio autorizou **menos**
+ * sessões que o pedido. Uma tela que a pinte de verde faz a clínica agendar o
+ * que não foi autorizado.
+ */
+export type AuthorizationStatus =
+  | "pending"
+  | "analysing"
+  | "authorized"
+  | "partially_authorized"
+  | "denied"
+  | "waiting_requester_justification"
+  | "waiting_provider_documentation"
+  | "sync_error"
+  | "invoiced"
+  | "cancelled";
 
-export type RequiredDocument = {
+export type GuideType = "execution" | "request";
+export type GuideStatus = "pre_authorized" | "token" | "executed";
+export type AuthorizationKind = "particular" | "health_care";
+/** Periodicidade da autorização. `base` é a autorização-mãe de um contrato. */
+export type AuthorizationCategory = "monthly" | "daily" | "base";
+export type PackageType = "capitation" | "package" | "free_for_service";
+
+/**
+ * Um pacote dentro da autorização.
+ *
+ * É onde mora o saldo: `quantity` é quantos pacotes foram autorizados,
+ * `maxByMonth` quantas sessões cabem em cada um, e `executions` quantas já
+ * foram consumidas por agendamento.
+ *
+ * `capitation` é a exceção que mais confunde: ali o teto é `maxByMonth` puro,
+ * porque a quantidade não multiplica. É o modelo de valor fixo por paciente.
+ */
+export type AuthorizationPackage = {
   id: string;
   name: string;
-  received: boolean;
-  /** Quando recusado por documento, o convênio costuma dizer o que falta. */
-  note?: string;
+  packageType: PackageType;
+  quantity: number;
+  maxByMonth: number;
+  /** Sessões já agendadas contra este pacote. */
+  executions: number;
 };
 
-export type ClaimEvent = {
-  at: string;
-  label: string;
-  /** `insurer` quando o evento vem do convênio, `clinic` quando vem da clínica. */
-  by: "insurer" | "clinic";
-};
-
-export type Claim = {
+export type Authorization = {
   id: string;
+  guideNumber: string;
   patient: PatientRef;
-  procedure: string;
-  amountCents: number;
-  insurer: string;
-  status: ClaimStatus;
-  submittedAt: string;
-  /** Preenchido quando `status` é `denied`. */
-  denial?: { code: string; reason: string; at: string };
-  documents: RequiredDocument[];
-  history: ClaimEvent[];
+  healthCare: string;
+  status: AuthorizationStatus;
+  kind: AuthorizationKind;
+  category: AuthorizationCategory;
+  guideType: GuideType;
+  guideStatus?: GuideStatus;
+  /** Janela de validade. Fora dela a autorização não serve, mesmo autorizada. */
+  validFrom: string;
+  validUntil: string;
+  requestDate: string;
+  authorizationDate?: string;
+  packages: AuthorizationPackage[];
+  /** Quantas sessões foram pedidas. Comparar com o autorizado revela o parcial. */
+  requestedSessions: number;
+  /** Mensagens de erro da integração. Preenchido quando `status` é `sync_error`. */
+  errors: string[];
+  observation?: string;
+  clinicalIndication?: string;
+  authorizationPassword?: string;
 };
 
-export type FinanceData = {
-  claims: Claim[];
+export type AuthorizationsData = {
+  authorizations: Authorization[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
 };
 
 /* ================================================================== *

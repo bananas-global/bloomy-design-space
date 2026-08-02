@@ -567,113 +567,103 @@ test.describe("Pacientes", () => {
   });
 });
 
-/* ============================================================== financeiro */
+/* =========================================================== autorizações */
 
-test.describe("Financeiro", () => {
-  test("a fila ordena por urgência e soma o que espera ação da clínica", async ({ page }) => {
-    await page.goto(urlFor("finance.queue"));
-
-    // Recusada primeiro: ordem cronológica esconderia a guia de três dias atrás.
-    const firstRow = page.getByRole("row").nth(1);
-    await expect(firstRow).toContainText("Recusada");
-
-    // 1.425,00 + 960,00 das duas guias que aguardam a clínica.
-    await expect(page.getByText("R$ 2.385,00")).toBeVisible();
-  });
-
-  test("convênio recusado mostra motivo e código, e bloqueia o reenvio nomeando o que falta", async ({
-    page,
-  }) => {
-    await page.goto(urlFor("finance.insurance-denied"));
-
-    await expect(page.getByRole("heading", { name: /Guia recusada — TUSS-3001/ })).toBeVisible();
-    await expect(page.getByText(/relatório clínico assinado e laudo de exame anterior/)).toBeVisible();
-
-    const resubmit = page.getByRole("button", { name: "Reenviar ao convênio" });
-    await expect(resubmit).toBeVisible();
-    await expect(resubmit).toBeDisabled();
-    await expect(
-      page.getByText("Falta anexar: Relatório clínico assinado, Laudo do exame anterior."),
-    ).toBeVisible();
-  });
-
-  test("a recusa é anunciada para leitor de tela ao abrir a página", async ({ page }) => {
-    await page.goto(urlFor("finance.insurance-denied"));
-
-    // `role="alert"` é o que faz a informação mais importante da página ser
-    // anunciada na chegada, e não descoberta depois de percorrer a estrutura.
-    // É o que o campo `announces: ["claim.status"]` do cenário exige.
-    await expect(page.getByRole("alert")).toContainText("Guia recusada — TUSS-3001");
-  });
-
-  test("anexar os documentos que faltam libera o reenvio na mesma tela", async ({ page }) => {
-    await page.goto(urlFor("finance.insurance-denied"));
-
-    const resubmit = page.getByRole("button", { name: "Reenviar ao convênio" });
-    await expect(resubmit).toBeDisabled();
-
-    // Cada clique remove o próprio botão da lista, então um `.all()` capturado de
-    // antemão aponta para nós que já saíram do DOM.
-    const attach = page.getByRole("button", { name: "Anexar" });
-    while ((await attach.count()) > 0) {
-      await attach.first().click();
-    }
-
-    await expect(page.getByText("2 de 4 documentos anexados")).toBeHidden();
-    await expect(resubmit).toBeEnabled();
-
-    await resubmit.click();
-    await expect(page.getByRole("status").first()).toContainText("reenviada ao SulAmérica");
-  });
-
-  test("pendência de documento não é recusa", async ({ page }) => {
-    await page.goto(urlFor("finance.pending-documents"));
+test.describe("Autorizações", () => {
+  test("a fila ordena por quem age em seguida, não por data", async ({ page }) => {
+    await page.goto(urlFor("authorizations.queue"));
 
     await expect(
-      page.getByRole("heading", { name: "O convênio pediu documento adicional" }),
+      page.getByRole("heading", { name: /autorizações esperam ação da clínica/ }),
     ).toBeVisible();
-    await expect(page.getByText("Exigido a partir da sexta sessão.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Reenviar ao convênio" })).toBeDisabled();
+
+    // O primeiro cartão precisa ser de ação da clínica, e o mais antigo deles.
+    const first = page.getByRole("article").first();
+    await expect(first.getByText("Ação da clínica")).toBeVisible();
+    await expect(first).toContainText("G-7015");
   });
 
-  test("guia em análise deixa claro que não há ação da clínica", async ({ page }) => {
-    await page.goto(urlFor("finance.invoice-under-review"));
+  test("cada situação diz qual é a próxima ação", async ({ page }) => {
+    await page.goto(urlFor("authorizations.queue"));
 
-    await expect(page.getByRole("heading", { name: "Em análise no convênio" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Reenviar ao convênio" })).toBeDisabled();
+    await expect(page.getByText(/o convênio está avaliando. Nada é esperado da clínica/)).toBeVisible();
+    await expect(page.getByText(/falta documento da clínica. A ação é da operação/)).toBeVisible();
+    await expect(page.getByText(/falta a justificativa de quem pediu/)).toBeVisible();
   });
 
-  test("com documentação completa o reenvio libera e o motivo original continua visível", async ({
-    page,
-  }) => {
-    await page.goto(urlFor("finance.resubmit-allowed"));
+  test("um pacote esgotado trava a autorização inteira, e a tela nomeia qual", async ({ page }) => {
+    await page.goto(urlFor("authorizations.one-package-exhausted"));
 
-    await expect(page.getByRole("button", { name: "Reenviar ao convênio" })).toBeEnabled();
-    // O contexto da recusa não desaparece só porque o problema foi resolvido.
-    await expect(page.getByRole("heading", { name: /TUSS-3001/ })).toBeVisible();
+    await expect(page.getByText(/Sem saldo em Psicologia — 2 sessões semanais/)).toBeVisible();
+    await expect(
+      page.getByText(/A autorização inteira fica indisponível.*mesmo que os outros tenham saldo/),
+    ).toBeVisible();
+    // O pacote com saldo continua mostrando quanto sobra: ele não é o problema.
+    await expect(page.getByText("2 sessões livres")).toBeVisible();
   });
 
-  test("o coordenador lê tudo e não reenvia", async ({ page }) => {
-    await page.goto(urlFor("finance.resubmit-no-permission"));
+  test("capitation não multiplica a quantidade", async ({ page }) => {
+    await page.goto(urlFor("authorizations.capitation"));
 
-    await expect(page.getByText("R$ 1.425,00")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Reenviar ao convênio" })).toBeDisabled();
-    await expect(page.getByText(/não reenvia guias/)).toBeVisible();
+    await expect(page.getByText("7 de 12 usadas")).toBeVisible();
+    await expect(page.getByText(/sem multiplicar pela quantidade de 3/)).toBeVisible();
+  });
+
+  test("validade vencida bloqueia mesmo com saldo", async ({ page }) => {
+    await page.goto(urlFor("authorizations.expired"));
+
+    await expect(page.getByText("vencida há 30 dias")).toBeVisible();
+    await expect(page.getByText(/vale de 01\/06\/2026 a 30\/06\/2026/)).toBeVisible();
+    // O saldo continua visível porque não é ele que trava.
+    await expect(page.getByText("13 sessões livres")).toBeVisible();
+  });
+
+  test("a parcial dá o número que falta, não só um aviso", async ({ page }) => {
+    await page.goto(urlFor("authorizations.partial"));
+
+    await expect(page.getByRole("heading", { name: "8 sessões a menos que o pedido" })).toBeVisible();
+    await expect(page.getByText(/Foram pedidas 16 e o convênio liberou 8/)).toBeVisible();
+    await expect(page.getByText("Autorizada parcialmente")).toBeVisible();
+  });
+
+  test("erro de sincronização não é apresentado como recusa", async ({ page }) => {
+    await page.goto(urlFor("authorizations.sync-error"));
+
+    await expect(page.getByText(/a integração falhou. Reenviar resolve/)).toBeVisible();
+    await expect(
+      page.getByText("Certificado do prestador expirado na comunicação com o convênio."),
+    ).toBeVisible();
+    // Classificada junto com as outras que a clínica precisa resolver.
+    await expect(page.getByRole("article").getByText("Ação da clínica")).toBeVisible();
+  });
+
+  test("a recepção não alcança a central de autorizações", async ({ page }) => {
+    await page.goto(urlFor("authorizations.no-access"));
+
+    await expect(
+      page.getByRole("heading", { name: "Você não tem acesso à central de autorizações" }),
+    ).toBeVisible();
+    await expect(page.getByText(/recebe a ligação do convênio/)).toBeVisible();
+  });
+
+  test("a fila vazia explica o que aparece aqui, e em que ordem", async ({ page }) => {
+    await page.goto(urlFor("authorizations.empty"));
+
+    await expect(page.getByRole("heading", { name: "Nenhuma autorização na fila" })).toBeVisible();
+    await expect(page.getByText(/em ordem de quem precisa agir primeiro/)).toBeVisible();
   });
 });
 
-/* =========================================================== transversais */
-
 test.describe("jornada por teclado", () => {
-  test("da fila até o reenvio sem usar o mouse", async ({ page }) => {
-    await page.goto(urlFor("finance.resubmit-allowed"));
+  test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
+    await page.goto(urlFor("session.pending-signature"));
 
-    const resubmit = page.getByRole("button", { name: "Reenviar ao convênio" });
-    await resubmit.focus();
-    await expect(resubmit).toBeFocused();
+    const sign = page.getByRole("button", { name: "Assinar como Marina Okabe" });
+    await sign.focus();
+    await expect(sign).toBeFocused();
     await page.keyboard.press("Enter");
 
-    await expect(page.getByRole("status").first()).toContainText("reenviada");
+    await expect(page.getByRole("status").first()).toContainText("Assinatura Supervisor");
   });
 
   test("o link de pulo é o primeiro elemento focável", async ({ page }) => {
@@ -685,16 +675,19 @@ test.describe("jornada por teclado", () => {
 });
 
 test.describe("determinismo", () => {
-  for (const scenarioId of ["agenda.day", "patients.list", "finance.queue"]) {
+  for (const scenarioId of ["agenda.day", "patients.list", "authorizations.queue"]) {
     test(`a mesma URL produz a mesma situação em "${scenarioId}"`, async ({ page }) => {
       const url = urlFor(scenarioId);
 
+      // Lê a região de conteúdo inteira, e não uma `tbody`: nem toda situação
+      // é uma tabela, e o determinismo vale para a tela toda — inclusive para
+      // saldos, contagens e datas calculadas.
       await page.goto(url);
-      const first = await page.locator("tbody").innerText();
+      const first = await page.locator("#conteudo").innerText();
 
       await page.goto("about:blank");
       await page.goto(url);
-      const second = await page.locator("tbody").innerText();
+      const second = await page.locator("#conteudo").innerText();
 
       expect(second).toBe(first);
     });
@@ -702,7 +695,7 @@ test.describe("determinismo", () => {
 });
 
 test.describe("navegação por permissão", () => {
-  test("o menu esconde o financeiro de quem atende", async ({ page }) => {
+  test("o menu esconde a central de autorizações de quem atende", async ({ page }) => {
     await page.goto(urlFor("agenda.cancel-no-permission"));
 
     // A terapeuta tem `schedules.list` e `patients.list`, e não tem
@@ -711,7 +704,7 @@ test.describe("navegação por permissão", () => {
     const nav = page.getByLabel("Navegação principal");
     await expect(nav.getByRole("link", { name: "Agenda" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Pacientes" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Financeiro" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Autorizações" })).toHaveCount(0);
   });
 
   test("a recepção alcança agenda e pacientes, e não a central de autorizações", async ({
@@ -725,12 +718,12 @@ test.describe("navegação por permissão", () => {
     const nav = page.getByLabel("Navegação principal");
     await expect(nav.getByRole("link", { name: "Agenda" })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Pacientes" })).toBeVisible();
-    await expect(nav.getByRole("link", { name: "Financeiro" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Autorizações" })).toHaveCount(0);
   });
 
   test("a operação alcança a central de autorizações", async ({ page }) => {
-    await page.goto(urlFor("finance.queue"));
+    await page.goto(urlFor("authorizations.queue"));
 
-    await expect(page.getByRole("link", { name: "Financeiro" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Autorizações" })).toBeVisible();
   });
 });

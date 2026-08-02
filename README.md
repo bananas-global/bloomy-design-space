@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-59 cenários em sete módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+62 cenários em sete módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,7 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
-| **Financeiro** | fila de guias, vazia, fatura em análise, convênio recusado, documentos pendentes, reenvio permitido, sem permissão para reenviar |
+| **Autorizações** | central, vazia, autorizada com saldo, pacote esgotado trava tudo, capitation não multiplica, validade vencida, autorizada parcialmente, erro de sincronização, aguardando documentação, recepção sem acesso |
 
 O módulo **Atendimento** é o que descreve o produto de verdade: o Bloomy é um
 sistema de terapia ABA para autismo, e a sessão — com programas, tentativas,
@@ -58,9 +58,12 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `minor-requires-guardian` | Menor de 18 exige responsável legal completo. |
 | `incomplete-registration-blocks-scheduling` | Campo obrigatório em falta bloqueia agendar. |
 | `restricted-record-requires-permission` | Prontuário restrito exige permissão específica. |
-| `retry-after-document-review` | Reenvio de guia exige documentação completa. |
-| `resubmit-requires-permission` | Só perfis com `authorizations.hub` reenviam. |
-| `denial-reason-always-visible` | Motivo e código da recusa ficam na tela. |
+| `authorization-availability-needs-all-three` | Autorizada, dentro da validade e com saldo em **todos** os pacotes. |
+| `capitation-ignores-quantity` | No capitation o teto é o máximo mensal puro, sem multiplicar. |
+| `partial-authorization-is-not-authorization` | Parcial liberou menos que o pedido, e não pode parecer autorizada. |
+| `sync-error-is-not-denial` | Falha de integração se resolve reenviando, não remontando o pedido. |
+| `pending-status-names-who-acts-next` | Cada espera diz de quem é a próxima ação. |
+| `only-admin-edits-authorization` | Criar, editar e apagar autorização é exclusivo do admin. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

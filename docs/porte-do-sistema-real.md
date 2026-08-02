@@ -163,6 +163,34 @@ Cinco regras, cinco cenários, a tela `InClinic` e vinte testes.
 
 Verde: `pnpm check` e 181 jornadas Playwright.
 
+### 6. Financeiro, parte 1: autorizações TISS — `porte/financeiro-autorizacoes`
+
+Concluída. **Substitui** o módulo Financeiro que existia.
+
+O módulo anterior modelava "guia" com quatro situações inventadas — recusada,
+pendente de documento, em análise, autorizada. O produto tem dez, e quatro delas
+são lidas como recusa quando não são. A diferença entre elas é a diferença entre
+reenviar, anexar documento, escrever justificativa e desistir.
+
+- **Erro de sincronização não é recusa.** É falha da integração; o pedido está
+  correto e reenviar resolve. Tratado como recusa, manda a clínica remontar um
+  pedido certo enquanto o prazo do convênio corre.
+- **Autorização parcial não é autorização.** O convênio liberou menos sessões
+  que o pedido. Pintada de verde, a clínica agenda o que não foi autorizado.
+- **Disponibilidade tem três condições, não uma.** Situação, validade e saldo —
+  e a terceira usa `Enum.all?`: um único pacote esgotado trava a autorização
+  inteira, mesmo com saldo nos outros.
+- **Capitation não multiplica.** O teto é o máximo mensal puro. Aplicar a
+  multiplicação cria saldo que o convênio não paga.
+
+Foram removidos `src/rules/finance.ts`, `src/fixtures/finance.ts`,
+`src/scenarios/finance.ts`, `ClaimList` e `ClaimDetail`, e o contrato `Claim`.
+O que era aproximação virou o modelo real.
+
+Seis regras, dez cenários, a tela `AuthorizationHub` e vinte e quatro testes.
+
+Verde: `pnpm check` e 188 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

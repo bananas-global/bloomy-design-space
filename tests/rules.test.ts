@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  Authorization,
+  AuthorizationPackage,
   ClinicalSession,
   ClinicalSessionData,
-  Claim,
   Criteria,
   DaySchedule,
   InClinicData,
@@ -24,7 +25,6 @@ import {
   wouldConflict,
 } from "../src/rules/agenda.js";
 import { canReadRecord, canSchedule, missingRequiredFields } from "../src/rules/patients.js";
-import { canResubmit, documentProgress, missingDocuments } from "../src/rules/finance.js";
 import {
   canRevert,
   canSign,
@@ -67,6 +67,17 @@ import {
   schedulesAfterCheckout,
   visibleTabs,
 } from "../src/rules/inClinic.js";
+import {
+  actor,
+  canEditAuthorization,
+  canScheduleAgainst,
+  daysUntilExpiry,
+  maxAllowed,
+  nextActionFor,
+  queueOrder,
+  remaining,
+  shortfall,
+} from "../src/rules/authorizations.js";
 
 /**
  * Testes das regras de negócio.
@@ -261,72 +272,6 @@ describe("restricted-record-requires-permission", () => {
   it("prontuário não restrito segue a permissão comum", () => {
     expect(canReadRecord(patient(), ["patients.see_clinic_overview"]).allowed).toBe(true);
     expect(canReadRecord(patient(), ["patients.show"]).allowed).toBe(false);
-  });
-});
-
-/* ============================================================== financeiro */
-
-function claim(overrides: Partial<Claim> = {}): Claim {
-  return {
-    id: "GUI-1",
-    patient: { id: "pt-5", name: "Júlia Prado", birthDate: "1966-06-30" },
-    procedure: "Ressonância",
-    amountCents: 142_500,
-    insurer: "SulAmérica",
-    status: "denied",
-    submittedAt: "2026-07-21T09:05:00.000-03:00",
-    documents: [
-      { id: "d-1", name: "Guia de atendimento", received: true },
-      { id: "d-2", name: "Relatório clínico assinado", received: false },
-    ],
-    history: [],
-    ...overrides,
-  };
-}
-
-describe("retry-after-document-review", () => {
-  const operation = ["authorizations.hub"];
-
-  it("bloqueia reenvio nomeando os documentos que faltam", () => {
-    const result = canResubmit(claim(), operation);
-    expect(result.allowed).toBe(false);
-    expect(result.reason).toBe("Falta anexar: Relatório clínico assinado.");
-  });
-
-  it("libera quando toda a documentação está anexada", () => {
-    const complete = claim({
-      documents: claim().documents.map((d) => ({ ...d, received: true })),
-    });
-    expect(canResubmit(complete, operation).allowed).toBe(true);
-  });
-
-  it("vale também para pendência de documento, não só para recusa", () => {
-    const pending = claim({ status: "pending_documents" });
-    expect(canResubmit(pending, operation).reason).toMatch(/Falta anexar/);
-  });
-
-  it("não reenvia guia em análise nem autorizada", () => {
-    expect(canResubmit(claim({ status: "under_review" }), operation).reason).toMatch(
-      /recusada ou com pendência/,
-    );
-    expect(canResubmit(claim({ status: "approved" }), operation).allowed).toBe(false);
-  });
-});
-
-describe("resubmit-requires-permission", () => {
-  it("bloqueia por permissão antes de olhar a documentação", () => {
-    const complete = claim({ documents: claim().documents.map((d) => ({ ...d, received: true })) });
-    expect(canResubmit(complete, ["patients.list"]).reason).toMatch(/não reenvia guias/);
-  });
-});
-
-describe("progresso de documentação", () => {
-  it("conta recebidos e total", () => {
-    expect(documentProgress(claim())).toEqual({ received: 1, total: 2 });
-  });
-
-  it("lista só o que falta", () => {
-    expect(missingDocuments(claim()).map((d) => d.name)).toEqual(["Relatório clínico assinado"]);
   });
 });
 
@@ -1342,5 +1287,210 @@ describe("alerta de presença", () => {
     expect(
       presenceAlert({ ...base, checkoutAt: "2026-07-30T10:00:00.000-03:00", schedules: [] }),
     ).toBeUndefined();
+  });
+});
+
+/* =========================================================== autorizações */
+
+/**
+ * A autorização decide se a sessão pode ser marcada e, depois, se pode ser
+ * cobrada. As três condições de disponibilidade são checadas juntas no
+ * monólito, numa consulta só — e a terceira usa `Enum.all?`, que é o detalhe
+ * que faz um pacote esgotado travar a autorização inteira.
+ */
+
+function authorizationPackage(
+  overrides: Partial<AuthorizationPackage> & { id: string },
+): AuthorizationPackage {
+  return {
+    name: "Terapia ABA",
+    packageType: "package",
+    quantity: 4,
+    maxByMonth: 4,
+    executions: 0,
+    ...overrides,
+  };
+}
+
+function auth(overrides: Partial<Authorization> = {}): Authorization {
+  return {
+    id: "aut-1",
+    guideNumber: "G-0001",
+    patient: { id: "p", name: "Théo Andrade Lins", birthDate: "2019-11-04" },
+    healthCare: "Bradesco Saúde",
+    status: "authorized",
+    kind: "health_care",
+    category: "monthly",
+    guideType: "request",
+    validFrom: "2026-07-01",
+    validUntil: "2026-07-31",
+    requestDate: "2026-06-24",
+    requestedSessions: 16,
+    packages: [authorizationPackage({ id: "p1" })],
+    errors: [],
+    ...overrides,
+  };
+}
+
+const HOJE = "2026-07-30T09:00:00.000-03:00";
+
+describe("capitation-ignores-quantity", () => {
+  it("multiplica pela quantidade nos tipos comuns", () => {
+    expect(maxAllowed(authorizationPackage({ id: "p", quantity: 4, maxByMonth: 4 }))).toBe(16);
+    expect(
+      maxAllowed(authorizationPackage({ id: "p", packageType: "free_for_service", quantity: 2, maxByMonth: 5 })),
+    ).toBe(10);
+  });
+
+  it("no capitation o teto é o máximo mensal puro", () => {
+    // Quantidade 3 não vira 36: é valor fixo por paciente.
+    expect(
+      maxAllowed(
+        authorizationPackage({ id: "p", packageType: "capitation", quantity: 3, maxByMonth: 12 }),
+      ),
+    ).toBe(12);
+  });
+
+  it("quantidade zero conta como um, como no monólito", () => {
+    expect(maxAllowed(authorizationPackage({ id: "p", quantity: 0, maxByMonth: 4 }))).toBe(4);
+  });
+});
+
+describe("authorization-availability-needs-all-three", () => {
+  it("libera quando situação, validade e saldo estão certos", () => {
+    expect(canScheduleAgainst(auth(), HOJE).allowed).toBe(true);
+  });
+
+  it("bloqueia por situação antes de olhar validade e saldo", () => {
+    const result = canScheduleAgainst(auth({ status: "denied" }), HOJE);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Negada/);
+  });
+
+  it("bloqueia fora da janela, citando as duas datas", () => {
+    const result = canScheduleAgainst(
+      auth({ validFrom: "2026-06-01", validUntil: "2026-06-30" }),
+      HOJE,
+    );
+    expect(result.reason).toMatch(/vale de 01\/06\/2026 a 30\/06\/2026/);
+  });
+
+  it("a janela inclui as duas pontas", () => {
+    const janela = auth({ validFrom: "2026-07-30", validUntil: "2026-07-30" });
+    expect(canScheduleAgainst(janela, HOJE).allowed).toBe(true);
+  });
+
+  it("um pacote esgotado trava a autorização inteira", () => {
+    // É a consequência do `Enum.all?`: saldo em um não compensa a falta no outro.
+    const mista = auth({
+      packages: [
+        authorizationPackage({ id: "p1", name: "Psicologia", quantity: 2, maxByMonth: 4, executions: 8 }),
+        authorizationPackage({ id: "p2", name: "Fonoaudiologia", quantity: 1, maxByMonth: 4, executions: 2 }),
+      ],
+    });
+    const result = canScheduleAgainst(mista, HOJE);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Sem saldo em Psicologia/);
+    expect(result.reason).toMatch(/mesmo que os outros tenham saldo/);
+  });
+
+  it("distingue todos esgotados de alguns esgotados", () => {
+    const tudoEsgotado = auth({
+      packages: [authorizationPackage({ id: "p1", name: "Terapia ABA", executions: 16 })],
+    });
+    expect(canScheduleAgainst(tudoEsgotado, HOJE).reason).toMatch(/Sem saldo em nenhum pacote/);
+  });
+
+  it("conta o que sobra sem cair para negativo", () => {
+    expect(remaining(authorizationPackage({ id: "p", executions: 20 }))).toBe(0);
+    expect(remaining(authorizationPackage({ id: "p", executions: 9 }))).toBe(7);
+  });
+});
+
+describe("partial-authorization-is-not-authorization", () => {
+  it("devolve quantas sessões faltaram em relação ao pedido", () => {
+    const parcial = auth({
+      status: "partially_authorized",
+      requestedSessions: 16,
+      packages: [authorizationPackage({ id: "p1", quantity: 2, maxByMonth: 4 })],
+    });
+    expect(shortfall(parcial)).toBe(8);
+  });
+
+  it("não inventa corte em autorização que não é parcial", () => {
+    expect(shortfall(auth())).toBeUndefined();
+    expect(shortfall(auth({ status: "denied" }))).toBeUndefined();
+  });
+
+  it("não devolve corte quando o liberado alcança o pedido", () => {
+    const semCorte = auth({
+      status: "partially_authorized",
+      requestedSessions: 8,
+      packages: [authorizationPackage({ id: "p1", quantity: 2, maxByMonth: 4 })],
+    });
+    expect(shortfall(semCorte)).toBeUndefined();
+  });
+});
+
+describe("pending-status-names-who-acts-next", () => {
+  it("classifica de quem é a próxima ação", () => {
+    expect(actor("waiting_provider_documentation")).toBe("clinic");
+    expect(actor("sync_error")).toBe("clinic");
+    expect(actor("denied")).toBe("clinic");
+    expect(actor("waiting_requester_justification")).toBe("requester");
+    expect(actor("analysing")).toBe("insurer");
+    expect(actor("pending")).toBe("insurer");
+    expect(actor("authorized")).toBe("none");
+    expect(actor("invoiced")).toBe("none");
+  });
+
+  it("sync_error diz que reenviar resolve, e não que foi recusado", () => {
+    expect(nextActionFor("sync_error")).toMatch(/Reenviar resolve/);
+    expect(nextActionFor("sync_error")).not.toMatch(/negou/);
+  });
+
+  it("as duas esperas por pendência nomeiam responsáveis diferentes", () => {
+    expect(nextActionFor("waiting_provider_documentation")).toMatch(/ação é da operação/);
+    expect(nextActionFor("waiting_requester_justification")).toMatch(
+      /ação é do profissional solicitante/,
+    );
+  });
+});
+
+describe("ordem da fila", () => {
+  it("põe o que espera a clínica antes do que espera o convênio", () => {
+    const fila = [
+      auth({ id: "analise", status: "analysing", requestDate: "2026-07-01" }),
+      auth({ id: "doc", status: "waiting_provider_documentation", requestDate: "2026-07-20" }),
+      auth({ id: "justificativa", status: "waiting_requester_justification", requestDate: "2026-07-05" }),
+    ];
+    expect(queueOrder(fila).map((item) => item.id)).toEqual(["doc", "justificativa", "analise"]);
+  });
+
+  it("desempata pela data do pedido, da mais antiga para a mais nova", () => {
+    const fila = [
+      auth({ id: "nova", status: "sync_error", requestDate: "2026-07-28" }),
+      auth({ id: "antiga", status: "denied", requestDate: "2026-07-02" }),
+    ];
+    expect(queueOrder(fila).map((item) => item.id)).toEqual(["antiga", "nova"]);
+  });
+});
+
+describe("only-admin-edits-authorization", () => {
+  it("bloqueia quem opera a central mas não é admin", () => {
+    const result = canEditAuthorization(["authorizations.hub"]);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Só o admin edita autorização/);
+  });
+
+  it("libera o admin", () => {
+    expect(canEditAuthorization(["authorizations.edit"]).allowed).toBe(true);
+  });
+});
+
+describe("validade", () => {
+  it("conta os dias até vencer, e o negativo significa vencida", () => {
+    expect(daysUntilExpiry(auth({ validUntil: "2026-08-05" }), HOJE)).toBe(6);
+    expect(daysUntilExpiry(auth({ validUntil: "2026-06-30" }), HOJE)).toBe(-30);
   });
 });

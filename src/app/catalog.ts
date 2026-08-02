@@ -7,21 +7,21 @@ import { programFixtures } from "../fixtures/programs.js";
 import { protocolFixtures } from "../fixtures/protocols.js";
 import { inClinicFixtures } from "../fixtures/inClinic.js";
 import { patientFixtures } from "../fixtures/patients.js";
-import { financeFixtures } from "../fixtures/finance.js";
+import { authorizationFixtures } from "../fixtures/authorizations.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
 import { inClinicRules } from "../rules/inClinic.js";
 import { patientRules } from "../rules/patients.js";
-import { financeRules } from "../rules/finance.js";
+import { authorizationRules } from "../rules/authorizations.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
 import { protocolScenarios } from "../scenarios/protocols.js";
 import { inClinicScenarios } from "../scenarios/inClinic.js";
 import { patientScenarios } from "../scenarios/patients.js";
-import { financeScenarios } from "../scenarios/finance.js";
+import { authorizationScenarios } from "../scenarios/authorizations.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -108,25 +108,43 @@ export const modules: Module[] = [
     ],
   },
   {
-    id: "finance",
-    name: "Financeiro",
-    description: "Guias, recusas de convênio e pendências de documentação.",
+    id: "authorizations",
+    name: "Autorizações",
+    description:
+      "O TISS: o que o convênio liberou, por quanto tempo vale, quantas sessões sobram e de quem é a próxima ação.",
     flows: [
       {
-        id: "recover-denied-claim",
-        title: "Recuperar uma guia recusada",
+        id: "work-the-queue",
+        title: "Trabalhar a fila da central",
         description:
-          "Da fila até o reenvio: o caminho que decide se o faturamento vira receita ou perda.",
+          "Da fila ordenada por responsabilidade até as três razões pelas quais uma autorização deixa de servir.",
         steps: [
-          { scenario: "finance.queue", label: "Escolher pela urgência" },
+          { scenario: "authorizations.queue", label: "Ver o que espera ação da clínica" },
           {
-            scenario: "finance.insurance-denied",
-            label: "Ler a recusa e anexar o que falta",
-            decision: "Toda a documentação exigida está anexada?",
+            scenario: "authorizations.with-balance",
+            label: "Conferir se serve para agendar",
+            decision: "Qual das três condições falhou?",
             branches: {
-              "Documentação completa": "finance.resubmit-allowed",
-              "Pendência, não recusa": "finance.pending-documents",
-              "Perfil sem permissão": "finance.resubmit-no-permission",
+              "Saldo esgotado num pacote": "authorizations.one-package-exhausted",
+              "Fora da validade": "authorizations.expired",
+              "Liberou menos que o pedido": "authorizations.partial",
+            },
+          },
+        ],
+      },
+      {
+        id: "not-a-denial",
+        title: "Distinguir o que não é recusa",
+        description:
+          "Três situações que parecem negativa do convênio e pedem ações completamente diferentes.",
+        steps: [
+          {
+            scenario: "authorizations.sync-error",
+            label: "Ler o que a integração devolveu",
+            decision: "A pendência é técnica, da clínica ou de quem pediu?",
+            branches: {
+              "Falta documento da clínica": "authorizations.waiting-documentation",
+              "Perfil sem acesso à central": "authorizations.no-access",
             },
           },
         ],
@@ -272,7 +290,7 @@ export const scenarios: Scenario[] = [
   ...protocolScenarios,
   ...inClinicScenarios,
   ...patientScenarios,
-  ...financeScenarios,
+  ...authorizationScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -282,7 +300,7 @@ export const fixtures: Fixture[] = [
   ...protocolFixtures,
   ...inClinicFixtures,
   ...patientFixtures,
-  ...financeFixtures,
+  ...authorizationFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -292,7 +310,7 @@ export const rules: Rule[] = [
   ...protocolRules,
   ...inClinicRules,
   ...patientRules,
-  ...financeRules,
+  ...authorizationRules,
 ];
 
 export { personas };

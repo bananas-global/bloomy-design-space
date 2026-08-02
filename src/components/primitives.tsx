@@ -1,5 +1,9 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import type { AppointmentStatus, ClaimStatus, ScheduleStatus } from "../contracts/index.js";
+import type {
+  AppointmentStatus,
+  AuthorizationStatus,
+  ScheduleStatus,
+} from "../contracts/index.js";
 
 /**
  * Componentes locais do Bloomy.
@@ -141,16 +145,30 @@ export function scheduleStatusLabel(status: ScheduleStatus): string {
   return SCHEDULE_STATUS[status].label;
 }
 
-const CLAIM_STATUS: Record<ClaimStatus, { label: string; tone: Tone }> = {
-  under_review: { label: "Em análise", tone: "warn" },
-  denied: { label: "Recusada", tone: "danger" },
-  pending_documents: { label: "Documentos pendentes", tone: "pending" },
-  approved: { label: "Autorizada", tone: "ok" },
-  resubmitted: { label: "Reenviada", tone: "info" },
+/**
+ * Situação da autorização TISS, com os rótulos do produto.
+ *
+ * Quatro das dez são frequentemente lidas como recusa e não são. O tom separa
+ * três grupos: o que espera a clínica agir (pendência), o que espera o convênio
+ * (aviso), e o que já foi decidido. `partially_authorized` fica em tom de aviso
+ * de propósito — pintá-la de verde faz a clínica agendar o que não foi
+ * autorizado.
+ */
+const AUTHORIZATION_STATUS: Record<AuthorizationStatus, { label: string; tone: Tone }> = {
+  pending: { label: "Pendente", tone: "info" },
+  analysing: { label: "Em análise", tone: "info" },
+  authorized: { label: "Autorizada", tone: "ok" },
+  partially_authorized: { label: "Autorizada parcialmente", tone: "warn" },
+  denied: { label: "Negada", tone: "danger" },
+  waiting_requester_justification: { label: "Aguardando justificativa", tone: "pending" },
+  waiting_provider_documentation: { label: "Aguardando documentação", tone: "pending" },
+  sync_error: { label: "Erro na sincronização", tone: "danger" },
+  invoiced: { label: "Faturada", tone: "neutral" },
+  cancelled: { label: "Cancelada", tone: "neutral" },
 };
 
-export function ClaimStatusChip({ status }: { status: ClaimStatus }) {
-  const { label, tone } = CLAIM_STATUS[status];
+export function AuthorizationStatusChip({ status }: { status: AuthorizationStatus }) {
+  const { label, tone } = AUTHORIZATION_STATUS[status];
   return <Chip tone={tone}>{label}</Chip>;
 }
 

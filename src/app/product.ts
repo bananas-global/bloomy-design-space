@@ -10,8 +10,7 @@ import { ProtocolApplication } from "../screens/ProtocolApplication.js";
 import { InClinic } from "../screens/InClinic.js";
 import { PatientList } from "../screens/PatientList.js";
 import { PatientDetail } from "../screens/PatientDetail.js";
-import { ClaimList } from "../screens/ClaimList.js";
-import { ClaimDetail } from "../screens/ClaimDetail.js";
+import { AuthorizationHub } from "../screens/AuthorizationHub.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -42,8 +41,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients/:id", screen: PatientDetail },
     { path: "/patients/:id/plan", screen: InterventionPlanScreen },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
-    { path: "/finance", screen: ClaimList },
-    { path: "/finance/claims/:id", screen: ClaimDetail },
+    { path: "/authorizations", screen: AuthorizationHub },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build
