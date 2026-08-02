@@ -43,6 +43,66 @@ Superfície medida em 2026-08-01:
 5. **Portais externos** — operadora, responsável legal, público (auto-checkin,
    anamnese, NPS).
 
+## Como ler este documento
+
+Três partes, e elas servem a leitores diferentes.
+
+- **O andamento** é o diário: uma entrada por rodada, na ordem em que aconteceu,
+  incluindo o que eu errei e como descobri. Serve para entender *como* o porte
+  foi feito, e vale mais pelas correções do que pelos acertos.
+- **Os achados** são a tabela do fim: uma linha por observação sobre o sistema
+  real, com o arquivo e a linha. Serve para levar ao time. Um script confere
+  todas as citações contra o monólito a cada `pnpm check`.
+- **Os padrões**, logo abaixo, agrupam os achados que se repetem. É a parte mais
+  curta e a mais útil: quase nenhum achado é isolado.
+
+Onde eu me enganei, a entrada diz isso com todas as letras e a linha da tabela
+começa com **Retratado**, **Reduzido** ou **Corrigido**. Isso aconteceu quatro
+vezes até agora, e as quatro estão marcadas.
+
+## Padrões que se repetem
+
+Quase nenhum achado é isolado. Cinco famílias respondem pela maioria:
+
+**1. O valor que diria o que aconteceu é calculado e jogado fora.**
+A anamnese informa sucesso sem ter terminado; o registro de geolocalização é
+montado e descartado; o worker conta as falhas e devolve `:ok`; o motivo que a
+operadora deu para recusar é descartado no caminho; a lista de atendimentos que
+ficaram sem guia é montada e o retorno é ignorado; a rotina da madrugada reporta
+o tamanho da fila em vez do que concluiu; a linha de registro do atendimento é
+inserida e o resultado do insert não é olhado.
+*Achados 14, 30, 48, 58, 60, 65, 68.*
+
+**2. O nome diz o contrário do comportamento.**
+`valid_register?` devolve `true` para texto vazio; `unanswered_count` guarda as
+respondidas; `comments_reviewed` é marcado pela própria rotina, e nasce `true`.
+Nos três, o comportamento está certo e só o nome mente — o que é pior, porque
+quem lê o nome não vai conferir.
+*Achados 5, 9, 63.*
+
+**3. A verificação que explicaria o problema é justamente a que não roda.**
+O changeset do endereço sabe dizer que o CEP é obrigatório, e a guarda o impede
+de rodar exatamente quando ele reclamaria. A validação de campo roda antes da
+limpeza, então confere um texto e grava outro. A exceção do administrador é
+comparada com um valor que o sistema nunca produz.
+*Achados 70, 71, 72, 75, 78, 79.*
+
+**4. O sistema sabe o próprio fuso e pergunta a data para outro.**
+`CalendarHelper.local_timezone/0` existe e é usado 104 vezes. `Date.utc_today()`
+é usado 205 vezes fora de worker. Das 21h à meia-noite as 205 estão erradas ao
+mesmo tempo. **Nos workers a escolha está certa** — o cron do Oban roda no fuso
+da clínica —, e foi por não ter verificado isso que publiquei dois achados que
+depois retratei.
+*Achados 22, 33, 38, 80, 82, 83, 84.*
+
+**5. O caminho comum não produz sintoma nenhum.**
+A ordem errada de validação só aparece quando alguém cola um espaço. O fuso só
+erra em três das vinte e quatro horas. O endereço só se perde quando falta o
+CEP. É a forma mais difícil de defeito, e explica por que todos sobreviveram
+tanto tempo: **eles acertam quase sempre.**
+*Transversal.*
+
+
 ## Andamento
 
 ### 1. Fundação — `porte/fundacao-papeis-reais`
@@ -1754,7 +1814,7 @@ por quê: eles não estão em workers.
 | Achado | Onde | Por que continua |
 | --- | --- | --- |
 | 22 | `mount` da tela de Supervisão | roda quando a pessoa abre a página, a qualquer hora |
-| 24 | `mount` do Mapa da unidade | idem |
+| — | período padrão do Mapa da unidade | idem. **Corrigido na rodada 65:** eu havia numerado esta linha como “24”, e o achado 24 é sobre faixa de horas. O período do mapa nunca teve número próprio; está coberto pelo achado 82. |
 | 33 | `has_open_checkin?`, via API | idem |
 | 38 | corte da inativação de paciente | compara data local com `start_time` em UTC |
 
@@ -2117,6 +2177,48 @@ arquivos sem ninguém reclamar.
 4 achados, 4 cenários, 4 regras testáveis, 10 testes de regra, 5 jornadas.
 
 
+### 65. Consolidação: o que o documento diz de si mesmo
+
+Última rodada antes do prazo. Em vez de abrir superfície nova, revisei o que
+publiquei.
+
+**Achei uma inconsistência minha.** Na rodada 57, ao listar os quatro achados de
+fuso que continuavam de pé depois das duas retratações, escrevi “24 — `mount` do
+Mapa da unidade”. O achado 24 é sobre **faixa de horas**, não sobre fuso; o
+período padrão do mapa nunca teve número próprio. A linha está corrigida, e o
+caso agora está coberto pelo achado 82.
+
+**Cruzei o 82 com os anteriores.** Ele generaliza 22, 33, 38 e 80: são
+ocorrências do mesmo padrão que a varredura mediu inteiro. Sem o cruzamento, uma
+leitura de fora conta cinco problemas onde há um, de tamanho conhecido.
+
+E escrevi duas seções que faltavam para o documento se sustentar sozinho:
+
+- **Como ler** — três partes para três leitores. O diário serve para entender
+  como o porte foi feito, e vale mais pelas correções que pelos acertos; a tabela
+  serve para levar ao time; os padrões são a parte mais curta e a mais útil.
+- **Padrões que se repetem** — cinco famílias que respondem pela maioria dos 85
+  achados. Escrevê-la mudou o que eu achava do trabalho: **quase nenhum achado é
+  isolado.** O valor que diria o que aconteceu sendo jogado fora aparece sete
+  vezes. O nome que mente, três. A verificação que não roda, seis. O fuso, sete.
+
+A quinta família não é um mecanismo, é a explicação de todas: **o caminho comum
+não produz sintoma nenhum.** A validação fora de ordem só erra quando alguém cola
+um espaço; o fuso só erra em três das vinte e quatro horas; o endereço só se
+perde quando falta o CEP. Foi o que mais me custou a entender e é o que precisa
+ser dito primeiro para alguém de fora: esses defeitos sobreviveram porque
+**acertam quase sempre**.
+
+Ao montar a família do fuso tive de escrever, junto, que **nos workers a escolha
+está certa** — o cron do Oban roda no fuso da clínica. Foi por não ter verificado
+isso antes que publiquei dois achados e depois os retratei. A ressalva fica na
+própria seção, para que ninguém repita meu erro lendo a família como se fosse
+uniforme.
+
+1 inconsistência corrigida, 1 achado cruzado com quatro anteriores, 2 seções
+novas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2205,7 +2307,7 @@ bugs do Design Space; são observações sobre o produto.
 | 79 | O único lugar que produziria a string esperada é ele próprio inalcançável: no login, `if "admin" in user.roles` compara texto com lista de átomos e é sempre falso. O seletor de papel tem o mesmo problema — recebe `params["role"]` como texto e o barra em `role in user.roles`. Três caminhos, a mesma confusão. | `lib/bloomy_web/user_auth.ex:42-48,74-82`, `lib/bloomy_web/backoffice/controllers/user_session_controller.ex:63` |
 | 80 | A mesma linha mede hoje com `Date.utc_today()`. A clínica é UTC−3 o ano inteiro, então das 21h à meia-noite o sistema já conta amanhã e recusa a data de hoje como passada — com a mensagem "Não pode ser uma data passada", que nesse caso é falsa. | `lib/bloomy/patients/patient.ex:202` |
 | 81 | Os dois defeitos se cobrem. Na janela das 21h à meia-noite ninguém desativa com a data de hoje, e a saída prevista para o caso — o administrador — é exatamente a que não funciona. Corrigir só um dos dois lados não resolve. | `lib/bloomy/patients/patient.ex:194-206` |
-| 82 | `Date.utc_today()` aparece **205 vezes fora de worker, em 133 arquivos**, enquanto `CalendarHelper.local_timezone/0` — que devolve `"America/Sao_Paulo"` e está escrito no sistema — é usado 104 vezes. Das 21h à meia-noite, as 205 respostas estão um dia à frente simultaneamente. Não é um defeito num lugar: é o jeito padrão de perguntar a data. | `lib/bloomy/calendar_helper.ex:40` e 133 arquivos |
+| 82 | **Generaliza os achados 22, 33, 38 e 80, e o período do Mapa da unidade.** `Date.utc_today()` aparece **205 vezes fora de worker, em 133 arquivos**, enquanto `CalendarHelper.local_timezone/0` — que devolve `"America/Sao_Paulo"` e está escrito no sistema — é usado 104 vezes. Das 21h à meia-noite, as 205 respostas estão um dia à frente simultaneamente. Não é um defeito num lugar: é o jeito padrão de perguntar a data. | `lib/bloomy/calendar_helper.ex:40` e 133 arquivos |
 | 83 | No chat, a linha que decide se a data é hoje pergunta a UTC e a **linha seguinte** formata a mesma data no fuso da clínica. As duas formas convivem no mesmo componente — prova de que ninguém escolheu UTC, e de que a correção precisa de alcance, não de decisão. | `lib/bloomy_web/backoffice/live/chat_live/chat_modal.ex:61,66` |
 | 84 | O campo de data de encerramento do mapa de horas usa `min={Date.utc_today()}`. Depois das 21h o dia de hoje deixa de ser selecionável no calendário do próprio formulário — sem mensagem nenhuma para interpretar. | `lib/bloomy_web/backoffice/live/patient_live/components/hour_map/finish_modal.ex:25` |
 | 85 | A idade do paciente é `floor(Date.diff(hoje, nascimento) / 365)`, em oito telas. Como o ano tem 365,2425 dias, a idade vira cedo — medido: três dias antes do aniversário aos doze anos, quatro aos vinte. A idade é faixa de protocolo e critério do que a operadora autoriza. | `lib/bloomy_web/backoffice/live/patient_live/components/card_header.ex:54` |
