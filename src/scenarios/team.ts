@@ -38,7 +38,7 @@ export const teamScenarios: Scenario[] = [
     route: "/team",
     persona: "coordinator",
     fixture: "team-supervised",
-    rules: ["supervision-link-defines-second-signature"],
+    rules: ["supervision-link-defines-second-signature", "one-supervision-link-per-pair"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     preconditions: [

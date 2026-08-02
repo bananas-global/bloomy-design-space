@@ -16,7 +16,7 @@ export const inClinicScenarios: Scenario[] = [
     route: "/in-clinic",
     persona: "attendant",
     fixture: "in-clinic-morning",
-    rules: ["checkin-marks-later-schedules-ready", "checkin-marks-earlier-schedules-delayed"],
+    rules: ["checkin-marks-later-schedules-ready", "checkin-marks-earlier-schedules-delayed", "one-active-checkin-per-patient"],
     a11y: {
       keyboard: "full",
       contrast: "AA",
@@ -44,6 +44,7 @@ export const inClinicScenarios: Scenario[] = [
     route: "/in-clinic",
     persona: "attendant",
     fixture: "in-clinic-nothing-ready",
+    rules: ["checkout-returns-schedules-to-scheduled"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     preconditions: ["Paciente com check-in às 09:30 e nenhum agendamento no dia."],

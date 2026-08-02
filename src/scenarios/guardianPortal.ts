@@ -62,7 +62,7 @@ export const guardianPortalScenarios: Scenario[] = [
     route: "/guardian",
     persona: "applicator",
     fixture: "guardian-plan-accepted",
-    rules: ["plan-acceptance-records-who-when-and-what"],
+    rules: ["plan-acceptance-records-who-when-and-what", "plans-cannot-overlap-for-a-patient"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [

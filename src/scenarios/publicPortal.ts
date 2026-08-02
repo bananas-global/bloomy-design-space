@@ -128,7 +128,7 @@ export const publicPortalScenarios: Scenario[] = [
     route: "/kiosk",
     persona: "applicator",
     fixture: "kiosk-unit-not-found",
-    rules: ["kiosk-distinguishes-three-failures"],
+    rules: ["kiosk-distinguishes-three-failures", "kiosk-never-goes-back"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [
@@ -145,7 +145,7 @@ export const publicPortalScenarios: Scenario[] = [
     route: "/nps",
     persona: "applicator",
     fixture: "nps-invite",
-    rules: ["nps-rating-is-zero-to-ten"],
+    rules: ["nps-rating-is-zero-to-ten", "nps-code-identifies-the-invite"],
     a11y: {
       keyboard: "full",
       contrast: "AA",

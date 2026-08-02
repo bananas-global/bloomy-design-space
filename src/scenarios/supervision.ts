@@ -17,7 +17,7 @@ export const supervisionScenarios: Scenario[] = [
     route: "/supervision",
     persona: "coordinator",
     fixture: "supervision-default-period",
-    rules: ["supervision-defaults-to-the-past"],
+    rules: ["supervision-defaults-to-the-past", "today-is-measured-in-utc"],
     a11y: {
       keyboard: "full",
       contrast: "AA",

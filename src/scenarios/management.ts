@@ -16,7 +16,7 @@ export const managementScenarios: Scenario[] = [
     route: "/management",
     persona: "coordinator",
     fixture: "management-monday",
-    rules: ["management-fronts-have-owners"],
+    rules: ["management-fronts-have-owners", "patient-without-clinical-owner-drifts"],
     a11y: {
       keyboard: "full",
       contrast: "AA",
