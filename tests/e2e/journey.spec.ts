@@ -824,6 +824,83 @@ test.describe("Faturas", () => {
   });
 });
 
+test.describe("Equipe", () => {
+  test("o cadastro diz o que decide em outros módulos", async ({ page }) => {
+    await page.goto(urlFor("team.supervision-defines-signature"));
+
+    await expect(page.getByRole("heading", { name: "O que este cadastro decide" })).toBeVisible();
+    await expect(
+      page.getByText(/segunda assinatura, de Clara Vidigal.*vem do vínculo de estágio/),
+    ).toBeVisible();
+    await expect(page.getByText("— exige assinatura nas sessões")).toBeVisible();
+  });
+
+  test("o profissional a definir não é um cadastro incompleto", async ({ page }) => {
+    await page.goto(urlFor("team.tbd"));
+
+    await expect(page.getByRole("heading", { name: "Espaço reservado na agenda" })).toBeVisible();
+    await expect(page.getByText(/exige apenas nome e especialidade/)).toBeVisible();
+    // O aviso de cadastro incompleto não pode aparecer: é outro tipo de cadastro.
+    await expect(page.getByText(/Cadastro incompleto/)).toHaveCount(0);
+  });
+
+  test("o cadastro comum incompleto conta e nomeia os campos", async ({ page }) => {
+    await page.goto(urlFor("team.incomplete"));
+
+    await expect(
+      page.getByRole("heading", { name: "Cadastro incompleto: 6 campos faltando" }),
+    ).toBeVisible();
+    await expect(page.getByText(/Falta CPF, data de nascimento/)).toBeVisible();
+  });
+
+  test("o contrato por hora acusa a taxa que falta e a consequência", async ({ page }) => {
+    await page.goto(urlFor("team.contract-incomplete"));
+
+    await expect(page.getByRole("heading", { name: "Contrato incompleto" })).toBeVisible();
+    await expect(page.getByText(/Falta hora administrativa especial/)).toBeVisible();
+    await expect(page.getByText(/descoberto pelo profissional, no aceite/)).toBeVisible();
+    await expect(page.getByText("não informado")).toBeVisible();
+  });
+
+  test("hora administrativa zerada é válida no contrato fixo", async ({ page }) => {
+    await page.goto(urlFor("team.fixed-contract-allows-zero"));
+
+    const clara = page.getByRole("article").filter({ hasText: "Clara Vidigal" });
+    await expect(clara.getByText(/quem tem mensalidade não cobra hora administrativa à parte/)).toBeVisible();
+    await expect(clara.getByRole("heading", { name: "Contrato incompleto" })).toHaveCount(0);
+  });
+
+  test("o contrato sem nota explica o fechamento curto do outro módulo", async ({ page }) => {
+    await page.goto(urlFor("team.no-invoice-contract"));
+
+    await expect(
+      page.getByText(/fechamento mensal pula as etapas de nota fiscal/),
+    ).toBeVisible();
+  });
+
+  test("desativar sem data explica o que a data separa", async ({ page }) => {
+    await page.goto(urlFor("team.deactivation-without-date"));
+
+    const botao = page.getByRole("button", { name: "Desativar profissional" });
+    await expect(botao).toBeDisabled();
+    await expect(page.getByText(/separa o histórico do que ainda vale/)).toBeVisible();
+  });
+
+  test("quem atende não alcança a lista de profissionais", async ({ page }) => {
+    await page.goto(urlFor("team.no-access"));
+
+    await expect(page.getByRole("heading", { name: "Você não tem acesso à equipe" })).toBeVisible();
+  });
+
+  test("a unidade sem profissionais explica o vazio", async ({ page }) => {
+    await page.goto(urlFor("team.empty"));
+
+    await expect(
+      page.getByRole("heading", { name: "Nenhum profissional vinculado" }),
+    ).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

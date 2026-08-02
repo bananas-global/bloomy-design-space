@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-79 cenários em nove módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+89 cenários em dez módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,6 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
+| **Equipe** | equipe da unidade, supervisão define a assinatura, profissional a definir, cadastro incompleto, contrato com taxa faltando, hora zerada válida, contrato sem nota, desativar sem data, quem atende sem acesso, unidade vazia |
 | **Faturas** | pronta para fechar, as duas perdas silenciosas, faltam identificadores, nada atendido, lote já gerado, operadora sem códigos TISS, operação sem acesso |
 | **Fechamentos** | o mês etapa por etapa, aguardando aceite, invisível em conferência, nota é do profissional, bloqueada para outros, contrato sem nota, pagar sem comprovante, pagar com comprovante, pago congelado, vazio |
 | **Autorizações** | central, vazia, autorizada com saldo, pacote esgotado trava tudo, capitation não multiplica, validade vencida, autorizada parcialmente, erro de sincronização, aguardando documentação, recepção sem acesso |
@@ -76,6 +77,12 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `authorization-without-agreement-is-worth-zero` | Linha sem acordo ativo entra valendo zero, em silêncio. |
 | `invoice-needs-number-protocol-igdr` | Fechar o lote exige número, protocolo e IGDR. |
 | `generated-invoice-is-final` | Fatura com lote gerado não é editada. |
+| `tbd-professional-is-a-placeholder` | Profissional a definir exige dois campos, não dez. |
+| `supervision-link-defines-second-signature` | A segunda assinatura do atendimento vem do vínculo de estágio. |
+| `one-supervision-link-per-pair` | O mesmo supervisor não se vincula duas vezes ao mesmo profissional. |
+| `contract-type-decides-required-rates` | Fixo e horista exigem valores diferentes — e zero vale só num deles. |
+| `contract-decides-invoice-requirement` | O contrato do mês decide se o fechamento pede nota fiscal. |
+| `deactivation-needs-a-date` | Desativar exige a data que separa o histórico do que ainda vale. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

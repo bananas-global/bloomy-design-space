@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  SupervisionLink,
+  TeamMember,
   HealthcareInvoice,
   InvoiceLine,
   Closure,
@@ -102,6 +104,17 @@ import {
   missingTissSetup,
   sessionsWithoutAgreement,
 } from "../src/rules/invoices.js";
+import {
+  canDeactivate,
+  canLinkSupervisor,
+  closureExpectsInvoice,
+  downstreamEffects,
+  isContractActiveOn,
+  missingContractRates,
+  missingProfessionalFields,
+  requiresSupervisorSignature,
+  signingSupervisors,
+} from "../src/rules/team.js";
 
 /**
  * Testes das regras de negócio.
@@ -1879,5 +1892,283 @@ describe("cadastro TISS da operadora", () => {
 
   it("operadora completa não gera aviso", () => {
     expect(missingTissSetup(invoiceFixture())).toEqual([]);
+  });
+});
+
+/* ================================================================ equipe */
+
+/**
+ * O cadastro da equipe é onde nascem duas decisões que aparecem em outros
+ * módulos: a segunda assinatura do atendimento e a nota fiscal do fechamento.
+ * Estes testes fixam os dois elos, para que mexer aqui não quebre lá em
+ * silêncio.
+ */
+
+function member(overrides: Partial<TeamMember> = {}): TeamMember {
+  return {
+    id: "prof",
+    name: "Marina Okabe",
+    tbd: false,
+    specialty: "Aplicador ABA",
+    email: "marina@exemplo.test",
+    cpf: "000.111.222-00",
+    phone: "(11) 90000-0011",
+    birthDate: "1996-02-14",
+    formation: "Psicologia",
+    healthFormation: "Psicologia (CRP)",
+    professionalTypes: ["therapeutic_companion"],
+    userTypes: ["attendant"],
+    appliesProtocol: false,
+    isAt: false,
+    active: true,
+    units: ["Pinheiros"],
+    supervisedBy: [],
+    supervises: [],
+    ...overrides,
+  };
+}
+
+const link = (overrides: Partial<SupervisionLink> = {}): SupervisionLink => ({
+  id: "int",
+  professionalId: "prof",
+  supervisorId: "sup",
+  supervisorName: "Clara Vidigal",
+  needsSupervisorSignature: true,
+  ...overrides,
+});
+
+describe("tbd-professional-is-a-placeholder", () => {
+  it("o a definir exige apenas nome e especialidade", () => {
+    const tbd: TeamMember = {
+      id: "t",
+      name: "Terapeuta a definir",
+      tbd: true,
+      specialty: "Aplicador ABA",
+      professionalTypes: [],
+      userTypes: [],
+      appliesProtocol: false,
+      isAt: false,
+      active: true,
+      units: [],
+      supervisedBy: [],
+      supervises: [],
+    };
+    expect(missingProfessionalFields(tbd)).toEqual([]);
+  });
+
+  it("o mesmo cadastro sem a marca de a definir tem oito campos faltando", () => {
+    const comum: TeamMember = {
+      id: "t",
+      name: "Terapeuta",
+      tbd: false,
+      specialty: "Aplicador ABA",
+      professionalTypes: [],
+      userTypes: [],
+      appliesProtocol: false,
+      isAt: false,
+      active: true,
+      units: [],
+      supervisedBy: [],
+      supervises: [],
+    };
+    expect(missingProfessionalFields(comum)).toEqual([
+      "e-mail",
+      "CPF",
+      "data de nascimento",
+      "telefone",
+      "papéis por unidade",
+      "formação em saúde",
+      "papéis globais",
+      "formação",
+    ]);
+  });
+
+  it("cadastro completo não acusa nada", () => {
+    expect(missingProfessionalFields(member())).toEqual([]);
+  });
+
+  it("o a definir sem especialidade ainda é incompleto", () => {
+    expect(missingProfessionalFields(member({ tbd: true, specialty: "" }))).toEqual(["especialidade"]);
+  });
+});
+
+describe("supervision-link-defines-second-signature", () => {
+  it("um vínculo que exige assinatura faz as sessões exigirem", () => {
+    expect(requiresSupervisorSignature(member({ supervisedBy: [link()] }))).toBe(true);
+  });
+
+  it("vínculo sem exigência não obriga nada", () => {
+    expect(
+      requiresSupervisorSignature(
+        member({ supervisedBy: [link({ needsSupervisorSignature: false })] }),
+      ),
+    ).toBe(false);
+  });
+
+  it("com vários supervisores, basta um exigir — é a leitura conservadora", () => {
+    const dois = member({
+      supervisedBy: [
+        link({ id: "a", supervisorId: "s1", needsSupervisorSignature: false }),
+        link({ id: "b", supervisorId: "s2", supervisorName: "Rui", needsSupervisorSignature: true }),
+      ],
+    });
+    expect(requiresSupervisorSignature(dois)).toBe(true);
+    expect(signingSupervisors(dois).map((l) => l.supervisorName)).toEqual(["Rui"]);
+  });
+
+  it("sem supervisão, nenhuma exigência", () => {
+    expect(requiresSupervisorSignature(member())).toBe(false);
+  });
+
+  it("o efeito é declarado em texto, ligando cadastro e atendimento", () => {
+    const efeitos = downstreamEffects(member({ supervisedBy: [link()] }), "2026-07-30");
+    expect(efeitos.join(" ")).toMatch(/segunda assinatura, de Clara Vidigal/);
+    expect(efeitos.join(" ")).toMatch(/vem do vínculo de estágio, não do atendimento/);
+  });
+});
+
+describe("one-supervision-link-per-pair", () => {
+  const comVinculo = member({ supervisedBy: [link()] });
+  const PERM = ["professionals.list_supervisor"];
+
+  it("recusa vincular o mesmo supervisor duas vezes", () => {
+    const result = canLinkSupervisor(comVinculo, "sup", PERM);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Clara Vidigal já é responsável por esse profissional/);
+  });
+
+  it("aceita um supervisor diferente", () => {
+    expect(canLinkSupervisor(comVinculo, "outro", PERM).allowed).toBe(true);
+  });
+
+  it("ninguém supervisiona a si mesmo", () => {
+    expect(canLinkSupervisor(member(), "prof", PERM).reason).toMatch(/a si mesmo/);
+  });
+
+  it("bloqueia por permissão antes de olhar os vínculos", () => {
+    expect(canLinkSupervisor(comVinculo, "sup", []).reason).toMatch(/administram supervisão/);
+  });
+});
+
+describe("contract-type-decides-required-rates", () => {
+  it("remuneração fixa exige mensal maior que zero", () => {
+    expect(
+      missingContractRates({
+        id: "c",
+        type: "fixed_compensation",
+        startDate: "2025-01-01",
+        monthlyRateCents: 0,
+        administrativeHourlyRateCents: 0,
+        issuesInvoice: true,
+      }),
+    ).toEqual(["valor mensal"]);
+  });
+
+  it("e aceita hora administrativa zerada — quem tem mensalidade não cobra à parte", () => {
+    expect(
+      missingContractRates({
+        id: "c",
+        type: "fixed_compensation",
+        startDate: "2025-01-01",
+        monthlyRateCents: 1_250_000,
+        administrativeHourlyRateCents: 0,
+        issuesInvoice: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("remuneração por hora exige as três maiores que zero", () => {
+    expect(
+      missingContractRates({
+        id: "c",
+        type: "hourly_compensation",
+        startDate: "2025-01-01",
+        serviceRateCents: 9_500,
+        administrativeHourlyRateCents: 0,
+        issuesInvoice: true,
+      }),
+    ).toEqual(["hora administrativa", "hora administrativa especial"]);
+  });
+
+  it("a mesma taxa zerada é válida num tipo e inválida no outro", () => {
+    // É a assimetria do `allow_zero?` no monólito, e ela é fácil de perder.
+    const fixo = missingContractRates({
+      id: "c",
+      type: "fixed_compensation",
+      startDate: "2025-01-01",
+      monthlyRateCents: 100,
+      administrativeHourlyRateCents: 0,
+      issuesInvoice: true,
+    });
+    const horista = missingContractRates({
+      id: "c",
+      type: "hourly_compensation",
+      startDate: "2025-01-01",
+      serviceRateCents: 100,
+      administrativeHourlyRateCents: 0,
+      specialAdministrativeHourlyRateCents: 100,
+      issuesInvoice: true,
+    });
+    expect(fixo).toEqual([]);
+    expect(horista).toEqual(["hora administrativa"]);
+  });
+});
+
+describe("contract-decides-invoice-requirement", () => {
+  const comContrato = (issuesInvoice: boolean, endDate?: string) =>
+    member({
+      contract: {
+        id: "c",
+        type: "hourly_compensation",
+        startDate: "2025-01-01",
+        endDate,
+        serviceRateCents: 9_500,
+        administrativeHourlyRateCents: 6_000,
+        specialAdministrativeHourlyRateCents: 8_500,
+        issuesInvoice,
+      },
+    });
+
+  it("o contrato ativo decide se o fechamento pede nota", () => {
+    expect(closureExpectsInvoice(comContrato(true), "2026-07-30")).toBe(true);
+    expect(closureExpectsInvoice(comContrato(false), "2026-07-30")).toBe(false);
+  });
+
+  it("contrato fora de vigência não decide nada", () => {
+    expect(closureExpectsInvoice(comContrato(true, "2026-06-30"), "2026-07-30")).toBe(false);
+  });
+
+  it("sem contrato, nada é exigido", () => {
+    expect(closureExpectsInvoice(member(), "2026-07-30")).toBe(false);
+  });
+
+  it("vigência inclui as duas pontas", () => {
+    const contrato = comContrato(true, "2026-07-30").contract!;
+    expect(isContractActiveOn(contrato, "2025-01-01")).toBe(true);
+    expect(isContractActiveOn(contrato, "2026-07-30")).toBe(true);
+    expect(isContractActiveOn(contrato, "2026-07-31")).toBe(false);
+    expect(isContractActiveOn(contrato, "2024-12-31")).toBe(false);
+  });
+});
+
+describe("deactivation-needs-a-date", () => {
+  const PERM = ["professionals.edit"];
+
+  it("bloqueia sem data, explicando o que ela separa", () => {
+    const result = canDeactivate(member(), PERM);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/separa o histórico do que ainda vale/);
+  });
+
+  it("libera com a data informada", () => {
+    expect(canDeactivate(member({ deactivationDate: "2026-08-31" }), PERM).allowed).toBe(true);
+  });
+
+  it("não desativa quem já está desativado", () => {
+    expect(canDeactivate(member({ active: false }), PERM).reason).toMatch(/já está desativado/);
+  });
+
+  it("bloqueia por permissão antes de tudo", () => {
+    expect(canDeactivate(member(), []).reason).toMatch(/não edita profissionais/);
   });
 });

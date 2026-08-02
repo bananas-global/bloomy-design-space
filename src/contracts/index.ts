@@ -817,6 +817,94 @@ export type HealthcareInvoicesData = {
 };
 
 /* ================================================================== *
+ * Equipe — o cadastro de onde saem decisões de outros módulos
+ * ================================================================== */
+
+/**
+ * Contrato do profissional com a clínica.
+ *
+ * `type` decide quais valores são obrigatórios, e a diferença não é cosmética:
+ * remuneração fixa exige mensalidade maior que zero e aceita hora
+ * administrativa zerada; por hora exige as três taxas maiores que zero.
+ *
+ * `issuesInvoice` é o campo que o módulo de Fechamentos consome para decidir se
+ * o ciclo passa pelas etapas de nota fiscal. Uma decisão que parece do
+ * financeiro mora no cadastro.
+ */
+export type TeamContract = {
+  id: string;
+  type: "fixed_compensation" | "hourly_compensation";
+  startDate: string;
+  endDate?: string;
+  weeklyPeriod?: number;
+  monthlyRateCents?: number;
+  serviceRateCents?: number;
+  administrativeHourlyRateCents?: number;
+  specialAdministrativeHourlyRateCents?: number;
+  issuesInvoice: boolean;
+};
+
+/**
+ * Vínculo de supervisão entre dois profissionais.
+ *
+ * `needsSupervisorSignature` vive aqui, e não no atendimento: é a relação de
+ * estágio que decide se as sessões daquele profissional exigem uma segunda
+ * assinatura. Outra decisão que parece do atendimento e mora no cadastro.
+ */
+export type SupervisionLink = {
+  id: string;
+  professionalId: string;
+  supervisorId: string;
+  supervisorName: string;
+  needsSupervisorSignature: boolean;
+  observation?: string;
+};
+
+/**
+ * Um profissional da equipe.
+ *
+ * `tbd` é o conceito mais fácil de perder no porte: um profissional "a definir"
+ * é um espaço reservado na agenda, criado antes de a clínica saber quem vai
+ * atender. O monólito reduz os dez campos obrigatórios a dois para ele.
+ */
+export type TeamMember = {
+  id: string;
+  name: string;
+  /** Profissional a definir: espaço reservado na agenda, ainda sem pessoa. */
+  tbd: boolean;
+  specialty: string;
+  email?: string;
+  cpf?: string;
+  phone?: string;
+  birthDate?: string;
+  /** Conselho e número de registro: CRP, CRFa, CREFITO. */
+  specialtyRegister?: string;
+  formation?: string;
+  healthFormation?: string;
+  /** Papéis por unidade, do campo bitwise `professional_types`. */
+  professionalTypes: string[];
+  /** Papéis globais, do campo bitwise `user_types`. */
+  userTypes: string[];
+  appliesProtocol: boolean;
+  /** Acompanhante terapêutico: atende fora da clínica. */
+  isAt: boolean;
+  active: boolean;
+  deactivationDate?: string;
+  units: string[];
+  contract?: TeamContract;
+  /** Quem supervisiona este profissional. */
+  supervisedBy: SupervisionLink[];
+  /** Quem este profissional supervisiona. */
+  supervises: SupervisionLink[];
+};
+
+export type TeamData = {
+  members: TeamMember[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

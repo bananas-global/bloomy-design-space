@@ -239,6 +239,38 @@ Quatro regras, sete cenários, a tela `HealthcareInvoice` e vinte e um testes.
 
 Verde: `pnpm check` e 240 jornadas Playwright.
 
+### 9. Cadastros: equipe — `porte/cadastros-equipe`
+
+Concluída.
+
+Este módulo tem uma função que os outros não têm: **ele explica os outros**.
+Duas decisões que pareciam do atendimento e do pagamento nascem no cadastro do
+profissional, e quem for desenhar aqueles módulos sem saber disso procura a
+configuração no lugar errado.
+
+- **A segunda assinatura da sessão vem do vínculo de estágio.**
+  `need_supervisor_signature` é campo de `Professionals.Internship`, não do
+  agendamento. Vale para todas as sessões daquele profissional.
+- **A nota fiscal do fechamento vem do contrato do mês.** É o mesmo
+  `issue_invoice` que o módulo de Fechamentos consome — sem saber disso, a
+  variante curta daquele ciclo parece um bug.
+
+Por isso cada profissional traz uma seção de "o que este cadastro decide",
+ligando o registro às consequências que ele produz longe daqui.
+
+Dois conceitos que era fácil perder no porte ficaram preservados:
+
+- **Profissional a definir.** Um espaço reservado na agenda, criado antes de a
+  clínica saber quem vai atender. O monólito reduz dez campos obrigatórios a
+  dois para ele — e isso não é um cadastro incompleto, é outro tipo de cadastro.
+- **A assimetria do `allow_zero?`.** A mesma hora administrativa pode ser zero
+  em contrato fixo e não pode em contrato por hora. Quem tem mensalidade não
+  cobra hora administrativa à parte.
+
+Seis regras, dez cenários, a tela `Team` e vinte e cinco testes.
+
+Verde: `pnpm check` e 269 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
