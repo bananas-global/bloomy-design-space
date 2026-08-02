@@ -2010,8 +2010,17 @@ export type AbsenceOrigin =
   | "observed"
   /** A família avisou antes. O sistema conta junto das ausências. */
   | "cancelled"
-  /** Um worker converteu depois de sete dias parado. Ninguém viu nada. */
-  | "fabricated_by_delay";
+  /**
+   * Um worker converteu depois de sete dias parado em atraso, com motivo
+   * `:delay`. Ninguém viu nada, e o motivo ao menos não acusa ninguém.
+   */
+  | "fabricated_by_delay"
+  /**
+   * Um worker converteu na manhã seguinte, porque o agendamento continuava
+   * marcado — motivo `:missing_patient`. **O sistema afirma que o paciente
+   * faltou**, sem que ninguém tenha olhado.
+   */
+  | "fabricated_blaming_patient";
 
 export interface AbsenceRecord {
   id: string;

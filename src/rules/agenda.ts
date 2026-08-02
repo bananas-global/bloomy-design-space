@@ -378,11 +378,19 @@ export const absenceOriginRules: Rule[] = [
     source: "src/rules/agenda.ts",
   },
   {
-    id: "the-absence-number-holds-three-different-things",
+    id: "the-absence-number-holds-four-different-things",
     statement:
-      "Somando o filtro `absence` ao worker de atraso, o número de ausências contém: quem faltou, quem cancelou avisando, e quem teve o registro convertido por ficar parado.",
+      "Somando o filtro `absence` aos dois workers, o número de ausências contém quatro origens: quem faltou, quem cancelou avisando, quem ficou sete dias parado em atraso, e quem continuava simplesmente marcado na manhã seguinte.",
     rationale:
-      "Três origens, uma conta. A terceira é a menos parecida com ausência de todas — mede desorganização interna, não comportamento da família. E é o número que embasa a conversa com quem trouxe a criança.",
+      "Quatro origens, uma conta, e duas delas fabricadas por rotina. É o número que embasa a conversa com quem trouxe a criança — e, na maior parte, ele não mede a família.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "one-worker-blames-the-patient-by-name",
+    statement:
+      "`MissedAttendedWorker` converte na manhã seguinte todo agendamento que continuava marcado, com `missing_reason: :missing_patient`. O outro worker usa `:delay`.",
+    rationale:
+      "A diferença entre os dois motivos é a diferença entre “ninguém fechou isto” e “o paciente faltou”. O segundo é uma afirmação sobre uma pessoa, feita por uma rotina que não olhou nada — e basta a recepção não ter feito o check-in.",
     source: "src/rules/agenda.ts",
   },
   {
@@ -402,7 +410,9 @@ export function absenceOriginLabel(origin: AbsenceOrigin): string {
     case "cancelled":
       return "A família avisou antes";
     case "fabricated_by_delay":
-      return "Convertida pelo sistema, sem ninguém ver";
+      return "Convertida após sete dias parada";
+    case "fabricated_blaming_patient":
+      return "Convertida na manhã seguinte, culpando o paciente";
   }
 }
 
@@ -415,6 +425,8 @@ export function whatTheOriginMeasures(origin: AbsenceOrigin): string {
       return "comunicação da família — o oposto de faltar";
     case "fabricated_by_delay":
       return "desorganização interna: um registro que ninguém fechou em sete dias";
+    case "fabricated_blaming_patient":
+      return "que o check-in não foi feito — e o motivo gravado acusa o paciente";
   }
 }
 
@@ -423,17 +435,42 @@ export function wasObserved(record: AbsenceRecord): boolean {
   return record.origin === "observed";
 }
 
-/** Implementação de `the-absence-number-holds-three-different-things`. */
+/** Implementação de `the-absence-number-holds-four-different-things`. */
 export function absencesByOrigin(
   data: AbsenceOriginData,
 ): { origin: AbsenceOrigin; count: number }[] {
-  const ordem: AbsenceOrigin[] = ["observed", "cancelled", "fabricated_by_delay"];
+  // Ordem: da mais parecida com ausência para a menos.
+  const ordem: AbsenceOrigin[] = [
+    "observed",
+    "cancelled",
+    "fabricated_by_delay",
+    "fabricated_blaming_patient",
+  ];
   return ordem
     .map((origin) => ({
       origin,
       count: data.records.filter((record) => record.origin === origin).length,
     }))
     .filter((linha) => linha.count > 0);
+}
+
+/** As origens que uma rotina fabricou, sem ninguém olhar. */
+export function fabricated(data: AbsenceOriginData): AbsenceRecord[] {
+  return data.records.filter(
+    (record) =>
+      record.origin === "fabricated_by_delay" ||
+      record.origin === "fabricated_blaming_patient",
+  );
+}
+
+/**
+ * Implementação de `one-worker-blames-the-patient-by-name`.
+ *
+ * Separada das demais fabricadas de propósito: as duas são automáticas, e só
+ * uma grava uma afirmação sobre a pessoa.
+ */
+export function blamesThePatient(record: AbsenceRecord): boolean {
+  return record.origin === "fabricated_blaming_patient";
 }
 
 /** Quanto do número relatado mede comportamento da família, e não outra coisa. */
