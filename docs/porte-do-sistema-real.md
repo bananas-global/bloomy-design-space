@@ -913,6 +913,28 @@ em asserção.
 3 jornadas novas, 1 par de contraste.
 
 
+### 31. Revisão visual: supervisão, inativação e fase — `porte/revisao-visual`
+
+As quatro telas restantes, abertas no navegador. Mais uma varredura automática
+de hierarquia de títulos em todos os 186 cenários — **nenhum salto de nível**.
+O que apareceu foram quatro coisas que regra automática nenhuma pega:
+
+- **Crases renderizados literalmente.** A tela de fase terapêutica mostrava
+  `` `TherapyPhase.changeset/2` `` com as crases visíveis: JSX não interpreta
+  markdown. E o texto era jargão de código numa tela de produto — reescrito em
+  português, sem nome de módulo Elixir.
+- **Inativar paciente usava a variante primária.** A tela inteira explica que a
+  ação é irreversível, e o botão vinha vestido com a cor da ação afirmativa,
+  dizendo o contrário do que a tela acabou de dizer. Passou para `danger`.
+- **Um aviso dentro de um cartão estava no mesmo nível de título do cartão.**
+  Não é salto de nível — a varredura não pega, o axe não pega —, é hierarquia
+  errada: conteúdo do cartão anunciado como irmão do título dele.
+- **O supervisor selecionado não dizia que estava selecionado.** Borda e fundo
+  deixavam a relação com o painel da direita por inferir.
+
+3 jornadas novas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

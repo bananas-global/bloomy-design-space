@@ -87,9 +87,9 @@ export function TherapyPhases({ context }: ScreenProps) {
           tone="warn"
           title={`${soltas.length === 1 ? "Uma fase não tem" : `${soltas.length} fases não têm`} especialidade`}
         >
-          O cadastro não exige especialidade — `TherapyPhase.changeset/2` não valida nada. Sem ela,
-          a fase não pertence a nenhum percurso e nenhuma tela sabe onde mostrá-la. Ela não some do
-          banco: some da leitura.
+          O cadastro aceita uma fase sem especialidade — não há validação. Sem ela, a fase não
+          pertence a nenhum percurso e nenhuma tela sabe onde mostrá-la. Ela não some do banco:
+          some da leitura.
         </Notice>
       )}
 

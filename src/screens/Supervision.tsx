@@ -115,7 +115,16 @@ export function Supervision({ context }: ScreenProps) {
                       : "border-[var(--border-soft)]"
                   }`}
                 >
-                  <p className="m-0 text-[15px] font-semibold text-navy">{supervisor.name}</p>
+                  <p className="m-0 text-[15px] font-semibold text-navy">
+                    {supervisor.name}
+                    {/* Selecionado dito em palavra: a borda e o fundo sozinhos
+                        deixam a relação com o painel da direita por inferir. */}
+                    {supervisor.id === supervision.selectedSupervisorId && (
+                      <span className="ml-2 text-[13px] font-normal text-[var(--fg-2)]">
+                        · em exibição ao lado
+                      </span>
+                    )}
+                  </p>
                   <p className="m-0 text-[13px] text-[var(--fg-2)]">
                     {supervisor.specialtyName} · {supervisor.internCount}{" "}
                     {supervisor.internCount === 1 ? "supervisionado" : "supervisionados"}
@@ -156,6 +165,7 @@ export function Supervision({ context }: ScreenProps) {
               <Notice
                 tone="warn"
                 title={`${parados.length} ${parados.length === 1 ? "atendimento parado" : "atendimentos parados"} esperando a assinatura do supervisor`}
+                level={3}
               >
                 <p className="m-0">
                   A segunda assinatura é o único efeito mecânico do vínculo de supervisão em todo o

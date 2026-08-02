@@ -147,7 +147,10 @@ export function PatientDeactivation({ context }: ScreenProps) {
         </div>
       </Card>
 
-      <Button id="inativar" variant="primary">
+      {/* Variante de perigo, e não primária. A tela inteira é sobre uma ação
+          irreversível; vesti-la com a cor da ação afirmativa faria o botão
+          dizer o contrário do que a tela acabou de explicar. */}
+      <Button id="inativar" variant="danger">
         Inativar {impact.patient.name}
       </Button>
     </div>,
