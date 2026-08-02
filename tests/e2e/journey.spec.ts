@@ -1466,6 +1466,69 @@ test.describe("Chat do caso", () => {
   });
 });
 
+test.describe("Visitas", () => {
+  test("as perdas aparecem pelo passo em que aconteceram", async ({ page }) => {
+    await page.goto(urlFor("prospects.funnel"));
+
+    await expect(page.getByRole("heading", { name: "Onde o funil perde gente" })).toBeVisible();
+    await expect(page.getByText("em Em avaliação")).toBeVisible();
+    await expect(page.getByText("em Proposta enviada")).toBeVisible();
+    await expect(page.getByText(/funil de oito estágios em linha esconde/)).toBeVisible();
+  });
+
+  test("os perdidos continuam registrados, com o motivo", async ({ page }) => {
+    await page.goto(urlFor("prospects.funnel"));
+
+    await expect(page.getByRole("heading", { name: "Perdidos" })).toBeVisible();
+    await expect(page.getByText("Família optou por clínica mais perto de casa.")).toBeVisible();
+    await expect(page.getByText("Convênio não cobria a frequência proposta.")).toBeVisible();
+  });
+
+  test("o tempo parado vem junto do passo", async ({ page }) => {
+    await page.goto(urlFor("prospects.stalled"));
+
+    await expect(
+      page.getByRole("heading", { name: "1 contato parado há mais de 30 dias" }),
+    ).toBeVisible();
+    await expect(page.getByText("há 71 dias neste passo")).toBeVisible();
+    await expect(page.getByText(/idêntico a quem chegou ontem/)).toBeVisible();
+  });
+
+  test("a conversão lista os cinco campos antes de tentar", async ({ page }) => {
+    await page.goto(urlFor("prospects.conversion-needs-more"));
+
+    await expect(
+      page.getByRole("heading", { name: "A conversão pede o que a visita não coleta" }),
+    ).toBeVisible();
+    // Aparece na lista do aviso e no motivo do botão: são as duas leituras que
+    // a regra pede — a antecipada e a do bloqueio.
+    await expect(page.getByText("estado civil do responsável")).toHaveCount(2);
+    await expect(page.getByText(/Vale coletar na visita/)).toBeVisible();
+
+    await expect(page.getByRole("button", { name: "Converter em paciente" })).toBeDisabled();
+    await expect(page.locator("#converter-pr-4-motivo")).toHaveText(
+      /5 informações que a visita não coleta/,
+    );
+  });
+
+  test("sem janela declarada, marcar a primeira sessão trava", async ({ page }) => {
+    await page.goto(urlFor("prospects.no-availability"));
+
+    await expect(page.getByText("Nenhuma janela de disponibilidade declarada.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Marcar primeira sessão" })).toBeDisabled();
+    await expect(page.locator("#agendar-pr-1-motivo")).toHaveText(
+      /mais barata de coletar na visita e a mais cara de perseguir depois/,
+    );
+  });
+
+  test("a tela vazia explica o que entra nela", async ({ page }) => {
+    await page.goto(urlFor("prospects.empty"));
+
+    await expect(page.getByRole("heading", { name: "Nenhuma visita registrada" })).toBeVisible();
+    await expect(page.getByText(/ainda não viraram paciente/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

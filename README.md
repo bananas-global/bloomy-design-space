@@ -24,7 +24,7 @@ própria.
 
 ## O que existe hoje
 
-139 cenários em dezoito módulos, cobrindo sucesso, vazio, permissão, regra e
+144 cenários em dezenove módulos, cobrindo sucesso, vazio, permissão, regra e
 exceção.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
@@ -42,6 +42,7 @@ em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 | **Mapa de horas** | mapa com conflitos, sem agenda não é ocupado, perde profissional e sala, mapa limpo, mapa aplicado, mapa em branco |
 | **Chat do caso** | uma semana de conversa, permanência antes do envio, menção que não chega, único canal do aplicador, chat vazio |
 | **Prontuário** | prontuário completo, documento que ninguém abre, documentos vencendo, anamnese incompleta, faltas acima do limite, sem critérios, recepção sem acesso |
+| **Visitas** | o funil de julho, parado há dois meses, a conversão pede mais, sem disponibilidade, nenhuma visita |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Estrutura** | estrutura da unidade, serviço sem sala, serviço impossível de agendar, três origens de bloqueio, não cobrável dispensa check-in, unidade sem estrutura |
 | **Portal da operadora** | lista de presença, atendimentos sem fechar, agendamentos omitidos pelo escopo, o que a operadora não vê, competência sem movimento |
@@ -132,6 +133,10 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `chat-messages-are-permanent` | Sem edição e sem exclusão: o schema não tem campo para isso. |
 | `mention-notifies-but-does-not-grant` | Menção notifica e não dá acesso a nada. |
 | `chat-is-the-applicators-only-written-channel` | É a única superfície escrita do caso que ele alcança. |
+| `lost-is-a-side-exit-not-the-last-step` | Perdido sai de qualquer passo, e não é o fim da fila. |
+| `conversion-needs-more-than-the-visit-collected` | Converter exige cinco dados que a visita nunca coleta. |
+| `availability-is-what-makes-the-first-schedule-possible` | Sem janela declarada, o contato trava no agendamento. |
+| `step-history-explains-the-funnel` | Só o histórico distingue quem está parado de quem chegou ontem. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

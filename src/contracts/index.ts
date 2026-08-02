@@ -1398,6 +1398,75 @@ export type ChatData = {
 };
 
 /* ================================================================== *
+ * Visitas — o funil de quem ainda não é paciente
+ * ================================================================== */
+
+/**
+ * Passo do funil.
+ *
+ * Sete passos e uma saída lateral. `lost` não é o fim da fila: é uma saída que
+ * pode acontecer de qualquer passo, e tratá-la como último estágio faria a
+ * leitura do funil mentir sobre onde as pessoas desistem.
+ */
+export type FunnelStep =
+  | "new"
+  | "initial_contact"
+  | "in_avaliation"
+  | "submitted"
+  | "waiting_plan"
+  | "scheduled"
+  | "converted"
+  | "lost";
+
+export type ProspectSource = "indication" | "search" | "others";
+
+/** Uma visita da família à unidade, antes de virar paciente. */
+export type ProspectVisit = {
+  id: string;
+  date: string;
+  visitedBy: string;
+  observations?: string;
+};
+
+/** Janela de disponibilidade que a família declarou. */
+export type ProspectAvailability = {
+  weekday: number;
+  startAt: string;
+  endAt: string;
+};
+
+export type ProspectStepChange = {
+  at: string;
+  from: FunnelStep;
+  to: FunnelStep;
+  by: string;
+};
+
+export type Prospect = {
+  id: string;
+  childName: string;
+  guardianName: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
+  guardianCpf?: string;
+  step: FunnelStep;
+  source: ProspectSource;
+  unitOfInterest: string;
+  specialties: string[];
+  observation?: string;
+  visits: ProspectVisit[];
+  availability: ProspectAvailability[];
+  history: ProspectStepChange[];
+  active: boolean;
+};
+
+export type ProspectsData = {
+  prospects: Prospect[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

@@ -29,6 +29,7 @@ const NAV: NavItem[] = [
   { label: "Agenda", path: "/agenda", permission: "schedules.list" },
   { label: "Na Clínica", path: "/in-clinic", permission: "closures.list" },
   { label: "Pacientes", path: "/patients", permission: "patients.list" },
+  { label: "Visitas", path: "/prospects", permission: "patients.create" },
   { label: "Equipe", path: "/team", permission: "professionals.list" },
   { label: "Estrutura", path: "/structure", permission: "services.list" },
   { label: "Autorizações", path: "/authorizations", permission: "authorizations.hub" },

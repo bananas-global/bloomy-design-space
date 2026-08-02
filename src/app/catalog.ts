@@ -19,6 +19,7 @@ import { recordFixtures } from "../fixtures/record.js";
 import { managementFixtures } from "../fixtures/management.js";
 import { hourMapFixtures } from "../fixtures/hourMap.js";
 import { chatFixtures } from "../fixtures/chat.js";
+import { prospectFixtures } from "../fixtures/prospects.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -37,6 +38,7 @@ import { recordRules } from "../rules/record.js";
 import { managementRules } from "../rules/management.js";
 import { hourMapRules } from "../rules/hourMap.js";
 import { chatRules } from "../rules/chat.js";
+import { prospectRules } from "../rules/prospects.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -55,6 +57,7 @@ import { recordScenarios } from "../scenarios/record.js";
 import { managementScenarios } from "../scenarios/management.js";
 import { hourMapScenarios } from "../scenarios/hourMap.js";
 import { chatScenarios } from "../scenarios/chat.js";
+import { prospectScenarios } from "../scenarios/prospects.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -611,6 +614,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "prospects",
+    name: "Visitas",
+    description:
+      "O funil de quem ainda não é paciente — e a coleta de dados que a conversão exige e a visita não faz.",
+    flows: [
+      {
+        id: "convert-a-visit",
+        title: "Levar uma visita até virar paciente",
+        description:
+          "Do funil até a conversão, com as duas coisas que travam no fim e podiam ser coletadas no começo.",
+        steps: [
+          {
+            scenario: "prospects.funnel",
+            label: "Ver onde o funil perde gente",
+            decision: "O que impede este contato de avançar?",
+            branches: {
+              "Faltam dados da conversão": "prospects.conversion-needs-more",
+              "Sem janela para marcar": "prospects.no-availability",
+              "Parado há semanas": "prospects.stalled",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -632,6 +661,7 @@ export const scenarios: Scenario[] = [
   ...managementScenarios,
   ...hourMapScenarios,
   ...chatScenarios,
+  ...prospectScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -654,6 +684,7 @@ export const fixtures: Fixture[] = [
   ...managementFixtures,
   ...hourMapFixtures,
   ...chatFixtures,
+  ...prospectFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -675,6 +706,7 @@ export const rules: Rule[] = [
   ...managementRules,
   ...hourMapRules,
   ...chatRules,
+  ...prospectRules,
 ];
 
 export { personas };

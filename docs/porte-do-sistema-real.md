@@ -514,6 +514,30 @@ Quatro regras, cinco cenários, a tela `Chat` e quinze testes.
 
 Verde: `pnpm check` e 431 jornadas Playwright.
 
+### 19. Cadastros: visitas — `porte/visitas`
+
+Concluída.
+
+O funil é o único lugar do produto em que alguém ainda **não é paciente** — e
+por isso o único em que quase nada é obrigatório. A consequência dessa folga
+aparece no fim.
+
+- **Converter exige cinco dados que a visita nunca coleta**: data de nascimento
+  e sexo da criança, e data de nascimento, estado civil e relação do
+  responsável. `ConvertToPatientParams` pede tudo isso;
+  `Prospects.LegalGuardian` guarda quatro campos. O último passo do funil é
+  sempre uma coleta, e ninguém avisa antes — a tela passa a avisar.
+- **Perdido é saída lateral, não último estágio.** Desenhado em linha, o funil
+  sugere que todo mundo caminha até o fim antes de desistir, e esconde onde as
+  pessoas param. A tela agrupa as perdas pelo passo em que aconteceram, que é a
+  única leitura que responde à pergunta que o funil existe para responder.
+- **O tempo parado vem junto do passo.** Numa lista por estágio, quem está há
+  dois meses em "aguardando plano" é idêntico a quem chegou ontem.
+
+Quatro regras, cinco cenários, a tela `Prospects` e quinze testes.
+
+Verde: `pnpm check` e 447 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

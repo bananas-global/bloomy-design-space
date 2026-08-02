@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  Prospect,
+  ProspectsData,
   ChatData,
   HourMap,
   HourMapSlot,
@@ -216,6 +218,18 @@ import {
   mentionsWithoutAccess,
   participatingRoles,
 } from "../src/rules/chat.js";
+import {
+  CONVERSION_EXTRA_FIELDS,
+  FUNNEL_LINE,
+  canConvert,
+  canScheduleFirstSession,
+  daysInCurrentStep,
+  isSideExit,
+  lossesByStep,
+  missingForConversion,
+  stalled,
+  stepPosition,
+} from "../src/rules/prospects.js";
 
 /**
  * Testes das regras de negócio.
@@ -3703,5 +3717,186 @@ describe("leitura da conversa", () => {
 
   it("conta as especialidades que participaram — a medida de multidisciplinar", () => {
     expect(participatingRoles(dados)).toEqual(["Terapeuta", "Aplicador"]);
+  });
+});
+
+/* ================================================================ visitas */
+
+/**
+ * O funil é o único lugar do produto em que alguém ainda não é paciente, e por
+ * isso o único em que quase nada é obrigatório. A consequência aparece no fim:
+ * converter exige dados que a visita nunca coletou.
+ */
+
+function prospectFixture(overrides: Partial<Prospect> & { id: string }): Prospect {
+  return {
+    childName: "Criança",
+    guardianName: "Responsável",
+    step: "new",
+    source: "search",
+    unitOfInterest: "Pinheiros",
+    specialties: [],
+    visits: [],
+    availability: [],
+    history: [],
+    active: true,
+    ...overrides,
+  };
+}
+
+const AGORA = "2026-07-30T09:00:00.000-03:00";
+
+describe("lost-is-a-side-exit-not-the-last-step", () => {
+  it("perdido não está na linha do funil", () => {
+    expect(isSideExit("lost")).toBe(true);
+    expect(stepPosition("lost")).toBeUndefined();
+    expect(FUNNEL_LINE).not.toContain("lost");
+  });
+
+  it("converter é o fim da linha, e tem posição", () => {
+    expect(stepPosition("converted")).toBe(FUNNEL_LINE.length - 1);
+    expect(isSideExit("converted")).toBe(false);
+  });
+
+  it("agrupa as perdas pelo passo em que aconteceram", () => {
+    // É a leitura que um funil de oito estágios em linha esconde.
+    const dados: ProspectsData = {
+      now: AGORA,
+      prospects: [
+        prospectFixture({
+          id: "a",
+          step: "lost",
+          history: [
+            { at: "2026-06-25T10:00:00.000-03:00", from: "in_avaliation", to: "lost", by: "Helena" },
+          ],
+        }),
+        prospectFixture({
+          id: "b",
+          step: "lost",
+          history: [
+            { at: "2026-06-10T16:00:00.000-03:00", from: "submitted", to: "lost", by: "Denise" },
+          ],
+        }),
+        prospectFixture({
+          id: "c",
+          step: "lost",
+          history: [
+            { at: "2026-06-11T16:00:00.000-03:00", from: "submitted", to: "lost", by: "Denise" },
+          ],
+        }),
+      ],
+    };
+    expect(lossesByStep(dados)).toEqual([
+      { step: "in_avaliation", count: 1 },
+      { step: "submitted", count: 2 },
+    ]);
+  });
+
+  it("perdido sem histórico é atribuído ao começo", () => {
+    const dados: ProspectsData = {
+      now: AGORA,
+      prospects: [prospectFixture({ id: "a", step: "lost" })],
+    };
+    expect(lossesByStep(dados)).toEqual([{ step: "new", count: 1 }]);
+  });
+});
+
+describe("conversion-needs-more-than-the-visit-collected", () => {
+  const pronto = prospectFixture({
+    id: "p",
+    childName: "Davi",
+    step: "scheduled",
+    guardianCpf: "111.444.777-35",
+    availability: [{ weekday: 1, startAt: "09:00", endAt: "12:00" }],
+  });
+
+  it("os cinco campos faltam sempre, porque a visita não os coleta", () => {
+    expect(missingForConversion(pronto)).toEqual([...CONVERSION_EXTRA_FIELDS]);
+  });
+
+  it("sem CPF do responsável, falta um a mais", () => {
+    const semCpf = { ...pronto, guardianCpf: undefined };
+    expect(missingForConversion(semCpf)[0]).toBe("CPF do responsável");
+    expect(missingForConversion(semCpf)).toHaveLength(6);
+  });
+
+  it("a negativa conta e nomeia o que falta", () => {
+    const result = canConvert(pronto, ["patients.create"]);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/5 informações que a visita não coleta/);
+    expect(result.reason).toMatch(/estado civil do responsável/);
+  });
+
+  it("não converte quem já foi convertido nem quem foi perdido", () => {
+    expect(canConvert({ ...pronto, step: "converted" }, ["patients.create"]).reason).toMatch(
+      /já foi convertido/,
+    );
+    expect(canConvert({ ...pronto, step: "lost" }, ["patients.create"]).reason).toMatch(
+      /Reabra o funil/,
+    );
+  });
+
+  it("bloqueia por permissão antes de tudo", () => {
+    expect(canConvert(pronto, []).reason).toMatch(/não cria pacientes/);
+  });
+});
+
+describe("availability-is-what-makes-the-first-schedule-possible", () => {
+  it("sem janela declarada, não dá para marcar", () => {
+    const result = canScheduleFirstSession(prospectFixture({ id: "p" }));
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/mais barata de coletar na visita/);
+  });
+
+  it("com janela, libera", () => {
+    expect(
+      canScheduleFirstSession(
+        prospectFixture({ id: "p", availability: [{ weekday: 2, startAt: "14:00", endAt: "18:00" }] }),
+      ).allowed,
+    ).toBe(true);
+  });
+});
+
+describe("step-history-explains-the-funnel", () => {
+  const parado = prospectFixture({
+    id: "p",
+    step: "waiting_plan",
+    history: [
+      { at: "2026-05-20T11:00:00.000-03:00", from: "submitted", to: "waiting_plan", by: "Denise" },
+    ],
+  });
+
+  const recente = prospectFixture({
+    id: "q",
+    step: "waiting_plan",
+    history: [
+      { at: "2026-07-29T11:00:00.000-03:00", from: "submitted", to: "waiting_plan", by: "Denise" },
+    ],
+  });
+
+  it("conta os dias desde a última mudança para o passo atual", () => {
+    expect(daysInCurrentStep(parado, AGORA)).toBe(71);
+    expect(daysInCurrentStep(recente, AGORA)).toBe(1);
+  });
+
+  it("distingue quem está parado de quem chegou ontem", () => {
+    // Numa lista por estágio, os dois seriam idênticos.
+    const dados: ProspectsData = { now: AGORA, prospects: [parado, recente] };
+    expect(stalled(dados).map((p) => p.id)).toEqual(["p"]);
+  });
+
+  it("convertido e perdido não contam como parados", () => {
+    const dados: ProspectsData = {
+      now: AGORA,
+      prospects: [
+        { ...parado, id: "conv", step: "converted" },
+        { ...parado, id: "perd", step: "lost" },
+      ],
+    };
+    expect(stalled(dados)).toEqual([]);
+  });
+
+  it("sem histórico, não há como dizer há quanto tempo", () => {
+    expect(daysInCurrentStep(prospectFixture({ id: "x" }), AGORA)).toBeUndefined();
   });
 });
