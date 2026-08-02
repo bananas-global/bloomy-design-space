@@ -17,6 +17,7 @@ import { Team } from "../screens/Team.js";
 import { Kiosk } from "../screens/Kiosk.js";
 import { Nps } from "../screens/Nps.js";
 import { GuardianPortal } from "../screens/GuardianPortal.js";
+import { InsurerPortal } from "../screens/InsurerPortal.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -54,6 +55,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/kiosk", screen: Kiosk },
     { path: "/nps", screen: Nps },
     { path: "/guardian", screen: GuardianPortal },
+    { path: "/insurer", screen: InsurerPortal },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build

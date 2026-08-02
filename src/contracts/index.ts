@@ -1048,6 +1048,67 @@ export type GuardianPortalData = {
 };
 
 /* ================================================================== *
+ * Portal da operadora — a clínica vista de fora
+ * ================================================================== */
+
+/**
+ * Um beneficiário, do ponto de vista da operadora.
+ *
+ * O vínculo é o plano: a operadora enxerga o paciente porque ele tem um plano
+ * dela, e não porque é paciente da clínica. É essa diferença que o escopo do
+ * monólito reproduz — e ela decide quem some da lista quando o plano muda.
+ */
+export type InsurerPatient = {
+  patient: PatientRef;
+  planName: string;
+  cardNumber: string;
+  /** Atendimentos realizados no período consultado. */
+  attendedSessions: number;
+  /** Atendimentos marcados e não realizados no mesmo período. */
+  missedSessions: number;
+};
+
+/**
+ * Uma linha da lista de presença.
+ *
+ * É o documento que a operadora usa para conferir o que foi cobrado. Traz o
+ * que aconteceu — data, horário, profissional, se houve presença — e nada do
+ * que foi feito na sessão.
+ */
+export type AttendanceRow = {
+  id: string;
+  date: string;
+  start: string;
+  end: string;
+  patientName: string;
+  professionalName: string;
+  professionalRegister?: string;
+  serviceName: string;
+  status: ScheduleStatus;
+  /** Assinatura do profissional que conduziu, quando já houve. */
+  signedBy?: string;
+  signedAt?: string;
+};
+
+export type InsurerPortalData = {
+  healthCare: HealthCare;
+  /** Período consultado na lista de presença. */
+  period: { start: string; end: string };
+  patients: InsurerPatient[];
+  attendance: AttendanceRow[];
+  /**
+   * Agendamentos do período que o escopo do monólito esconde da operadora.
+   *
+   * Existe só neste Design Space, e de propósito: o `scope/2` real filtra
+   * `status != :incomplete` sem dizer nada. Guardar a contagem permite discutir
+   * se a omissão silenciosa é o comportamento pretendido.
+   */
+  hiddenIncompleteCount: number;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

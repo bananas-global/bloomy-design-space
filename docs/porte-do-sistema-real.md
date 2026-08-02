@@ -331,6 +331,28 @@ Cinco regras, sete cenários, a tela `GuardianPortal` e dezenove testes.
 
 Verde: `pnpm check` e 316 jornadas Playwright.
 
+### 12. Portais externos, parte 3: operadora — `porte/portal-operadora`
+
+Concluída. **Fecha os três portais externos.**
+
+O único lugar do produto em que dados de uma clínica são mostrados a uma
+organização de fora. Isso torna o que **não** aparece tão projetado quanto o que
+aparece — e a tela diz isso em voz alta, porque uma ausência silenciosa de
+informação clínica pareceria lacuna do produto em vez de decisão.
+
+- **A contagem separa o que fechou do que apenas aconteceu.** Um atendimento
+  pendente de assinatura ocorreu e ainda não fechou; contá-lo como prestado
+  antecipa a cobrança. É a diferença mais comum entre o número da clínica e o da
+  operadora, e agora ela tem nome na tela.
+- **A omissão do escopo é declarada.** `SchedulePolicy.scope/2` filtra
+  `status != :incomplete` para o usuário de operadora sem sinalizar nada. Este
+  Design Space mostra a contagem do que foi omitido, para a decisão ser
+  discutida em vez de herdada.
+
+Quatro regras, cinco cenários, a tela `InsurerPortal` e oito testes.
+
+Verde: `pnpm check` e 332 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -349,4 +371,5 @@ bugs do Design Space; são observações sobre o produto.
 | 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |
 | 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |
 | 12 | `provider_code` e `requester_code` de `HealthCare` são opcionais no changeset e obrigatórios na geração do lote TISS. O cadastro passa e o envio falha. | `lib/bloomy/health_cares/health_care.ex` |
+| 13 | `SchedulePolicy.scope/2` esconde agendamentos `:incomplete` do usuário de operadora sem sinalizar. A lista de presença fica impossível de conciliar com a fatura quando os números não batem. | `lib/bloomy/schedules/schedule_policy.ex` |
 | 11 | `ClosurePolicy` se contradiz sobre o especialista: `can_interact?` diz que ele age na etapa de aceite, mas `scope/2` não o lista e ele cai no `where: false`. O especialista não vê fechamento nenhum, nem o próprio. | `lib/bloomy/professionals/closures/closure_policy.ex` |

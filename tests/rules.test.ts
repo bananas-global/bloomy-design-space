@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  AttendanceRow,
+  InsurerPortalData,
   GuardianPlan,
   GuardianPortalData,
   SupervisionLink,
@@ -140,6 +142,14 @@ import {
   plansAwaitingAcceptance,
   upcomingSchedules,
 } from "../src/rules/guardianPortal.js";
+import {
+  NOT_SHARED_WITH_INSURER,
+  attendanceSummary,
+  hiddenFromInsurer,
+  isBeneficiary,
+  notDeliveredReason,
+  wasDelivered,
+} from "../src/rules/insurerPortal.js";
 
 /**
  * Testes das regras de negócio.
@@ -2601,5 +2611,131 @@ describe("planos esperando aceite", () => {
       ],
     });
     expect(plansAwaitingAcceptance(dados).map((p) => p.id)).toEqual(["pendente"]);
+  });
+});
+
+/* ==================================================== portal da operadora */
+
+/**
+ * O único lugar do produto em que dados de uma clínica são mostrados a uma
+ * organização de fora. Estes testes fixam o que conta como prestado — e a
+ * omissão que o escopo faz em silêncio.
+ */
+
+function attendanceRow(overrides: Partial<AttendanceRow> & { id: string }): AttendanceRow {
+  return {
+    date: "2026-07-06",
+    start: "2026-07-06T14:00:00.000-03:00",
+    end: "2026-07-06T15:00:00.000-03:00",
+    patientName: "Théo Andrade Lins",
+    professionalName: "Marina Okabe",
+    serviceName: "Terapia ABA",
+    status: "finished",
+    ...overrides,
+  };
+}
+
+function insurerData(overrides: Partial<InsurerPortalData> = {}): InsurerPortalData {
+  return {
+    healthCare: {
+      id: "op",
+      name: "Bradesco Saúde",
+      ansRegister: "005711",
+      cnpj: "11.222.333/0001-44",
+      skipEligibility: false,
+      planTypes: [],
+    },
+    period: { start: "2026-07-01", end: "2026-07-31" },
+    patients: [],
+    attendance: [],
+    hiddenIncompleteCount: 0,
+    now: "2026-08-01T09:00:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("attendance-list-counts-only-what-happened", () => {
+  const dados = insurerData({
+    attendance: [
+      attendanceRow({ id: "1" }),
+      attendanceRow({ id: "2" }),
+      attendanceRow({ id: "3", status: "missed" }),
+      attendanceRow({ id: "4", status: "cancelled" }),
+      attendanceRow({ id: "5", status: "pending_signature" }),
+      attendanceRow({ id: "6", status: "pending_supervisor_signature" }),
+      attendanceRow({ id: "7", status: "pending_register" }),
+    ],
+  });
+
+  it("só Finalizado conta como prestado", () => {
+    expect(wasDelivered(attendanceRow({ id: "x" }))).toBe(true);
+    expect(wasDelivered(attendanceRow({ id: "x", status: "pending_signature" }))).toBe(false);
+  });
+
+  it("separa o que fechou do que apenas aconteceu", () => {
+    // A distinção existe porque contar um atendimento pendente como prestado
+    // antecipa uma cobrança que ainda não fechou.
+    const resumo = attendanceSummary(dados);
+    expect(resumo.delivered).toBe(2);
+    expect(resumo.pendingClosure).toBe(3);
+    expect(resumo.missed).toBe(1);
+    expect(resumo.cancelled).toBe(1);
+    expect(resumo.total).toBe(7);
+  });
+
+  it("cada situação não prestada tem um motivo escrito", () => {
+    expect(notDeliveredReason(attendanceRow({ id: "x", status: "missed" }))).toBe(
+      "Paciente faltou",
+    );
+    expect(notDeliveredReason(attendanceRow({ id: "x", status: "pending_supervisor_signature" }))).toMatch(
+      /aguardando assinatura do supervisor/,
+    );
+    expect(notDeliveredReason(attendanceRow({ id: "x" }))).toBeUndefined();
+  });
+
+  it("período sem movimento zera tudo sem quebrar", () => {
+    const vazio = attendanceSummary(insurerData());
+    expect(vazio).toEqual({ delivered: 0, pendingClosure: 0, missed: 0, cancelled: 0, total: 0 });
+  });
+});
+
+describe("insurer-sees-only-its-own-beneficiaries", () => {
+  const dados = insurerData({
+    patients: [
+      {
+        patient: { id: "pac-theo", name: "Théo", birthDate: "2019-11-04" },
+        planName: "Efetivo Pleno",
+        cardNumber: "0000",
+        attendedSessions: 3,
+        missedSessions: 1,
+      },
+    ],
+  });
+
+  it("reconhece quem tem plano desta operadora", () => {
+    expect(isBeneficiary(dados, "pac-theo")).toBe(true);
+  });
+
+  it("não reconhece paciente da clínica sem plano desta operadora", () => {
+    // O vínculo é o plano, não a clínica: é por isso que alguém some da lista
+    // ao trocar de convênio, mesmo continuando em atendimento.
+    expect(isBeneficiary(dados, "pac-laura")).toBe(false);
+  });
+});
+
+describe("incomplete-schedules-are-hidden-from-the-insurer", () => {
+  it("expõe quantos agendamentos o escopo omitiu", () => {
+    expect(hiddenFromInsurer(insurerData({ hiddenIncompleteCount: 2 }))).toBe(2);
+    expect(hiddenFromInsurer(insurerData())).toBe(0);
+  });
+});
+
+describe("insurer-sees-attendance-not-clinical-record", () => {
+  it("a lista do que não é compartilhado nomeia o conteúdo clínico", () => {
+    // Existe como constante, e não como texto na tela, para sobreviver a uma
+    // reescrita de layout: é decisão de privacidade, não de composição.
+    expect(NOT_SHARED_WITH_INSURER).toContain("a evolução escrita da sessão");
+    expect(NOT_SHARED_WITH_INSURER).toContain("as tentativas registradas nos programas");
+    expect(NOT_SHARED_WITH_INSURER).toHaveLength(4);
   });
 });

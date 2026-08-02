@@ -1036,6 +1036,63 @@ test.describe("Portal da família", () => {
   });
 });
 
+test.describe("Portal da operadora", () => {
+  test("o total separa o que fechou do que apenas aconteceu", async ({ page }) => {
+    await page.goto(urlFor("insurer.attendance"));
+
+    // Os quatro números do resumo são um `dl`: o rótulo é `dt`, não texto solto.
+    await expect(page.getByRole("term").filter({ hasText: "Atendimentos prestados" })).toBeVisible();
+    await expect(page.getByRole("term").filter({ hasText: "Aguardando fechamento" })).toBeVisible();
+    await expect(
+      page.getByText(/aguardando fechamento aconteceram e ainda não têm assinatura completa/),
+    ).toBeVisible();
+  });
+
+  test("cada linha não prestada diz por quê", async ({ page }) => {
+    await page.goto(urlFor("insurer.attendance"));
+
+    await expect(page.getByText("Paciente faltou")).toBeVisible();
+    await expect(page.getByText("Realizado, aguardando assinatura de quem atendeu")).toBeVisible();
+    await expect(page.getByText("Realizado, aguardando assinatura do supervisor")).toBeVisible();
+  });
+
+  test("a tabela tem legenda e cabeçalhos de coluna", async ({ page }) => {
+    await page.goto(urlFor("insurer.attendance"));
+
+    await expect(page.getByRole("table")).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Profissional" })).toBeVisible();
+    await expect(page.getByText(/Atendimentos de beneficiários da Bradesco Saúde entre/)).toBeAttached();
+  });
+
+  test("a omissão do escopo é declarada, não silenciosa", async ({ page }) => {
+    await page.goto(urlFor("insurer.hidden-incomplete"));
+
+    await expect(
+      page.getByRole("heading", { name: "2 agendamentos do período não aparecem nesta lista" }),
+    ).toBeVisible();
+    await expect(page.getByText(/No sistema atual esse filtro é silencioso/)).toBeVisible();
+    await expect(page.getByText(/discutida em vez de herdada/)).toBeVisible();
+  });
+
+  test("o que a operadora não vê é dito em voz alta", async ({ page }) => {
+    await page.goto(urlFor("insurer.not-shared"));
+
+    await expect(page.getByRole("heading", { name: "O que não aparece aqui" })).toBeVisible();
+    await expect(page.getByText("a evolução escrita da sessão")).toBeVisible();
+    await expect(page.getByText("as tentativas registradas nos programas")).toBeVisible();
+    await expect(page.getByText(/conteúdo clínico é do paciente e da clínica/)).toBeVisible();
+  });
+
+  test("competência sem movimento mostra zeros, sem sumir com a seção", async ({ page }) => {
+    await page.goto(urlFor("insurer.empty"));
+
+    await expect(
+      page.getByText("Nenhum atendimento de beneficiário desta operadora no período."),
+    ).toBeVisible();
+    await expect(page.getByRole("term").filter({ hasText: "Atendimentos prestados" })).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

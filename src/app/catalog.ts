@@ -13,6 +13,7 @@ import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
 import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
+import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -25,6 +26,7 @@ import { invoiceRules } from "../rules/invoices.js";
 import { teamRules } from "../rules/team.js";
 import { publicPortalRules } from "../rules/publicPortal.js";
 import { guardianPortalRules } from "../rules/guardianPortal.js";
+import { insurerPortalRules } from "../rules/insurerPortal.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -37,6 +39,7 @@ import { invoiceScenarios } from "../scenarios/invoices.js";
 import { teamScenarios } from "../scenarios/team.js";
 import { publicPortalScenarios } from "../scenarios/publicPortal.js";
 import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
+import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -440,6 +443,31 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "insurer",
+    name: "Portal da operadora",
+    description:
+      "A clínica vista de fora: lista de presença, o que conta como prestado, e o que não acompanha a cobrança.",
+    flows: [
+      {
+        id: "reconcile-the-month",
+        title: "Conferir a competência",
+        description:
+          "Da lista de presença até as duas razões pelas quais os números da clínica e os da operadora divergem.",
+        steps: [
+          {
+            scenario: "insurer.attendance",
+            label: "Conferir os atendimentos do mês",
+            decision: "Por que o total não bate com o faturado?",
+            branches: {
+              "Atendimento sem fechar": "insurer.pending-closure",
+              "Agendamento omitido pelo escopo": "insurer.hidden-incomplete",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -455,6 +483,7 @@ export const scenarios: Scenario[] = [
   ...teamScenarios,
   ...publicPortalScenarios,
   ...guardianPortalScenarios,
+  ...insurerPortalScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -471,6 +500,7 @@ export const fixtures: Fixture[] = [
   ...publicPortalFixtures,
   ...npsFixtures,
   ...guardianPortalFixtures,
+  ...insurerPortalFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -486,6 +516,7 @@ export const rules: Rule[] = [
   ...teamRules,
   ...publicPortalRules,
   ...guardianPortalRules,
+  ...insurerPortalRules,
 ];
 
 export { personas };

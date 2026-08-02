@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-105 cenários em doze módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+110 cenários em treze módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,6 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
+| **Portal da operadora** | lista de presença, atendimentos sem fechar, agendamentos omitidos pelo escopo, o que a operadora não vê, competência sem movimento |
 | **Portal da família** | portal, plano esperando aceite, plano aceito, plano vencido, plano de outra família, termos não aceitos, sem atendimentos |
 | **Portal público** | totem esperando CPF, CPF errado, CPF sem cadastro, escolher quem chegou, nenhum atendimento hoje, chegada registrada, QR Code inválido, pesquisa de satisfação, nota baixa |
 | **Equipe** | equipe da unidade, supervisão define a assinatura, profissional a definir, cadastro incompleto, contrato com taxa faltando, hora zerada válida, contrato sem nota, desativar sem data, quem atende sem acesso, unidade vazia |
@@ -95,6 +96,10 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `expired-plan-cannot-be-accepted` | Plano vencido não recebe aceite. |
 | `plans-cannot-overlap-for-a-patient` | Dois planos do mesmo paciente não têm vigências sobrepostas. |
 | `terms-acceptance-records-context` | O aceite dos termos guarda instante, endereço de rede e dispositivo. |
+| `insurer-sees-only-its-own-beneficiaries` | O vínculo é o plano, não a clínica. |
+| `incomplete-schedules-are-hidden-from-the-insurer` | O escopo omite agendamentos incompletos, e o faz em silêncio. |
+| `insurer-sees-attendance-not-clinical-record` | A operadora vê a prestação, não o conteúdo clínico. |
+| `attendance-list-counts-only-what-happened` | Só Finalizado conta como prestado. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |
