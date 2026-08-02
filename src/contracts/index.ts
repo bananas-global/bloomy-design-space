@@ -1467,6 +1467,62 @@ export type ProspectsData = {
 };
 
 /* ================================================================== *
+ * Relatórios — os documentos que saem da clínica
+ * ================================================================== */
+
+/**
+ * Tipo do relatório.
+ *
+ * Sete tipos, e o que muda entre eles não é só o conteúdo: é **para onde o
+ * documento vai**. A declaração de comparecimento vai para o empregador do
+ * responsável; o relatório para operadora vai para o convênio; o PEI vai para a
+ * família. O mesmo botão produz documentos que saem da clínica para lugares
+ * muito diferentes.
+ */
+export type ReportType =
+  | "normal"
+  | "declaration_of_attendance"
+  | "protocol_report"
+  | "evolution_report"
+  | "pei"
+  | "health_care_report"
+  | "external_report";
+
+export type ReportStatus = "elaboration" | "generated_pdf" | "cancelled";
+
+export type PatientReport = {
+  id: string;
+  name: string;
+  reportType: ReportType;
+  status: ReportStatus;
+  patientName: string;
+  /** Quem responde pelo documento. Pode não ser quem o escreveu. */
+  ownerName?: string;
+  /** Quem criou o registro. */
+  authorName: string;
+  content?: string;
+  createdAt: string;
+  cancelledAt?: string;
+  /** Campos exclusivos da declaração de comparecimento. */
+  attendance?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    guardianName: string;
+  };
+  /** Período coberto, nos tipos que cobrem um intervalo. */
+  period?: { start: string; end: string };
+};
+
+export type ReportsData = {
+  reports: PatientReport[];
+  /** Papel de quem está olhando, para exercitar a regra de emissão. */
+  currentRole: string;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

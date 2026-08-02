@@ -1529,6 +1529,68 @@ test.describe("Visitas", () => {
   });
 });
 
+test.describe("Relatórios", () => {
+  test("cada tipo diz para onde o documento vai", async ({ page }) => {
+    await page.goto(urlFor("reports.list"));
+
+    // O destinatário não está no schema — é o que decide o cuidado com o
+    // conteúdo, e sem ele o handoff produz sete telas iguais.
+    await expect(page.getByText(/empregador de quem trouxe a criança/).first()).toBeVisible();
+    await expect(page.getByText(/a operadora, junto da autorização/)).toBeVisible();
+    await expect(page.getByText("Sem conteúdo clínico").first()).toBeVisible();
+    await expect(page.getByText("Leva conteúdo clínico").first()).toBeVisible();
+  });
+
+  test("a declaração incompleta não gera PDF", async ({ page }) => {
+    await page.goto(urlFor("reports.declaration-incomplete"));
+
+    await expect(page.getByRole("heading", { name: "Declaração incompleta" })).toBeVisible();
+    await expect(page.getByText(/horário de saída, nome do responsável/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Gerar PDF" })).toBeDisabled();
+    await expect(page.locator("#pdf-rel-2-motivo")).toHaveText(
+      /esteve na clínica naquele horário/,
+    );
+  });
+
+  test("conteúdo clínico numa declaração é avisado antes de gerar", async ({ page }) => {
+    await page.goto(urlFor("reports.declaration-with-clinical"));
+
+    await expect(
+      page.getByRole("heading", { name: "Conteúdo clínico numa declaração de comparecimento" }),
+    ).toBeVisible();
+    await expect(page.getByText(/único tipo que sai do circuito da saúde/)).toBeVisible();
+    // A escolha continua de quem emite: informada, não bloqueada.
+    await expect(page.getByRole("button", { name: "Gerar PDF" })).toBeEnabled();
+  });
+
+  test("o descompasso de permissão é declarado, não corrigido", async ({ page }) => {
+    await page.goto(urlFor("reports.issuing-without-reading"));
+
+    await expect(
+      page.getByRole("heading", { name: "A permissão de emitir não verifica a de ler" }),
+    ).toBeVisible();
+    await expect(page.getByText(/não alcança a visão clínica do paciente/).first()).toBeVisible();
+    await expect(page.getByText(/tomada de propósito, em vez de herdada/)).toBeVisible();
+  });
+
+  test("relatório com PDF gerado não é editado", async ({ page }) => {
+    await page.goto(urlFor("reports.generated"));
+
+    await expect(page.getByRole("button", { name: "Editar" })).toBeDisabled();
+    await expect(page.locator("#editar-rel-4-motivo")).toHaveText(
+      /papel que está na mão de alguém/,
+    );
+    // O conteúdo continua legível.
+    await expect(page.getByText(/Evolução consistente em imitação motora/)).toBeVisible();
+  });
+
+  test("sem relatório, a tela nomeia os tipos possíveis", async ({ page }) => {
+    await page.goto(urlFor("reports.empty"));
+
+    await expect(page.getByText(/declaração de comparecimento, relatório evolutivo/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  PatientReport,
   Prospect,
   ProspectsData,
   ChatData,
@@ -230,6 +231,16 @@ import {
   stalled,
   stepPosition,
 } from "../src/rules/prospects.js";
+import {
+  attendanceHasClinicalContent,
+  canEditReport,
+  canGeneratePdf,
+  canIssue,
+  carriesClinicalContent,
+  destination,
+  issuingWithoutReading,
+  missingAttendanceFields,
+} from "../src/rules/reports.js";
 
 /**
  * Testes das regras de negócio.
@@ -3898,5 +3909,168 @@ describe("step-history-explains-the-funnel", () => {
 
   it("sem histórico, não há como dizer há quanto tempo", () => {
     expect(daysInCurrentStep(prospectFixture({ id: "x" }), AGORA)).toBeUndefined();
+  });
+});
+
+/* ============================================================ relatórios */
+
+/**
+ * Sete tipos de documento que saem por um botão só. O que muda entre eles é
+ * para onde o papel vai — e é a coisa que o schema não guarda.
+ */
+
+function reportFixture(overrides: Partial<PatientReport> & { id: string }): PatientReport {
+  return {
+    name: "Relatório",
+    reportType: "normal",
+    status: "elaboration",
+    patientName: "Théo",
+    authorName: "Marina",
+    createdAt: "2026-07-20T10:00:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("report-type-decides-the-destination", () => {
+  it("a declaração de comparecimento é o único tipo sem conteúdo clínico", () => {
+    expect(carriesClinicalContent("declaration_of_attendance")).toBe(false);
+    for (const type of [
+      "normal",
+      "protocol_report",
+      "evolution_report",
+      "pei",
+      "health_care_report",
+      "external_report",
+    ] as const) {
+      expect(carriesClinicalContent(type)).toBe(true);
+    }
+  });
+
+  it("e o único que sai do circuito da saúde", () => {
+    expect(destination("declaration_of_attendance").who).toMatch(/empregador|escola/);
+    expect(destination("health_care_report").who).toMatch(/operadora/);
+    expect(destination("external_report").who).toMatch(/outro serviço de saúde/);
+  });
+
+  it("todo tipo tem destinatário nomeado", () => {
+    for (const type of [
+      "normal",
+      "declaration_of_attendance",
+      "protocol_report",
+      "evolution_report",
+      "pei",
+      "health_care_report",
+      "external_report",
+    ] as const) {
+      expect(destination(type).who.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("attendance-declaration-carries-no-clinical-content", () => {
+  const completa = reportFixture({
+    id: "d",
+    reportType: "declaration_of_attendance",
+    attendance: {
+      date: "2026-07-23",
+      startTime: "14:00",
+      endTime: "15:00",
+      guardianName: "Renata",
+    },
+  });
+
+  it("exige data, os dois horários e o nome do responsável", () => {
+    const vazia = reportFixture({
+      id: "d",
+      reportType: "declaration_of_attendance",
+      attendance: { date: "", startTime: "", endTime: "", guardianName: "" },
+    });
+    expect(missingAttendanceFields(vazia)).toEqual([
+      "data do atendimento",
+      "horário de entrada",
+      "horário de saída",
+      "nome do responsável",
+    ]);
+  });
+
+  it("a declaração completa não acusa nada", () => {
+    expect(missingAttendanceFields(completa)).toEqual([]);
+    expect(canGeneratePdf(completa).allowed).toBe(true);
+  });
+
+  it("os campos só são exigidos neste tipo", () => {
+    expect(missingAttendanceFields(reportFixture({ id: "e", reportType: "evolution_report" }))).toEqual(
+      [],
+    );
+  });
+
+  it("detecta conteúdo clínico numa declaração — o campo aceita e não deveria", () => {
+    const vazando = { ...completa, content: "Paciente em acompanhamento para TEA." };
+    expect(attendanceHasClinicalContent(vazando)).toBe(true);
+    // Em qualquer outro tipo, conteúdo é esperado e não gera aviso.
+    expect(
+      attendanceHasClinicalContent({ ...vazando, reportType: "evolution_report" }),
+    ).toBe(false);
+  });
+
+  it("bloqueia o PDF nomeando o que falta e o que a declaração prova", () => {
+    const incompleta = {
+      ...completa,
+      attendance: { ...completa.attendance!, endTime: "", guardianName: "" },
+    };
+    const result = canGeneratePdf(incompleta);
+    expect(result.reason).toMatch(/horário de saída, nome do responsável/);
+    expect(result.reason).toMatch(/esteve na clínica naquele horário/);
+  });
+});
+
+describe("issuing-does-not-check-reading", () => {
+  it("a recepção emite relatórios", () => {
+    expect(canIssue("attendant").allowed).toBe(true);
+  });
+
+  it("e o descompasso é declarado quando o tipo leva conteúdo clínico", () => {
+    // `generate_report` inclui attendant; `see_clinic_overview` o exclui.
+    const aviso = issuingWithoutReading("evolution_report", "attendant");
+    expect(aviso).toMatch(/não alcança a visão clínica/);
+    expect(aviso).toMatch(/emitir não verifica a de ler/);
+  });
+
+  it("não há descompasso na declaração de comparecimento", () => {
+    // Ela não leva conteúdo clínico: emitir sem ler o prontuário é coerente.
+    expect(issuingWithoutReading("declaration_of_attendance", "attendant")).toBeUndefined();
+  });
+
+  it("nem para quem lê o prontuário", () => {
+    for (const role of ["coordinator", "supervisor", "therapeutic_companion", "specialist"]) {
+      expect(issuingWithoutReading("evolution_report", role)).toBeUndefined();
+    }
+  });
+
+  it("quem não emite não gera descompasso nenhum", () => {
+    expect(issuingWithoutReading("evolution_report", "operation")).toBeUndefined();
+    expect(canIssue("operation").reason).toMatch(/não emite relatórios/);
+  });
+});
+
+describe("generated-report-is-frozen", () => {
+  const gerado = reportFixture({ id: "g", status: "generated_pdf" });
+
+  it("não edita depois do PDF, e a negativa diz por quê", () => {
+    expect(canEditReport(gerado).reason).toMatch(/papel que está na mão de alguém/);
+  });
+
+  it("nem gera o PDF de novo", () => {
+    expect(canGeneratePdf(gerado).reason).toMatch(/já foi gerado/);
+  });
+
+  it("cancelado não edita nem gera", () => {
+    const cancelado = reportFixture({ id: "c", status: "cancelled" });
+    expect(canEditReport(cancelado).allowed).toBe(false);
+    expect(canGeneratePdf(cancelado).reason).toMatch(/não gera PDF/);
+  });
+
+  it("em elaboração é editável", () => {
+    expect(canEditReport(reportFixture({ id: "e" })).allowed).toBe(true);
   });
 });
