@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-72 cenários em oito módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+79 cenários em nove módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,6 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
+| **Faturas** | pronta para fechar, as duas perdas silenciosas, faltam identificadores, nada atendido, lote já gerado, operadora sem códigos TISS, operação sem acesso |
 | **Fechamentos** | o mês etapa por etapa, aguardando aceite, invisível em conferência, nota é do profissional, bloqueada para outros, contrato sem nota, pagar sem comprovante, pagar com comprovante, pago congelado, vazio |
 | **Autorizações** | central, vazia, autorizada com saldo, pacote esgotado trava tudo, capitation não multiplica, validade vencida, autorizada parcialmente, erro de sincronização, aguardando documentação, recepção sem acesso |
 
@@ -71,6 +72,10 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `paid-closure-is-frozen` | Fechamento pago não aceita interação de nenhum papel. |
 | `invoice-belongs-to-the-professional` | Só o dono anexa a própria nota fiscal — regra de identidade. |
 | `payment-proof-belongs-to-the-clinic` | Comprovante é de admin e People, e a confirmação depende dele. |
+| `invoice-includes-only-executed-authorizations` | Autorização sem atendimento realizado não entra na fatura. |
+| `authorization-without-agreement-is-worth-zero` | Linha sem acordo ativo entra valendo zero, em silêncio. |
+| `invoice-needs-number-protocol-igdr` | Fechar o lote exige número, protocolo e IGDR. |
+| `generated-invoice-is-final` | Fatura com lote gerado não é editada. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

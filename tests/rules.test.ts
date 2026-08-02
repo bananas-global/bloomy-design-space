@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  HealthcareInvoice,
+  InvoiceLine,
   Closure,
   Authorization,
   AuthorizationPackage,
@@ -89,6 +91,17 @@ import {
   nextStep,
   visibleClosures,
 } from "../src/rules/closures.js";
+import {
+  billableLines,
+  canFinishInvoice,
+  excludedLines,
+  invoiceTotalCents,
+  lineTotalCents,
+  linesWithoutAgreement,
+  missingInvoiceFields,
+  missingTissSetup,
+  sessionsWithoutAgreement,
+} from "../src/rules/invoices.js";
 
 /**
  * Testes das regras de negócio.
@@ -1703,5 +1716,168 @@ describe("nota fiscal no ciclo", () => {
     expect(nextStep(closureFixture({ status: "pending_invoice", issuesInvoice: true }))).toMatch(
       /precisa anexar a nota fiscal/,
     );
+  });
+});
+
+/* =============================================================== faturas */
+
+/**
+ * Metade destes testes existe por um motivo só: duas maneiras de a clínica
+ * perder dinheiro sem receber aviso nenhum. O monólito soma sem reclamar nos
+ * dois casos.
+ */
+
+function invoiceLine(overrides: Partial<InvoiceLine> & { authorizationId: string }): InvoiceLine {
+  return {
+    guideNumber: "G-0001",
+    patientName: "Théo Andrade Lins",
+    packageName: "Terapia ABA",
+    quantity: 16,
+    executedSessions: 16,
+    agreementPriceCents: 18_500,
+    ...overrides,
+  };
+}
+
+function invoiceFixture(overrides: Partial<HealthcareInvoice> = {}): HealthcareInvoice {
+  return {
+    id: "fat",
+    healthCare: {
+      id: "op",
+      name: "Bradesco Saúde",
+      ansRegister: "005711",
+      cnpj: "11.222.333/0001-44",
+      providerCode: "PRT-9081",
+      requesterCode: "SOL-4417",
+      skipEligibility: false,
+      planTypes: [],
+    },
+    status: "pending",
+    invoiceType: "health_care",
+    periodStart: "2026-07-01",
+    periodEnd: "2026-07-31",
+    number: "2026-07-0148",
+    protocol: "PRT-88213",
+    igdr: "IGDR-2026-07",
+    lines: [invoiceLine({ authorizationId: "a1" })],
+    ...overrides,
+  };
+}
+
+describe("invoice-includes-only-executed-authorizations", () => {
+  const comSemExecucao = invoiceFixture({
+    lines: [
+      invoiceLine({ authorizationId: "a1" }),
+      invoiceLine({ authorizationId: "a2", executedSessions: 0, quantity: 4 }),
+    ],
+  });
+
+  it("descarta a autorização sem nenhum atendimento", () => {
+    expect(billableLines(comSemExecucao).map((l) => l.authorizationId)).toEqual(["a1"]);
+    expect(excludedLines(comSemExecucao).map((l) => l.authorizationId)).toEqual(["a2"]);
+  });
+
+  it("a descartada não contribui com nada para o total", () => {
+    expect(invoiceTotalCents(comSemExecucao)).toBe(16 * 18_500);
+  });
+
+  it("linha descartada vale zero mesmo tendo preço de acordo", () => {
+    expect(lineTotalCents(invoiceLine({ authorizationId: "a", executedSessions: 0 }))).toBe(0);
+  });
+});
+
+describe("authorization-without-agreement-is-worth-zero", () => {
+  const semAcordo = invoiceFixture({
+    lines: [
+      invoiceLine({ authorizationId: "a1" }),
+      invoiceLine({ authorizationId: "a2", quantity: 8, agreementPriceCents: undefined }),
+    ],
+  });
+
+  it("a linha atendida sem acordo entra e vale zero", () => {
+    expect(billableLines(semAcordo)).toHaveLength(2);
+    expect(lineTotalCents(semAcordo.lines[1]!)).toBe(0);
+  });
+
+  it("separa as linhas sem acordo para a tela poder avisar antes do envio", () => {
+    expect(linesWithoutAgreement(semAcordo).map((l) => l.authorizationId)).toEqual(["a2"]);
+  });
+
+  it("conta sessões, não dinheiro — o valor perdido é desconhecível", () => {
+    // Sem acordo não existe preço a aplicar; estimar um seria inventar um
+    // número que a operadora nunca vai pagar.
+    expect(sessionsWithoutAgreement(semAcordo)).toBe(8);
+  });
+
+  it("o total ignora silenciosamente a linha sem acordo, como no monólito", () => {
+    expect(invoiceTotalCents(semAcordo)).toBe(16 * 18_500);
+  });
+});
+
+describe("invoice-needs-number-protocol-igdr", () => {
+  it("nomeia os três campos que faltam", () => {
+    const vazia = invoiceFixture({ number: undefined, protocol: undefined, igdr: undefined });
+    expect(missingInvoiceFields(vazia)).toEqual(["número", "protocolo", "IGDR"]);
+  });
+
+  it("campo só com espaço conta como vazio", () => {
+    expect(missingInvoiceFields(invoiceFixture({ protocol: "   " }))).toEqual(["protocolo"]);
+  });
+
+  it("bloqueia o fechamento citando o que falta e para que serve", () => {
+    const result = canFinishInvoice(invoiceFixture({ igdr: undefined }), [
+      "healthcare_invoices.edit",
+    ]);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Falta preencher: IGDR/);
+    expect(result.reason).toMatch(/identificadores com que a operadora reconhece o lote/);
+  });
+
+  it("libera com os três preenchidos e linha faturável", () => {
+    expect(canFinishInvoice(invoiceFixture(), ["healthcare_invoices.edit"]).allowed).toBe(true);
+  });
+
+  it("bloqueia quando nada foi atendido no período", () => {
+    const nada = invoiceFixture({
+      lines: [invoiceLine({ authorizationId: "a", executedSessions: 0 })],
+    });
+    expect(canFinishInvoice(nada, ["healthcare_invoices.edit"]).reason).toMatch(
+      /Não há o que faturar/,
+    );
+  });
+
+  it("bloqueia por permissão antes de olhar o conteúdo", () => {
+    expect(canFinishInvoice(invoiceFixture(), ["healthcare_invoices.list"]).reason).toMatch(
+      /Só o admin fecha fatura/,
+    );
+  });
+});
+
+describe("generated-invoice-is-final", () => {
+  it("não fecha de novo uma fatura cujo lote já saiu", () => {
+    const gerada = invoiceFixture({ status: "generated_invoice" });
+    expect(canFinishInvoice(gerada, ["healthcare_invoices.edit"]).reason).toMatch(
+      /divergir do que a operadora recebeu/,
+    );
+  });
+});
+
+describe("cadastro TISS da operadora", () => {
+  it("nomeia os códigos que faltam", () => {
+    const incompleta = invoiceFixture({
+      healthCare: {
+        ...invoiceFixture().healthCare,
+        providerCode: undefined,
+        requesterCode: undefined,
+      },
+    });
+    expect(missingTissSetup(incompleta)).toEqual([
+      "código do prestador",
+      "código do solicitante",
+    ]);
+  });
+
+  it("operadora completa não gera aviso", () => {
+    expect(missingTissSetup(invoiceFixture())).toEqual([]);
   });
 });

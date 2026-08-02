@@ -216,6 +216,29 @@ Seis regras, dez cenários, a tela `Closures` e vinte e três testes.
 
 Verde: `pnpm check` e 218 jornadas Playwright.
 
+### 8. Financeiro, parte 3: faturas de convênio — `porte/financeiro-faturas`
+
+Concluída. **Fecha o financeiro.**
+
+O último passo do dinheiro: o lote TISS que a clínica envia para receber pelo
+que atendeu. Metade deste módulo existe por um motivo só — duas maneiras de
+perder dinheiro sem receber aviso nenhum.
+
+- **Autorização sem atendimento não entra na fatura.** O corte é correto:
+  faturar o que não aconteceu seria pior. O risco é ele ser invisível, e a
+  clínica achar que faturou o mês inteiro.
+- **Autorização atendida sem acordo ativo entra valendo zero.**
+  `CalculatePriceForInvoice` soma `0.0` quando não acha acordo vigente, sem erro
+  e sem aviso. É o jeito mais silencioso de a clínica trabalhar de graça.
+
+A tela mostra as duas listas **antes** do total. E o aviso do acordo ativo diz
+quantas *sessões* vão a zero, não quantos reais: sem acordo não existe preço a
+aplicar, e estimar um seria inventar um número que a operadora não vai pagar.
+
+Quatro regras, sete cenários, a tela `HealthcareInvoice` e vinte e um testes.
+
+Verde: `pnpm check` e 240 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -233,4 +256,5 @@ bugs do Design Space; são observações sobre o produto.
 | 8 | `ProtocolPolicy.can?(role, :list)` não inclui `supervisor`. Quem supervisiona o caso não alcança a avaliação que o originou — nem para leitura. | `lib/bloomy/protocols/protocol_policy.ex` |
 | 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |
 | 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |
+| 12 | `provider_code` e `requester_code` de `HealthCare` são opcionais no changeset e obrigatórios na geração do lote TISS. O cadastro passa e o envio falha. | `lib/bloomy/health_cares/health_care.ex` |
 | 11 | `ClosurePolicy` se contradiz sobre o especialista: `can_interact?` diz que ele age na etapa de aceite, mas `scope/2` não o lista e ele cai no `where: false`. O especialista não vê fechamento nenhum, nem o próprio. | `lib/bloomy/professionals/closures/closure_policy.ex` |

@@ -9,6 +9,7 @@ import { inClinicFixtures } from "../fixtures/inClinic.js";
 import { patientFixtures } from "../fixtures/patients.js";
 import { authorizationFixtures } from "../fixtures/authorizations.js";
 import { closureFixtures } from "../fixtures/closures.js";
+import { invoiceFixtures } from "../fixtures/invoices.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -17,6 +18,7 @@ import { inClinicRules } from "../rules/inClinic.js";
 import { patientRules } from "../rules/patients.js";
 import { authorizationRules } from "../rules/authorizations.js";
 import { closureRules } from "../rules/closures.js";
+import { invoiceRules } from "../rules/invoices.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -25,6 +27,7 @@ import { inClinicScenarios } from "../scenarios/inClinic.js";
 import { patientScenarios } from "../scenarios/patients.js";
 import { authorizationScenarios } from "../scenarios/authorizations.js";
 import { closureScenarios } from "../scenarios/closures.js";
+import { invoiceScenarios } from "../scenarios/invoices.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -318,6 +321,33 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "invoices",
+    name: "Faturas",
+    description:
+      "O lote TISS enviado à operadora — e as duas maneiras de perder dinheiro sem receber aviso.",
+    flows: [
+      {
+        id: "close-the-invoice",
+        title: "Fechar a competência de uma operadora",
+        description:
+          "Da conferência das linhas até a geração do lote, com os dois cortes silenciosos do cálculo.",
+        steps: [
+          {
+            scenario: "invoices.silent-losses",
+            label: "Conferir o que entra e o que some",
+            decision: "O que impede o fechamento?",
+            branches: {
+              "Faltam identificadores": "invoices.missing-fields",
+              "Nada foi atendido": "invoices.nothing-executed",
+              "Operadora sem códigos": "invoices.health-care-incomplete",
+            },
+          },
+          { scenario: "invoices.ready", label: "Gerar o lote" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -329,6 +359,7 @@ export const scenarios: Scenario[] = [
   ...patientScenarios,
   ...authorizationScenarios,
   ...closureScenarios,
+  ...invoiceScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -340,6 +371,7 @@ export const fixtures: Fixture[] = [
   ...patientFixtures,
   ...authorizationFixtures,
   ...closureFixtures,
+  ...invoiceFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -351,6 +383,7 @@ export const rules: Rule[] = [
   ...patientRules,
   ...authorizationRules,
   ...closureRules,
+  ...invoiceRules,
 ];
 
 export { personas };

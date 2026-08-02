@@ -746,6 +746,84 @@ test.describe("Fechamentos", () => {
   });
 });
 
+test.describe("Faturas", () => {
+  test("as duas perdas silenciosas aparecem antes do total", async ({ page }) => {
+    await page.goto(urlFor("invoices.silent-losses"));
+
+    await expect(
+      page.getByRole("heading", { name: "8 sessões atendidas vão para a fatura valendo zero" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "1 autorização ficou de fora" }),
+    ).toBeVisible();
+
+    // O aviso admite o que não dá para afirmar, em vez de estimar um valor.
+    await expect(page.getByText(/estimar um seria inventar um número/)).toBeVisible();
+  });
+
+  test("a linha sem acordo é destacada dentro da lista faturada", async ({ page }) => {
+    await page.goto(urlFor("invoices.silent-losses"));
+
+    await expect(page.getByText(/sem acordo ativo — entra valendo R\$\s*0,00/)).toBeVisible();
+  });
+
+  test("as autorizações fora do lote são nomeadas, não só contadas", async ({ page }) => {
+    await page.goto(urlFor("invoices.silent-losses"));
+
+    await expect(page.getByRole("heading", { name: "Fora do lote" })).toBeVisible();
+    await expect(page.getByText(/G-7003.*Benício Tavares Rocha/)).toBeVisible();
+  });
+
+  test("faltando identificadores, o fechamento explica para que servem", async ({ page }) => {
+    await page.goto(urlFor("invoices.missing-fields"));
+
+    await expect(page.getByRole("button", { name: "Gerar lote e fechar" })).toBeDisabled();
+    await expect(page.locator("#fechar-fatura-motivo")).toHaveText(
+      /Falta preencher: protocolo, IGDR/,
+    );
+    await expect(page.getByText(/ninguém consegue rastreá-lo depois/)).toBeVisible();
+  });
+
+  test("sem atendimento no período não há o que faturar", async ({ page }) => {
+    await page.goto(urlFor("invoices.nothing-executed"));
+
+    await expect(
+      page.getByText(/Nenhuma linha entrou no lote/),
+    ).toBeVisible();
+    await expect(page.locator("#fechar-fatura-motivo")).toHaveText(/Não há o que faturar/);
+  });
+
+  test("lote já gerado não fecha de novo", async ({ page }) => {
+    await page.goto(urlFor("invoices.generated"));
+
+    await expect(page.getByText("Lote gerado")).toBeVisible();
+    await expect(page.locator("#fechar-fatura-motivo")).toHaveText(
+      /divergir do que a operadora recebeu/,
+    );
+    // Travar é sobre escrita: as linhas continuam legíveis.
+    await expect(page.getByText("G-7001")).toBeVisible();
+  });
+
+  test("operadora sem códigos TISS é avisada antes do envio", async ({ page }) => {
+    await page.goto(urlFor("invoices.health-care-incomplete"));
+
+    await expect(
+      page.getByRole("heading", { name: "Operadora sem cadastro completo para o TISS" }),
+    ).toBeVisible();
+    await expect(page.getByText(/opcionais no cadastro e obrigatórios no lote/)).toBeVisible();
+    await expect(page.getByText("não cadastrado").first()).toBeVisible();
+  });
+
+  test("a operação cuida do contrato e não vê a fatura", async ({ page }) => {
+    await page.goto(urlFor("invoices.no-access"));
+
+    await expect(
+      page.getByRole("heading", { name: "Você não tem acesso às faturas de convênio" }),
+    ).toBeVisible();
+    await expect(page.getByText(/cuida do contrato com a operadora/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

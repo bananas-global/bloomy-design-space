@@ -751,6 +751,72 @@ export type ClosuresData = {
 };
 
 /* ================================================================== *
+ * Faturas de convênio — o lote TISS que a clínica envia
+ * ================================================================== */
+
+/**
+ * A operadora, do ponto de vista do faturamento.
+ *
+ * `providerCode` e `requesterCode` são os códigos que a clínica usa dentro do
+ * TISS; sem eles o lote não fecha. `skipEligibility` é uma escolha por
+ * operadora: algumas não expõem consulta de elegibilidade, e a clínica passa
+ * sem ela — assumindo o risco de faturar um beneficiário inativo.
+ */
+export type HealthCare = {
+  id: string;
+  name: string;
+  ansRegister: string;
+  cnpj: string;
+  providerCode?: string;
+  requesterCode?: string;
+  skipEligibility: boolean;
+  planTypes: string[];
+};
+
+/**
+ * Uma autorização dentro da fatura, resumida ao que o cálculo pergunta.
+ *
+ * `executedSessions` é o que o monólito chama de `schedule_dailys`: os
+ * atendimentos efetivamente realizados sob aquela autorização. Zero significa
+ * que ela **não entra** na fatura, por mais autorizada que esteja.
+ *
+ * `agreementPriceCents` é o preço do acordo ativo daquele pacote com aquela
+ * operadora. Ausente significa que não há acordo vigente — e o monólito soma
+ * zero, sem avisar.
+ */
+export type InvoiceLine = {
+  authorizationId: string;
+  guideNumber: string;
+  patientName: string;
+  packageName: string;
+  quantity: number;
+  executedSessions: number;
+  agreementPriceCents?: number;
+};
+
+export type HealthcareInvoiceStatus = "pending" | "generated_invoice";
+
+export type HealthcareInvoice = {
+  id: string;
+  healthCare: HealthCare;
+  status: HealthcareInvoiceStatus;
+  invoiceType: "particular" | "health_care";
+  periodStart: string;
+  periodEnd: string;
+  /** Os três campos que o lote exige para fechar. */
+  number?: string;
+  protocol?: string;
+  igdr?: string;
+  lines: InvoiceLine[];
+};
+
+export type HealthcareInvoicesData = {
+  invoice: HealthcareInvoice;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 
