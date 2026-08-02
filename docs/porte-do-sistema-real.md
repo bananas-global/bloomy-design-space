@@ -49,18 +49,18 @@ Números de 2026-08-02, 09:00 — fim da janela de trabalho contínuo.
 
 | | |
 | --- | --- |
-| Cenários | 244 |
-| Regras declaradas | 183 |
-| Fixtures determinísticas | 298 |
-| Telas React | 45 |
-| Testes de regra | 648 |
-| Jornadas Playwright | 839 |
-| Achados sobre o sistema real | 89 |
-| Rodadas registradas | 66 |
+| Cenários | 247 |
+| Regras declaradas | 186 |
+| Fixtures determinísticas | 304 |
+| Telas React | 46 |
+| Testes de regra | 656 |
+| Jornadas Playwright | 850 |
+| Achados sobre o sistema real | 92 |
+| Rodadas registradas | 67 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
-citado, e um script confere as 91 citações a cada verificação.
+citado, e um script confere as 95 citações a cada verificação.
 
 **O que sustenta isso não são os cenários, são as varreduras.** Nove testes
 percorrem *todos* os cenários a cada execução: nenhum renderiza vazio, nenhum
@@ -2314,6 +2314,54 @@ sem ninguém notar. E o cenário do dia mostra a mesma chegada das 22h40 sendo
 5 achados, 5 cenários, 4 regras testáveis, 8 testes de regra, 6 jornadas.
 
 
+### 67. A assinatura da família, datada em UTC
+
+Última rodada. Fui ao portal do responsável e encontrei a ocorrência do achado
+82 que mais dói:
+
+```elixir
+def accept(%BehaviorInterventionPlan{} = plan, legal_guardian_id, signature) do
+  plan
+  |> BehaviorInterventionPlan.changeset(%{
+       guardian_approved: true,
+       legal_guardian_id: legal_guardian_id,
+       signature: signature,
+       signed_at: Date.utc_today()
+     })
+```
+
+É o **aceite do plano de intervenção comportamental** — o documento que descreve
+como a equipe responde ao comportamento da criança. O responsável assina pela API
+do portal, de casa. E a data é carimbada em UTC.
+
+O que muda aqui não é o mecanismo, é **a proporção**. Nas telas internas as três
+horas pegam o fim do expediente e pouca gente. Aqui elas pegam a noite, que é
+quando se lê documento de filho depois do trabalho. **A janela do defeito é o
+horário principal deste público.** O mesmo defeito, a mesma quantidade de horas,
+e alcances completamente diferentes conforme quem está do outro lado — foi isso
+que a tela precisou dizer, e por isso ela mostra a proporção como número, e não
+só a contagem de erros.
+
+E há um caso que deixa de ser erro de um dia. Um plano que termina hoje, assinado
+às 23h20, fica registrado como **aceito depois do próprio fim**. O documento
+afirma as duas coisas ao mesmo tempo, e quem for conferir não tem como saber qual
+das duas datas está errada. Isso ganhou aviso próprio.
+
+**Uma decisão pequena que vale registrar:** as duas datas — a assinada e a
+gravada — aparecem em *todas* as linhas, inclusive nas corretas. É a coluna igual
+nas linhas certas que torna a diferença legível nas erradas. Mostrá-la só onde
+há erro pouparia espaço e tiraria a régua.
+
+**E uma correção de escopo.** Eu ia acusar também o `finalize`, que grava
+`end_at: Date.utc_today()`, de bloquear o plano seguinte por sobreposição. Fui
+ler `validate_no_overlap` antes de escrever e a consulta filtra
+`expired == false` — e `finalize` marca `expired: true`. **Não bloqueia nada.**
+A teoria era boa e estava errada; ler a consulta custou dois minutos e teria me
+custado um achado retratado.
+
+3 achados, 3 cenários, 3 regras testáveis, 8 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2410,3 +2458,6 @@ bugs do Design Space; são observações sobre o produto.
 | 87 | Quando a busca não acha nada, o totem responde “Nenhum dos seus filhos tem consultas agendadas para hoje.” Das 21h à meia-noite isso é dito a uma família de pé na recepção, com a consulta marcada. A frase não fala do sistema, fala da família — e é falsa. | `lib/bloomy_web/public/live/auto_checkin_live/components/no_scheduled_patients.ex:18` |
 | 88 | A mesma janela tem o efeito oposto: quem tem atendimento **amanhã** e passa pelo totem depois das 21h **consegue fazer check-in**, e fica registrada presença num dia sem atendimento. Encontrado ao escrever o teste do limite, não lendo o código. | `lib/bloomy_web/public/live/auto_checkin_live/components/select_patient_step.ex:201` |
 | 89 | O totem é a única superfície operada pela família, sem ninguém do lado para explicar. As 205 ocorrências do achado 82 não são equivalentes: as internas têm quem contorne e quem reclame; esta não tem nenhum dos dois. | `lib/bloomy_web/public/live/auto_checkin_live/` |
+| 90 | `BehaviorInterventionPlans.accept/3` grava `signed_at: Date.utc_today()`. É a data do aceite do responsável ao plano de intervenção comportamental, colhida pela API do portal. Quem assina das 21h à meia-noite fica com o documento datado do dia seguinte. | `lib/bloomy/patients/behavior_intervention_plans/context.ex:76`, `lib/bloomy_web/legal_guardian/api/behavior_intervention_plans/behavior_intervention_plan_controller.ex:25` |
+| 91 | A janela de três horas coincide com o horário em que este público existe: o responsável assina de casa, à noite. As ocorrências do achado 82 não têm o mesmo alcance — numa tela interna a janela pega o fim do expediente; aqui pega o horário principal. | `lib/bloomy/patients/behavior_intervention_plans/context.ex:76` |
+| 92 | Um plano que termina hoje, aceito às 23h, fica registrado como **aceito depois do próprio fim**. Deixa de ser erro de um dia e vira contradição interna: o documento afirma o fim e o aceite posterior ao mesmo tempo. | `lib/bloomy/patients/behavior_intervention_plans/context.ex:60-77` |

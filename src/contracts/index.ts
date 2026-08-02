@@ -2358,3 +2358,26 @@ export interface CheckinArrival {
 export interface AutoCheckinData {
   arrivals: CheckinArrival[];
 }
+
+/**
+ * Assinatura do plano de intervenção comportamental.
+ *
+ * O responsável assina pelo portal, e o sistema carimba a data:
+ *
+ * ```elixir
+ * signed_at: Date.utc_today()
+ * ```
+ */
+export interface PlanSignature {
+  id: string;
+  patientName: string;
+  guardianName: string;
+  /** Instante local em que o responsável apertou assinar. */
+  signedAt: string;
+  planStart: string;
+  planEnd: string;
+}
+
+export interface PlanSignatureData {
+  signatures: PlanSignature[];
+}

@@ -1,4 +1,17 @@
 import type {
+  PlanSignature as AssinaturaPlano,
+  PlanSignatureData as AssinaturaData,
+} from "../src/contracts/index.js";
+import {
+  actualDate,
+  signedAfterThePlanEnded,
+  signedAtNight,
+  signingHour,
+  stampedCorrectly,
+  stampedOnTheWrongDay,
+  storedDate,
+} from "../src/rules/planSignature.js";
+import type {
   AutoCheckinData as TotemData,
   CheckinArrival as Chegada,
 } from "../src/contracts/index.js";
@@ -7068,5 +7081,98 @@ describe("auto check-in — quem o totem recusa", () => {
 
   it("guarda a frase do totem literal, sem parafrasear", () => {
     expect(TOTEM_MESSAGE).toBe("Nenhum dos seus filhos tem consultas agendadas para hoje.");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Aceite do plano de intervenção comportamental
+// ---------------------------------------------------------------------------
+
+function assinaturaPlano(o: Partial<AssinaturaPlano> & { id: string }): AssinaturaPlano {
+  return {
+    patientName: "Helena M.",
+    guardianName: "Renata Alencar",
+    signedAt: "2026-07-30T19:10:00.000-03:00",
+    planStart: "2026-07-01",
+    planEnd: "2026-12-31",
+    ...o,
+  };
+}
+
+const aceites = (signatures: AssinaturaPlano[]): AssinaturaData => ({ signatures });
+
+describe("aceite do plano — o carimbo da data", () => {
+  it("grava o dia seguinte quando a assinatura cai depois das 21h", () => {
+    const noite = assinaturaPlano({ id: "a", signedAt: "2026-07-30T21:35:00.000-03:00" });
+    expect(actualDate(noite)).toBe("2026-07-30");
+    expect(storedDate(noite)).toBe("2026-07-31");
+  });
+
+  it("acerta às 20h59 e erra às 21h", () => {
+    expect(storedDate(assinaturaPlano({ id: "a", signedAt: "2026-07-30T20:59:00.000-03:00" })))
+      .toBe("2026-07-30");
+    expect(storedDate(assinaturaPlano({ id: "a", signedAt: "2026-07-30T21:00:00.000-03:00" })))
+      .toBe("2026-07-31");
+  });
+
+  it("separa os aceites com data trocada dos corretos, sem sobra", () => {
+    const dados = aceites([
+      assinaturaPlano({ id: "erro1", signedAt: "2026-07-30T21:35:00.000-03:00" }),
+      assinaturaPlano({ id: "erro2", signedAt: "2026-07-30T23:50:00.000-03:00" }),
+      assinaturaPlano({ id: "ok1" }),
+      assinaturaPlano({ id: "ok2", signedAt: "2026-07-30T09:00:00.000-03:00" }),
+    ]);
+    expect(stampedOnTheWrongDay(dados).map((a) => a.id)).toEqual(["erro1", "erro2"]);
+    expect(stampedCorrectly(dados).map((a) => a.id)).toEqual(["ok1", "ok2"]);
+  });
+});
+
+describe("aceite do plano — a contradição interna do documento", () => {
+  it("acusa o aceite carimbado depois do fim do plano", () => {
+    const dados = aceites([
+      assinaturaPlano({
+        id: "vence",
+        signedAt: "2026-07-30T23:20:00.000-03:00",
+        planEnd: "2026-07-30",
+      }),
+    ]);
+    expect(signedAfterThePlanEnded(dados).map((a) => a.id)).toEqual(["vence"]);
+  });
+
+  it("não acusa quando a assinatura de verdade já era posterior ao fim", () => {
+    // Aí o problema é outro, e não é este: o carimbo não inventou nada.
+    const dados = aceites([
+      assinaturaPlano({
+        id: "tardia",
+        signedAt: "2026-08-05T22:00:00.000-03:00",
+        planEnd: "2026-07-30",
+      }),
+    ]);
+    expect(signedAfterThePlanEnded(dados)).toEqual([]);
+  });
+
+  it("não acusa quando o plano ainda está longe de terminar", () => {
+    const dados = aceites([
+      assinaturaPlano({ id: "a", signedAt: "2026-07-30T23:20:00.000-03:00" }),
+    ]);
+    expect(stampedOnTheWrongDay(dados)).toHaveLength(1);
+    expect(signedAfterThePlanEnded(dados)).toEqual([]);
+  });
+});
+
+describe("aceite do plano — a proporção, que é o achado", () => {
+  it("conta os aceites que vieram depois das 18h", () => {
+    const dados = aceites([
+      assinaturaPlano({ id: "n1", signedAt: "2026-07-30T19:10:00.000-03:00" }),
+      assinaturaPlano({ id: "n2", signedAt: "2026-07-30T21:35:00.000-03:00" }),
+      assinaturaPlano({ id: "d1", signedAt: "2026-07-30T14:05:00.000-03:00" }),
+    ]);
+    expect(signedAtNight(dados).map((a) => a.id)).toEqual(["n1", "n2"]);
+  });
+
+  it("lê a hora local, e não a do carimbo", () => {
+    // Se lesse a do carimbo, as 23h20 virariam 2h e a conta da noite quebraria.
+    expect(signingHour(assinaturaPlano({ id: "a", signedAt: "2026-07-30T23:20:00.000-03:00" })))
+      .toBe(23);
   });
 });
