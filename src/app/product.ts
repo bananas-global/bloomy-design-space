@@ -38,6 +38,7 @@ import { AbsenceOriginScreen } from "../screens/AbsenceOrigin.js";
 import { AutoCheckout } from "../screens/AutoCheckout.js";
 import { AuthorizationRenewal } from "../screens/AuthorizationRenewal.js";
 import { FieldOrdering } from "../screens/FieldOrdering.js";
+import { DeactivationDate } from "../screens/DeactivationDate.js";
 import { PatientAddress } from "../screens/PatientAddress.js";
 import { MeetingSummary } from "../screens/MeetingSummary.js";
 import { TissBatch } from "../screens/TissBatch.js";
@@ -73,6 +74,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients", screen: PatientList },
     // Literal antes da paramétrica: `/patients/:id` casaria com "address".
     { path: "/patients/address", screen: PatientAddress },
+    { path: "/patients/deactivation-date", screen: DeactivationDate },
     { path: "/patients/:id", screen: PatientDetail },
     { path: "/patients/:id/plan", screen: InterventionPlanScreen },
     { path: "/patients/:id/record", screen: PatientRecordScreen },

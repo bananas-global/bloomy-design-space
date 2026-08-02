@@ -1,4 +1,21 @@
 import type {
+  DeactivationAttempt as TentativaDesativacao,
+  DeactivationDateData as DesativacaoData,
+} from "../src/contracts/index.js";
+import {
+  accepted,
+  crossesIntoTomorrow,
+  exemptionApplies,
+  isRejected,
+  localHour,
+  rejectedOnTheMerits,
+  rejectedOnlyByTheClock,
+  rejectionExplanation,
+  shouldBeExempt,
+  utcDate,
+  wouldBeRejectedLocally,
+} from "../src/rules/deactivationDate.js";
+import type {
   PatientAddressAttempt as TentativaEndereco,
   PatientAddressData as EnderecoData,
 } from "../src/contracts/index.js";
@@ -6693,5 +6710,155 @@ describe("endereço do paciente — o erro que existe e não roda", () => {
     // O mesmo defeito de bairro: um vira erro na tela, o outro vira silêncio.
     expect(rejectedWithAnError(dados).map((t) => t.id)).toEqual(["recusado"]);
     expect(silentlyDiscarded(dados).map((t) => t.id)).toEqual(["silencioso"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Data de desativação
+// ---------------------------------------------------------------------------
+
+function tentativaDesativacao(
+  o: Partial<TentativaDesativacao> & { id: string },
+): TentativaDesativacao {
+  return {
+    patientName: "Helena M.",
+    actorName: "Renata Alencar",
+    actorRole: "coordinator",
+    roleArrivesAsText: false,
+    chosenDate: "2026-07-30",
+    submittedAt: "2026-07-30T14:20:00.000-03:00",
+    ...o,
+  };
+}
+
+const desativacoes = (attempts: TentativaDesativacao[]): DesativacaoData => ({ attempts });
+
+describe("data de desativação — a janela das 21h", () => {
+  it("UTC vira o dia exatamente às 21h da clínica", () => {
+    expect(utcDate(tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T20:59:00.000-03:00" })))
+      .toBe("2026-07-30");
+    expect(utcDate(tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T21:00:00.000-03:00" })))
+      .toBe("2026-07-31");
+  });
+
+  it("marca a travessia do dia só dentro da janela", () => {
+    expect(
+      crossesIntoTomorrow(
+        tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T14:20:00.000-03:00" }),
+      ),
+    ).toBe(false);
+    expect(
+      crossesIntoTomorrow(
+        tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T23:59:00.000-03:00" }),
+      ),
+    ).toBe(true);
+  });
+
+  it("recusa a data de hoje quando o envio cai na janela, e aceita fora dela", () => {
+    const noite = tentativaDesativacao({ id: "noite", submittedAt: "2026-07-30T21:40:00.000-03:00" });
+    const tarde = tentativaDesativacao({ id: "tarde" });
+    expect(isRejected(noite)).toBe(true);
+    expect(isRejected(tarde)).toBe(false);
+    // E a recusa some no dia em que o dia for contado no fuso da clínica.
+    expect(wouldBeRejectedLocally(noite)).toBe(false);
+  });
+
+  it("separa a recusa pelo relógio da recusa legítima", () => {
+    const dados = desativacoes([
+      tentativaDesativacao({ id: "relogio", submittedAt: "2026-07-30T21:40:00.000-03:00" }),
+      tentativaDesativacao({ id: "legitima", chosenDate: "2026-07-24" }),
+      tentativaDesativacao({ id: "passa" }),
+    ]);
+    expect(rejectedOnlyByTheClock(dados).map((t) => t.id)).toEqual(["relogio"]);
+    expect(rejectedOnTheMerits(dados).map((t) => t.id)).toEqual(["legitima"]);
+    expect(accepted(dados).map((t) => t.id)).toEqual(["passa"]);
+  });
+
+  it("uma data futura passa mesmo dentro da janela", () => {
+    // A janela adianta um dia; não alcança quem escolheu duas semanas à frente.
+    const futura = tentativaDesativacao({
+      id: "futura",
+      chosenDate: "2026-08-14",
+      submittedAt: "2026-07-30T23:10:00.000-03:00",
+    });
+    expect(isRejected(futura)).toBe(false);
+  });
+
+  it("a data de amanhã, enviada na janela, também passa", () => {
+    // Vale fixar o limite: a janela empata a data de amanhã com o "hoje" do
+    // sistema, e empate não é anterior.
+    const amanha = tentativaDesativacao({
+      id: "amanha",
+      chosenDate: "2026-07-31",
+      submittedAt: "2026-07-30T22:00:00.000-03:00",
+    });
+    expect(isRejected(amanha)).toBe(false);
+  });
+});
+
+describe("data de desativação — a exceção que não vale", () => {
+  it("a exceção não se aplica quando o papel chega como átomo", () => {
+    const adm = tentativaDesativacao({ id: "a", actorRole: "admin" });
+    expect(exemptionApplies(adm)).toBe(false);
+  });
+
+  it("aplica-se quando o papel chega como texto", () => {
+    const adm = tentativaDesativacao({ id: "a", actorRole: "admin", roleArrivesAsText: true });
+    expect(exemptionApplies(adm)).toBe(true);
+  });
+
+  it("não vale para quem não é administrador, nem chegando como texto", () => {
+    expect(
+      exemptionApplies(
+        tentativaDesativacao({ id: "a", actorRole: "coordinator", roleArrivesAsText: true }),
+      ),
+    ).toBe(false);
+  });
+
+  it("aponta quem deveria estar isento e não está", () => {
+    const dados = desativacoes([
+      tentativaDesativacao({ id: "adm", actorRole: "admin" }),
+      tentativaDesativacao({ id: "coord" }),
+    ]);
+    expect(shouldBeExempt(dados).map((t) => t.id)).toEqual(["adm"]);
+  });
+
+  it("corrigir só o papel não fecha a janela para os outros", () => {
+    // É o cálculo que impede a correção pela metade.
+    const noite = (id: string, role: string, texto: boolean) =>
+      tentativaDesativacao({
+        id,
+        actorRole: role,
+        roleArrivesAsText: texto,
+        submittedAt: "2026-07-30T22:05:00.000-03:00",
+      });
+    const comExcecao = desativacoes([noite("adm", "admin", true), noite("coord", "coordinator", true)]);
+    expect(accepted(comExcecao).map((t) => t.id)).toEqual(["adm"]);
+    expect(rejectedOnlyByTheClock(comExcecao).map((t) => t.id)).toEqual(["coord"]);
+  });
+});
+
+describe("data de desativação — como o motivo é dito", () => {
+  it("não repete a frase do sistema quando ela é falsa", () => {
+    const noite = tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T21:40:00.000-03:00" });
+    const motivo = rejectionExplanation(noite);
+    expect(motivo).toContain("A data escolhida é hoje.");
+    expect(motivo).toContain("depois das 21h");
+    expect(motivo).not.toContain("já passou");
+  });
+
+  it("diz a verdade simples quando a data passou de verdade", () => {
+    expect(rejectionExplanation(tentativaDesativacao({ id: "a", chosenDate: "2026-07-24" }))).toBe(
+      "A data escolhida já passou.",
+    );
+  });
+
+  it("não explica nada quando a tentativa passou", () => {
+    expect(rejectionExplanation(tentativaDesativacao({ id: "a" }))).toBeUndefined();
+  });
+
+  it("lê a hora local do envio, e não a de UTC", () => {
+    expect(localHour(tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T21:40:00.000-03:00" })))
+      .toBe(21);
   });
 });

@@ -3135,3 +3135,63 @@ test.describe("endereço do paciente", () => {
     await expect(page.getByText("endereço gravado")).toHaveCount(5);
   });
 });
+
+test.describe("data de desativação", () => {
+  test("a janela é dita em hora de relógio, e não como conceito de fuso", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-date-evening-window"));
+
+    await expect(
+      page.getByText("2 desativações foram recusadas por uma data que é hoje"),
+    ).toBeVisible();
+    await expect(page.getByText(/Otávio L\. — enviada às 21h com a data de/)).toBeVisible();
+    await expect(page.getByText(/Depois das 21h ele já está contando amanhã/)).toBeVisible();
+  });
+
+  test("a data da clínica aparece ao lado da que o sistema conta", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-date-evening-window"));
+
+    // Três envios caem na janela: 21h40, 22h05 e 23h10.
+    await expect(
+      page.getByText(/Na clínica é 30 de jul\. de 2026; o sistema está contando 31 de jul\. de 2026/),
+    ).toHaveCount(3);
+  });
+
+  test("a frase falsa do sistema não é repetida", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-date-evening-window"));
+
+    await expect(page.getByText("Não pode ser uma data passada")).toHaveCount(0);
+    await expect(page.getByText(/A data escolhida é hoje\./)).toHaveCount(2);
+    // A recusa legítima usa a frase simples, porque ali ela é verdadeira.
+    await expect(page.getByText("A data escolhida já passou.")).toHaveCount(1);
+  });
+
+  test("o administrador aparece nomeado como tratado igual aos outros", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-date-exemption-dead"));
+
+    await expect(page.getByText("A saída prevista para este caso é a que não funciona")).toBeVisible();
+    await expect(
+      page.getByText("Marcos Itaparica é administrador e foi tratado como qualquer outro papel."),
+    ).toBeVisible();
+    await expect(page.getByText(/a decisão está escrita/)).toBeVisible();
+    await expect(page.getByText(/Consertar só a validação não resolve/)).toBeVisible();
+  });
+
+  test("com a exceção viva, o administrador passa e os outros continuam recusados", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("patients.deactivation-date-exemption-alive"));
+
+    await expect(page.getByText("exceção de administrador aplicada")).toHaveCount(1);
+    // A janela não foi corrigida: a coordenadora das 21h40 continua barrada.
+    await expect(page.getByText("1 desativação foi recusada por uma data que é hoje")).toBeVisible();
+    await expect(page.getByText(/Otávio L\. — enviada às 21h/)).toBeVisible();
+  });
+
+  test("durante o dia, só a recusa legítima permanece", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-date-daytime"));
+
+    await expect(page.getByText(/recusadas por uma data que é hoje/)).toHaveCount(0);
+    await expect(page.getByText(/Na clínica é/)).toHaveCount(0);
+    await expect(page.getByText("A data escolhida já passou.")).toHaveCount(1);
+  });
+});
