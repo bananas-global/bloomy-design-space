@@ -1995,3 +1995,74 @@ test.describe("controle de horas", () => {
     await expect(page.getByText(/depois do primeiro check-in/)).toBeVisible();
   });
 });
+
+test.describe("marcar atendimento", () => {
+  test("os quatro impedimentos aparecem de uma vez, na ordem do código", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-four-impediments"));
+
+    await expect(page.getByText("4 impedimentos")).toBeVisible();
+    const itens = page.getByRole("listitem");
+    // A ordem é informação: é a ordem em que o sistema real os verificaria.
+    await expect(itens.filter({ hasText: "Bloqueio na agenda do profissional" })).toHaveCount(1);
+    await expect(itens.filter({ hasText: "Sala lotada" })).toHaveCount(1);
+  });
+
+  test("a tela diz quantas tentativas de salvar isso seria hoje", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-four-impediments"));
+
+    await expect(page.getByText("Hoje isso seriam 4 tentativas de salvar")).toBeVisible();
+    await expect(page.getByText(/com a família na frente ou no telefone/)).toBeVisible();
+  });
+
+  test("o primeiro impedimento é marcado como o único que o sistema atual mostraria", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("agenda.new-four-impediments"));
+
+    await expect(page.getByText("a única que o sistema atual mostraria")).toBeVisible();
+  });
+
+  test("cada impedimento diz de quem é resolver", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-four-impediments"));
+
+    await expect(page.getByText(/Resolver: Recepção, trocando de sala/)).toBeVisible();
+    await expect(page.getByText(/Resolver: Administração da unidade/)).toBeVisible();
+  });
+
+  test("o profissional desativado é encaminhado ao People", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-inactive-professional"));
+
+    // A mesma frase aparece na lista e no motivo do botão desabilitado — que é
+    // o comportamento certo, e obriga a asserção a dizer qual das duas mede.
+    await expect(page.getByText(/está desativado e não pode ser agendado/)).toHaveCount(2);
+    await expect(page.getByText(/Resolver: People, que reativa o cadastro/)).toBeVisible();
+
+    const marcar = page.getByRole("button", { name: "Marcar atendimento" });
+    await expect(marcar).toBeVisible();
+    await expect(marcar).toBeDisabled();
+  });
+
+  test("a sala com atendimento mostra ocupação contra capacidade", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-room-has-room"));
+
+    await expect(page.getByText("· 2 de 3 lugares ocupados")).toBeVisible();
+    await expect(page.getByText(/ainda cabe 1 atendimento/)).toBeVisible();
+    await expect(page.getByText(/está usada/)).toBeVisible();
+  });
+
+  test("o acompanhamento terapêutico diz que a verificação de sala não rodou", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-therapeutic-companion"));
+
+    await expect(page.getByText("A verificação de sala não rodou")).toBeVisible();
+    await expect(page.getByText(/não é cadastro incompleto/)).toBeVisible();
+    await expect(page.getByText("não se aplica")).toBeVisible();
+  });
+
+  test("o sucesso nomeia o que foi conferido, em vez de um ok mudo", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-clear"));
+
+    await expect(page.getByText("As sete verificações passaram")).toBeVisible();
+    const marcar = page.getByRole("button", { name: "Marcar atendimento" });
+    await expect(marcar).toBeEnabled();
+  });
+});

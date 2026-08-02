@@ -714,6 +714,53 @@ cada um deles do silêncio.
 7 cenários, 18 testes de regra, 9 jornadas.
 
 
+### 25. Agenda, revisitada — `porte/agenda-revisitada`
+
+A agenda foi o primeiro módulo escrito, antes de o monólito ser lido a fundo, e
+ficou com quatro regras plausíveis. O sistema real tem **sete verificadores**
+compostos por `ScheduleVerification.verify/2`:
+
+```elixir
+Enum.find_value(verifiers, fn module -> module && module.verify(changeset) end)
+```
+
+`find_value` **para no primeiro que devolve algo**. Um horário com quatro
+problemas exige quatro tentativas de salvar para que todos apareçam — e cada
+tentativa custa uma conversa, porque quem marca está com a família na frente ou
+no telefone.
+
+A ordem é a do array, e não a de gravidade nem a de facilidade de resolver:
+
+1. profissional desativado — resolve o People
+2. bloqueio na agenda do profissional — coordenação
+3. bloqueio na agenda da unidade — administração da unidade
+4. bloqueio na agenda da sala — recepção
+5. bloqueio geral no período — administração da unidade
+6. atendimento duplicado — coordenação
+7. **lotação da sala** — recepção, trocando de sala
+
+A mais fácil de contornar é a última a ser dita.
+
+Três decisões:
+
+- **Todos os impedimentos de uma vez.** É a única diferença de comportamento
+  que o Design Space propõe aqui, e ela fica declarada ao lado do que acontece
+  hoje: `firstImpediment/1` reproduz o `find_value`, `allImpediments/1` propõe a
+  alternativa, e `savesToSeeEverything/1` mede o custo em número de tentativas.
+- **Cada impedimento diz de quem é resolver.** Uma lista que só informa devolve
+  o problema para quem não pode agir.
+- **A verificação que não rodou também é dita.** `VerifyRoomAvailability` só
+  roda quando `schedule_type != :at`: sem essa frase, um horário de
+  acompanhamento terapêutico sem sala parece cadastro incompleto e alguém vai
+  "corrigi-lo".
+
+E uma correção de leitura: `capacity <= schedule_count` significa que **sala
+ocupada não é sala indisponível**. Salas comportam atendimentos simultâneos, e
+mostrar ocupação contra capacidade evita recusar um horário que caberia.
+
+5 cenários, 14 testes de regra, 8 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -754,3 +801,4 @@ bugs do Design Space; são observações sobre o produto.
 | 31 | `ExpectedClinicHour.changeset` valida só `start_at`, e `RecalculateExpectedHours` chama `Time.diff(end_at, start_at)` sem checar nulo. O cadastro autoriza exatamente a forma que o cálculo não processa; o erro aparece no recálculo, longe de quem salvou. | `lib/bloomy/professionals/clinical_hours/expected_clinic_hour.ex:20` |
 | 32 | Nada compara `end_at` com `start_at` em `ClinicHour`. Uma saída anterior à entrada é aceita e `Time.diff` devolve negativo, subtraindo horas do total do dia — que pode ficar menor que uma de suas parcelas. | `lib/bloomy/professionals/clinical_hours/clinic_hour.ex:20-31` |
 | 33 | `Checkin.has_open_checkin?/1` ancora a busca em `Date.utc_today()`. Depois das 21h em Brasília, a pergunta "esta pessoa tem check-in aberto hoje?" é feita sobre o dia seguinte. Terceira ocorrência do mesmo padrão, junto dos achados 22 e o período do mapa. | `lib/bloomy/professionals/clinical_hours/checkin.ex:60` |
+| 34 | `ScheduleVerification.verify/2` usa `Enum.find_value` sobre sete verificadores: para no primeiro que falha. Um horário com quatro impedimentos exige quatro tentativas de salvar para que todos apareçam, e a ordem em que eles surgem é a ordem do array — a lotação da sala, a mais fácil de contornar, é a última. | `lib/bloomy/schedules/schedule_verification.ex:10-24` |

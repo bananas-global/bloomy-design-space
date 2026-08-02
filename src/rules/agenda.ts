@@ -120,3 +120,155 @@ export function wouldConflict(
     appointment.id,
   )?.length ?? 0) > 0;
 }
+
+/* ================================================ Marcar um atendimento */
+
+import type { Impediment, ImpedimentKind, ScheduleAttempt } from "../contracts/index.js";
+
+/**
+ * Regras da tentativa de marcar.
+ *
+ * `ScheduleVerification.verify/2` roda sete verificadores em ordem fixa e usa
+ * `Enum.find_value` — que **para no primeiro que devolve algo**. Quem tenta
+ * marcar recebe um impedimento por vez, na ordem em que o código os lista, e
+ * não na ordem que importa para resolver.
+ *
+ * Traduzido de `Bloomy.Schedules.ScheduleVerification` e dos sete módulos
+ * `Verify*` que ela compõe.
+ */
+export const schedulingRules: Rule[] = [
+  {
+    id: "impediments-are-revealed-one-at-a-time",
+    statement:
+      "As sete verificações rodam em sequência e param na primeira que falha. Um horário com quatro problemas exige quatro tentativas de salvar para que todos apareçam.",
+    rationale:
+      "Cada tentativa custa uma conversa: a recepção está com a família na frente ou no telefone. Descobrir que o profissional está bloqueado, corrigir, e só então descobrir que a sala está lotada é o padrão mais caro possível para quem atende sob interrupção.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "impediment-order-is-code-order",
+    statement:
+      "A ordem é: profissional desativado, bloqueio do profissional, bloqueio da unidade, bloqueio da sala, bloqueio geral, atendimento duplicado e, por último, lotação da sala.",
+    rationale:
+      "Não é uma ordem de gravidade nem de facilidade de resolver — é a ordem em que os módulos aparecem numa lista. A lotação da sala, que costuma ser a mais fácil de contornar trocando de sala, é a última a ser dita.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "room-capacity-is-not-one",
+    statement:
+      "A sala é verificada por `capacity <= schedule_count`. Salas comportam mais de um atendimento simultâneo, e “ocupada” só quer dizer cheia.",
+    rationale:
+      "Quem lê a agenda assume que uma sala com atendimento está indisponível. Mostrar ocupação contra capacidade evita que se recuse um horário que caberia.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "room-is-not-verified-outside-the-clinic",
+    statement:
+      "Acompanhamento terapêutico (`schedule_type: :at`) não passa pela verificação de sala — ele não acontece na clínica.",
+    rationale:
+      "É a decisão certa, e ela precisa aparecer: sem dizer isso, um horário de AT sem sala parece um cadastro incompleto e alguém vai “corrigi-lo”.",
+    source: "src/rules/agenda.ts",
+  },
+];
+
+/** A ordem exata do array de verificadores em `ScheduleVerification`. */
+export const IMPEDIMENT_ORDER: ImpedimentKind[] = [
+  "professional_inactive",
+  "professional_blocked",
+  "unit_blocked",
+  "room_blocked",
+  "general_blocking",
+  "duplicate_slot",
+  "room_full",
+];
+
+export function impedimentLabel(kind: ImpedimentKind): string {
+  switch (kind) {
+    case "professional_inactive":
+      return "Profissional desativado";
+    case "professional_blocked":
+      return "Bloqueio na agenda do profissional";
+    case "unit_blocked":
+      return "Bloqueio na agenda da unidade";
+    case "room_blocked":
+      return "Bloqueio na agenda da sala";
+    case "general_blocking":
+      return "Bloqueio geral no período";
+    case "duplicate_slot":
+      return "Já existe atendimento igual no horário";
+    case "room_full":
+      return "Sala lotada";
+  }
+}
+
+/** Quem resolve cada um. Sem isso, a lista informa e não encaminha. */
+export function impedimentOwner(kind: ImpedimentKind): string {
+  switch (kind) {
+    case "professional_inactive":
+      return "People, que reativa o cadastro";
+    case "professional_blocked":
+    case "duplicate_slot":
+      return "Coordenação, escolhendo outro horário ou outro profissional";
+    case "unit_blocked":
+    case "general_blocking":
+      return "Administração da unidade, que criou o bloqueio";
+    case "room_blocked":
+    case "room_full":
+      return "Recepção, trocando de sala";
+  }
+}
+
+/**
+ * Implementação de `impediments-are-revealed-one-at-a-time`.
+ *
+ * Reproduz o `Enum.find_value`: devolve **um** impedimento, o primeiro na ordem
+ * do código. Existe para ser comparado com {@link allImpediments} — é a
+ * comparação que mostra o custo.
+ */
+export function firstImpediment(attempt: ScheduleAttempt): Impediment | undefined {
+  for (const kind of IMPEDIMENT_ORDER) {
+    const found = attempt.impediments.find((entry) => entry.kind === kind);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/** Todos, na mesma ordem — o que esta especificação propõe mostrar de uma vez. */
+export function allImpediments(attempt: ScheduleAttempt): Impediment[] {
+  return IMPEDIMENT_ORDER.flatMap((kind) =>
+    attempt.impediments.filter((entry) => entry.kind === kind),
+  );
+}
+
+/** Quantas vezes alguém salvaria para ver tudo, do jeito que o sistema real responde. */
+export function savesToSeeEverything(attempt: ScheduleAttempt): number {
+  return allImpediments(attempt).length;
+}
+
+export function canSchedule(attempt: ScheduleAttempt): { allowed: boolean; reason?: string } {
+  const first = firstImpediment(attempt);
+  if (!first) return { allowed: true };
+  return { allowed: false, reason: first.message };
+}
+
+/**
+ * Implementação de `room-is-not-verified-outside-the-clinic`.
+ *
+ * Diz por que a sala não foi checada, em vez de simplesmente não checar — um
+ * horário de AT sem sala parece cadastro incompleto para quem não sabe disso.
+ */
+export function roomVerificationSkipped(attempt: ScheduleAttempt): string | undefined {
+  if (attempt.scheduleType === "at") {
+    return "Acompanhamento terapêutico não acontece na clínica: a verificação de sala não roda, e a ausência de sala aqui não é cadastro incompleto.";
+  }
+  if (attempt.roomName === undefined) {
+    return "Sem sala escolhida, não há o que verificar. A sala ainda pode ser definida depois.";
+  }
+  return undefined;
+}
+
+/** Implementação de `room-capacity-is-not-one`. */
+export function roomHeadroom(attempt: ScheduleAttempt): number | undefined {
+  if (attempt.roomCapacity === undefined || attempt.roomOccupancy === undefined) return undefined;
+  return attempt.roomCapacity - attempt.roomOccupancy;
+}
