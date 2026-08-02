@@ -145,6 +145,37 @@ export const deactivationFixtures: Fixture[] = [
         { id: "hm-2", durationEnd: "2026-11-30" },
       ],
       hourMapsLosingAutoRenew: 4,
+      path: "manual",
+      professionalBonds: [
+        { id: "b1", professionalName: "Marina Okabe", observation: "Responde pela fonoaudiologia desde a entrada. Boa vinculação." },
+        { id: "b2", professionalName: "Renato Bezerra Alcântara" },
+      ],
+    } satisfies DeactivationImpact,
+  },
+  {
+    id: "deactivation-by-worker",
+    label: "A data chegou e o worker rodou",
+    description:
+      "A mesma inativação pelo caminho automático: os vínculos profissional–paciente são apagados, com as observações junto.",
+    data: {
+      patient: THEO,
+      deactivationDate: "2026-07-30",
+      schedulesToCancel: [
+        {
+          id: "s1",
+          start: "2026-07-30T14:00:00.000-03:00",
+          serviceName: "Sessão de intervenção ABA",
+          professionalName: "Marina Okabe",
+        },
+      ],
+      hourMapsToClose: [{ id: "hm-1", durationEnd: "2026-12-20" }],
+      hourMapsLosingAutoRenew: 4,
+      path: "worker",
+      professionalBonds: [
+        { id: "b1", professionalName: "Marina Okabe", observation: "Responde pela fonoaudiologia desde a entrada. Boa vinculação." },
+        { id: "b2", professionalName: "Renato Bezerra Alcântara" },
+        { id: "b3", professionalName: "Clara Vidigal", observation: "Supervisiona o caso desde março." },
+      ],
     } satisfies DeactivationImpact,
   },
   {
@@ -171,6 +202,10 @@ export const deactivationFixtures: Fixture[] = [
       ],
       hourMapsToClose: [{ id: "hm-1", durationEnd: "2026-12-20" }],
       hourMapsLosingAutoRenew: 4,
+      path: "manual",
+      professionalBonds: [
+        { id: "b1", professionalName: "Marina Okabe" },
+      ],
     } satisfies DeactivationImpact,
   },
 ];

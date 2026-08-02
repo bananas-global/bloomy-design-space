@@ -115,6 +115,29 @@ export const therapyPhaseScenarios: Scenario[] = [
     tags: ["exceção", "regra"],
   },
   {
+    id: "patients.deactivation-by-worker",
+    title: "O caminho automático apaga os vínculos",
+    intent:
+      "Mostrar que dois códigos com o mesmo objetivo destroem coisas diferentes — e que o mais destrutivo é o que ninguém acompanha.",
+    route: "/patients/pac-theo/deactivate",
+    persona: "clinic_admin",
+    fixture: "deactivation-by-worker",
+    rules: ["the-unattended-path-destroys-more", "the-bond-carries-clinical-context"],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: [
+      "`DeactivatePatientWorker` faz `Repo.delete_all` nos vínculos profissional–paciente.",
+      "`ChangePatientStatus`, o caminho manual, não os toca.",
+      "Dois dos três vínculos têm observação escrita.",
+    ],
+    expected: [
+      "A tela nomeia os vínculos que serão apagados, com as observações.",
+      "E diz o que o outro caminho faria com os mesmos vínculos.",
+      "A justificativa é dita: famílias em ABA pausam e voltam, e é isso que se procura no retorno.",
+    ],
+    tags: ["regra", "exceção", "decisão"],
+  },
+  {
     id: "patients.deactivation-scheduled",
     title: "A data futura não adia a destruição",
     intent:

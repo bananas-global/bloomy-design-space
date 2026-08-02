@@ -11,7 +11,10 @@ import {
   Notice,
 } from "../components/primitives.js";
 import {
+  bondsDeletedBy,
+  bondsWithNotes,
   caughtOnTheEve,
+  pathDifference,
   deactivationSummary,
   realCutoff,
   stillActiveAfterScheduling,
@@ -53,6 +56,9 @@ export function PatientDeactivation({ context }: ScreenProps) {
   const vespera = caughtOnTheEve(impact);
   const corte = realCutoff(impact.deactivationDate);
   const aindaAtivo = stillActiveAfterScheduling(impact);
+  const vinculosApagados = bondsDeletedBy(impact);
+  const comAnotacao = bondsWithNotes(impact);
+  const diferenca = pathDifference(impact);
 
   return wrap(
     context,
@@ -105,6 +111,41 @@ export function PatientDeactivation({ context }: ScreenProps) {
             {vespera.length === 1 ? "Este atendimento é cancelado" : "Estes atendimentos são cancelados"}{" "}
             com motivo “paciente inativado”, num dia em que o paciente ainda estava ativo.
           </p>
+        </Notice>
+      )}
+
+      {/* Dois caminhos para o mesmo resultado, e o desatendido destrói mais.
+          A frase aparece nos dois lados: quem inativa pela tela precisa saber
+          que a rota automática é diferente. */}
+      {diferenca && (
+        <Notice
+          tone={impact.path === "worker" ? "danger" : "info"}
+          title={
+            impact.path === "worker"
+              ? "Este caminho apaga os vínculos com os profissionais"
+              : "Este caminho preserva os vínculos com os profissionais"
+          }
+        >
+          <p className="m-0">{diferenca}</p>
+          {vinculosApagados.length > 0 && (
+            <ul className="m-0 mt-2 list-disc space-y-1 pl-5">
+              {vinculosApagados.map((bond) => (
+                <li key={bond.id}>
+                  {bond.professionalName}
+                  {bond.observation && <> — “{bond.observation}”</>}
+                </li>
+              ))}
+            </ul>
+          )}
+          {comAnotacao.length > 0 && (
+            <p className="m-0 mt-2">
+              {comAnotacao.length === 1
+                ? "Um desses vínculos tem observação escrita"
+                : `${comAnotacao.length} desses vínculos têm observação escrita`}
+              . Famílias em terapia ABA pausam e voltam, e é exatamente isso que se procura no
+              retorno: quem atendia, e o que se anotou sobre a relação.
+            </p>
+          )}
         </Notice>
       )}
 

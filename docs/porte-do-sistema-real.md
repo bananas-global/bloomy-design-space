@@ -1527,6 +1527,37 @@ pendurada. O teste de contrato de cenário pegou antes de qualquer commit.
 1 cenário atualizado, 4 testes de regra, 3 jornadas.
 
 
+### 51. O caminho desatendido destrói mais — `porte/dois-caminhos`
+
+Inativar um paciente acontece de duas formas: alguém troca o status na tela
+(`ChangePatientStatus`), ou a data marcada chega e o `DeactivatePatientWorker`
+roda sozinho. O resultado pretendido é o mesmo. O que os dois códigos fazem,
+não:
+
+| | Agendamentos | Mapas de horas | Vínculo profissional–paciente |
+| --- | --- | --- | --- |
+| Manual | cancela | encerra | **não toca** |
+| Worker | — | encerra | **`delete_all`** |
+
+O worker **apaga** os vínculos. Não desativa, não marca: remove as linhas. E o
+vínculo carrega um campo de observação em texto livre — o que alguém escreveu
+sobre aquela relação vai junto.
+
+Duas rotas para o mesmo resultado é normal. **Divergirem no que destroem não é**
+— e a rota mais destrutiva é justamente a que ninguém acompanha. A diferença só
+aparece semanas depois, quando alguém procura quem atendia a criança.
+
+Isso importa em ABA especificamente: **famílias pausam e voltam**, e o que se
+procura no retorno é exatamente quem atendia e o que se anotou sobre a relação.
+É a única parte do histórico que a inativação remove em vez de encerrar.
+
+A tela diz os dois lados. Quem inativa pela mão precisa saber que a rota
+automática é diferente — por isso a comparação aparece nos dois caminhos, e não
+só no destrutivo.
+
+1 cenário, 6 testes de regra, 4 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1586,3 +1617,4 @@ bugs do Design Space; são observações sobre o produto.
 | 50 | `MarkDelayedSchedulesAsMissedWorker` converte em ausência (`missing_reason: :delay`) todo agendamento parado há sete dias em atraso. É limpeza de fila apresentada como fato clínico: ninguém observou a falta, e depois da conversão não há como distinguir do caso real sem abrir o histórico. Somado ao achado 40, o número de "ausências" contém três coisas diferentes. | `lib/bloomy/schedules/mark_delayed_schedules_as_missed_worker.ex:10-27` |
 | 51 | `NotAttendedWorker` devolve para `:not_started`, via `update_all` e sem log, todo atendimento que ficou em `:ready_for_service` ou `:ongoing` no dia anterior. A sessão que alguém começou e não fechou é desfeita na virada, sem deixar evidência de que houve início. | `lib/bloomy/schedules/not_attended_worker.ex:10-21` |
 | 52 | `MissedAttendedWorker` converte na manhã seguinte todo agendamento ainda `:scheduled` com `missing_reason: :missing_patient`. Basta a recepção não ter feito o check-in: o sistema grava que o paciente faltou, sem ninguém ter olhado. O outro worker de conversão usa `:delay`, que não acusa ninguém — a diferença entre os dois motivos é a diferença entre "ninguém fechou isto" e uma afirmação sobre uma pessoa. | `lib/bloomy/schedules/missed_attended_worker.ex:9-22` |
+| 53 | `DeactivatePatientWorker` faz `Repo.delete_all` nos vínculos profissional–paciente. O caminho manual (`ChangePatientStatus`) não os toca. Mesmo objetivo, dois códigos, e o que roda sem ninguém presente apaga o registro de quem atendeu — junto do campo de observação daquela relação. Em ABA, é justamente o que se procura quando a família volta. | `lib/bloomy/patients/workers/deactivate_patient_worker.ex:41-42` |

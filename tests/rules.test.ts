@@ -4917,6 +4917,8 @@ describe("deactivation", () => {
     ],
     hourMapsToClose: [{ id: "hm-1", durationEnd: "2026-12-20" }],
     hourMapsLosingAutoRenew: 4,
+    path: "manual",
+    professionalBonds: [],
   };
 
   it("o corte real é 21h da véspera, e não a data escolhida", () => {
@@ -5622,5 +5624,83 @@ describe("some-absences-were-never-observed", () => {
     expect(whatTheOriginMeasures("observed")).toContain("comportamento");
     expect(whatTheOriginMeasures("cancelled")).toContain("oposto de faltar");
     expect(whatTheOriginMeasures("fabricated_by_delay")).toContain("desorganização interna");
+  });
+});
+
+/* =========================================== Os dois caminhos da inativação */
+
+import {
+  bondsDeletedBy,
+  bondsWithNotes,
+  pathDifference,
+} from "../src/rules/patients.js";
+
+describe("the-unattended-path-destroys-more", () => {
+  const base = {
+    patient: { id: "p", name: "Théo", birthDate: "2019-11-04" },
+    deactivationDate: "2026-07-30",
+    schedulesToCancel: [],
+    hourMapsToClose: [],
+    hourMapsLosingAutoRenew: 0,
+    professionalBonds: [
+      { id: "b1", professionalName: "Marina", observation: "Boa vinculação." },
+      { id: "b2", professionalName: "Renato" },
+    ],
+  };
+
+  it("só o caminho do worker apaga vínculo", () => {
+    expect(bondsDeletedBy({ ...base, path: "worker" }).map((b) => b.id)).toEqual(["b1", "b2"]);
+    expect(bondsDeletedBy({ ...base, path: "manual" })).toEqual([]);
+  });
+
+  it("a frase de comparação fala dos dois lados, e diz qual está em vigor", () => {
+    expect(pathDifference({ ...base, path: "worker" })).toContain("são apagados");
+    expect(pathDifference({ ...base, path: "worker" })).toContain("pela tela");
+    expect(pathDifference({ ...base, path: "manual" })).toContain("permanecem");
+    expect(pathDifference({ ...base, path: "manual" })).toContain("worker");
+  });
+
+  it("cala quando não há vínculo — aí os dois caminhos coincidem", () => {
+    expect(pathDifference({ ...base, path: "worker", professionalBonds: [] })).toBeUndefined();
+    expect(pathDifference({ ...base, path: "manual", professionalBonds: [] })).toBeUndefined();
+  });
+
+  it("concorda em número com um vínculo só", () => {
+    const um = { ...base, path: "worker" as const, professionalBonds: [base.professionalBonds[0]!] };
+    expect(pathDifference(um)).toContain("1 vínculo");
+    expect(pathDifference(um)).toContain("é apagado");
+  });
+});
+
+describe("the-bond-carries-clinical-context", () => {
+  it("separa os vínculos que têm observação escrita", () => {
+    const impacto = {
+      patient: { id: "p", name: "Théo", birthDate: "2019-11-04" },
+      deactivationDate: "2026-07-30",
+      schedulesToCancel: [],
+      hourMapsToClose: [],
+      hourMapsLosingAutoRenew: 0,
+      path: "worker" as const,
+      professionalBonds: [
+        { id: "b1", professionalName: "Marina", observation: "Boa vinculação." },
+        { id: "b2", professionalName: "Renato" },
+        { id: "b3", professionalName: "Clara", observation: "   " },
+      ],
+    };
+    // Observação só de espaços não conta: é ausência com outra aparência.
+    expect(bondsWithNotes(impacto).map((b) => b.id)).toEqual(["b1"]);
+  });
+
+  it("no caminho manual não há observação em risco", () => {
+    const impacto = {
+      patient: { id: "p", name: "Théo", birthDate: "2019-11-04" },
+      deactivationDate: "2026-07-30",
+      schedulesToCancel: [],
+      hourMapsToClose: [],
+      hourMapsLosingAutoRenew: 0,
+      path: "manual" as const,
+      professionalBonds: [{ id: "b1", professionalName: "Marina", observation: "Boa vinculação." }],
+    };
+    expect(bondsWithNotes(impacto)).toEqual([]);
   });
 });
