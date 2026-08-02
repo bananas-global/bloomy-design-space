@@ -24,7 +24,7 @@ própria.
 
 ## O que existe hoje
 
-128 cenários em dezesseis módulos, cobrindo sucesso, vazio, permissão, regra e
+134 cenários em dezessete módulos, cobrindo sucesso, vazio, permissão, regra e
 exceção.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
@@ -39,6 +39,7 @@ em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Gerência** | segunda de manhã, o mais antigo não é o mais urgente, aplicador sem supervisor, nenhuma pendência, quem atende sem acesso |
+| **Mapa de horas** | mapa com conflitos, sem agenda não é ocupado, perde profissional e sala, mapa limpo, mapa aplicado, mapa em branco |
 | **Prontuário** | prontuário completo, documento que ninguém abre, documentos vencendo, anamnese incompleta, faltas acima do limite, sem critérios, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Estrutura** | estrutura da unidade, serviço sem sala, serviço impossível de agendar, três origens de bloqueio, não cobrável dispensa check-in, unidade sem estrutura |
@@ -122,6 +123,10 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `applicator-without-supervisor-cannot-close` | Sem vínculo, a sessão acontece e não tem quem assine. |
 | `management-fronts-have-owners` | Fila sem dono é fila que ninguém trabalha. |
 | `patient-without-clinical-owner-drifts` | Nada trava, e é justamente esse o problema. |
+| `hour-map-generates-with-holes` | Conflito apaga o campo e cria o horário assim mesmo. |
+| `conflict-family-decides-what-is-lost` | Conflito de profissional apaga o profissional; de sala, a sala. |
+| `no-agenda-is-not-a-clash` | Sem agenda padrão é cadastro faltando, não horário ocupado. |
+| `applied-map-is-not-redrawn` | Mapa aplicado não é editado: os agendamentos já existem. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  HourMap,
+  HourMapSlot,
   ManagementData,
   MentorshipGap,
   ReportControl,
@@ -189,6 +191,19 @@ import {
   overdueConsequence,
   reportQueue,
 } from "../src/rules/management.js";
+import {
+  PROFESSIONAL_CONFLICTS,
+  ROOM_CONFLICTS,
+  canApply,
+  canEdit,
+  conflictMessage,
+  incompleteSlots,
+  losesProfessional,
+  losesRoom,
+  mapSummary,
+  weekdayLabel,
+  weeklyMinutes,
+} from "../src/rules/hourMap.js";
 
 /**
  * Testes das regras de negócio.
@@ -3353,5 +3368,200 @@ describe("acesso à gerência", () => {
     expect(canOpenManagement(["patients.list"]).reason).toMatch(
       /admin, admin de clínica e coordenação/,
     );
+  });
+});
+
+/* ========================================================= mapa de horas */
+
+/**
+ * O mapa gera a grade e, onde há conflito, apaga o campo em conflito em vez de
+ * falhar. Estes testes fixam qual campo cada família de conflito apaga — e que
+ * um horário pode perder os dois e ainda assim ser criado.
+ */
+
+function hourMapSlot(
+  overrides: Partial<HourMapSlot> & { id: string; weekday: number },
+): HourMapSlot {
+  return {
+    startAt: "14:00",
+    endAt: "15:00",
+    specialty: "Aplicador ABA",
+    serviceName: "Terapia ABA",
+    sessionLocation: "in_clinic",
+    scheduleType: "patient",
+    professionalName: "Marina Okabe",
+    roomName: "Sala 1",
+    conflicts: [],
+    ...overrides,
+  };
+}
+
+function hourMapFixture(overrides: Partial<HourMap> = {}): HourMap {
+  return {
+    id: "mapa",
+    patient: { id: "pac", name: "Théo", birthDate: "2019-11-04" },
+    unitName: "Pinheiros",
+    status: "creating",
+    durationStart: "2026-08-01",
+    durationEnd: "2026-12-31",
+    autoRenew: true,
+    slots: [],
+    warnings: [],
+    ...overrides,
+  };
+}
+
+describe("conflict-family-decides-what-is-lost", () => {
+  it("os quatro conflitos de profissional apagam o profissional", () => {
+    for (const conflict of PROFESSIONAL_CONFLICTS) {
+      const slot = hourMapSlot({ id: "s", weekday: 1, conflicts: [conflict] });
+      expect(losesProfessional(slot)).toBe(true);
+      expect(losesRoom(slot)).toBe(false);
+    }
+  });
+
+  it("os dois conflitos de sala apagam a sala", () => {
+    for (const conflict of ROOM_CONFLICTS) {
+      const slot = hourMapSlot({ id: "s", weekday: 1, conflicts: [conflict] });
+      expect(losesRoom(slot)).toBe(true);
+      expect(losesProfessional(slot)).toBe(false);
+    }
+  });
+
+  it("um horário pode perder os dois", () => {
+    const slot = hourMapSlot({
+      id: "s",
+      weekday: 1,
+      conflicts: ["professional_blocked", "room_blocked"],
+    });
+    expect(losesProfessional(slot)).toBe(true);
+    expect(losesRoom(slot)).toBe(true);
+  });
+
+  it("basta um conflito da família para apagar o campo", () => {
+    // Espelha `set_field_value/4`: não é o pior conflito que decide, é o primeiro.
+    const slot = hourMapSlot({ id: "s", weekday: 1, conflicts: ["no_agenda"] });
+    expect(losesProfessional(slot)).toBe(true);
+  });
+
+  it("cada conflito aponta um responsável, e eles diferem", () => {
+    expect(conflictMessage("no_agenda").owner).toMatch(/People/);
+    expect(conflictMessage("professional_occupied").owner).toMatch(/Coordenação/);
+    expect(conflictMessage("room_occupied").owner).toMatch(/Administração da unidade/);
+  });
+});
+
+describe("no-agenda-is-not-a-clash", () => {
+  it("distingue cadastro faltando de horário ocupado", () => {
+    expect(conflictMessage("no_agenda").what).toMatch(/cadastro faltando, não horário ocupado/);
+    expect(conflictMessage("professional_occupied").what).toMatch(/já tem outro atendimento/);
+  });
+
+  it("e por isso aponta um responsável diferente", () => {
+    expect(conflictMessage("no_agenda").owner).not.toEqual(
+      conflictMessage("professional_occupied").owner,
+    );
+  });
+});
+
+describe("hour-map-generates-with-holes", () => {
+  const comBuracos = hourMapFixture({
+    slots: [
+      hourMapSlot({ id: "ok1", weekday: 1 }),
+      hourMapSlot({ id: "ok2", weekday: 2 }),
+      hourMapSlot({ id: "semProf", weekday: 3, conflicts: ["no_agenda"] }),
+      hourMapSlot({ id: "semSala", weekday: 4, conflicts: ["room_occupied"] }),
+      hourMapSlot({
+        id: "semAmbos",
+        weekday: 5,
+        conflicts: ["professional_blocked", "room_blocked"],
+      }),
+    ],
+  });
+
+  it("conta as duas famílias separadamente, e elas se sobrepõem", () => {
+    // O horário que perde os dois entra nas duas contagens: é o que permite
+    // dizer a quem entregar cada parte.
+    expect(mapSummary(comBuracos)).toEqual({
+      total: 5,
+      complete: 2,
+      withoutProfessional: 2,
+      withoutRoom: 2,
+    });
+  });
+
+  it("lista os horários que nasceram incompletos", () => {
+    expect(incompleteSlots(comBuracos).map((s) => s.id)).toEqual([
+      "semProf",
+      "semSala",
+      "semAmbos",
+    ]);
+  });
+
+  it("aplicar continua permitido mesmo com buracos", () => {
+    // É assim no monólito, e é defensável. O que a especificação exige é que a
+    // decisão seja informada, não bloqueada.
+    expect(canApply(comBuracos, ["hour_maps.manage_hour_map"]).allowed).toBe(true);
+  });
+
+  it("mas não aplica um mapa em branco", () => {
+    expect(canApply(hourMapFixture(), ["hour_maps.manage_hour_map"]).reason).toMatch(
+      /ao menos um horário/,
+    );
+  });
+
+  it("bloqueia por permissão antes de olhar o conteúdo", () => {
+    expect(canApply(comBuracos, []).reason).toMatch(/admin, admin de clínica e coordenação/);
+  });
+});
+
+describe("applied-map-is-not-redrawn", () => {
+  const aplicado = hourMapFixture({
+    status: "applied",
+    slots: [hourMapSlot({ id: "s", weekday: 1 })],
+  });
+
+  it("não edita o desenho depois de aplicado", () => {
+    expect(canEdit(aplicado, ["hour_maps.manage_hour_map"]).reason).toMatch(
+      /já viraram atendimento/,
+    );
+  });
+
+  it("nem aplica de novo", () => {
+    expect(canApply(aplicado, ["hour_maps.manage_hour_map"]).reason).toMatch(/já foi aplicado/);
+  });
+
+  it("mapa cancelado pede um novo", () => {
+    const cancelado = { ...aplicado, status: "cancelled" as const };
+    expect(canApply(cancelado, ["hour_maps.manage_hour_map"]).reason).toMatch(/Desenhe um novo/);
+  });
+
+  it("mapa em desenho é editável", () => {
+    expect(canEdit(hourMapFixture(), ["hour_maps.manage_hour_map"]).allowed).toBe(true);
+  });
+});
+
+describe("horas por semana", () => {
+  it("conta o desenho, e não o que sobrou depois dos conflitos", () => {
+    // É o número combinado com a família, e ele não muda porque uma sala estava
+    // ocupada.
+    const mapa = hourMapFixture({
+      slots: [
+        hourMapSlot({ id: "a", weekday: 1, startAt: "14:00", endAt: "15:00" }),
+        hourMapSlot({
+          id: "b",
+          weekday: 3,
+          startAt: "08:00",
+          endAt: "10:00",
+          conflicts: ["room_blocked"],
+        }),
+      ],
+    });
+    expect(weeklyMinutes(mapa)).toBe(180);
+  });
+
+  it("nomeia os dias da semana a partir de 1", () => {
+    expect(weekdayLabel(1)).toBe("Segunda");
+    expect(weekdayLabel(7)).toBe("Domingo");
   });
 });

@@ -1303,6 +1303,64 @@ export type ManagementData = {
 };
 
 /* ================================================================== *
+ * Mapa de horas — a ponte entre o plano e a agenda
+ * ================================================================== */
+
+/**
+ * Conflito encontrado ao gerar a grade.
+ *
+ * Seis tipos, em duas famílias. Os quatro primeiros dizem respeito ao
+ * profissional; os dois últimos, à sala. A família importa porque decide o que
+ * o mapa faz: ele **esvazia o campo daquela família** e gera o horário assim
+ * mesmo, em vez de falhar.
+ */
+export type HourMapConflict =
+  | "no_agenda"
+  | "conflicting_agenda"
+  | "professional_blocked"
+  | "professional_occupied"
+  | "room_occupied"
+  | "room_blocked";
+
+/** Uma linha da grade semanal pretendida. */
+export type HourMapSlot = {
+  id: string;
+  /** 1 = segunda, 7 = domingo. */
+  weekday: number;
+  startAt: string;
+  endAt: string;
+  specialty: string;
+  serviceName: string;
+  sessionLocation: SessionLocation;
+  scheduleType: "patient" | "at";
+  /** Preenchido no desenho; esvaziado quando há conflito de profissional. */
+  professionalName?: string;
+  /** Preenchido no desenho; esvaziado quando há conflito de sala. */
+  roomName?: string;
+  conflicts: HourMapConflict[];
+};
+
+export type HourMap = {
+  id: string;
+  patient: PatientRef;
+  unitName: string;
+  status: "creating" | "applied" | "cancelled";
+  durationStart: string;
+  durationEnd: string;
+  /** Renova sozinho ao fim da vigência. Ligado por padrão no monólito. */
+  autoRenew: boolean;
+  slots: HourMapSlot[];
+  /** Avisos produzidos na aplicação do mapa. */
+  warnings: string[];
+};
+
+export type HourMapData = {
+  map: HourMap;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

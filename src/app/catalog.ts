@@ -17,6 +17,7 @@ import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
 import { structureFixtures } from "../fixtures/structure.js";
 import { recordFixtures } from "../fixtures/record.js";
 import { managementFixtures } from "../fixtures/management.js";
+import { hourMapFixtures } from "../fixtures/hourMap.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -33,6 +34,7 @@ import { insurerPortalRules } from "../rules/insurerPortal.js";
 import { structureRules } from "../rules/structure.js";
 import { recordRules } from "../rules/record.js";
 import { managementRules } from "../rules/management.js";
+import { hourMapRules } from "../rules/hourMap.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -49,6 +51,7 @@ import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
 import { structureScenarios } from "../scenarios/structure.js";
 import { recordScenarios } from "../scenarios/record.js";
 import { managementScenarios } from "../scenarios/management.js";
+import { hourMapScenarios } from "../scenarios/hourMap.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -554,6 +557,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "hour-map",
+    name: "Mapa de horas",
+    description:
+      "A semana pretendida do paciente — e o que o sistema faz quando não consegue materializá-la.",
+    flows: [
+      {
+        id: "draw-and-apply",
+        title: "Desenhar e aplicar a semana",
+        description:
+          "Do desenho até a aplicação, com os conflitos que criam horários incompletos em vez de falhar.",
+        steps: [
+          {
+            scenario: "hour-map.with-conflicts",
+            label: "Conferir o que vai nascer incompleto",
+            decision: "Que tipo de conflito é este?",
+            branches: {
+              "Cadastro faltando": "hour-map.no-agenda-is-not-a-clash",
+              "Perde profissional e sala": "hour-map.loses-both",
+            },
+          },
+          { scenario: "hour-map.applied", label: "Ver o mapa depois de aplicado" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -573,6 +602,7 @@ export const scenarios: Scenario[] = [
   ...structureScenarios,
   ...recordScenarios,
   ...managementScenarios,
+  ...hourMapScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -593,6 +623,7 @@ export const fixtures: Fixture[] = [
   ...structureFixtures,
   ...recordFixtures,
   ...managementFixtures,
+  ...hourMapFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -612,6 +643,7 @@ export const rules: Rule[] = [
   ...structureRules,
   ...recordRules,
   ...managementRules,
+  ...hourMapRules,
 ];
 
 export { personas };

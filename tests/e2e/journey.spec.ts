@@ -1324,6 +1324,75 @@ test.describe("Gerência", () => {
   });
 });
 
+test.describe("Mapa de horas", () => {
+  test("o resumo vem antes da grade, com as duas perdas separadas", async ({ page }) => {
+    await page.goto(urlFor("hour-map.with-conflicts"));
+
+    await expect(
+      page.getByRole("heading", { name: "3 de 6 horários vão nascer incompletos" }),
+    ).toBeVisible();
+    await expect(page.getByText(/2 sem profissional definido — resolver é da coordenação/)).toBeVisible();
+    await expect(page.getByText(/2 sem sala definida — resolver é da administração/)).toBeVisible();
+
+    // Aplicar continua disponível: a decisão é informada, não bloqueada.
+    await expect(page.getByRole("button", { name: "Aplicar o mapa" })).toBeEnabled();
+  });
+
+  test("sem agenda é cadastro faltando, e o dono é outro", async ({ page }) => {
+    await page.goto(urlFor("hour-map.no-agenda-is-not-a-clash"));
+
+    await expect(
+      page.getByText(/é cadastro faltando, não horário ocupado/),
+    ).toBeVisible();
+    await expect(page.getByText(/Resolver: People, que define agenda padrão/)).toBeVisible();
+  });
+
+  test("o horário que perde os dois diz que vira agendamento assim mesmo", async ({ page }) => {
+    await page.goto(urlFor("hour-map.loses-both"));
+
+    await expect(
+      page.getByText("Este horário perdeu profissional e sala, e mesmo assim vai virar agendamento."),
+    ).toBeVisible();
+    await expect(page.getByText(/Resolver: Coordenação\./).first()).toBeVisible();
+    await expect(page.getByText(/Resolver: Administração da unidade\./).first()).toBeVisible();
+  });
+
+  test("as horas por semana contam o desenho, não o que sobrou", async ({ page }) => {
+    await page.goto(urlFor("hour-map.with-conflicts"));
+
+    await expect(page.getByText(/7 horas por semana/)).toBeVisible();
+    await expect(page.getByText(/não muda porque uma sala estava ocupada/)).toBeVisible();
+  });
+
+  test("o mapa limpo não alarma nada", async ({ page }) => {
+    await page.goto(urlFor("hour-map.clean"));
+
+    await expect(page.getByText(/vão nascer incompletos/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Aplicar o mapa" })).toBeEnabled();
+  });
+
+  test("o mapa aplicado não é redesenhado", async ({ page }) => {
+    await page.goto(urlFor("hour-map.applied"));
+
+    await expect(page.getByRole("button", { name: "Editar o desenho" })).toBeDisabled();
+    await expect(page.locator("#editar-motivo")).toHaveText(/já viraram atendimento/);
+    await expect(page.locator("#aplicar-motivo")).toHaveText(/já foi aplicado/);
+
+    // O aviso muda de tempo verbal: agora é fato, não risco.
+    await expect(
+      page.getByRole("heading", { name: "3 de 6 horários nasceram incompletos" }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Avisos gerados na aplicação" })).toBeVisible();
+  });
+
+  test("o mapa em branco explica o que é um mapa de horas", async ({ page }) => {
+    await page.goto(urlFor("hour-map.empty"));
+
+    await expect(page.getByRole("heading", { name: "Nenhum horário desenhado" })).toBeVisible();
+    await expect(page.getByText(/dia, horário, especialidade/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

@@ -21,6 +21,7 @@ import { InsurerPortal } from "../screens/InsurerPortal.js";
 import { Structure } from "../screens/Structure.js";
 import { PatientRecordScreen } from "../screens/PatientRecord.js";
 import { Management } from "../screens/Management.js";
+import { HourMapScreen } from "../screens/HourMap.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -51,6 +52,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients/:id", screen: PatientDetail },
     { path: "/patients/:id/plan", screen: InterventionPlanScreen },
     { path: "/patients/:id/record", screen: PatientRecordScreen },
+    { path: "/patients/:id/hour-map", screen: HourMapScreen },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },
     { path: "/closures", screen: Closures },

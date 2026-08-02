@@ -460,6 +460,33 @@ Quatro regras, cinco cenários, a tela `Management` e treze testes.
 
 Verde: `pnpm check` e 394 jornadas Playwright.
 
+### 17. Clínico, parte 6: mapa de horas — `porte/clinico-mapa-horas`
+
+Concluída.
+
+A ponte entre o plano e a agenda: alguém desenha a semana pretendida do paciente
+e o sistema materializa isso em agendamentos ao longo da vigência.
+
+O módulo existe por causa de uma escolha do sistema real que é fácil de não
+notar. Quando um horário esbarra num conflito, `BuildSchedules` **não falha**:
+apaga o campo em conflito e cria o agendamento assim mesmo. É defensável —
+metade de um horário é melhor que nenhum, e a recepção completa depois — e
+precisa estar visível, porque um mapa aplicado com quinze agendamentos sem
+profissional parece pronto e não está.
+
+- **A família do conflito decide o que se perde.** Os quatro conflitos de
+  profissional apagam o profissional; os dois de sala apagam a sala. Um horário
+  pode perder os dois e continuar sendo criado.
+- **E decide de quem é resolver.** Profissional é da coordenação, sala é da
+  administração da unidade, e agenda padrão faltando é do People. Um aviso único
+  de "conflito" não diz a quem entregar.
+- **"Sem agenda" não é "ocupado".** Uma é cadastro faltando, a outra é disputa de
+  horário, e elas pedem ações opostas.
+
+Quatro regras, seis cenários, a tela `HourMap` e dezoito testes.
+
+Verde: `pnpm check` e 413 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
