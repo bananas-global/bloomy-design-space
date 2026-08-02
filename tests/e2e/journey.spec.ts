@@ -2109,6 +2109,9 @@ test.describe("fase terapêutica", () => {
 
     await expect(page.getByText("Uma fase não tem especialidade")).toBeVisible();
     await expect(page.getByText(/some da leitura/)).toBeVisible();
+    // Nome de módulo Elixir entre crases é jargão de código, e os crases
+    // apareciam literalmente: JSX não interpreta markdown.
+    await expect(page.getByText(/TherapyPhase\.changeset/)).toHaveCount(0);
   });
 
   test("ambientação é marcada como ambígua", async ({ page }) => {
@@ -2259,5 +2262,30 @@ test.describe("plurais", () => {
     // perde a autoridade para exigir precisão de quem a implementa.
     await expect(page.getByText("1 dia", { exact: true })).toBeVisible();
     await expect(page.getByText("1 dias")).toHaveCount(0);
+  });
+});
+
+test.describe("supervisão e inativação, revisão visual", () => {
+  test("o supervisor em exibição diz que está, e não só muda de cor", async ({ page }) => {
+    await page.goto(urlFor("supervision.awaiting-signature"));
+
+    await expect(page.getByText("· em exibição ao lado")).toBeVisible();
+  });
+
+  test("o aviso dentro do cartão fica um nível abaixo do título dele", async ({ page }) => {
+    await page.goto(urlFor("supervision.awaiting-signature"));
+
+    // Como conteúdo do cartão, o aviso não é irmão do título do cartão. Não é
+    // salto de nível — nenhuma regra automática pega —, é hierarquia errada.
+    await expect(
+      page.getByRole("heading", { level: 3, name: /atendimentos parados esperando/ }),
+    ).toBeVisible();
+  });
+
+  test("inativar usa a variante de perigo, e não a de ação afirmativa", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-impact"));
+
+    const botao = page.getByRole("button", { name: /^Inativar / });
+    await expect(botao).toHaveCSS("color", "rgb(144, 42, 42)");
   });
 });
