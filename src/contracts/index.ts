@@ -1467,6 +1467,62 @@ export type ProspectsData = {
 };
 
 /* ================================================================== *
+ * Relatórios — os documentos que saem da clínica
+ * ================================================================== */
+
+/**
+ * Tipo do relatório.
+ *
+ * Sete tipos, e o que muda entre eles não é só o conteúdo: é **para onde o
+ * documento vai**. A declaração de comparecimento vai para o empregador do
+ * responsável; o relatório para operadora vai para o convênio; o PEI vai para a
+ * família. O mesmo botão produz documentos que saem da clínica para lugares
+ * muito diferentes.
+ */
+export type ReportType =
+  | "normal"
+  | "declaration_of_attendance"
+  | "protocol_report"
+  | "evolution_report"
+  | "pei"
+  | "health_care_report"
+  | "external_report";
+
+export type ReportStatus = "elaboration" | "generated_pdf" | "cancelled";
+
+export type PatientReport = {
+  id: string;
+  name: string;
+  reportType: ReportType;
+  status: ReportStatus;
+  patientName: string;
+  /** Quem responde pelo documento. Pode não ser quem o escreveu. */
+  ownerName?: string;
+  /** Quem criou o registro. */
+  authorName: string;
+  content?: string;
+  createdAt: string;
+  cancelledAt?: string;
+  /** Campos exclusivos da declaração de comparecimento. */
+  attendance?: {
+    date: string;
+    startTime: string;
+    endTime: string;
+    guardianName: string;
+  };
+  /** Período coberto, nos tipos que cobrem um intervalo. */
+  period?: { start: string; end: string };
+};
+
+export type ReportsData = {
+  reports: PatientReport[];
+  /** Papel de quem está olhando, para exercitar a regra de emissão. */
+  currentRole: string;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 
@@ -1510,4 +1566,32 @@ export function ageInYears(birthDate: string, reference = TODAY): number {
 
 export function isMinor(patient: PatientRef, reference = TODAY): boolean {
   return ageInYears(patient.birthDate, reference) < 18;
+}
+
+/* ========================================================== Notificações */
+
+/**
+ * Uma notificação como o sistema real a guarda.
+ *
+ * O que o schema **não** tem é o que decide a tela: não há tipo, não há
+ * categoria, não há prioridade e não há entidade referenciada. Há um título,
+ * um texto e uma URL opcional — e o texto é uma cópia congelada no momento do
+ * envio, não uma leitura do dado.
+ */
+export interface NotificationItem {
+  id: string;
+  title: string;
+  /** Texto gravado no envio. Não acompanha o dado se ele mudar depois. */
+  content: string;
+  /** Para onde a notificação leva. Opcional: pode não levar a lugar nenhum. */
+  onClickUrl?: string;
+  /** Quando esta pessoa leu. Ausente é não lida. Mora no vínculo, não na notificação. */
+  readAt?: string;
+  /** Quando o vínculo foi criado — é por ele que a lista ordena. */
+  at: string;
+}
+
+export interface NotificationsData {
+  currentUser: { id: string; name: string; role: string };
+  items: NotificationItem[];
 }

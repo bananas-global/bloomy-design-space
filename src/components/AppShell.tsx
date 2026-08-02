@@ -15,7 +15,8 @@ type NavItem = {
   label: string;
   path: string;
   /** Permissão mínima para o item aparecer. */
-  permission: string;
+  /** Ausente quando o item não é filtrado por permissão — notificações são de todo mundo. */
+  permission?: string;
 };
 
 /**
@@ -35,6 +36,7 @@ const NAV: NavItem[] = [
   { label: "Autorizações", path: "/authorizations", permission: "authorizations.hub" },
   { label: "Fechamentos", path: "/closures", permission: "closures.list" },
   { label: "Gerência", path: "/management", permission: "management.list" },
+  { label: "Notificações", path: "/notifications" },
 ];
 
 /**
@@ -92,7 +94,7 @@ export function AppShell({
           <span className="text-lg font-extrabold tracking-tight">Bloomy</span>
         </div>
 
-        {NAV.filter((item) => context.can(item.permission)).map((item) => {
+        {NAV.filter((item) => item.permission === undefined || context.can(item.permission)).map((item) => {
           const isCurrent = currentPath.startsWith(item.path);
           return (
             <a

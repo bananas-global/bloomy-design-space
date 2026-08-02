@@ -1529,6 +1529,68 @@ test.describe("Visitas", () => {
   });
 });
 
+test.describe("Relatórios", () => {
+  test("cada tipo diz para onde o documento vai", async ({ page }) => {
+    await page.goto(urlFor("reports.list"));
+
+    // O destinatário não está no schema — é o que decide o cuidado com o
+    // conteúdo, e sem ele o handoff produz sete telas iguais.
+    await expect(page.getByText(/empregador de quem trouxe a criança/).first()).toBeVisible();
+    await expect(page.getByText(/a operadora, junto da autorização/)).toBeVisible();
+    await expect(page.getByText("Sem conteúdo clínico").first()).toBeVisible();
+    await expect(page.getByText("Leva conteúdo clínico").first()).toBeVisible();
+  });
+
+  test("a declaração incompleta não gera PDF", async ({ page }) => {
+    await page.goto(urlFor("reports.declaration-incomplete"));
+
+    await expect(page.getByRole("heading", { name: "Declaração incompleta" })).toBeVisible();
+    await expect(page.getByText(/horário de saída, nome do responsável/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Gerar PDF" })).toBeDisabled();
+    await expect(page.locator("#pdf-rel-2-motivo")).toHaveText(
+      /esteve na clínica naquele horário/,
+    );
+  });
+
+  test("conteúdo clínico numa declaração é avisado antes de gerar", async ({ page }) => {
+    await page.goto(urlFor("reports.declaration-with-clinical"));
+
+    await expect(
+      page.getByRole("heading", { name: "Conteúdo clínico numa declaração de comparecimento" }),
+    ).toBeVisible();
+    await expect(page.getByText(/único tipo que sai do circuito da saúde/)).toBeVisible();
+    // A escolha continua de quem emite: informada, não bloqueada.
+    await expect(page.getByRole("button", { name: "Gerar PDF" })).toBeEnabled();
+  });
+
+  test("o descompasso de permissão é declarado, não corrigido", async ({ page }) => {
+    await page.goto(urlFor("reports.issuing-without-reading"));
+
+    await expect(
+      page.getByRole("heading", { name: "A permissão de emitir não verifica a de ler" }),
+    ).toBeVisible();
+    await expect(page.getByText(/não alcança a visão clínica do paciente/).first()).toBeVisible();
+    await expect(page.getByText(/tomada de propósito, em vez de herdada/)).toBeVisible();
+  });
+
+  test("relatório com PDF gerado não é editado", async ({ page }) => {
+    await page.goto(urlFor("reports.generated"));
+
+    await expect(page.getByRole("button", { name: "Editar" })).toBeDisabled();
+    await expect(page.locator("#editar-rel-4-motivo")).toHaveText(
+      /papel que está na mão de alguém/,
+    );
+    // O conteúdo continua legível.
+    await expect(page.getByText(/Evolução consistente em imitação motora/)).toBeVisible();
+  });
+
+  test("sem relatório, a tela nomeia os tipos possíveis", async ({ page }) => {
+    await page.goto(urlFor("reports.empty"));
+
+    await expect(page.getByText(/declaração de comparecimento, relatório evolutivo/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));
@@ -1600,5 +1662,88 @@ test.describe("navegação por permissão", () => {
     await page.goto(urlFor("authorizations.queue"));
 
     await expect(page.getByRole("link", { name: "Autorizações" })).toBeVisible();
+  });
+});
+
+test.describe("notificações", () => {
+  test("a lista diz quantas estão não lidas e que a marca é de quem lê", async ({ page }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    await expect(page.getByText("3 não lidas")).toBeVisible();
+    await expect(page.getByText("4 no total")).toBeVisible();
+    // Lido mora no vínculo, não na notificação. Sem essa frase, o contador se
+    // lê como estado do sistema, e não da pessoa.
+    await expect(
+      page.getByText(/continua não lida para as outras pessoas que a receberam/),
+    ).toBeVisible();
+  });
+
+  test("não lida tem rótulo textual, e não só cor de fundo", async ({ page }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    await expect(page.getByText("Não lida", { exact: true })).toHaveCount(3);
+    await expect(page.getByText("Lida", { exact: true })).toHaveCount(1);
+  });
+
+  test("a data de recebimento fica junto do texto, porque o texto é cópia congelada", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    await expect(page.getByText(/Recebida em/).first()).toBeVisible();
+    await expect(page.getByText(/lida por você em/)).toBeVisible();
+  });
+
+  test("o destino vazio é distinguido da ausência de destino", async ({ page }) => {
+    await page.goto(urlFor("notifications.leads-nowhere"));
+
+    // Três dos quatro remetentes gravam `""`. Em Elixir a string vazia é
+    // truthy: renderizada sem cuidado, vira um link clicável para lugar nenhum.
+    const abrir = page.getByRole("button", { name: "Abrir" }).first();
+    await expect(abrir).toBeVisible();
+    await expect(abrir).toBeDisabled();
+    await expect(page.getByText(/foi gravado como texto vazio, e não como ausência/).first()).toBeVisible();
+  });
+
+  test("a notificação de transferência é apontada como não identificada", async ({ page }) => {
+    await page.goto(urlFor("notifications.leads-nowhere"));
+
+    await expect(page.getByText("Esta notificação não diz sobre o que é")).toBeVisible();
+    await expect(
+      page.getByText(/comunica a perda de algo, e a menos identificada/),
+    ).toBeVisible();
+  });
+
+  test("a menção chega para quem não abre a tela de destino", async ({ page }) => {
+    await page.goto(urlFor("notifications.target-does-not-open"));
+
+    // Notificar não é dar acesso — é o mesmo aviso que o chat dá antes do
+    // envio, visto agora do lado de quem recebeu.
+    const abrir = page.getByRole("button", { name: "Abrir" });
+    await expect(abrir).toBeDisabled();
+    await expect(page.getByText(/exige patients\.edit/)).toBeVisible();
+  });
+
+  test("o texto que nomeia o paciente é apontado na própria notificação", async ({ page }) => {
+    await page.goto(urlFor("notifications.clinical-text-without-check"));
+
+    await expect(page.getByText(/nomeia Théo Andrade Lins e a especialidade/)).toBeVisible();
+    await expect(page.getByText(/o sino entrega direto/).first()).toBeVisible();
+  });
+
+  test("com tudo lido, marcar todas fica visível e desabilitada, com o motivo", async ({ page }) => {
+    await page.goto(urlFor("notifications.all-read"));
+
+    await expect(page.getByText("Tudo lido")).toBeVisible();
+    const marcar = page.getByRole("button", { name: "Marcar todas como lidas" });
+    await expect(marcar).toBeVisible();
+    await expect(marcar).toBeDisabled();
+  });
+
+  test("o vazio explica o alcance do recurso", async ({ page }) => {
+    await page.goto(urlFor("notifications.empty"));
+
+    await expect(page.getByText("Nenhuma notificação")).toBeVisible();
+    await expect(page.getByText(/o resto do produto ainda não avisa nada/)).toBeVisible();
   });
 });

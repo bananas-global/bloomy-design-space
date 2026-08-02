@@ -20,6 +20,8 @@ import { managementFixtures } from "../fixtures/management.js";
 import { hourMapFixtures } from "../fixtures/hourMap.js";
 import { chatFixtures } from "../fixtures/chat.js";
 import { prospectFixtures } from "../fixtures/prospects.js";
+import { reportFixtures } from "../fixtures/reports.js";
+import { notificationFixtures } from "../fixtures/notifications.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -39,6 +41,8 @@ import { managementRules } from "../rules/management.js";
 import { hourMapRules } from "../rules/hourMap.js";
 import { chatRules } from "../rules/chat.js";
 import { prospectRules } from "../rules/prospects.js";
+import { reportRules } from "../rules/reports.js";
+import { notificationRules } from "../rules/notifications.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -58,6 +62,8 @@ import { managementScenarios } from "../scenarios/management.js";
 import { hourMapScenarios } from "../scenarios/hourMap.js";
 import { chatScenarios } from "../scenarios/chat.js";
 import { prospectScenarios } from "../scenarios/prospects.js";
+import { reportScenarios } from "../scenarios/reports.js";
+import { notificationScenarios } from "../scenarios/notifications.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -640,6 +646,58 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "reports",
+    name: "Relatórios",
+    description:
+      "Os documentos que saem da clínica — sete tipos, destinos diferentes, e um botão só.",
+    flows: [
+      {
+        id: "issue-a-document",
+        title: "Emitir um documento sobre o paciente",
+        description:
+          "Da lista até as duas coisas que a tela precisa avisar antes de o papel sair da clínica.",
+        steps: [
+          {
+            scenario: "reports.list",
+            label: "Escolher o tipo e ver para onde vai",
+            decision: "O que precisa ser conferido antes de gerar?",
+            branches: {
+              "Declaração incompleta": "reports.declaration-incomplete",
+              "Conteúdo clínico numa declaração": "reports.declaration-with-clinical",
+              "Perfil emite e não lê": "reports.issuing-without-reading",
+            },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "notifications",
+    name: "Notificações",
+    description:
+      "Quatro avisos no produto inteiro — e três deles chegam sem levar a lugar nenhum.",
+    flows: [
+      {
+        id: "read-what-arrived",
+        title: "Ler o que chegou",
+        description:
+          "Da lista até as três coisas que o sino faz e ninguém decidiu: não levar, não identificar e entregar conteúdo clínico.",
+        steps: [
+          {
+            scenario: "notifications.unread-list",
+            label: "Ver o que o sistema avisa",
+            decision: "O que esta notificação não resolve?",
+            branches: {
+              "Não leva ao agendamento": "notifications.leads-nowhere",
+              "Leva a uma tela que não abre": "notifications.target-does-not-open",
+              "Entrega dado clínico sem checar": "notifications.clinical-text-without-check",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -662,6 +720,8 @@ export const scenarios: Scenario[] = [
   ...hourMapScenarios,
   ...chatScenarios,
   ...prospectScenarios,
+  ...reportScenarios,
+  ...notificationScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -685,6 +745,8 @@ export const fixtures: Fixture[] = [
   ...hourMapFixtures,
   ...chatFixtures,
   ...prospectFixtures,
+  ...reportFixtures,
+  ...notificationFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -707,6 +769,8 @@ export const rules: Rule[] = [
   ...hourMapRules,
   ...chatRules,
   ...prospectRules,
+  ...reportRules,
+  ...notificationRules,
 ];
 
 export { personas };

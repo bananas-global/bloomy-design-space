@@ -538,6 +538,63 @@ Quatro regras, cinco cenários, a tela `Prospects` e quinze testes.
 
 Verde: `pnpm check` e 447 jornadas Playwright.
 
+### 20. Cadastros: relatórios — `porte/relatorios`
+
+Concluída.
+
+Sete tipos de documento que saem por um botão só. O que muda entre eles não é o
+formato: é **para onde o papel vai** depois de gerado — empregador, convênio,
+família, outro serviço de saúde. Um relatório é a coisa mais fácil de o produto
+emitir e a mais difícil de recolher.
+
+O destinatário não está no schema. Está nas regras deste módulo porque é o que
+decide o cuidado com o conteúdo — e sem ele o handoff produz sete telas iguais.
+
+- **A declaração de comparecimento é o único tipo que sai do circuito da
+  saúde.** Vai para o RH de uma empresa ou para a escola, e precisa provar
+  apenas que a pessoa esteve na clínica naquele horário. O campo `content`
+  aceita qualquer coisa em qualquer tipo, sem validação — a tela avisa antes de
+  gerar o PDF.
+- **Relatório com PDF gerado não é editado.** O papel já saiu; editar o registro
+  faria o sistema divergir do que está na mão de alguém.
+
+Quatro regras, seis cenários, a tela `Reports` e dezenove testes.
+
+Verde: `pnpm check` e 465 jornadas Playwright.
+
+### 21. Notificações — `porte/notificacoes`
+
+O recurso que mais parece resolvido e menos foi olhado. O schema tem três campos
+— título, conteúdo e URL — e o estado de leitura mora no vínculo com a pessoa,
+não na notificação. Isso já é o modelo certo, e decide metade da tela: “marcar
+todas como lidas” age sobre os vínculos de quem clicou, e a mesma mensagem
+continua não lida para todos os outros.
+
+A outra metade vem de ler **quem envia**, e não o schema. São quatro chamadas de
+`Notify.notify/4` no sistema inteiro — agendamento assumido, agendamento
+transferido, agendamento atrasado e menção no chat. Três delas gravam string
+vazia como destino, e a quarta aponta para o formulário de edição do paciente,
+não para o chat de onde a menção saiu.
+
+Três decisões desenhadas a partir disso:
+
+- **Sem destino e com destino vazio são estados diferentes.** `undefined` é uma
+  notificação que nunca pretendeu levar a lugar nenhum; `""` é uma que pretendia
+  e não leva. Só a segunda é defeito. `linkTarget/1` os separa e `canOpen/2` dá
+  motivos diferentes — apagá-los no mesmo cinza esconderia qual dos dois alguém
+  precisa consertar.
+- **A hora de recebimento fica junto do texto, sempre.** O conteúdo é cópia
+  congelada no envio: se o agendamento for remarcado, a notificação continua
+  dizendo o que dizia. Sem a data ao lado, ele se lê como estado atual.
+- **O conteúdo clínico é apontado, não removido.** `namesPatient/1` procura a
+  linha `Paciente:` que o template de `AssumeSchedule` interpola. É leitura de
+  string porque o sistema real só tem string — a fragilidade da detecção é a
+  própria constatação.
+
+6 cenários, 16 testes de regra, 9 jornadas. Com este módulo o backoffice está
+coberto de ponta a ponta.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -557,5 +614,10 @@ bugs do Design Space; são observações sobre o produto.
 | 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |
 | 12 | `provider_code` e `requester_code` de `HealthCare` são opcionais no changeset e obrigatórios na geração do lote TISS. O cadastro passa e o envio falha. | `lib/bloomy/health_cares/health_care.ex` |
 | 14 | Finalizar uma anamnese incompleta **relata sucesso e não finaliza**. `keep_pending_until_required_fields/1` devolve o status para `pending` dentro do changeset, sem erro — quem clicou vê a anamnese ainda aberta, sem explicação. O cenário `record.anamnese-incomplete` mostra o atual e o proposto lado a lado. | `lib/bloomy/anamneses/anamnese.ex:31` |
+| 15 | A permissão de **emitir** relatório não verifica a de **ler** o prontuário. `generate_report` inclui `attendant`; `see_clinic_overview` o exclui. Quem não pode abrir a evolução do paciente pode produzir um documento de evolução sobre ele, e o formulário não filtra o tipo por papel. | `lib/bloomy/patients/patient_policy.ex:22` |
 | 13 | `SchedulePolicy.scope/2` esconde agendamentos `:incomplete` do usuário de operadora sem sinalizar. A lista de presença fica impossível de conciliar com a fatura quando os números não batem. | `lib/bloomy/schedules/schedule_policy.ex` |
 | 11 | `ClosurePolicy` se contradiz sobre o especialista: `can_interact?` diz que ele age na etapa de aceite, mas `scope/2` não o lista e ele cai no `where: false`. O especialista não vê fechamento nenhum, nem o próprio. | `lib/bloomy/professionals/closures/closure_policy.ex` |
+| 16 | `NotificationUser.changeset/2` exige `read_at` no `validate_required`. Uma notificação **não lida** é impossível de criar por ele. O remetente contorna usando `build_assoc` direto, então a validação nunca roda — é código morto que documenta o oposto do comportamento. | `lib/bloomy/backoffice/notification_user.ex:26` |
+| 17 | Três dos quatro remetentes passam `""` como `on_click_url`. Em Elixir a string vazia é *truthy*: um template que faça `if notification.on_click_url` renderiza um link clicável para lugar nenhum. As notificações que mais precisariam levar a algum lugar — as três de agendamento — são justamente as que não levam. | `lib/bloomy/schedules/assume_schedule.ex:21,37,64` |
+| 18 | `mark_all_notifications_read_for/1` grava `DateTime.utc_now()` sem truncar numa coluna `:utc_datetime`, enquanto `mark_notifications_read/1` trunca para segundo. Ecto rejeita microssegundos não vazios ao serializar `:utc_datetime` — há risco de “marcar todas como lidas” falhar onde “marcar uma” funciona. **Não reproduzido**: não rodamos o monólito. Vale um teste antes de qualquer conclusão. | `lib/bloomy/backoffice.ex:241-245` |
+| 19 | A notificação de menção no chat aponta para `/backoffice/pacientes/:id/editar?message=:id` — o formulário de cadastro do paciente, não o chat de onde a menção saiu. Somado ao achado sobre `ChatPolicy`, quem é mencionado recebe um aviso que leva a uma tela que pode não abrir para o perfil dele. | `lib/bloomy/multidisciplinary_chat/send_message.ex:62` |

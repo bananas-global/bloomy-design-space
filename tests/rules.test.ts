@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  PatientReport,
   Prospect,
   ProspectsData,
   ChatData,
@@ -230,6 +231,16 @@ import {
   stalled,
   stepPosition,
 } from "../src/rules/prospects.js";
+import {
+  attendanceHasClinicalContent,
+  canEditReport,
+  canGeneratePdf,
+  canIssue,
+  carriesClinicalContent,
+  destination,
+  issuingWithoutReading,
+  missingAttendanceFields,
+} from "../src/rules/reports.js";
 
 /**
  * Testes das regras de negócio.
@@ -3898,5 +3909,319 @@ describe("step-history-explains-the-funnel", () => {
 
   it("sem histórico, não há como dizer há quanto tempo", () => {
     expect(daysInCurrentStep(prospectFixture({ id: "x" }), AGORA)).toBeUndefined();
+  });
+});
+
+/* ============================================================ relatórios */
+
+/**
+ * Sete tipos de documento que saem por um botão só. O que muda entre eles é
+ * para onde o papel vai — e é a coisa que o schema não guarda.
+ */
+
+function reportFixture(overrides: Partial<PatientReport> & { id: string }): PatientReport {
+  return {
+    name: "Relatório",
+    reportType: "normal",
+    status: "elaboration",
+    patientName: "Théo",
+    authorName: "Marina",
+    createdAt: "2026-07-20T10:00:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("report-type-decides-the-destination", () => {
+  it("a declaração de comparecimento é o único tipo sem conteúdo clínico", () => {
+    expect(carriesClinicalContent("declaration_of_attendance")).toBe(false);
+    for (const type of [
+      "normal",
+      "protocol_report",
+      "evolution_report",
+      "pei",
+      "health_care_report",
+      "external_report",
+    ] as const) {
+      expect(carriesClinicalContent(type)).toBe(true);
+    }
+  });
+
+  it("e o único que sai do circuito da saúde", () => {
+    expect(destination("declaration_of_attendance").who).toMatch(/empregador|escola/);
+    expect(destination("health_care_report").who).toMatch(/operadora/);
+    expect(destination("external_report").who).toMatch(/outro serviço de saúde/);
+  });
+
+  it("todo tipo tem destinatário nomeado", () => {
+    for (const type of [
+      "normal",
+      "declaration_of_attendance",
+      "protocol_report",
+      "evolution_report",
+      "pei",
+      "health_care_report",
+      "external_report",
+    ] as const) {
+      expect(destination(type).who.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("attendance-declaration-carries-no-clinical-content", () => {
+  const completa = reportFixture({
+    id: "d",
+    reportType: "declaration_of_attendance",
+    attendance: {
+      date: "2026-07-23",
+      startTime: "14:00",
+      endTime: "15:00",
+      guardianName: "Renata",
+    },
+  });
+
+  it("exige data, os dois horários e o nome do responsável", () => {
+    const vazia = reportFixture({
+      id: "d",
+      reportType: "declaration_of_attendance",
+      attendance: { date: "", startTime: "", endTime: "", guardianName: "" },
+    });
+    expect(missingAttendanceFields(vazia)).toEqual([
+      "data do atendimento",
+      "horário de entrada",
+      "horário de saída",
+      "nome do responsável",
+    ]);
+  });
+
+  it("a declaração completa não acusa nada", () => {
+    expect(missingAttendanceFields(completa)).toEqual([]);
+    expect(canGeneratePdf(completa).allowed).toBe(true);
+  });
+
+  it("os campos só são exigidos neste tipo", () => {
+    expect(missingAttendanceFields(reportFixture({ id: "e", reportType: "evolution_report" }))).toEqual(
+      [],
+    );
+  });
+
+  it("detecta conteúdo clínico numa declaração — o campo aceita e não deveria", () => {
+    const vazando = { ...completa, content: "Paciente em acompanhamento para TEA." };
+    expect(attendanceHasClinicalContent(vazando)).toBe(true);
+    // Em qualquer outro tipo, conteúdo é esperado e não gera aviso.
+    expect(
+      attendanceHasClinicalContent({ ...vazando, reportType: "evolution_report" }),
+    ).toBe(false);
+  });
+
+  it("bloqueia o PDF nomeando o que falta e o que a declaração prova", () => {
+    const incompleta = {
+      ...completa,
+      attendance: { ...completa.attendance!, endTime: "", guardianName: "" },
+    };
+    const result = canGeneratePdf(incompleta);
+    expect(result.reason).toMatch(/horário de saída, nome do responsável/);
+    expect(result.reason).toMatch(/esteve na clínica naquele horário/);
+  });
+});
+
+describe("issuing-does-not-check-reading", () => {
+  it("a recepção emite relatórios", () => {
+    expect(canIssue("attendant").allowed).toBe(true);
+  });
+
+  it("e o descompasso é declarado quando o tipo leva conteúdo clínico", () => {
+    // `generate_report` inclui attendant; `see_clinic_overview` o exclui.
+    const aviso = issuingWithoutReading("evolution_report", "attendant");
+    expect(aviso).toMatch(/não alcança a visão clínica/);
+    expect(aviso).toMatch(/emitir não verifica a de ler/);
+  });
+
+  it("não há descompasso na declaração de comparecimento", () => {
+    // Ela não leva conteúdo clínico: emitir sem ler o prontuário é coerente.
+    expect(issuingWithoutReading("declaration_of_attendance", "attendant")).toBeUndefined();
+  });
+
+  it("nem para quem lê o prontuário", () => {
+    for (const role of ["coordinator", "supervisor", "therapeutic_companion", "specialist"]) {
+      expect(issuingWithoutReading("evolution_report", role)).toBeUndefined();
+    }
+  });
+
+  it("quem não emite não gera descompasso nenhum", () => {
+    expect(issuingWithoutReading("evolution_report", "operation")).toBeUndefined();
+    expect(canIssue("operation").reason).toMatch(/não emite relatórios/);
+  });
+});
+
+describe("generated-report-is-frozen", () => {
+  const gerado = reportFixture({ id: "g", status: "generated_pdf" });
+
+  it("não edita depois do PDF, e a negativa diz por quê", () => {
+    expect(canEditReport(gerado).reason).toMatch(/papel que está na mão de alguém/);
+  });
+
+  it("nem gera o PDF de novo", () => {
+    expect(canGeneratePdf(gerado).reason).toMatch(/já foi gerado/);
+  });
+
+  it("cancelado não edita nem gera", () => {
+    const cancelado = reportFixture({ id: "c", status: "cancelled" });
+    expect(canEditReport(cancelado).allowed).toBe(false);
+    expect(canGeneratePdf(cancelado).reason).toMatch(/não gera PDF/);
+  });
+
+  it("em elaboração é editável", () => {
+    expect(canEditReport(reportFixture({ id: "e" })).allowed).toBe(true);
+  });
+});
+
+/* ========================================================== Notificações */
+import type { NotificationItem, NotificationsData } from "../src/contracts/index.js";
+import {
+  canMarkAllRead,
+  canOpen,
+  identifiesSubject,
+  inOrder as notificationsInOrder,
+  isUnread,
+  linkTarget,
+  namesPatient,
+  unidentified,
+  unreadCount,
+} from "../src/rules/notifications.js";
+
+function notificationItem(overrides: Partial<NotificationItem> & { id: string }): NotificationItem {
+  return { title: "Aviso", content: "Algo aconteceu.", at: "2026-07-29T10:00:00.000-03:00", ...overrides };
+}
+
+function notificationData(items: NotificationItem[]): NotificationsData {
+  return { currentUser: { id: "u", name: "Marina", role: "therapeutic_companion" }, items };
+}
+
+describe("read-state-belongs-to-the-person", () => {
+  it("trata a ausência de readAt como não lida", () => {
+    expect(isUnread(notificationItem({ id: "a" }))).toBe(true);
+    expect(isUnread(notificationItem({ id: "b", readAt: "2026-07-29T11:00:00.000-03:00" }))).toBe(false);
+  });
+
+  it("conta só as não lidas de quem está olhando", () => {
+    expect(unreadCount(notificationData([notificationItem({ id: "a" }), notificationItem({ id: "b", readAt: "x" })]))).toBe(1);
+  });
+
+  it("desabilita marcar todas quando não há nada não lido, e diz por quê", () => {
+    const decision = canMarkAllRead(notificationData([notificationItem({ id: "a", readAt: "x" })]));
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("não lidas");
+  });
+
+  it("permite marcar todas quando há ao menos uma", () => {
+    expect(canMarkAllRead(notificationData([notificationItem({ id: "a" })])).allowed).toBe(true);
+  });
+});
+
+describe("notification-may-lead-nowhere", () => {
+  it("separa destino ausente de destino gravado vazio", () => {
+    expect(linkTarget(notificationItem({ id: "a" }))).toEqual({ kind: "none" });
+    expect(linkTarget(notificationItem({ id: "b", onClickUrl: "" }))).toEqual({ kind: "empty" });
+    expect(linkTarget(notificationItem({ id: "c", onClickUrl: "   " }))).toEqual({ kind: "empty" });
+  });
+
+  it("dá motivos diferentes para os dois — só um deles é defeito", () => {
+    const sem = canOpen(notificationItem({ id: "a" }), []);
+    const vazio = canOpen(notificationItem({ id: "b", onClickUrl: "" }), []);
+
+    expect(sem.allowed).toBe(false);
+    expect(vazio.allowed).toBe(false);
+    expect(sem.reason).not.toBe(vazio.reason);
+    expect(vazio.reason).toContain("vazio");
+  });
+
+  it("reconhece a permissão exigida pela única URL real do sistema", () => {
+    const mencao = notificationItem({
+      id: "m",
+      onClickUrl: "/backoffice/pacientes/pac-theo/editar?message=m2",
+    });
+
+    expect(linkTarget(mencao)).toEqual({
+      kind: "url",
+      href: "/backoffice/pacientes/pac-theo/editar?message=m2",
+      requiredPermission: "patients.edit",
+    });
+
+    expect(canOpen(mencao, ["patients.edit"]).allowed).toBe(true);
+
+    const bloqueado = canOpen(mencao, []);
+    expect(bloqueado.allowed).toBe(false);
+    expect(bloqueado.reason).toContain("patients.edit");
+  });
+
+  it("não exige permissão para uma URL fora da tabela — declarar o que se sabe, não adivinhar", () => {
+    const outra = notificationItem({ id: "o", onClickUrl: "/backoffice/qualquer-coisa" });
+    expect(linkTarget(outra)).toEqual({ kind: "url", href: "/backoffice/qualquer-coisa" });
+    expect(canOpen(outra, []).allowed).toBe(true);
+  });
+});
+
+describe("notification-carries-what-the-screen-would-check", () => {
+  const assumido = notificationItem({
+    id: "a",
+    content: ["Você assumiu um agendamento pendente.", "Paciente: Théo Andrade Lins", "Data: 29/07"].join("\n"),
+  });
+
+  it("encontra o nome do paciente que o template interpola no texto", () => {
+    expect(namesPatient(assumido)).toBe("Théo Andrade Lins");
+  });
+
+  it("não inventa nome quando a linha não existe ou está vazia", () => {
+    expect(namesPatient(notificationItem({ id: "b", content: "Um agendamento seu foi assumido." }))).toBeUndefined();
+    expect(namesPatient(notificationItem({ id: "c", content: "Paciente:   " }))).toBeUndefined();
+  });
+});
+
+describe("transferred-without-saying-which", () => {
+  const transferido = notificationItem({
+    id: "t",
+    title: "Agendamento transferido",
+    content: "Um agendamento seu foi assumido por um supervisor.",
+    onClickUrl: "",
+  });
+
+  it("marca como não identificada a notificação que não nomeia nem leva", () => {
+    expect(identifiesSubject(transferido)).toBe(false);
+  });
+
+  it("aceita como identificada quem nomeia o paciente, mesmo sem link", () => {
+    expect(
+      identifiesSubject(notificationItem({ id: "a", content: "Paciente: Théo Andrade Lins", onClickUrl: "" })),
+    ).toBe(true);
+  });
+
+  it("aceita como identificada quem leva a uma tela, mesmo sem nomear", () => {
+    expect(
+      identifiesSubject(notificationItem({ id: "m", content: "Alguém te mencionou.", onClickUrl: "/backoffice/pacientes/p/editar" })),
+    ).toBe(true);
+  });
+
+  it("isola só as não identificadas da lista", () => {
+    const lista = notificationData([transferido, notificationItem({ id: "a", content: "Paciente: Helena Vasconcelos Prado" })]);
+    expect(unidentified(lista).map((entry) => entry.id)).toEqual(["t"]);
+  });
+});
+
+describe("ordem da lista", () => {
+  it("ordena pelo vínculo mais recente, e não pela ordem em que vieram", () => {
+    const lista = notificationData([
+      notificationItem({ id: "velha", at: "2026-07-20T10:00:00.000-03:00" }),
+      notificationItem({ id: "nova", at: "2026-07-29T10:00:00.000-03:00" }),
+    ]);
+    expect(notificationsInOrder(lista).map((entry) => entry.id)).toEqual(["nova", "velha"]);
+  });
+
+  it("não altera a lista original", () => {
+    const lista = notificationData([
+      notificationItem({ id: "velha", at: "2026-07-20T10:00:00.000-03:00" }),
+      notificationItem({ id: "nova", at: "2026-07-29T10:00:00.000-03:00" }),
+    ]);
+    notificationsInOrder(lista);
+    expect(lista.items.map((entry) => entry.id)).toEqual(["velha", "nova"]);
   });
 });
