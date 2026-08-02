@@ -54,9 +54,9 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Fixtures determinísticas | 318 |
 | Telas React | 48 |
 | Testes de regra | 667 |
-| Jornadas Playwright | 874 |
+| Jornadas Playwright | 877 |
 | Achados sobre o sistema real | 98 |
-| Rodadas registradas | 70 |
+| Rodadas registradas | 71 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
@@ -2533,6 +2533,54 @@ número e melhor para quem lê depois.**
 
 1 defeito meu diagnosticado, 2 tentativas de correção revertidas, 1 problema
 aberto com diagnóstico registrado.
+
+### 71. A tela branca, e o que ela disse sobre a suíte inteira
+
+O Bruno abriu o Design Space e em dois minutos achou o que 874 jornadas não
+acharam: **cerca de metade das telas ficava branca ao navegar**, sem nem o
+chrome do Design Space, e voltava com recarga.
+
+A causa, medida e não suposta. Ao navegar por dentro do app, o motor troca
+cenário e fixture **antes** de o adapter resolver os dados. Existe pelo menos um
+render em que `context.data` ainda é o do cenário anterior. Minhas telas
+convertem com `as` — promessa de tipo em tempo de compilação, proteção nenhuma em
+tempo de execução — e desreferenciam. `Cannot read properties of undefined
+(reading 'impediments')`. Sem error boundary, o React desmonta a árvore inteira e
+sobra página branca.
+
+Três correções:
+
+1. **Blindagem nas 48 rotas**, com diagnóstico que diz a causa. Quando a fixture
+   ativa não é a que o cenário declara — o caso de quem mexe no seletor —, ela
+   nomeia as duas. Quando é, o defeito é de verdade e a mensagem aparece inteira.
+2. **Detecção da travessia.** Com o adapter de fixtures, o dado resolvido *é* o
+   da fixture; quando as referências divergem, ainda estamos trocando de
+   situação, e o certo é mostrar carregamento em vez de renderizar com dado
+   alheio. Isso sozinho eliminou as 45 quebras.
+3. **A explicação dentro do `AppShell`.** A primeira versão renderizava solta e
+   tirava o `<main id="conteudo">` da página — o marco principal sumia e o atalho
+   “pular para o conteúdo” ficava sem destino. Um estado de erro que quebra a
+   navegação por teclado troca um problema por outro.
+
+**Mas o defeito não é a tela branca — é a suíte.** Todas as 874 jornadas fazem
+`page.goto()`: carga limpa, rota e cenário sempre coerentes. **Nenhuma clica de
+uma situação para outra.** Numa carga limpa a travessia não existe, então a
+janela inteira era invisível. Eu cobri 254 cenários de um jeito só e chamei isso
+de confiança.
+
+A varredura nova clica em todas as 254 pela navegação e confere três coisas: o
+chrome sobreviveu, o `#conteudo` existe, e a blindagem não precisou entrar. Ela
+achou 45 quebras na primeira execução — que é o que uma varredura serve para
+fazer, e o que as outras nove não podiam fazer por construção.
+
+Errei três vezes escrevendo esse teste, e as três valem registro porque são o
+mesmo tipo de erro: **supor em vez de ler**. Assumi que `chrome: true` mostrava o
+chrome (é o contrário), que o seletor tinha `aria-label` (tem `<label for>`), e
+que a explicação podia viver fora do shell. Nas três, dois minutos de leitura
+teriam evitado a tentativa.
+
+3 correções, 1 varredura nova, 45 quebras encontradas e fechadas.
+
 
 ## Achados sobre o sistema real
 
