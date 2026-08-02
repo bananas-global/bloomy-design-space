@@ -35,6 +35,7 @@ import { Overdue } from "../screens/Overdue.js";
 import { PlanCoverageScreen } from "../screens/PlanCoverage.js";
 import { ClosureGeneration } from "../screens/ClosureGeneration.js";
 import { AbsenceOriginScreen } from "../screens/AbsenceOrigin.js";
+import { AutoCheckout } from "../screens/AutoCheckout.js";
 import { Prospects } from "../screens/Prospects.js";
 import { Reports } from "../screens/Reports.js";
 
@@ -81,6 +82,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/authorizations/coverage", screen: PlanCoverageScreen },
     { path: "/closures/generation", screen: ClosureGeneration },
     { path: "/agenda/absences", screen: AbsenceOriginScreen },
+    { path: "/in-clinic/auto-checkout", screen: AutoCheckout },
     { path: "/patients/:id/reports", screen: Reports },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },

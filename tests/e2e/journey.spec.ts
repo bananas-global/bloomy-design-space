@@ -2699,3 +2699,44 @@ test.describe("os dois caminhos da inativação", () => {
     await expect(page.getByText(/Se a data chegar e o worker rodar/)).toBeVisible();
   });
 });
+
+test.describe("saída automática", () => {
+  test("os registros antigos são separados dos de hoje", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.auto-checkout-absurd"));
+
+    await expect(
+      page.getByText("3 registros vão declarar uma presença que não aconteceu"),
+    ).toBeVisible();
+    await expect(page.getByText("Presenças de hoje")).toBeVisible();
+  });
+
+  test("a duração aparece em dias, e não em horas", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.auto-checkout-absurd"));
+
+    // "2147 horas" obrigaria quem lê a dividir de cabeça.
+    await expect(page.getByText("89 dias na unidade")).toBeVisible();
+    await expect(page.getByText(/2147 horas/)).toHaveCount(0);
+  });
+
+  test("a tela reconhece que limpar a lista é a intenção certa", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.auto-checkout-absurd"));
+
+    await expect(page.getByText(/Limpar a lista é a intenção certa/)).toBeVisible();
+    await expect(page.getByText(/A rotina não filtra por data/)).toBeVisible();
+  });
+
+  test("com só check-ins de hoje, o aviso cala", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.auto-checkout-clean"));
+
+    await expect(page.getByText(/vão declarar uma presença que não aconteceu/)).toHaveCount(0);
+    await expect(page.getByText(/fecha a lista sem inventar duração nenhuma/)).toBeVisible();
+  });
+
+  test("cada registro fechado diz quem o fechou", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.auto-checkout-signed"));
+
+    await expect(page.getByText("fechada pela rotina")).toBeVisible();
+    await expect(page.getByText("fechada por Recepção — Bianca")).toBeVisible();
+    await expect(page.getByText(/pareceria erro de quem estava no balcão/)).toBeVisible();
+  });
+});

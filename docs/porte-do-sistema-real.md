@@ -1558,6 +1558,39 @@ só no destrutivo.
 1 cenário, 6 testes de regra, 4 jornadas.
 
 
+### 52. A saída que a rotina carimba — `porte/saida-automatica`
+
+O monólito tem 21 workers. `AutoCheckout` é o mais curto e o mais severo:
+
+```elixir
+from(sr in ServiceRecord, where: is_nil(sr.checkout_at))
+|> Repo.update_all(set: [checkout_at: DateTime.utc_now(), checkout_done_by: "system"])
+```
+
+**Não há filtro de data. Nenhum.** Todo check-in sem saída, de qualquer dia da
+história, recebe a hora em que a rotina rodou. Na fixture, um check-in de 2 de
+maio passa a declarar **89 dias na unidade**.
+
+A intenção é boa e a tela reconhece isso: a lista de quem está na clínica é
+operacional e não pode acumular. O efeito colateral é que a **duração** vira
+absurdo para tudo que não é de hoje.
+
+Três decisões:
+
+- **Os dois grupos aparecem separados.** Sozinha, cada linha parece plausível; é
+  a comparação entre "7 horas" e "89 dias" que denuncia.
+- **A duração é dita em dias quando passa de um.** "2147 horas" obrigaria quem
+  lê a dividir de cabeça para entender o tamanho.
+- **A assinatura do sistema é preservada e elogiada.** `checkout_done_by:
+  "system"` é a única parte honesta da operação — sem ela, a duração absurda
+  pareceria erro de quem estava no balcão.
+
+Errei a aritmética das durações ao escrever os testes e corrigi medindo, em vez
+de ajustar o número até passar.
+
+3 cenários, 7 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1618,3 +1651,5 @@ bugs do Design Space; são observações sobre o produto.
 | 51 | `NotAttendedWorker` devolve para `:not_started`, via `update_all` e sem log, todo atendimento que ficou em `:ready_for_service` ou `:ongoing` no dia anterior. A sessão que alguém começou e não fechou é desfeita na virada, sem deixar evidência de que houve início. | `lib/bloomy/schedules/not_attended_worker.ex:10-21` |
 | 52 | `MissedAttendedWorker` converte na manhã seguinte todo agendamento ainda `:scheduled` com `missing_reason: :missing_patient`. Basta a recepção não ter feito o check-in: o sistema grava que o paciente faltou, sem ninguém ter olhado. O outro worker de conversão usa `:delay`, que não acusa ninguém — a diferença entre os dois motivos é a diferença entre "ninguém fechou isto" e uma afirmação sobre uma pessoa. | `lib/bloomy/schedules/missed_attended_worker.ex:9-22` |
 | 53 | `DeactivatePatientWorker` faz `Repo.delete_all` nos vínculos profissional–paciente. O caminho manual (`ChangePatientStatus`) não os toca. Mesmo objetivo, dois códigos, e o que roda sem ninguém presente apaga o registro de quem atendeu — junto do campo de observação daquela relação. Em ABA, é justamente o que se procura quando a família volta. | `lib/bloomy/patients/workers/deactivate_patient_worker.ex:41-42` |
+| 54 | `AutoCheckout` fecha **todo** check-in sem saída, sem filtro de data, carimbando a hora em que a rotina rodou. Um check-in esquecido há três meses passa a declarar uma presença de 89 dias na unidade. A intenção — limpar a lista operacional — é boa; carimbar a duração junto é o efeito colateral. | `lib/bloomy/service_records/auto_checkout.ex:7-12` |
+| 55 | `HourMaps.Workers.AutoRenewWorker` só age se `Date.utc_today() == Date.end_of_month(today)`. Em Brasília, a janela em que essa condição é verdadeira vai das 21h do penúltimo dia às 20h59 do último — se o agendamento do worker cair fora dela, a renovação silenciosamente não acontece e a continuidade da terapia fica um mês sem mapa. Sétima ocorrência do padrão de fuso. | `lib/bloomy/patients/hour_maps/workers/auto_renew_worker.ex:13-19` |
