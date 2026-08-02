@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  Closure,
   Authorization,
   AuthorizationPackage,
   ClinicalSession,
@@ -78,6 +79,16 @@ import {
   remaining,
   shortfall,
 } from "../src/rules/authorizations.js";
+import {
+  canAttachInvoice,
+  canAttachPaymentProof,
+  canChangeStatusTo,
+  canConfirmPayment,
+  canInteract,
+  expectsInvoice,
+  nextStep,
+  visibleClosures,
+} from "../src/rules/closures.js";
 
 /**
  * Testes das regras de negócio.
@@ -1492,5 +1503,205 @@ describe("validade", () => {
   it("conta os dias até vencer, e o negativo significa vencida", () => {
     expect(daysUntilExpiry(auth({ validUntil: "2026-08-05" }), HOJE)).toBe(6);
     expect(daysUntilExpiry(auth({ validUntil: "2026-06-30" }), HOJE)).toBe(-30);
+  });
+});
+
+/* =========================================================== fechamentos */
+
+/**
+ * O fechamento é o módulo em que o Bloomy mais se parece com um processo entre
+ * duas partes. A cada etapa a bola troca de lado, e as regras existem para que a
+ * tela consiga dizer de quem ela é agora.
+ */
+
+function closureFixture(overrides: Partial<Closure> = {}): Closure {
+  return {
+    id: "fec",
+    professional: { id: "prof-marina", name: "Marina Okabe", specialty: "Aplicador ABA" },
+    professionalUserId: "user-marina",
+    month: 7,
+    year: 2026,
+    amountCents: 748_000,
+    status: "wait_accept",
+    issuesInvoice: true,
+    logs: [],
+    ...overrides,
+  };
+}
+
+describe("closure-hands-over-at-each-stage", () => {
+  it("as etapas de conferência são da clínica", () => {
+    for (const status of ["closure", "revision"] as const) {
+      expect(canInteract(closureFixture({ status }), "coordinator").allowed).toBe(true);
+      expect(canInteract(closureFixture({ status }), "therapeutic_companion").allowed).toBe(false);
+    }
+  });
+
+  it("as etapas de aceite e nota são do profissional", () => {
+    for (const status of ["wait_accept", "pending_invoice"] as const) {
+      expect(canInteract(closureFixture({ status }), "therapeutic_companion").allowed).toBe(true);
+      expect(canInteract(closureFixture({ status }), "clinic_admin").allowed).toBe(false);
+    }
+  });
+
+  it("as etapas de nota e pagamento são do financeiro", () => {
+    for (const status of ["validate_nf", "pay_invoice"] as const) {
+      expect(canInteract(closureFixture({ status }), "people").allowed).toBe(true);
+      expect(canInteract(closureFixture({ status }), "admin").allowed).toBe(true);
+      expect(canInteract(closureFixture({ status }), "coordinator").allowed).toBe(false);
+    }
+  });
+
+  it("a negativa diz de quem é a etapa, e não só que o perfil não pode", () => {
+    const result = canInteract(closureFixture({ status: "validate_nf" }), "coordinator");
+    expect(result.reason).toMatch(/ação é de quem responde por admin ou People/);
+  });
+
+  it("o coordenador aparece nos dois lados, e é assim no monólito", () => {
+    // `can_interact?` lista `coordinator` tanto nas etapas da clínica quanto nas
+    // do profissional — ele fecha e também é fechado.
+    expect(canInteract(closureFixture({ status: "closure" }), "coordinator").allowed).toBe(true);
+    expect(canInteract(closureFixture({ status: "wait_accept" }), "coordinator").allowed).toBe(true);
+  });
+});
+
+describe("paid-closure-is-frozen", () => {
+  const pago = closureFixture({ status: "paid" });
+
+  it("nenhum papel interage com fechamento pago, nem o admin", () => {
+    for (const role of ["admin", "people", "clinic_admin", "coordinator", "therapeutic_companion"]) {
+      expect(canInteract(pago, role).allowed).toBe(false);
+    }
+    expect(canInteract(pago, "admin").reason).toMatch(/registro contábil/);
+  });
+
+  it("nem a nota nem o comprovante podem ser trocados", () => {
+    expect(canAttachInvoice(pago, "user-marina").reason).toMatch(/não troca de nota fiscal/);
+    expect(canAttachPaymentProof(pago, "admin").reason).toMatch(/não troca de comprovante/);
+  });
+});
+
+describe("closure-status-moves-backward-only", () => {
+  const emValidacao = closureFixture({ status: "validate_nf" });
+
+  it("permite voltar para qualquer etapa anterior", () => {
+    expect(canChangeStatusTo(emValidacao, "wait_accept", "people").allowed).toBe(true);
+    expect(canChangeStatusTo(emValidacao, "closure", "admin").allowed).toBe(true);
+  });
+
+  it("permite permanecer no mesmo estado", () => {
+    // O monólito diz "selecione um status atual ou anterior".
+    expect(canChangeStatusTo(emValidacao, "validate_nf", "people").allowed).toBe(true);
+  });
+
+  it("recusa avançar pela mão, dizendo de quem é a etapa", () => {
+    const result = canChangeStatusTo(emValidacao, "paid", "admin");
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Não é permitido avançar situação pela mão/);
+    expect(result.reason).toMatch(/admin ou People/);
+  });
+
+  it("só três papéis corrigem situação", () => {
+    expect(canChangeStatusTo(emValidacao, "closure", "coordinator").reason).toMatch(
+      /Só admin, admin de clínica e People/,
+    );
+    expect(canChangeStatusTo(emValidacao, "closure", "clinic_admin").allowed).toBe(true);
+  });
+});
+
+describe("invoice-belongs-to-the-professional", () => {
+  const pendente = closureFixture({ status: "pending_invoice" });
+
+  it("o dono anexa a própria nota", () => {
+    expect(canAttachInvoice(pendente, "user-marina").allowed).toBe(true);
+  });
+
+  it("nem o admin anexa no lugar dele — a regra é de identidade", () => {
+    const result = canAttachInvoice(pendente, "user-helena");
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/documento fiscal de Marina Okabe/);
+  });
+});
+
+describe("payment-proof-belongs-to-the-clinic", () => {
+  const aPagar = closureFixture({ status: "pay_invoice" });
+
+  it("só admin e People anexam o comprovante", () => {
+    expect(canAttachPaymentProof(aPagar, "people").allowed).toBe(true);
+    expect(canAttachPaymentProof(aPagar, "coordinator").reason).toMatch(/Só admin e People/);
+  });
+
+  it("confirmar sem comprovante é bloqueado, com a consequência dita", () => {
+    const result = canConfirmPayment(aPagar, "people");
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/sem nada para cobrar se o valor não cair/);
+  });
+
+  it("com comprovante, a confirmação libera", () => {
+    const comProva = closureFixture({
+      status: "pay_invoice",
+      paymentProof: { name: "comprovante.pdf", at: "2026-08-01T10:22:00.000-03:00" },
+    });
+    expect(canConfirmPayment(comProva, "people").allowed).toBe(true);
+  });
+
+  it("não confirma pagamento fora da etapa de pagar", () => {
+    expect(canConfirmPayment(closureFixture({ status: "validate_nf" }), "people").reason).toMatch(
+      /Só um fechamento em A pagar/,
+    );
+  });
+});
+
+describe("closure-is-invisible-until-sent", () => {
+  const lista = [
+    closureFixture({ id: "a", status: "closure", professionalUserId: "user-marina" }),
+    closureFixture({ id: "b", status: "wait_accept", professionalUserId: "user-marina" }),
+    closureFixture({ id: "c", status: "paid", professionalUserId: "user-outro" }),
+  ];
+
+  it("a clínica vê tudo", () => {
+    for (const role of ["admin", "people", "operation", "coordinator", "clinic_admin"]) {
+      expect(visibleClosures(lista, role, "user-x")).toHaveLength(3);
+    }
+  });
+
+  it("o profissional vê só os próprios, e nunca os que ainda estão em conferência", () => {
+    const vistos = visibleClosures(lista, "therapeutic_companion", "user-marina");
+    expect(vistos.map((item) => item.id)).toEqual(["b"]);
+  });
+
+  it("o especialista não vê fechamento nenhum, nem o próprio", () => {
+    // Divergência do monólito reproduzida como é: `scope/2` lista terapeuta,
+    // aplicador e supervisor, e esquece `specialist` — que cai na cláusula
+    // final. `can_interact?`, porém, afirma que ele age na etapa de aceite.
+    expect(visibleClosures(lista, "specialist", "user-marina")).toHaveLength(0);
+    expect(canInteract(closureFixture({ status: "wait_accept" }), "specialist").allowed).toBe(true);
+  });
+
+  it("a recepção também não vê", () => {
+    expect(visibleClosures(lista, "attendant", "user-marina")).toHaveLength(0);
+  });
+});
+
+describe("nota fiscal no ciclo", () => {
+  it("só entra quando a etapa alcançou a nota e o contrato exige", () => {
+    expect(expectsInvoice(closureFixture({ status: "pending_invoice", issuesInvoice: true }))).toBe(
+      true,
+    );
+    expect(expectsInvoice(closureFixture({ status: "pending_invoice", issuesInvoice: false }))).toBe(
+      false,
+    );
+    expect(expectsInvoice(closureFixture({ status: "wait_accept", issuesInvoice: true }))).toBe(
+      false,
+    );
+  });
+
+  it("contrato sem nota muda a frase de próxima ação", () => {
+    expect(nextStep(closureFixture({ status: "pending_invoice", issuesInvoice: false }))).toMatch(
+      /não exige nota fiscal/,
+    );
+    expect(nextStep(closureFixture({ status: "pending_invoice", issuesInvoice: true }))).toMatch(
+      /precisa anexar a nota fiscal/,
+    );
   });
 });

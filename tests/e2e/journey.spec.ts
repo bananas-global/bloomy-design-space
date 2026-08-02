@@ -654,6 +654,98 @@ test.describe("Autorizações", () => {
   });
 });
 
+test.describe("Fechamentos", () => {
+  test("de quem é a bola vem antes do valor", async ({ page }) => {
+    await page.goto(urlFor("closures.all-stages"));
+
+    const primeiro = page.getByRole("article").first();
+    await expect(primeiro.getByText("Com a clínica")).toBeVisible();
+    await expect(primeiro.getByText(/A clínica está conferindo os valores/)).toBeVisible();
+  });
+
+  test("a trilha das sete etapas marca onde o fechamento está", async ({ page }) => {
+    await page.goto(urlFor("closures.wait-accept"));
+
+    // `aria-current="step"` é o que permite saber onde se está sem contar.
+    await expect(page.locator('[aria-current="step"]')).toHaveText(/Aguardando aceite/);
+    await expect(page.getByText("Etapa 2 de 7, atual:")).toBeAttached();
+  });
+
+  test("o profissional não vê o fechamento que ainda está em conferência", async ({ page }) => {
+    await page.goto(urlFor("closures.invisible-until-sent"));
+
+    await expect(
+      page.getByRole("heading", { name: "Nenhum fechamento para ver aqui" }),
+    ).toBeVisible();
+    await expect(page.getByText(/só depois de enviados para aceite/)).toBeVisible();
+  });
+
+  test("o dono anexa a própria nota fiscal", async ({ page }) => {
+    await page.goto(urlFor("closures.invoice-is-the-professionals"));
+
+    await expect(page.getByRole("button", { name: "Anexar nota fiscal" })).toBeEnabled();
+    await expect(page.getByText(/Marina Okabe precisa anexar a nota fiscal/)).toBeVisible();
+  });
+
+  test("nem o admin anexa nota no lugar do profissional", async ({ page }) => {
+    await page.goto(urlFor("closures.invoice-blocked-for-others"));
+
+    await expect(page.getByRole("button", { name: "Anexar nota fiscal" })).toBeDisabled();
+    await expect(page.locator("#anexar-nf-motivo")).toHaveText(
+      /documento fiscal de Marina Okabe/,
+    );
+  });
+
+  test("contrato sem nota risca as etapas em vez de escondê-las", async ({ page }) => {
+    await page.goto(urlFor("closures.no-invoice-contract"));
+
+    // A etapa 5 é a validação da nota: fora do contrato e não é a atual, então
+    // aparece riscada. A 4 é a atual — o fechamento está parado nela mesmo sem
+    // exigir nota — e por isso é anunciada como atual, não como fora.
+    await expect(page.getByText("Etapa 5 de 7, fora deste contrato:")).toBeAttached();
+    await expect(page.getByText("Etapa 4 de 7, atual:")).toBeAttached();
+    await expect(
+      page.getByRole("heading", { name: "Contrato sem emissão de nota fiscal" }),
+    ).toBeVisible();
+    // A seção de nota não aparece quando o contrato não a exige.
+    await expect(page.getByRole("heading", { name: "Nota fiscal", exact: true })).toHaveCount(0);
+  });
+
+  test("confirmar pagamento sem comprovante explica a consequência", async ({ page }) => {
+    await page.goto(urlFor("closures.pay-without-proof"));
+
+    await expect(page.getByRole("button", { name: "Confirmar pagamento" })).toBeDisabled();
+    await expect(page.locator("#confirmar-pagamento-motivo")).toHaveText(
+      /sem nada para cobrar se o valor não cair/,
+    );
+    await expect(page.getByRole("button", { name: "Anexar comprovante" })).toBeEnabled();
+  });
+
+  test("com comprovante, a confirmação libera", async ({ page }) => {
+    await page.goto(urlFor("closures.pay-with-proof"));
+
+    await expect(page.getByRole("button", { name: "Confirmar pagamento" })).toBeEnabled();
+    await expect(page.getByText("comprovante-2026-07-marina.pdf")).toBeVisible();
+  });
+
+  test("fechamento pago está congelado, inclusive para o admin", async ({ page }) => {
+    await page.goto(urlFor("closures.paid-is-frozen"));
+
+    await expect(page.getByRole("button", { name: "Anexar comprovante" })).toBeDisabled();
+    await expect(page.locator("#anexar-comprovante-motivo")).toHaveText(
+      /não troca de comprovante/,
+    );
+    // Congelar é sobre escrita: o histórico continua legível.
+    await expect(page.getByText("Pagamento confirmado")).toBeVisible();
+  });
+
+  test("a lista vazia explica de onde vêm os fechamentos", async ({ page }) => {
+    await page.goto(urlFor("closures.empty"));
+
+    await expect(page.getByText(/gerados na virada do mês, um por profissional/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

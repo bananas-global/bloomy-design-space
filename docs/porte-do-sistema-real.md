@@ -191,6 +191,31 @@ Seis regras, dez cenários, a tela `AuthorizationHub` e vinte e quatro testes.
 
 Verde: `pnpm check` e 188 jornadas Playwright.
 
+### 7. Financeiro, parte 2: fechamentos — `porte/financeiro-fechamentos`
+
+Concluída.
+
+O pagamento mensal do profissional. É o módulo em que o Bloomy mais se parece
+com um processo entre duas partes: a clínica calcula, o profissional confere, o
+profissional emite a nota, a clínica valida e paga.
+
+- **Sete situações, e cada uma troca de dono.** Duas são da clínica, duas do
+  profissional, duas do financeiro, e a última não é de ninguém. Uma barra de
+  progresso mostra quanto falta e esconde a única pergunta que importa em cada
+  ponto — de quem é a bola agora.
+- **A correção manual só volta.** `ensure_backward_status` recusa avanço: cada
+  passo adiante depende da ação de quem é dono da etapa. Pular do fechamento
+  para pago produziria pagamento sem aceite e sem nota.
+- **A nota fiscal é a única regra de identidade do porte.** O monólito pergunta
+  `closure.professional.user_id == user.id` — nem o admin sobe nota no lugar de
+  quem a emitiu.
+- **Pago é terminal de verdade.** `can_interact?` devolve falso sem olhar o
+  papel, e as quatro funções de anexo têm cláusula própria para ele.
+
+Seis regras, dez cenários, a tela `Closures` e vinte e três testes.
+
+Verde: `pnpm check` e 218 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -208,3 +233,4 @@ bugs do Design Space; são observações sobre o produto.
 | 8 | `ProtocolPolicy.can?(role, :list)` não inclui `supervisor`. Quem supervisiona o caso não alcança a avaliação que o originou — nem para leitura. | `lib/bloomy/protocols/protocol_policy.ex` |
 | 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |
 | 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |
+| 11 | `ClosurePolicy` se contradiz sobre o especialista: `can_interact?` diz que ele age na etapa de aceite, mas `scope/2` não o lista e ele cai no `where: false`. O especialista não vê fechamento nenhum, nem o próprio. | `lib/bloomy/professionals/closures/closure_policy.ex` |

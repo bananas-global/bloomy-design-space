@@ -8,6 +8,7 @@ import { protocolFixtures } from "../fixtures/protocols.js";
 import { inClinicFixtures } from "../fixtures/inClinic.js";
 import { patientFixtures } from "../fixtures/patients.js";
 import { authorizationFixtures } from "../fixtures/authorizations.js";
+import { closureFixtures } from "../fixtures/closures.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -15,6 +16,7 @@ import { protocolRules } from "../rules/protocols.js";
 import { inClinicRules } from "../rules/inClinic.js";
 import { patientRules } from "../rules/patients.js";
 import { authorizationRules } from "../rules/authorizations.js";
+import { closureRules } from "../rules/closures.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -22,6 +24,7 @@ import { protocolScenarios } from "../scenarios/protocols.js";
 import { inClinicScenarios } from "../scenarios/inClinic.js";
 import { patientScenarios } from "../scenarios/patients.js";
 import { authorizationScenarios } from "../scenarios/authorizations.js";
+import { closureScenarios } from "../scenarios/closures.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -281,6 +284,40 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "closures",
+    name: "Fechamentos",
+    description:
+      "O pagamento mensal do profissional: sete etapas, e a cada uma a bola troca de lado.",
+    flows: [
+      {
+        id: "close-the-month",
+        title: "Fechar o mês de um profissional",
+        description:
+          "Da conferência da clínica até o pagamento confirmado, passando pelas duas etapas que são do profissional.",
+        steps: [
+          {
+            scenario: "closures.wait-accept",
+            label: "O profissional confere o valor",
+            decision: "O contrato do mês exige nota fiscal?",
+            branches: {
+              "Exige nota": "closures.invoice-is-the-professionals",
+              "Não exige": "closures.no-invoice-contract",
+            },
+          },
+          {
+            scenario: "closures.pay-without-proof",
+            label: "Confirmar o pagamento",
+            decision: "O comprovante já foi anexado?",
+            branches: {
+              "Comprovante anexado": "closures.pay-with-proof",
+              "Já pago": "closures.paid-is-frozen",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -291,6 +328,7 @@ export const scenarios: Scenario[] = [
   ...inClinicScenarios,
   ...patientScenarios,
   ...authorizationScenarios,
+  ...closureScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -301,6 +339,7 @@ export const fixtures: Fixture[] = [
   ...inClinicFixtures,
   ...patientFixtures,
   ...authorizationFixtures,
+  ...closureFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -311,6 +350,7 @@ export const rules: Rule[] = [
   ...inClinicRules,
   ...patientRules,
   ...authorizationRules,
+  ...closureRules,
 ];
 
 export { personas };

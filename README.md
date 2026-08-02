@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-62 cenários em sete módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+72 cenários em oito módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,6 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
+| **Fechamentos** | o mês etapa por etapa, aguardando aceite, invisível em conferência, nota é do profissional, bloqueada para outros, contrato sem nota, pagar sem comprovante, pagar com comprovante, pago congelado, vazio |
 | **Autorizações** | central, vazia, autorizada com saldo, pacote esgotado trava tudo, capitation não multiplica, validade vencida, autorizada parcialmente, erro de sincronização, aguardando documentação, recepção sem acesso |
 
 O módulo **Atendimento** é o que descreve o produto de verdade: o Bloomy é um
@@ -64,6 +65,12 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `sync-error-is-not-denial` | Falha de integração se resolve reenviando, não remontando o pedido. |
 | `pending-status-names-who-acts-next` | Cada espera diz de quem é a próxima ação. |
 | `only-admin-edits-authorization` | Criar, editar e apagar autorização é exclusivo do admin. |
+| `closure-hands-over-at-each-stage` | Cada etapa do fechamento tem um dono diferente. |
+| `closure-status-moves-backward-only` | Correção manual de situação só volta, nunca avança. |
+| `closure-is-invisible-until-sent` | O profissional não vê o próprio fechamento em conferência. |
+| `paid-closure-is-frozen` | Fechamento pago não aceita interação de nenhum papel. |
+| `invoice-belongs-to-the-professional` | Só o dono anexa a própria nota fiscal — regra de identidade. |
+| `payment-proof-belongs-to-the-clinic` | Comprovante é de admin e People, e a confirmação depende dele. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

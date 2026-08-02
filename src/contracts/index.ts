@@ -690,6 +690,67 @@ export type AuthorizationsData = {
 };
 
 /* ================================================================== *
+ * Fechamento do profissional — o pagamento, e de quem é a bola
+ * ================================================================== */
+
+/**
+ * Situação do fechamento mensal.
+ *
+ * Sete estados de `Professionals.Closures.Closure`, e o que os torna
+ * interessantes não é a quantidade: é que **cada um troca de dono**. A clínica
+ * fecha, o profissional aceita, o profissional emite a nota, a clínica valida,
+ * a clínica paga. Uma tela que trate isso como barra de progresso esconde a
+ * única informação que importa em cada ponto — de quem é a bola agora.
+ *
+ * `paid` é terminal: `ClosurePolicy.can_interact?/2` devolve `false` para ele
+ * sem olhar o papel, e nenhum anexo pode ser trocado ou removido.
+ */
+export type ClosureStatus =
+  | "closure"
+  | "wait_accept"
+  | "revision"
+  | "pending_invoice"
+  | "validate_nf"
+  | "pay_invoice"
+  | "paid";
+
+export type ClosureLog = {
+  at: string;
+  /** Ausente quando a ação foi do sistema, como a geração automática do mês. */
+  by?: string;
+  observation: string;
+};
+
+export type Closure = {
+  id: string;
+  professional: Professional;
+  /** Id do usuário dono deste profissional. Decide quem anexa a nota fiscal. */
+  professionalUserId: string;
+  month: number;
+  year: number;
+  amountCents: number;
+  status: ClosureStatus;
+  /** Nota fiscal, anexada pelo próprio profissional. */
+  invoiceFile?: { name: string; at: string };
+  /** Comprovante de pagamento, anexado pela clínica. */
+  paymentProof?: { name: string; at: string };
+  /** O contrato do mês exige emissão de nota? Sem ele, o ciclo pula a NF. */
+  issuesInvoice: boolean;
+  logs: ClosureLog[];
+};
+
+export type ClosuresData = {
+  closures: Closure[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+  /**
+   * Usuário que está olhando. A regra de anexo da nota fiscal pergunta por
+   * identidade, não por papel: só o dono do fechamento anexa a própria nota.
+   */
+  currentUserId: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 
