@@ -16,7 +16,11 @@ export const overdueScenarios: Scenario[] = [
     route: "/agenda/overdue",
     persona: "coordinator",
     fixture: "overdue-as-coordinator",
-    rules: ["overdue-means-two-different-things", "the-coordinator-list-hides-the-supervisor-step"],
+    rules: [
+      "overdue-means-two-different-things",
+      "the-coordinator-list-hides-the-supervisor-step",
+      "an-open-session-is-undone-overnight",
+    ],
     a11y: {
       keyboard: "full",
       contrast: "AA",
@@ -32,6 +36,7 @@ export const overdueScenarios: Scenario[] = [
       "A tela diz qual definição está aplicando, e que existe outra.",
       "Os que estão dentro da folga de 48h aparecem apontados como divergência.",
       "A etapa que espera o supervisor é nomeada como ponto cego das duas listas.",
+      "“Não iniciado” é qualificado: pode ser uma sessão que a rotina noturna desfez.",
     ],
     tags: ["regra", "decisão", "exceção"],
   },

@@ -1995,3 +1995,35 @@ export interface ClosureGenerationData {
   ranAt: string;
   candidates: ClosureCandidate[];
 }
+
+/* ============================================== Origem de uma ausência */
+
+/**
+ * De onde veio a marca de ausência.
+ *
+ * O sistema real guarda `missing_reason`, e um dos valores é `:delay` — posto
+ * por um worker que converte agendamentos parados há sete dias. Essa ausência
+ * **não foi observada por ninguém**.
+ */
+export type AbsenceOrigin =
+  /** Alguém registrou que o paciente não apareceu. */
+  | "observed"
+  /** A família avisou antes. O sistema conta junto das ausências. */
+  | "cancelled"
+  /** Um worker converteu depois de sete dias parado. Ninguém viu nada. */
+  | "fabricated_by_delay";
+
+export interface AbsenceRecord {
+  id: string;
+  patientName: string;
+  professionalName: string;
+  date: string;
+  origin: AbsenceOrigin;
+  /** Dias que o registro passou parado antes da conversão automática. */
+  daysStalled?: number;
+}
+
+export interface AbsenceOriginData {
+  month: string;
+  records: AbsenceRecord[];
+}

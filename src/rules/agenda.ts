@@ -124,6 +124,9 @@ export function wouldConflict(
 /* ================================================ Marcar um atendimento */
 
 import type {
+  AbsenceOrigin,
+  AbsenceOriginData,
+  AbsenceRecord,
   AppointmentStatus,
   Impediment,
   ImpedimentKind,
@@ -355,4 +358,86 @@ export function attendanceBreakdown(
 export function shareThatWasWarned(breakdown: AttendanceBreakdown): number | undefined {
   if (breakdown.countedTogether === 0) return undefined;
   return Math.round((breakdown.cancelled / breakdown.countedTogether) * 100);
+}
+
+/* ============================================== De onde vem uma ausência */
+
+/**
+ * Regras da origem da ausência.
+ *
+ * Fecham o arco aberto por `the-absence-filter-counts-cancellations`. O número
+ * de "ausências" contém três coisas diferentes, e só uma delas é ausência.
+ */
+export const absenceOriginRules: Rule[] = [
+  {
+    id: "some-absences-were-never-observed",
+    statement:
+      "`MarkDelayedSchedulesAsMissedWorker` converte em ausência todo agendamento parado há sete dias em atraso, com motivo `:delay` e descrição “atraso”. Ninguém viu a família não aparecer.",
+    rationale:
+      "É uma limpeza de fila apresentada como fato clínico. A criança pode ter vindo e o registro simplesmente não ter sido fechado — e a partir da conversão não há como distinguir uma coisa da outra sem abrir o histórico.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "the-absence-number-holds-three-different-things",
+    statement:
+      "Somando o filtro `absence` ao worker de atraso, o número de ausências contém: quem faltou, quem cancelou avisando, e quem teve o registro convertido por ficar parado.",
+    rationale:
+      "Três origens, uma conta. A terceira é a menos parecida com ausência de todas — mede desorganização interna, não comportamento da família. E é o número que embasa a conversa com quem trouxe a criança.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "an-open-session-is-undone-overnight",
+    statement:
+      "`NotAttendedWorker` devolve para “não iniciado” todo atendimento que ficou em andamento ou pronto no dia anterior. A sessão que alguém começou e não fechou é desfeita na virada.",
+    rationale:
+      "Desfazer sem registrar apaga a evidência de que houve início. Quem abriu a sessão e foi interrompido volta no dia seguinte e encontra o agendamento como se nada tivesse acontecido — e o `update_all` não deixa log.",
+    source: "src/rules/agenda.ts",
+  },
+];
+
+export function absenceOriginLabel(origin: AbsenceOrigin): string {
+  switch (origin) {
+    case "observed":
+      return "Alguém registrou a falta";
+    case "cancelled":
+      return "A família avisou antes";
+    case "fabricated_by_delay":
+      return "Convertida pelo sistema, sem ninguém ver";
+  }
+}
+
+/** O que essa origem de fato mede — que é o que decide se ela pertence à conta. */
+export function whatTheOriginMeasures(origin: AbsenceOrigin): string {
+  switch (origin) {
+    case "observed":
+      return "comportamento da família";
+    case "cancelled":
+      return "comunicação da família — o oposto de faltar";
+    case "fabricated_by_delay":
+      return "desorganização interna: um registro que ninguém fechou em sete dias";
+  }
+}
+
+/** Implementação de `some-absences-were-never-observed`. */
+export function wasObserved(record: AbsenceRecord): boolean {
+  return record.origin === "observed";
+}
+
+/** Implementação de `the-absence-number-holds-three-different-things`. */
+export function absencesByOrigin(
+  data: AbsenceOriginData,
+): { origin: AbsenceOrigin; count: number }[] {
+  const ordem: AbsenceOrigin[] = ["observed", "cancelled", "fabricated_by_delay"];
+  return ordem
+    .map((origin) => ({
+      origin,
+      count: data.records.filter((record) => record.origin === origin).length,
+    }))
+    .filter((linha) => linha.count > 0);
+}
+
+/** Quanto do número relatado mede comportamento da família, e não outra coisa. */
+export function shareThatIsReallyAbsence(data: AbsenceOriginData): number | undefined {
+  if (data.records.length === 0) return undefined;
+  return Math.round((data.records.filter(wasObserved).length / data.records.length) * 100);
 }

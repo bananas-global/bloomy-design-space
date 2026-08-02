@@ -31,7 +31,13 @@ import { patientGapFixtures } from "../fixtures/patientGaps.js";
 import { overdueFixtures } from "../fixtures/overdue.js";
 import { coverageFixtures } from "../fixtures/coverage.js";
 import { closureGenerationFixtures } from "../fixtures/closureGeneration.js";
-import { agendaRules, schedulingRules, absenceRules } from "../rules/agenda.js";
+import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
+import {
+  agendaRules,
+  schedulingRules,
+  absenceRules,
+  absenceOriginRules,
+} from "../rules/agenda.js";
 import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
@@ -88,6 +94,7 @@ import { patientGapScenarios } from "../scenarios/patientGaps.js";
 import { overdueScenarios } from "../scenarios/overdue.js";
 import { coverageScenarios } from "../scenarios/coverage.js";
 import { closureGenerationScenarios } from "../scenarios/closureGeneration.js";
+import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -124,6 +131,22 @@ export const modules: Module[] = [
               "O profissional está desativado": "agenda.new-inactive-professional",
               "A sala parecia cheia e não está": "agenda.new-room-has-room",
               "Não tem sala, e não precisa ter": "agenda.new-therapeutic-companion",
+            },
+          },
+        ],
+      },
+      {
+        id: "where-absences-come-from",
+        title: "Descobrir de onde vêm as ausências",
+        description:
+          "Três origens somadas num número só, e a menos parecida com ausência é fabricada por um worker.",
+        steps: [
+          {
+            scenario: "agenda.absence-origins",
+            label: "Separar as três origens",
+            decision: "E quando elas não se misturam?",
+            branches: {
+              "Todas observadas": "agenda.absence-all-observed",
             },
           },
         ],
@@ -954,6 +977,7 @@ export const scenarios: Scenario[] = [
   ...overdueScenarios,
   ...coverageScenarios,
   ...closureGenerationScenarios,
+  ...absenceOriginScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -988,6 +1012,7 @@ export const fixtures: Fixture[] = [
   ...overdueFixtures,
   ...coverageFixtures,
   ...closureGenerationFixtures,
+  ...absenceOriginFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -995,6 +1020,7 @@ export const rules: Rule[] = [
   ...agendaRules,
   ...schedulingRules,
   ...absenceRules,
+  ...absenceOriginRules,
   ...overdueRules,
   ...supervisorOverdueRules,
   ...coverageRules,
