@@ -35,6 +35,7 @@ import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
 import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
 import { authorizationRenewalFixtures } from "../fixtures/authorizationRenewal.js";
 import { fieldOrderingFixtures } from "../fixtures/fieldOrdering.js";
+import { deactivationDateFixtures } from "../fixtures/deactivationDate.js";
 import { patientAddressFixtures } from "../fixtures/patientAddress.js";
 import { meetingSummaryFixtures } from "../fixtures/meetingSummary.js";
 import { tissBatchFixtures } from "../fixtures/tissBatch.js";
@@ -49,6 +50,7 @@ import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
 import { fieldOrderingRules } from "../rules/fieldOrdering.js";
+import { deactivationDateRules } from "../rules/deactivationDate.js";
 import { patientAddressRules } from "../rules/patientAddress.js";
 import { appointmentRowRules, meetingSummaryRules } from "../rules/meetingSummary.js";
 import { tissBatchRules } from "../rules/tissBatch.js";
@@ -116,6 +118,7 @@ import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
 import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
 import { authorizationRenewalScenarios } from "../scenarios/authorizationRenewal.js";
 import { fieldOrderingScenarios } from "../scenarios/fieldOrdering.js";
+import { deactivationDateScenarios } from "../scenarios/deactivationDate.js";
 import { patientAddressScenarios } from "../scenarios/patientAddress.js";
 import { meetingSummaryScenarios } from "../scenarios/meetingSummary.js";
 import { tissBatchScenarios } from "../scenarios/tissBatch.js";
@@ -1049,6 +1052,7 @@ export const scenarios: Scenario[] = [
   ...autoCheckoutScenarios,
   ...authorizationRenewalScenarios,
   ...fieldOrderingScenarios,
+  ...deactivationDateScenarios,
   ...patientAddressScenarios,
   ...meetingSummaryScenarios,
   ...tissBatchScenarios,
@@ -1091,6 +1095,7 @@ export const fixtures: Fixture[] = [
   ...autoCheckoutFixtures,
   ...authorizationRenewalFixtures,
   ...fieldOrderingFixtures,
+  ...deactivationDateFixtures,
   ...patientAddressFixtures,
   ...meetingSummaryFixtures,
   ...tissBatchFixtures,
@@ -1108,6 +1113,7 @@ export const rules: Rule[] = [
   ...coverageRules,
   ...closureGenerationRules,
   ...fieldOrderingRules,
+  ...deactivationDateRules,
   ...patientAddressRules,
   ...appointmentRowRules,
   ...meetingSummaryRules,

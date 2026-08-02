@@ -2010,6 +2010,59 @@ endereço”.
 4 achados, 5 cenários, 4 regras testáveis, 12 testes de regra, 6 jornadas.
 
 
+### 63. Uma linha, dois defeitos, e eles se cobrem
+
+`validate_deactivation_date` cabe numa linha e carrega dois problemas
+independentes:
+
+```elixir
+if current_user_role != "admin" and Date.compare(value, Date.utc_today()) == :lt,
+  do: add_error(changeset, :deactivation_date, "Não pode ser uma data passada")
+```
+
+**O papel chega como átomo.** `field :roles, EctoBitwiseEnum, values: [:admin, ...]`,
+e `current_role` vem de `List.last(user.roles)`. `:admin != "admin"` é
+verdadeiro, sempre. A exceção escrita para administradores não vale para
+ninguém.
+
+Fui procurar de onde viria a string, para não acusar cedo demais, e a resposta
+fecha o caso. No login:
+
+```elixir
+role = if "admin" in user.roles, do: "admin", else: List.last(user.roles)
+```
+
+`"admin" in [:admin, :coordinator]` é falso pela mesma confusão. **O único lugar
+capaz de produzir o valor que a validação espera é ele próprio inalcançável.**
+E o terceiro caminho, o seletor de papel, recebe `params["role"]` — texto — e o
+guarda atrás de `role in user.roles`, que barra pelo mesmo motivo. Três caminhos,
+uma confusão, nenhuma saída.
+
+**Hoje é medido em UTC.** A clínica está em UTC−3 o ano inteiro. Das 21h à
+meia-noite, `Date.utc_today()` já devolve amanhã, e a data de hoje passa a ser
+recusada por ser passada. São três horas de todo dia, justamente no fim do
+expediente — a hora de fechar pendências.
+
+E aí está o motivo de eu ter posto os dois na mesma tela em vez de duas.
+**Separados, cada um teria contorno**: com a exceção viva, um administrador
+destravaria a noite; com o fuso certo, o papel morto nem apareceria. Juntos não
+sobra caminho.
+
+Duas decisões de texto que valeram o tempo. A tela **não repete a frase do
+sistema** — “Não pode ser uma data passada” é literalmente falsa nesse caso, e
+repeti-la espalharia a mentira em vez de explicá-la. E a janela é dita em **hora
+de relógio**, não em conceito de fuso: “problema de fuso” não ajuda quem está com
+o formulário aberto às 21h40; “depois das 21h” é o que dá para conferir.
+
+Um cenário existe só para medir o alcance de uma correção pela metade: com o
+papel corrigido e a janela intacta, o administrador passa e a coordenadora
+continua barrada. E dois testes fixam os limites que eu quase deixei implícitos
+— uma data futura passa mesmo dentro da janela, e a data de **amanhã** também
+passa, porque empate com o “hoje” do sistema não é anterior.
+
+4 achados, 4 cenários, 4 regras testáveis, 15 testes de regra, 6 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2094,3 +2147,7 @@ bugs do Design Space; são observações sobre o produto.
 | 75 | O changeset do endereço exige `zip_code` e tem a mensagem exata para o caso — e a guarda impede que ele rode justamente quando ele reclamaria. A explicação existe no sistema e o caminho evita chegar nela. | `lib/bloomy/addresses/address.ex:24-26`, `lib/bloomy/patients/patient.ex:215-221` |
 | 76 | Pular o `cast_assoc` **não apaga** o endereço anterior: ele fica intacto. Uma edição que corrija a rua e apague o CEP salva com sucesso, não muda nada, e exibe o endereço antigo como se fosse a confirmação da mudança. | `lib/bloomy/patients/patient.ex:215-221` |
 | 77 | Em nenhum dos casos há erro, campo destacado ou registro de tentativa. O cadastro é confirmado, e a confirmação é idêntica à de um cadastro completo. | `lib/bloomy/patients/patient.ex:110-137` |
+| 78 | `validate_deactivation_date` isenta administradores comparando o papel com o texto `"admin"`. O papel chega como átomo (`EctoBitwiseEnum`, `List.last(user.roles)`), então `:admin != "admin"` é sempre verdadeiro e a exceção não vale para ninguém. | `lib/bloomy/patients/patient.ex:194-206`, `lib/bloomy/backoffice/user.ex:32-44` |
+| 79 | O único lugar que produziria a string esperada é ele próprio inalcançável: no login, `if "admin" in user.roles` compara texto com lista de átomos e é sempre falso. O seletor de papel tem o mesmo problema — recebe `params["role"]` como texto e o barra em `role in user.roles`. Três caminhos, a mesma confusão. | `lib/bloomy_web/user_auth.ex:42-48,74-82`, `lib/bloomy_web/backoffice/controllers/user_session_controller.ex:63` |
+| 80 | A mesma linha mede hoje com `Date.utc_today()`. A clínica é UTC−3 o ano inteiro, então das 21h à meia-noite o sistema já conta amanhã e recusa a data de hoje como passada — com a mensagem "Não pode ser uma data passada", que nesse caso é falsa. | `lib/bloomy/patients/patient.ex:202` |
+| 81 | Os dois defeitos se cobrem. Na janela das 21h à meia-noite ninguém desativa com a data de hoje, e a saída prevista para o caso — o administrador — é exatamente a que não funciona. Corrigir só um dos dois lados não resolve. | `lib/bloomy/patients/patient.ex:194-206` |

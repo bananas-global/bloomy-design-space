@@ -2262,3 +2262,38 @@ export interface PatientAddressAttempt {
 export interface PatientAddressData {
   attempts: PatientAddressAttempt[];
 }
+
+/**
+ * Data de desativação do paciente.
+ *
+ * ```elixir
+ * if current_user_role != "admin" and Date.compare(value, Date.utc_today()) == :lt,
+ *   do: add_error(changeset, :deactivation_date, "Não pode ser uma data passada")
+ * ```
+ *
+ * Duas coisas na mesma linha: a comparação com um papel que chega como átomo, e
+ * a data de hoje medida em UTC.
+ */
+export interface DeactivationAttempt {
+  id: string;
+  patientName: string;
+  actorName: string;
+  /** O papel de quem está desativando. */
+  actorRole: string;
+  /**
+   * O papel chega como texto.
+   *
+   * No monólito é sempre `false`: `user.roles` é uma lista de átomos, e os três
+   * caminhos que produziriam a string `"admin"` são barrados pela mesma
+   * comparação entre texto e átomo.
+   */
+  roleArrivesAsText: boolean;
+  /** A data escolhida no formulário, em `YYYY-MM-DD`. */
+  chosenDate: string;
+  /** O instante local, com fuso, em que a pessoa aperta salvar. */
+  submittedAt: string;
+}
+
+export interface DeactivationDateData {
+  attempts: DeactivationAttempt[];
+}
