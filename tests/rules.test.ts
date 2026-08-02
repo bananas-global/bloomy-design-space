@@ -5786,3 +5786,72 @@ describe("the-system-signs-its-own-checkout", () => {
     expect(closedByTheSystem(presenca({ id: "c" }))).toBe(false);
   });
 });
+
+/* ============================================== Renovação da janela */
+
+import type { AuthorizationRenewalData, AuthorizationWindow } from "../src/contracts/index.js";
+import {
+  canEnableAutoRenew,
+  renewsIntoEmpty,
+  whatRenewalChanges,
+} from "../src/rules/authorizations.js";
+
+function janela(overrides: Partial<AuthorizationWindow> & { id: string }): AuthorizationWindow {
+  return {
+    patientName: "Théo",
+    durationStart: "2026-05-01",
+    durationEnd: "2026-08-31",
+    autoRenew: true,
+    remainingSessions: 12,
+    ...overrides,
+  };
+}
+
+describe("renewing-the-window-does-not-restore-sessions", () => {
+  it("isola as janelas que vão renovar sem saldo nenhum", () => {
+    const dados: AuthorizationRenewalData = {
+      today: "2026-07-30",
+      windows: [
+        janela({ id: "a" }),
+        janela({ id: "b", remainingSessions: 0 }),
+        // Sem renovação automática: não vai renovar, então não é o caso.
+        janela({ id: "c", remainingSessions: 0, autoRenew: false }),
+      ],
+    };
+    expect(renewsIntoEmpty(dados).map((w) => w.id)).toEqual(["b"]);
+  });
+
+  it("a frase diz o que a renovação move e o que ela não repõe", () => {
+    expect(whatRenewalChanges(janela({ id: "a" }))).toContain("não acrescenta nenhuma");
+    const vazia = whatRenewalChanges(janela({ id: "b", remainingSessions: 0 }));
+    expect(vazia).toContain("continua sem sessão nenhuma");
+    expect(vazia).toContain("guia nova");
+  });
+
+  it("concorda em número com uma sessão só", () => {
+    expect(whatRenewalChanges(janela({ id: "a", remainingSessions: 1 }))).toContain(
+      "1 sessão que resta",
+    );
+  });
+});
+
+describe("only-one-window-renews-per-patient", () => {
+  const dados: AuthorizationRenewalData = {
+    today: "2026-07-30",
+    windows: [
+      janela({ id: "a", patientName: "Théo" }),
+      janela({ id: "b", patientName: "Théo", autoRenew: false }),
+      janela({ id: "c", patientName: "Nina", autoRenew: false }),
+    ],
+  };
+
+  it("bloqueia a segunda janela renovando do mesmo paciente, com o motivo", () => {
+    const decisao = canEnableAutoRenew(dados, "Théo");
+    expect(decisao.allowed).toBe(false);
+    expect(decisao.reason).toContain("períodos sobrepostos");
+  });
+
+  it("libera quem ainda não tem nenhuma renovando", () => {
+    expect(canEnableAutoRenew(dados, "Nina").allowed).toBe(true);
+  });
+});
