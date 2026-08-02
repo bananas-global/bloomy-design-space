@@ -2230,3 +2230,35 @@ export interface ValidatedField {
 export interface FieldOrderingData {
   fields: ValidatedField[];
 }
+
+/**
+ * Endereço do paciente.
+ *
+ * O cadastro decide se casa a associação com uma guarda de um campo só:
+ *
+ * ```elixir
+ * defp maybe_cast_address(changeset, attrs) do
+ *   if attrs["address"]["zip_code"] !== "" do
+ *     cast_assoc(changeset, :address)
+ *   else
+ *     changeset
+ *   end
+ * end
+ * ```
+ */
+export interface PatientAddressAttempt {
+  id: string;
+  patientName: string;
+  zipCode: string;
+  street: string;
+  neighborhood: string;
+  number: string;
+  city: string;
+  state: string;
+  /** O paciente já tinha endereço gravado antes desta edição. */
+  hadAddressBefore: boolean;
+}
+
+export interface PatientAddressData {
+  attempts: PatientAddressAttempt[];
+}

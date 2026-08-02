@@ -3067,3 +3067,71 @@ test.describe("validação e limpeza fora de ordem", () => {
     await expect(page.getByText(/mas o valor gravado/)).toHaveCount(0);
   });
 });
+
+test.describe("endereço do paciente", () => {
+  test("o que foi digitado e vai sumir é listado campo a campo", async ({ page }) => {
+    await page.goto(urlFor("patients.address-discarded-without-zip"));
+
+    await expect(page.getByText("1 endereço digitado não vai ser gravado")).toBeVisible();
+    await expect(
+      page.getByText(/Otávio L\. preencheu 5 campos do endereço e deixou o CEP em branco/),
+    ).toBeVisible();
+    await expect(page.getByText("Rua: Estrada do Aterrado, km 4")).toBeVisible();
+    await expect(page.getByText("Cidade: Ibiúna")).toBeVisible();
+    await expect(
+      page.getByText(/O CEP não é mais um campo do endereço: é o que decide se o endereço existe/),
+    ).toBeVisible();
+  });
+
+  test("a edição silenciosa fica separada, e diz que o antigo continua", async ({ page }) => {
+    await page.goto(urlFor("patients.address-edit-changes-nothing"));
+
+    await expect(
+      page.getByText("1 edição não vai mudar nada, e vai parecer que mudou"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Bruna S\. — o endereço anterior continua gravado exatamente como estava/),
+    ).toBeVisible();
+    await expect(page.getByText(/como se fosse a confirmação de que deu certo/)).toBeVisible();
+  });
+
+  test("a mensagem que o sistema já tem aparece entre aspas", async ({ page }) => {
+    await page.goto(urlFor("patients.address-error-exists-and-is-skipped"));
+
+    await expect(page.getByText("A frase que explicaria isso já existe no sistema")).toBeVisible();
+    // A frase vem destacada dentro da própria sentença; as aspas ficam fora do
+    // destaque, então a asserção é sobre o texto destacado.
+    await expect(
+      page.getByText("“CEP: não pode ficar em branco”", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByText(/A correção é deixar a checagem acontecer/)).toBeVisible();
+  });
+
+  test("com o CEP preenchido, o sistema reclama de verdade do que falta", async ({ page }) => {
+    await page.goto(urlFor("patients.address-error-exists-and-is-skipped"));
+
+    // Nina C. tem CEP e bairro em branco: a checagem roda e responde.
+    await expect(page.getByText("O sistema responde: Bairro: não pode ficar em branco")).toBeVisible();
+    // Otávio L. tem o mesmo tipo de falta e não recebe resposta nenhuma.
+    await expect(
+      page.getByText(/O sistema teria respondido “CEP: não pode ficar em branco”, e não responde nada/),
+    ).toHaveCount(2);
+  });
+
+  test("cadastrar sem endereço nenhum aparece como salvo, não como perda", async ({ page }) => {
+    await page.goto(urlFor("patients.address-deliberately-absent"));
+
+    await expect(page.getByText("salvo sem endereço, como pedido")).toHaveCount(1);
+    await expect(
+      page.getByText(/cadastrar sem endereço nenhum precisa continuar possível/),
+    ).toBeVisible();
+  });
+
+  test("com CEP em todos, os avisos calam e tudo é gravado", async ({ page }) => {
+    await page.goto(urlFor("patients.address-all-with-zip"));
+
+    await expect(page.getByText(/não vai ser gravado/)).toHaveCount(0);
+    await expect(page.getByText(/não vai mudar nada/)).toHaveCount(0);
+    await expect(page.getByText("endereço gravado")).toHaveCount(5);
+  });
+});

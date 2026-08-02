@@ -1957,6 +1957,59 @@ changesets.
 4 achados, 4 cenários, 4 regras testáveis, 12 testes de regra, 6 jornadas.
 
 
+### 62. O CEP decide se o endereço existe
+
+Fui ler o changeset de `Patient`, que é o cadastro com mais campo de texto, e o
+achado não estava na ordem da limpeza — estava numa guarda de quatro linhas:
+
+```elixir
+defp maybe_cast_address(changeset, attrs) do
+  if attrs["address"]["zip_code"] !== "" do
+    cast_assoc(changeset, :address)
+  else
+    changeset
+  end
+end
+```
+
+Com o CEP em branco, a associação não é casada. Quem preencheu rua, bairro,
+número, cidade e estado — uma família de zona rural, um cadastro feito por
+telefone — **perde tudo isso**, e o cadastro salva com sucesso. Nada no
+formulário diz que o CEP tem esse poder.
+
+O que torna o achado bom é a segunda metade. O changeset do endereço exige o CEP
+e sabe dizer exatamente o que aconteceu:
+
+```elixir
+|> validate_required([:zip_code, :street, :neighborhood, :number, :city, :state])
+```
+
+**A guarda impede de rodar justamente a checagem que reclamaria.** A explicação
+está escrita no sistema, e o caminho se organiza para nunca chegar nela. A
+correção é pequena — deixar a checagem acontecer e devolver o erro que ela já
+sabe dar —, e é a diferença entre um cadastro incompleto conhecido e um
+desconhecido.
+
+**Corrigi a mim mesmo no meio.** Eu tinha escrito uma função chamada
+`overwritesAnExistingAddress`, supondo que pular o `cast_assoc` apagasse o
+endereço anterior. Não apaga: a associação simplesmente não é tocada, e o
+endereço antigo **fica**. Isso não enfraquece o achado, troca ele por um pior:
+quem corrige a rua e apaga o CEP salva com sucesso, não muda nada, e vê o
+endereço velho na tela como se fosse a confirmação. No cadastro novo ao menos
+falta endereço e alguém pode estranhar; aqui há um endereço, ele parece
+atualizado, e é o antigo.
+
+Dois cenários existem só para proteger a correção de ir longe demais. Um fixa
+que **cadastrar sem endereço nenhum precisa continuar possível** — é a
+necessidade real que a guarda atende, e quem for consertar não pode remover a
+guarda junto com o defeito. O outro mostra o mesmo defeito de bairro em duas
+tentativas: com CEP preenchido vira erro na tela, sem CEP vira silêncio. É o
+par que torna o problema impossível de confundir com “o sistema não valida
+endereço”.
+
+4 achados, 5 cenários, 4 regras testáveis, 12 testes de regra, 6 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2037,3 +2090,7 @@ bugs do Design Space; são observações sobre o produto.
 | 71 | Consequência A: um envio é recusado por caracteres que nunca seriam gravados. O código da pesquisa de satisfação exige exatamente 5; colado com um espaço, a conferência vê 6 e recusa, enquanto o campo mostra 5. A mensagem conta o que não seria guardado. | `lib/bloomy/nps/nps_response.ex:23,26`, `lib/bloomy/custom_services/comments/comment.ex:32,35` |
 | 72 | Consequência B, mais grave: um valor curto demais **passa** por causa dos espaços e é gravado sem eles. Um código com `is: 5` é guardado com 3 caracteres. O defeito não aparece na tela — fica no banco, e todo código que confia no formato encontra um valor impossível. | `lib/bloomy/nps/nps_response.ex:23,26` |
 | 73 | A ordem certa já existe no repositório: `RoomServicePoint` normaliza com `update_change` **antes** do `validate_format`. Corrigir os outros 122 é estender uma decisão já tomada aqui dentro, e não escolher uma política nova. | `lib/bloomy/units/room_service_point.ex:31-32,37-41` |
+| 74 | `maybe_cast_address/2` só casa a associação do endereço quando o CEP não é string vazia. Preenchido todo o resto e deixado o CEP em branco, rua, bairro, número, cidade e estado são descartados e o cadastro salva com sucesso. Nada no formulário indica que o CEP decide isso. | `lib/bloomy/patients/patient.ex:133,215-221` |
+| 75 | O changeset do endereço exige `zip_code` e tem a mensagem exata para o caso — e a guarda impede que ele rode justamente quando ele reclamaria. A explicação existe no sistema e o caminho evita chegar nela. | `lib/bloomy/addresses/address.ex:24-26`, `lib/bloomy/patients/patient.ex:215-221` |
+| 76 | Pular o `cast_assoc` **não apaga** o endereço anterior: ele fica intacto. Uma edição que corrija a rua e apague o CEP salva com sucesso, não muda nada, e exibe o endereço antigo como se fosse a confirmação da mudança. | `lib/bloomy/patients/patient.ex:215-221` |
+| 77 | Em nenhum dos casos há erro, campo destacado ou registro de tentativa. O cadastro é confirmado, e a confirmação é idêntica à de um cadastro completo. | `lib/bloomy/patients/patient.ex:110-137` |

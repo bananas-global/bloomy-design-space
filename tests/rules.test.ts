@@ -1,4 +1,18 @@
 import type {
+  PatientAddressAttempt as TentativaEndereco,
+  PatientAddressData as EnderecoData,
+} from "../src/contracts/index.js";
+import {
+  addressIsCast,
+  deliberatelyWithoutAddress,
+  editKeepsTheOldAddress,
+  errorTheChangesetWouldGive,
+  filledFields,
+  rejectedWithAnError,
+  silentlyDiscarded,
+  wouldBeValid,
+} from "../src/rules/patientAddress.js";
+import type {
   FieldOrderingData as OrdemData,
   ValidatedField as CampoValidado,
 } from "../src/contracts/index.js";
@@ -6558,5 +6572,126 @@ describe("ordem da validação — como o tamanho é dito", () => {
     expect(sizeLabel(campo({ id: "a", typed: "K7M2P" }))).toBe("5 caracteres");
     expect(sizeLabel(campo({ id: "a", typed: "K7M2P " }))).toBe("6 como veio, 5 depois de aparado");
     expect(sizeLabel(campo({ id: "a", typed: "K" }))).toBe("1 caractere");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Endereço do paciente
+// ---------------------------------------------------------------------------
+
+function tentativaEndereco(
+  o: Partial<TentativaEndereco> & { id: string },
+): TentativaEndereco {
+  return {
+    patientName: "Helena M.",
+    zipCode: "04567-010",
+    street: "Rua das Acácias",
+    neighborhood: "Vila Aurora",
+    number: "212",
+    city: "São Paulo",
+    state: "SP",
+    hadAddressBefore: false,
+    ...o,
+  };
+}
+
+const enderecos = (attempts: TentativaEndereco[]): EnderecoData => ({ attempts });
+
+describe("endereço do paciente — a guarda de um campo só", () => {
+  it("casa a associação exatamente quando o CEP não é string vazia", () => {
+    expect(addressIsCast(tentativaEndereco({ id: "a" }))).toBe(true);
+    expect(addressIsCast(tentativaEndereco({ id: "a", zipCode: "" }))).toBe(false);
+    // Um CEP inválido passa pela guarda: quem barra formato é o changeset.
+    expect(addressIsCast(tentativaEndereco({ id: "a", zipCode: "x" }))).toBe(true);
+  });
+
+  it("descarta em silêncio o endereço que a pessoa digitou", () => {
+    const dados = enderecos([
+      tentativaEndereco({ id: "perde", zipCode: "", street: "Estrada do Aterrado" }),
+    ]);
+    expect(silentlyDiscarded(dados).map((t) => t.id)).toEqual(["perde"]);
+  });
+
+  it("não chama de perda o cadastro deliberadamente sem endereço", () => {
+    // É a necessidade que a guarda atende, e precisa continuar possível.
+    const vazio = tentativaEndereco({
+      id: "vazio",
+      zipCode: "",
+      street: "",
+      neighborhood: "",
+      number: "",
+      city: "",
+      state: "",
+    });
+    const dados = enderecos([vazio]);
+    expect(silentlyDiscarded(dados)).toEqual([]);
+    expect(deliberatelyWithoutAddress(dados).map((t) => t.id)).toEqual(["vazio"]);
+  });
+
+  it("conta só os campos preenchidos, ignorando espaço em branco", () => {
+    const t = tentativaEndereco({ id: "a", street: "Rua X", neighborhood: "   ", city: "" });
+    expect(filledFields(t).map((c) => c.label)).toEqual(["Rua", "Número", "Estado"]);
+  });
+});
+
+describe("endereço do paciente — a edição que não muda nada", () => {
+  it("mantém o endereço antigo quando o CEP é apagado numa edição", () => {
+    // Pular cast_assoc não apaga a associação: ela fica intacta.
+    expect(
+      editKeepsTheOldAddress(
+        tentativaEndereco({ id: "a", zipCode: "", hadAddressBefore: true }),
+      ),
+    ).toBe(true);
+  });
+
+  it("não confunde a edição silenciosa com o cadastro novo perdido", () => {
+    expect(
+      editKeepsTheOldAddress(
+        tentativaEndereco({ id: "a", zipCode: "", hadAddressBefore: false }),
+      ),
+    ).toBe(false);
+  });
+
+  it("não acusa nada quando o CEP está preenchido, mesmo havendo endereço antes", () => {
+    expect(editKeepsTheOldAddress(tentativaEndereco({ id: "a", hadAddressBefore: true }))).toBe(
+      false,
+    );
+  });
+});
+
+describe("endereço do paciente — o erro que existe e não roda", () => {
+  it("diz que o CEP não pode ficar em branco", () => {
+    expect(errorTheChangesetWouldGive(tentativaEndereco({ id: "a", zipCode: "" }))).toBe(
+      "CEP: não pode ficar em branco",
+    );
+  });
+
+  it("diz que o CEP é inválido quando o formato não bate", () => {
+    expect(errorTheChangesetWouldGive(tentativaEndereco({ id: "a", zipCode: "4567010" }))).toBe(
+      "CEP inválido",
+    );
+  });
+
+  it("nomeia os campos obrigatórios que ficaram em branco", () => {
+    expect(
+      errorTheChangesetWouldGive(
+        tentativaEndereco({ id: "a", neighborhood: "", city: "" }),
+      ),
+    ).toBe("Bairro, Cidade: não pode ficar em branco");
+  });
+
+  it("não devolve erro nenhum quando o endereço está completo", () => {
+    expect(errorTheChangesetWouldGive(tentativaEndereco({ id: "a" }))).toBeUndefined();
+    expect(wouldBeValid(tentativaEndereco({ id: "a" }))).toBe(true);
+  });
+
+  it("com CEP preenchido, o sistema recusa de verdade e mostra o motivo", () => {
+    const dados = enderecos([
+      tentativaEndereco({ id: "recusado", neighborhood: "" }),
+      tentativaEndereco({ id: "silencioso", zipCode: "", neighborhood: "" }),
+    ]);
+    // O mesmo defeito de bairro: um vira erro na tela, o outro vira silêncio.
+    expect(rejectedWithAnError(dados).map((t) => t.id)).toEqual(["recusado"]);
+    expect(silentlyDiscarded(dados).map((t) => t.id)).toEqual(["silencioso"]);
   });
 });
