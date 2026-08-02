@@ -2327,3 +2327,56 @@ test.describe("paginação do controle de horas", () => {
     await expect(page.getByText("O mês não cabe numa página")).toHaveCount(0);
   });
 });
+
+test.describe("pendências de cadastro", () => {
+  test("a lista abre pela lacuna clínica, e não por nome", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-by-consequence"));
+
+    const primeiro = page.getByRole("article").first();
+    await expect(primeiro).toContainText("Nina Corrêa Bastos");
+    await expect(primeiro).toContainText("Sem nível de suporte");
+  });
+
+  test("cada lacuna diz o efeito e de quem é resolver", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-by-consequence"));
+
+    await expect(page.getByText(/dimensiona a intensidade da intervenção/).first()).toBeVisible();
+    await expect(page.getByText(/Resolve: Especialista, na avaliação/).first()).toBeVisible();
+    await expect(page.getByText(/não aparece no mapa de nenhuma unidade/)).toBeVisible();
+  });
+
+  test("o tempo em atendimento aparece junto da lacuna", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-by-consequence"));
+
+    // Duas semanas é tarefa; dez meses é processo que não fecha.
+    await expect(page.getByText("há 10 meses em atendimento")).toBeVisible();
+    await expect(page.getByText("há 15 dias em atendimento")).toBeVisible();
+  });
+
+  test("a tela diz que nada disso bloqueia atendimento, e por que isso é caro", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-block-nothing"));
+
+    await expect(page.getByText("Nenhuma destas ausências impede atendimento")).toBeVisible();
+    await expect(page.getByText(/um bloqueio se resolve porque incomoda hoje/)).toBeVisible();
+  });
+
+  test("o total ganha proporção sobre os ativos", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-block-nothing"));
+
+    await expect(page.getByText("6 pacientes com pendência")).toBeVisible();
+    await expect(page.getByText("13% dos 48 ativos")).toBeVisible();
+  });
+
+  test("a tela aponta que a consulta já existe no sistema", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-by-consequence"));
+
+    await expect(page.getByText(/uma consulta que só existe como parâmetro de endereço/)).toBeVisible();
+  });
+
+  test("o vazio não vira elogio", async ({ page }) => {
+    await page.goto(urlFor("patients.gaps-none"));
+
+    await expect(page.getByText("Nenhuma pendência de cadastro")).toBeVisible();
+    await expect(page.getByText(/vale conferir mesmo quando ninguém reclamou/)).toBeVisible();
+  });
+});

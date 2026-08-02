@@ -285,3 +285,124 @@ export function deactivationSummary(impact: DeactivationImpact): string[] {
 export function isReversible(): boolean {
   return false;
 }
+
+/* ================================================= Pendências de cadastro */
+
+import type { PatientGapKind, PatientGapsData, PatientWithGaps } from "../contracts/index.js";
+
+/**
+ * Regras das pendências de cadastro.
+ *
+ * `PatientFilters` aceita `missing=plan|unit|hour_map|support_level` e
+ * `missing_any=true`. O sistema **sabe** responder "quem está sem o quê" — e
+ * não existe tela nenhuma que faça essa pergunta. Alguém precisa saber digitar
+ * o filtro.
+ */
+export const patientGapRules: Rule[] = [
+  {
+    id: "the-filter-exists-and-the-worklist-does-not",
+    statement:
+      "O sistema filtra pacientes por plano, unidade, mapa de horas e nível de suporte ausentes, e nenhuma tela mostra isso como trabalho a fazer.",
+    rationale:
+      "Uma consulta que só existe como parâmetro de URL é uma pergunta que ninguém faz. A informação está a um filtro de distância e permanece invisível porque depende de alguém suspeitar que ela exista.",
+    source: "src/rules/patients.ts",
+  },
+  {
+    id: "these-gaps-block-nothing",
+    statement:
+      "Nenhuma das quatro ausências impede atendimento. O paciente é atendido, as sessões acontecem e os programas rodam com as quatro em aberto.",
+    rationale:
+      "É o que as torna caras: um bloqueio se resolve porque incomoda hoje. Estas não incomodam ninguém até alguém precisar do dado — o responsável pedir o plano, a operadora pedir a unidade, a coordenação tentar montar a semana.",
+    source: "src/rules/patients.ts",
+  },
+  {
+    id: "the-four-gaps-have-different-weights",
+    statement:
+      "Sem unidade, o paciente não aparece em mapa nenhum. Sem mapa de horas, não há semana pretendida. Sem plano, não há o que o responsável aceite. Sem nível de suporte, o perfil que dimensiona a intensidade da intervenção está incompleto.",
+    rationale:
+      "Listadas como “cadastro incompleto”, as quatro pedem a mesma coisa: preencher. Nomeadas pela consequência, cada uma tem um dono e uma urgência diferentes — e a de nível de suporte é clínica, não administrativa.",
+    source: "src/rules/patients.ts",
+  },
+];
+
+export const GAP_ORDER: PatientGapKind[] = ["support_level", "unit", "hour_map", "plan"];
+
+export function gapLabel(gap: PatientGapKind): string {
+  switch (gap) {
+    case "plan":
+      return "Sem plano";
+    case "unit":
+      return "Sem unidade";
+    case "hour_map":
+      return "Sem mapa de horas";
+    case "support_level":
+      return "Sem nível de suporte";
+  }
+}
+
+/** Implementação de `the-four-gaps-have-different-weights`. */
+export function gapConsequence(gap: PatientGapKind): { efeito: string; dono: string } {
+  switch (gap) {
+    case "support_level":
+      return {
+        efeito:
+          "O perfil TEA está incompleto: falta o nível de suporte, que é o que dimensiona a intensidade da intervenção.",
+        dono: "Especialista, na avaliação",
+      };
+    case "unit":
+      return {
+        efeito: "O paciente não aparece no mapa de nenhuma unidade, nem na visão de capacidade.",
+        dono: "Recepção ou coordenação",
+      };
+    case "hour_map":
+      return {
+        efeito:
+          "Não há semana pretendida: os agendamentos existem avulsos, e nada os renova nem os confere.",
+        dono: "Coordenação",
+      };
+    case "plan":
+      return {
+        efeito: "Não há plano de intervenção para o responsável aceitar.",
+        dono: "Especialista, que escreve o plano",
+      };
+  }
+}
+
+/**
+ * A lacuna mais grave de um paciente, na ordem que a consequência impõe.
+ *
+ * Existe porque uma lista ordenada por nome trata as quatro como iguais, e elas
+ * não são: nível de suporte ausente é clínico.
+ */
+export function worstGap(entry: PatientWithGaps): PatientGapKind | undefined {
+  return GAP_ORDER.find((gap) => entry.gaps.includes(gap));
+}
+
+/** Quem tem mais tempo de casa com a lacuna aberta aparece primeiro. */
+export function byUrgency(data: PatientGapsData): PatientWithGaps[] {
+  return [...data.patients].sort((a, b) => {
+    const pesoA = GAP_ORDER.indexOf(worstGap(a) ?? "plan");
+    const pesoB = GAP_ORDER.indexOf(worstGap(b) ?? "plan");
+    if (pesoA !== pesoB) return pesoA - pesoB;
+    return b.daysInCare - a.daysInCare;
+  });
+}
+
+/** Quantos pacientes têm cada lacuna — o número que dá tamanho ao problema. */
+export function countByGap(data: PatientGapsData): { gap: PatientGapKind; count: number }[] {
+  return GAP_ORDER.map((gap) => ({
+    gap,
+    count: data.patients.filter((entry) => entry.gaps.includes(gap)).length,
+  })).filter((linha) => linha.count > 0);
+}
+
+/**
+ * A proporção sobre os pacientes ativos.
+ *
+ * Um número absoluto não diz se doze é muito: doze de quinze é um processo
+ * quebrado, doze de quatrocentos é uma tarde de trabalho.
+ */
+export function shareOfActive(data: PatientGapsData): number | undefined {
+  if (data.activePatients <= 0) return undefined;
+  return Math.round((data.patients.length / data.activePatients) * 100);
+}

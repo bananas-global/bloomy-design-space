@@ -1875,3 +1875,29 @@ export interface PageWindow {
   /** Total de itens que existem no período ou filtro em vigor. */
   total: number;
 }
+
+/* ================================================= Pendências de cadastro */
+
+/**
+ * As quatro ausências que o sistema real sabe filtrar.
+ *
+ * São **relações que nunca foram estabelecidas**, e não campos obrigatórios em
+ * branco — coisa diferente de `missingRequiredFields`. Nenhuma delas bloqueia
+ * nada: o paciente é atendido normalmente com as quatro em aberto.
+ */
+export type PatientGapKind = "plan" | "unit" | "hour_map" | "support_level";
+
+export interface PatientWithGaps {
+  patient: PatientRef;
+  gaps: PatientGapKind[];
+  /** Há quantos dias o paciente está em atendimento com a lacuna aberta. */
+  daysInCare: number;
+  /** Nível de suporte do DSM-5, de 1 a 3. Ausente é a lacuna `support_level`. */
+  supportLevel?: 1 | 2 | 3;
+}
+
+export interface PatientGapsData {
+  patients: PatientWithGaps[];
+  /** Total de pacientes ativos, para a lacuna ter proporção. */
+  activePatients: number;
+}

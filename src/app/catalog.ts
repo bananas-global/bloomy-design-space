@@ -27,12 +27,13 @@ import { unitMapFixtures } from "../fixtures/unitMap.js";
 import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
 import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
 import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyPhases.js";
+import { patientGapFixtures } from "../fixtures/patientGaps.js";
 import { agendaRules, schedulingRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
 import { inClinicRules } from "../rules/inClinic.js";
-import { patientRules, therapyPhaseRules } from "../rules/patients.js";
+import { patientRules, therapyPhaseRules, patientGapRules } from "../rules/patients.js";
 import { authorizationRules } from "../rules/authorizations.js";
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
@@ -77,6 +78,7 @@ import { unitMapScenarios } from "../scenarios/unitMap.js";
 import { clinicalHourScenarios } from "../scenarios/clinicalHours.js";
 import { newAppointmentScenarios } from "../scenarios/newAppointment.js";
 import { therapyPhaseScenarios } from "../scenarios/therapyPhases.js";
+import { patientGapScenarios } from "../scenarios/patientGaps.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -173,6 +175,23 @@ export const modules: Module[] = [
             branches: {
               "Tudo em ambientação": "patients.phases-all-beginning",
               "Nenhuma fase registrada": "patients.phases-empty",
+            },
+          },
+        ],
+      },
+      {
+        id: "find-what-is-missing",
+        title: "Descobrir o que falta e não bloqueia",
+        description:
+          "A consulta existe no sistema real e nenhuma tela faz a pergunta.",
+        steps: [
+          {
+            scenario: "patients.gaps-by-consequence",
+            label: "Ver as pendências por consequência",
+            decision: "Esta lacuna é de quem?",
+            branches: {
+              "É clínica": "patients.gaps-clinical",
+              "Não bloqueia nada, e por isso fica": "patients.gaps-block-nothing",
             },
           },
         ],
@@ -872,6 +891,7 @@ export const scenarios: Scenario[] = [
   ...clinicalHourScenarios,
   ...newAppointmentScenarios,
   ...therapyPhaseScenarios,
+  ...patientGapScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -902,6 +922,7 @@ export const fixtures: Fixture[] = [
   ...clinicalHourFixtures,
   ...newAppointmentFixtures,
   ...therapyPhaseFixtures,
+  ...patientGapFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -914,6 +935,7 @@ export const rules: Rule[] = [
   ...inClinicRules,
   ...patientRules,
   ...therapyPhaseRules,
+  ...patientGapRules,
   ...authorizationRules,
   ...closureRules,
   ...invoiceRules,
