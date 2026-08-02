@@ -1496,6 +1496,37 @@ resposta certa foi dar a ela o cenário que faltava, não apagá-la.
 2 cenários, 6 testes de regra, 5 jornadas.
 
 
+### 50. A rotina que grava a culpa no paciente — `porte/culpa-no-paciente`
+
+O último dos três workers é o pior. `MissedAttendedWorker` converte, **na manhã
+seguinte**, todo agendamento que continuava `:scheduled` — com
+`missing_reason: :missing_patient`.
+
+Basta a recepção não ter feito o check-in. O sistema então **afirma que o
+paciente faltou**, sem que ninguém tenha olhado nada.
+
+A diferença entre os dois workers está no motivo gravado, e ela é toda:
+
+| Worker | Espera | Motivo gravado | O que afirma |
+| --- | --- | --- | --- |
+| `MarkDelayedSchedulesAsMissed` | 7 dias | `:delay` | "ninguém fechou isto" |
+| `MissedAttended` | 1 dia | `:missing_patient` | "o paciente faltou" |
+
+O primeiro não acusa ninguém. O segundo é uma afirmação sobre uma pessoa, feita
+por uma rotina que não olhou nada — e é ela que fica no histórico.
+
+Com isso o número de "ausências" chega a **quatro origens**, duas fabricadas.
+Na fixture do mês: quinze registros, **quatro pessoas faltaram**. Vinte e sete
+por cento do número mede comportamento da família; o resto mede o processo
+interno da clínica.
+
+Uma correção de percurso: a substituição do id da regra de "três" para "quatro"
+não casou na primeira tentativa e o `pnpm check` reprovou com referência
+pendurada. O teste de contrato de cenário pegou antes de qualquer commit.
+
+1 cenário atualizado, 4 testes de regra, 3 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1554,3 +1585,4 @@ bugs do Design Space; são observações sobre o produto.
 | 49 | O worker usa `Date.utc_today()` para decidir a competência. Rodando à meia-noite UTC do dia 1º, em Brasília são 21h do último dia do mês que está sendo fechado — as três últimas horas caem no fechamento seguinte, na faixa em que acompanhamento terapêutico acontece. Sexta ocorrência do padrão de fuso. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:14` |
 | 50 | `MarkDelayedSchedulesAsMissedWorker` converte em ausência (`missing_reason: :delay`) todo agendamento parado há sete dias em atraso. É limpeza de fila apresentada como fato clínico: ninguém observou a falta, e depois da conversão não há como distinguir do caso real sem abrir o histórico. Somado ao achado 40, o número de "ausências" contém três coisas diferentes. | `lib/bloomy/schedules/mark_delayed_schedules_as_missed_worker.ex:10-27` |
 | 51 | `NotAttendedWorker` devolve para `:not_started`, via `update_all` e sem log, todo atendimento que ficou em `:ready_for_service` ou `:ongoing` no dia anterior. A sessão que alguém começou e não fechou é desfeita na virada, sem deixar evidência de que houve início. | `lib/bloomy/schedules/not_attended_worker.ex:10-21` |
+| 52 | `MissedAttendedWorker` converte na manhã seguinte todo agendamento ainda `:scheduled` com `missing_reason: :missing_patient`. Basta a recepção não ter feito o check-in: o sistema grava que o paciente faltou, sem ninguém ter olhado. O outro worker de conversão usa `:delay`, que não acusa ninguém — a diferença entre os dois motivos é a diferença entre "ninguém fechou isto" e uma afirmação sobre uma pessoa. | `lib/bloomy/schedules/missed_attended_worker.ex:9-22` |

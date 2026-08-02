@@ -14,6 +14,8 @@ import {
 import {
   absenceOriginLabel,
   absencesByOrigin,
+  blamesThePatient,
+  fabricated,
   shareThatIsReallyAbsence,
   wasObserved,
   whatTheOriginMeasures,
@@ -62,9 +64,8 @@ export function AbsenceOriginScreen({ context }: ScreenProps) {
 
   const porOrigem = absencesByOrigin(absences);
   const proporcao = shareThatIsReallyAbsence(absences);
-  const fabricadas = absences.records.filter(
-    (record) => record.origin === "fabricated_by_delay",
-  );
+  const fabricadas = fabricated(absences);
+  const acusatorias = fabricadas.filter(blamesThePatient);
   const misturado = porOrigem.length > 1;
 
   return wrap(
@@ -103,9 +104,28 @@ export function AbsenceOriginScreen({ context }: ScreenProps) {
             ))}
           </ul>
           <p className="m-0 mt-2">
-            Um worker transforma em ausência todo agendamento que fica sete dias em atraso. A
-            criança pode ter vindo e o registro simplesmente não ter sido fechado — e a partir da
-            conversão não há como distinguir uma coisa da outra sem abrir o histórico.
+            Duas rotinas fazem isto: uma converte o que fica sete dias parado em atraso, com motivo
+            “atraso”; a outra converte na manhã seguinte tudo o que continuava marcado. A criança
+            pode ter vindo e o registro simplesmente não ter sido fechado — e a partir da conversão
+            não há como distinguir uma coisa da outra sem abrir o histórico.
+          </p>
+        </Notice>
+      )}
+
+      {/* A diferença entre os dois motivos gravados é a diferença entre
+          "ninguém fechou isto" e "o paciente faltou". */}
+      {acusatorias.length > 0 && (
+        <Notice tone="danger" title="Uma das rotinas grava a culpa no paciente">
+          <p className="m-0">
+            {acusatorias.length}{" "}
+            {acusatorias.length === 1 ? "registro foi convertido" : "registros foram convertidos"} na
+            manhã seguinte com motivo “paciente faltou”, porque o agendamento continuava marcado.
+            Basta a recepção não ter feito o check-in.
+          </p>
+          <p className="m-0 mt-2">
+            O outro worker grava “atraso”, que não acusa ninguém. A diferença entre os dois motivos
+            é a diferença entre “ninguém fechou isto” e uma afirmação sobre uma pessoa — feita por
+            uma rotina que não olhou nada.
           </p>
         </Notice>
       )}

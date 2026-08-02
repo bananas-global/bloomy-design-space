@@ -2600,7 +2600,7 @@ test.describe("de onde vêm as ausências", () => {
     await page.goto(urlFor("agenda.absence-origins"));
 
     await expect(
-      page.getByText("O sistema conta 12 ausências. 33% mede comportamento da família."),
+      page.getByText("O sistema conta 15 ausências. 27% mede comportamento da família."),
     ).toBeVisible();
   });
 
@@ -2619,6 +2619,7 @@ test.describe("de onde vêm as ausências", () => {
 
     await expect(page.getByText("Ausências que ninguém observou")).toBeVisible();
     await expect(page.getByText(/convertida depois de 9 dias parada em atraso/)).toBeVisible();
+    await expect(page.getByText(/Duas rotinas fazem isto/)).toBeVisible();
     await expect(page.getByText(/a criança pode ter vindo e o registro simplesmente não ter sido fechado/i)).toBeVisible();
   });
 
@@ -2634,5 +2635,35 @@ test.describe("de onde vêm as ausências", () => {
 
     await expect(page.getByText("“Não iniciado” pode ser uma sessão desfeita")).toBeVisible();
     await expect(page.getByText(/por rotina automática e sem registro/)).toBeVisible();
+  });
+});
+
+test.describe("a rotina que acusa o paciente", () => {
+  test("a conversão da manhã seguinte é separada da de sete dias", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-origins"));
+
+    await expect(page.getByText("Uma das rotinas grava a culpa no paciente")).toBeVisible();
+    await expect(page.getByText(/Basta a recepção não ter feito o check-in/)).toBeVisible();
+  });
+
+  test("a frase nomeia a diferença entre os dois motivos gravados", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-origins"));
+
+    // "atraso" não acusa ninguém; "paciente faltou" é afirmação sobre alguém.
+    await expect(
+      page.getByText(/a diferença entre “ninguém fechou isto” e uma afirmação sobre uma pessoa/),
+    ).toBeVisible();
+  });
+
+  test("cada origem tem etiqueta própria na lista", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-origins"));
+
+    // Nos `article` de cada registro, e não nos `li` — o resumo também usa
+    // lista, e o rótulo da origem aparece nos dois lugares.
+    const registro = page.getByRole("article");
+    await expect(registro.filter({ hasText: "Convertida após sete dias parada" })).toHaveCount(3);
+    await expect(
+      registro.filter({ hasText: "Convertida na manhã seguinte, culpando o paciente" }),
+    ).toHaveCount(3);
   });
 });

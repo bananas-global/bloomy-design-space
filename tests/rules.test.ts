@@ -5521,6 +5521,8 @@ describe("the-month-closes-three-hours-early", () => {
 import type { AbsenceOriginData, AbsenceRecord } from "../src/contracts/index.js";
 import {
   absencesByOrigin,
+  blamesThePatient,
+  fabricated,
   shareThatIsReallyAbsence,
   wasObserved,
   whatTheOriginMeasures,
@@ -5536,7 +5538,7 @@ function ausencia(overrides: Partial<AbsenceRecord> & { id: string }): AbsenceRe
   };
 }
 
-describe("the-absence-number-holds-three-different-things", () => {
+describe("the-absence-number-holds-four-different-things", () => {
   const mes: AbsenceOriginData = {
     month: "2026-07",
     records: [
@@ -5549,12 +5551,24 @@ describe("the-absence-number-holds-three-different-things", () => {
     ],
   };
 
-  it("separa as três origens na ordem em que elas se afastam de “ausência”", () => {
+  it("separa as origens na ordem em que elas se afastam de “ausência”", () => {
     expect(absencesByOrigin(mes)).toEqual([
       { origin: "observed", count: 2 },
       { origin: "cancelled", count: 2 },
       { origin: "fabricated_by_delay", count: 2 },
     ]);
+  });
+
+  it("a quarta origem entra por último, e é a que acusa o paciente", () => {
+    const comAcusacao: AbsenceOriginData = {
+      month: "2026-07",
+      records: [
+        ...mes.records,
+        ausencia({ id: "b1", origin: "fabricated_blaming_patient", daysStalled: 1 }),
+      ],
+    };
+    const linhas = absencesByOrigin(comAcusacao);
+    expect(linhas[linhas.length - 1]).toEqual({ origin: "fabricated_blaming_patient", count: 1 });
   });
 
   it("omite origem que não aparece — a lista não anuncia zeros", () => {
@@ -5568,6 +5582,32 @@ describe("the-absence-number-holds-three-different-things", () => {
 
   it("não divide por zero num mês sem ausência nenhuma", () => {
     expect(shareThatIsReallyAbsence({ month: "2026-07", records: [] })).toBeUndefined();
+  });
+});
+
+describe("one-worker-blames-the-patient-by-name", () => {
+  it("separa as duas rotinas: só uma grava uma afirmação sobre a pessoa", () => {
+    expect(blamesThePatient(ausencia({ id: "b", origin: "fabricated_blaming_patient" }))).toBe(true);
+    expect(blamesThePatient(ausencia({ id: "f", origin: "fabricated_by_delay" }))).toBe(false);
+    expect(blamesThePatient(ausencia({ id: "a" }))).toBe(false);
+  });
+
+  it("reúne as duas fabricadas, que é o que a tela precisa listar junto", () => {
+    const dados: AbsenceOriginData = {
+      month: "2026-07",
+      records: [
+        ausencia({ id: "a" }),
+        ausencia({ id: "c", origin: "cancelled" }),
+        ausencia({ id: "f", origin: "fabricated_by_delay", daysStalled: 7 }),
+        ausencia({ id: "b", origin: "fabricated_blaming_patient", daysStalled: 1 }),
+      ],
+    };
+    expect(fabricated(dados).map((r) => r.id)).toEqual(["f", "b"]);
+  });
+
+  it("o motivo gravado é o que separa as duas, e a frase diz isso", () => {
+    expect(whatTheOriginMeasures("fabricated_by_delay")).toContain("ninguém fechou");
+    expect(whatTheOriginMeasures("fabricated_blaming_patient")).toContain("acusa o paciente");
   });
 });
 

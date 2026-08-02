@@ -21,9 +21,9 @@ function record(overrides: Partial<AbsenceRecord> & { id: string }): AbsenceReco
 export const absenceOriginFixtures: Fixture[] = [
   {
     id: "absence-origin-month",
-    label: "Doze ausências, quatro origens de verdade",
+    label: "Quinze ausências, e quatro pessoas faltaram",
     description:
-      "O número que o filtro devolve para julho. Quatro pessoas faltaram, cinco avisaram antes, e três foram convertidas por um worker.",
+      "O número que o filtro devolve para julho. Quatro faltaram, cinco avisaram antes, três ficaram paradas sete dias, e três foram convertidas na manhã seguinte culpando o paciente.",
     data: {
       month: "2026-07",
       records: [
@@ -57,6 +57,27 @@ export const absenceOriginFixtures: Fixture[] = [
           date: "2026-07-20",
           origin: "fabricated_by_delay",
           daysStalled: 7,
+        }),
+
+        record({
+          id: "b1",
+          date: "2026-07-07",
+          origin: "fabricated_blaming_patient",
+          daysStalled: 1,
+          patientName: "Nina Corrêa Bastos",
+        }),
+        record({
+          id: "b2",
+          date: "2026-07-17",
+          origin: "fabricated_blaming_patient",
+          daysStalled: 1,
+        }),
+        record({
+          id: "b3",
+          date: "2026-07-24",
+          origin: "fabricated_blaming_patient",
+          daysStalled: 1,
+          patientName: "Rafael Toledo Marinho",
         }),
       ],
     } satisfies AbsenceOriginData,

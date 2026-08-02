@@ -10,15 +10,16 @@ import type { Scenario } from "@brucesantos/design-space";
 export const absenceOriginScenarios: Scenario[] = [
   {
     id: "agenda.absence-origins",
-    title: "Doze ausências, e quatro pessoas faltaram",
+    title: "Quinze ausências, e quatro pessoas faltaram",
     intent:
       "Separar as três origens que o sistema soma, e dizer o que cada uma de fato mede.",
     route: "/agenda/absences",
     persona: "clinic_admin",
     fixture: "absence-origin-month",
     rules: [
-      "the-absence-number-holds-three-different-things",
+      "the-absence-number-holds-four-different-things",
       "some-absences-were-never-observed",
+      "one-worker-blames-the-patient-by-name",
     ],
     a11y: {
       keyboard: "full",
@@ -28,13 +29,15 @@ export const absenceOriginScenarios: Scenario[] = [
     status: "in-review",
     preconditions: [
       "O filtro `absence` soma `:missed` e `:cancelled`.",
-      "`MarkDelayedSchedulesAsMissedWorker` converte agendamentos parados há sete dias.",
-      "Doze registros em julho: quatro faltas, cinco cancelamentos, três conversões.",
+      "`MarkDelayedSchedulesAsMissedWorker` converte agendamentos parados há sete dias, com motivo `:delay`.",
+      "`MissedAttendedWorker` converte na manhã seguinte todo agendamento ainda `:scheduled`, com motivo `:missing_patient`.",
+      "Quinze registros em julho: quatro faltas, cinco cancelamentos, seis conversões automáticas.",
     ],
     expected: [
-      "A tela abre pela proporção — 33% mede comportamento da família —, e não pelo total.",
+      "A tela abre pela proporção — 27% mede comportamento da família —, e não pelo total.",
       "Cada origem diz o que mede, e não só como se chama.",
       "As conversões automáticas têm aviso próprio, com os dias que ficaram paradas.",
+      "A rotina que grava “paciente faltou” é separada da que grava “atraso”.",
     ],
     tags: ["regra", "exceção", "decisão"],
   },
