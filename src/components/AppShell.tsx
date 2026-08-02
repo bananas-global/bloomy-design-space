@@ -1,27 +1,7 @@
 import type { ReactNode } from "react";
 import type { ScenarioContext } from "@brucesantos/design-space";
-import symbol from "../assets/bloomy-symbol-negative.svg";
-import {
-  IconAgendamentos,
-  IconAtendimentos,
-  IconAutorizacoes,
-  IconBiblioteca,
-  IconBloqueios,
-  IconColaboradores,
-  IconDashboard,
-  IconFechamentos,
-  IconGerencia,
-  IconLeads,
-  IconMapaDaUnidade,
-  IconNaClinica,
-  IconOperadoras,
-  IconPacientes,
-  IconProfissionais,
-  IconServicos,
-  IconSidebar,
-  IconSupervisao,
-  IconUnidades,
-} from "./NavIcons.js";
+import logotipo from "../assets/bloomy-negative.svg";
+import { Icon } from "./Icon.js";
 
 /**
  * Chrome do Bloomy — **espelho** do backoffice real.
@@ -42,7 +22,8 @@ type NavItem = {
   label: string;
   /** A rota daqui, quando a situação já foi portada. */
   path?: string;
-  Icon: (props: { className?: string }) => ReactNode;
+  /** O nome exato do ícone no layout do sistema. */
+  icon: string;
   /** Permissão mínima para o item aparecer, como no `:if` do layout real. */
   permission?: string;
   /** Rota do sistema real, para quem for conferir o espelho. */
@@ -63,24 +44,24 @@ type NavItem = {
  * completo do que é.
  */
 const NAV: NavItem[] = [
-  { label: "Dashboard", Icon: IconDashboard, origem: "/backoffice" },
-  { label: "Agendamentos", path: "/agenda", Icon: IconAgendamentos, permission: "schedules.list", origem: "/backoffice/agendamentos" },
-  { label: "Mapa da Unidade", path: "/unit-map", Icon: IconMapaDaUnidade, permission: "unit_maps.show", origem: "/backoffice/mapa-da-unidade" },
-  { label: "Pacientes", path: "/patients", Icon: IconPacientes, permission: "patients.list", origem: "/backoffice/pacientes" },
-  { label: "Leads", path: "/prospects", Icon: IconLeads, permission: "patients.create", origem: "/backoffice/visitas" },
-  { label: "Na Clínica", path: "/in-clinic", Icon: IconNaClinica, permission: "closures.list", origem: "/backoffice/na-clinica" },
-  { label: "Biblioteca", Icon: IconBiblioteca, permission: "programs.list", origem: "/backoffice/programas" },
-  { label: "Profissionais", path: "/team", Icon: IconProfissionais, permission: "professionals.list", origem: "/backoffice/profissionais" },
-  { label: "Unidades", path: "/structure", Icon: IconUnidades, permission: "services.list", origem: "/backoffice/unidades" },
-  { label: "Central de autorizações", path: "/authorizations", Icon: IconAutorizacoes, permission: "authorizations.hub", origem: "/backoffice/central_autorizacoes" },
-  { label: "Operadoras", Icon: IconOperadoras, origem: "/backoffice/operadoras" },
-  { label: "Serviços", Icon: IconServicos, permission: "services.list", origem: "/backoffice/servicos" },
-  { label: "Bloqueios", Icon: IconBloqueios, origem: "/backoffice/bloqueios" },
-  { label: "Atendimentos", path: "/clinical-hours", Icon: IconAtendimentos, origem: "/backoffice/atendimentos" },
-  { label: "Fechamentos", path: "/closures", Icon: IconFechamentos, permission: "closures.list", origem: "/backoffice/financeiro/fechamentos" },
-  { label: "Listas gerenciais", path: "/management", Icon: IconGerencia, permission: "management.list", origem: "/backoffice/gerencia" },
-  { label: "Colaboradores", Icon: IconColaboradores, origem: "/backoffice/usuarios" },
-  { label: "Supervisão", path: "/supervision", Icon: IconSupervisao, permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
+  { label: "Dashboard", icon: "fa-chart-pie", origem: "/backoffice" },
+  { label: "Agendamentos", path: "/agenda", icon: "fa-calendar-day", permission: "schedules.list", origem: "/backoffice/agendamentos" },
+  { label: "Mapa da Unidade", path: "/unit-map", icon: "fa-table", permission: "unit_maps.show", origem: "/backoffice/mapa-da-unidade" },
+  { label: "Pacientes", path: "/patients", icon: "fa-users", permission: "patients.list", origem: "/backoffice/pacientes" },
+  { label: "Leads", path: "/prospects", icon: "fa-user-plus", permission: "patients.create", origem: "/backoffice/visitas" },
+  { label: "Na Clínica", path: "/in-clinic", icon: "fa-house-chimney-medical", permission: "closures.list", origem: "/backoffice/na-clinica" },
+  { label: "Biblioteca", icon: "fa-memo-circle-check", permission: "programs.list", origem: "/backoffice/programas" },
+  { label: "Profissionais", path: "/team", icon: "fa-user-md", permission: "professionals.list", origem: "/backoffice/profissionais" },
+  { label: "Unidades", path: "/structure", icon: "fa-hospital", permission: "services.list", origem: "/backoffice/unidades" },
+  { label: "Central de autorizações", path: "/authorizations", icon: "fa-solid fa-bullhorn", permission: "authorizations.hub", origem: "/backoffice/central_autorizacoes" },
+  { label: "Operadoras", icon: "fa-building", origem: "/backoffice/operadoras" },
+  { label: "Serviços", icon: "fa-suitcase-medical", permission: "services.list", origem: "/backoffice/servicos" },
+  { label: "Bloqueios", icon: "fa-calendar-xmark", origem: "/backoffice/bloqueios" },
+  { label: "Atendimentos", path: "/clinical-hours", icon: "fa-calendar-pen", origem: "/backoffice/atendimentos" },
+  { label: "Fechamentos", path: "/closures", icon: "fa-dollar", permission: "closures.list", origem: "/backoffice/financeiro/fechamentos" },
+  { label: "Listas gerenciais", path: "/management", icon: "fa-gear", permission: "management.list", origem: "/backoffice/gerencia" },
+  { label: "Colaboradores", icon: "fa-solid fa-user-tie", origem: "/backoffice/usuarios" },
+  { label: "Supervisão", path: "/supervision", icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
 ];
 
 /**
@@ -136,10 +117,10 @@ export function AppShell({
           className="bloomy-drawer espelho-do-sistema sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-hidden bg-[var(--color-brand-blue)] p-4"
           aria-label="Navegação principal"
         >
-          {/* No sistema o logotipo cheio aparece com o drawer aberto, e só o
-              símbolo quando recolhido. Aqui ele fica sempre aberto: recolher é
-              estado de uso, e o Design Space serve para comparar telas. */}
-          <img src={symbol} alt="Bloomy" className="mx-auto mb-8 mt-4 h-12" />
+          {/* Logotipo cheio com o drawer aberto, símbolo quando recolhido —
+              como o sistema faz. Aqui ele fica sempre aberto, então é sempre o
+              cheio. */}
+          <img src={logotipo} alt="Bloomy" className="mx-auto mb-8 mt-4 h-12" />
 
           <ul className="m-0 flex list-none flex-col gap-2 overflow-y-auto overflow-x-hidden p-0">
             {visiveis.map((item) => {
@@ -156,7 +137,7 @@ export function AppShell({
                       className="flex h-12 w-full cursor-default items-center gap-2.5 rounded-lg px-4 text-lg font-bold text-white/45"
                       title={`Existe no sistema (${item.origem}) e ainda não foi portado`}
                     >
-                      <item.Icon className="h-5 w-5 shrink-0" />
+                      <Icon name={item.icon} className="w-6 shrink-0 text-center" />
                       <span className="truncate">{item.label}</span>
                     </span>
                   </li>
@@ -179,7 +160,7 @@ export function AppShell({
                         : "hover:bg-[var(--color-brand-blue-dark)]/40",
                     ].join(" ")}
                   >
-                    <item.Icon className="h-5 w-5 shrink-0" />
+                    <Icon name={item.icon} className="w-6 shrink-0 text-center" />
                     <span className="truncate">{item.label}</span>
                   </a>
                 </li>
@@ -193,7 +174,7 @@ export function AppShell({
         {surface === "backoffice" && (
           <header className="sticky top-0 z-40 flex items-center justify-between gap-4 bg-surface px-4 py-4 shadow-[var(--shadow-main)] lg:px-8">
             <div className="flex min-w-0 items-center gap-4">
-              <IconSidebar className="hidden h-5 w-5 shrink-0 text-[var(--color-brand-purple-dark)]/60 lg:block" />
+              <Icon name="fa-sidebar" className="hidden shrink-0 text-[var(--color-brand-purple-dark)]/60 lg:block" />
               {breadcrumb && breadcrumb.length > 0 && (
                 <nav aria-label="Trilha de navegação" className="min-w-0">
                   <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[0.8125rem] text-[var(--fg-2)]">
@@ -238,7 +219,7 @@ export function AppShell({
                   Vila Aurora
                 </p>
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-green)]/20">
-                  <IconUnidades className="h-5 w-5 text-[var(--color-green)]" />
+                  <Icon name="fa-hospital" className="text-[var(--color-green)]" />
                 </span>
               </div>
 
@@ -250,7 +231,7 @@ export function AppShell({
                   {context.persona?.name ?? "—"}
                 </p>
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand-purple)]/20">
-                  <IconColaboradores className="h-5 w-5 text-[var(--color-purple)]" />
+                  <Icon name="fa-user-tie" className="text-[var(--color-purple)]" />
                 </span>
               </div>
             </div>
