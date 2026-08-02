@@ -43,6 +43,48 @@ Superfície medida em 2026-08-01:
 5. **Portais externos** — operadora, responsável legal, público (auto-checkin,
    anamnese, NPS).
 
+## Onde o porte chegou
+
+Números de 2026-08-02, 09:00 — fim da janela de trabalho contínuo.
+
+| | |
+| --- | --- |
+| Cenários | 244 |
+| Regras declaradas | 183 |
+| Fixtures determinísticas | 298 |
+| Telas React | 45 |
+| Testes de regra | 648 |
+| Jornadas Playwright | 839 |
+| Achados sobre o sistema real | 89 |
+| Rodadas registradas | 66 |
+
+Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
+antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
+citado, e um script confere as 91 citações a cada verificação.
+
+**O que sustenta isso não são os cenários, são as varreduras.** Nove testes
+percorrem *todos* os cenários a cada execução: nenhum renderiza vazio, nenhum
+salta nível de título, nenhum vaza jargão de código, o que a tela declara
+anunciar é o que ela anuncia, o foco não volta para cima dentro de uma coluna,
+nada tem alvo menor que 24px nem rolagem lateral a 375px, o texto dobra sem
+transbordar, cadeia longa quebra dentro da caixa, movimento reduzido é
+respeitado, e o mesmo cenário mostra os mesmos horários em três fusos. Três
+vezes ao longo da noite uma varredura escrita horas antes reprovou trabalho que
+eu tinha acabado de fazer.
+
+**Quatro coisas que publiquei e depois corrigi**, todas marcadas no lugar:
+dois achados retratados por eu não ter verificado que o cron do Oban roda no
+fuso da clínica; um reduzido por exagero (`inspect` sem efeito visível, por
+causa de uma guarda que eu não tinha lido); e uma numeração errada numa tabela
+de referência cruzada. Estão registradas porque a taxa de erro é informação: um
+achado exagerado gasta o crédito dos outros.
+
+**O que ficou de fora.** As PRs não foram abertas — a escolha foi “branch por
+módulo, PR no fim”, e abrir PR é ação para fora, que depende do teu aval. O
+build avisa que o pacote passa de 500 kB e sugere divisão em partes; para um
+Design Space aberto por link isso não é problema, mas a decisão é tua.
+
+
 ## Como ler este documento
 
 Três partes, e elas servem a leitores diferentes.
