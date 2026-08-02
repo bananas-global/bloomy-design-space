@@ -4974,3 +4974,87 @@ describe("page-size-decides-what-can-be-compared", () => {
     expect(pageCount({ limit: 5, total: 0 })).toBe(1);
   });
 });
+
+/* ================================================ Pendências de cadastro */
+
+import type { PatientGapsData } from "../src/contracts/index.js";
+import {
+  GAP_ORDER,
+  byUrgency,
+  countByGap,
+  gapConsequence,
+  shareOfActive,
+  worstGap,
+} from "../src/rules/patients.js";
+
+function gapsData(patients: PatientGapsData["patients"], activePatients = 48): PatientGapsData {
+  return { patients, activePatients };
+}
+
+const pac = (id: string, name: string) => ({ id, name, birthDate: "2019-11-04" });
+
+describe("the-four-gaps-have-different-weights", () => {
+  it("põe a lacuna clínica primeiro na ordem de consequência", () => {
+    expect(GAP_ORDER[0]).toBe("support_level");
+  });
+
+  it("escolhe a lacuna mais grave de quem tem várias", () => {
+    expect(
+      worstGap({ patient: pac("a", "A"), gaps: ["plan", "support_level"], daysInCare: 10 }),
+    ).toBe("support_level");
+    expect(worstGap({ patient: pac("b", "B"), gaps: ["plan", "hour_map"], daysInCare: 10 })).toBe(
+      "hour_map",
+    );
+  });
+
+  it("cada lacuna tem efeito e dono próprios, e o clínico não é da recepção", () => {
+    expect(gapConsequence("support_level").dono).toContain("Especialista");
+    expect(gapConsequence("unit").dono).toContain("Recepção");
+    expect(gapConsequence("support_level").efeito).toContain("intensidade da intervenção");
+  });
+});
+
+describe("ordenação das pendências", () => {
+  const dados = gapsData([
+    { patient: pac("a", "Rafael"), gaps: ["plan"], daysInCare: 15 },
+    { patient: pac("b", "Nina"), gaps: ["support_level"], daysInCare: 312 },
+    { patient: pac("c", "Alice"), gaps: ["plan"], daysInCare: 190 },
+  ]);
+
+  it("abre pela consequência, e não por nome", () => {
+    expect(byUrgency(dados)[0]!.patient.name).toBe("Nina");
+  });
+
+  it("dentro da mesma lacuna, quem está há mais tempo vem antes", () => {
+    const [, segundo, terceiro] = byUrgency(dados);
+    expect(segundo!.patient.name).toBe("Alice");
+    expect(terceiro!.patient.name).toBe("Rafael");
+  });
+
+  it("não altera a lista original", () => {
+    byUrgency(dados);
+    expect(dados.patients[0]!.patient.name).toBe("Rafael");
+  });
+});
+
+describe("tamanho do problema", () => {
+  it("conta por lacuna e omite as que ninguém tem", () => {
+    const dados = gapsData([
+      { patient: pac("a", "A"), gaps: ["plan", "hour_map"], daysInCare: 10 },
+      { patient: pac("b", "B"), gaps: ["plan"], daysInCare: 10 },
+    ]);
+    expect(countByGap(dados)).toEqual([
+      { gap: "hour_map", count: 1 },
+      { gap: "plan", count: 2 },
+    ]);
+  });
+
+  it("dá proporção ao total, porque doze não diz nada sozinho", () => {
+    expect(shareOfActive(gapsData([{ patient: pac("a", "A"), gaps: ["plan"], daysInCare: 1 }], 48))).toBe(2);
+    expect(shareOfActive(gapsData([{ patient: pac("a", "A"), gaps: ["plan"], daysInCare: 1 }], 4))).toBe(25);
+  });
+
+  it("não divide por zero quando não há paciente ativo", () => {
+    expect(shareOfActive(gapsData([], 0))).toBeUndefined();
+  });
+});

@@ -1231,6 +1231,43 @@ jornada para isso — **um aviso que aparece sempre é um aviso que ninguém lê
 Registrado em `docs/decisions/0006`. 1 cenário, 4 testes de regra, 2 jornadas.
 
 
+### 42. A consulta existe e a pergunta não era feita — `porte/pendencias-de-cadastro`
+
+`PatientFilters` aceita dezesseis filtros, e dois deles não têm equivalente em
+tela nenhuma: `missing` e `missing_any`. O sistema **sabe** responder "quem está
+sem plano, sem unidade, sem mapa de horas ou sem nível de suporte" — e ninguém
+pergunta, porque a resposta só existe como parâmetro de endereço.
+
+São quatro **relações que nunca foram estabelecidas**, e não campos obrigatórios
+em branco — coisa diferente da regra de cadastro incompleto que o módulo já
+tinha. E **nenhuma bloqueia nada**: o paciente é atendido, as sessões acontecem
+e os programas rodam com as quatro em aberto. É o que as torna caras — um
+bloqueio se resolve porque incomoda hoje; estas só incomodam quando alguém
+precisa do dado, e aí já faz meses.
+
+Três decisões:
+
+- **A ordem é por consequência, não por nome.** Sem nível de suporte, o perfil
+  TEA está incompleto — e é o dado que dimensiona a intensidade da intervenção,
+  logo é lacuna clínica, do especialista. Sem unidade, o paciente some de todos
+  os mapas. Sem mapa, não há semana pretendida. Sem plano, não há o que o
+  responsável aceite. Listadas como "cadastro incompleto" as quatro pedem a
+  mesma coisa; nomeadas pela consequência, cada uma tem dono e urgência
+  próprios.
+- **O tempo em atendimento vem junto da lacuna.** Duas semanas é tarefa; dez
+  meses é processo que não fecha, e na lista as duas são idênticas sem isso.
+- **O total ganha proporção.** Seis pendências não dizem nada sozinhas — seis de
+  quarenta e oito, sim.
+
+**A varredura de jargão pegou uma regressão minha.** Escrevi `missing` e
+`missing_any` no texto da tela, exatamente o defeito que corrigi três rodadas
+atrás com `patients.edit`. A varredura escrita naquela ocasião reprovou o commit
+horas depois. É o segundo caso da noite em que uma verificação permanente pega o
+estrago de trabalho novo.
+
+4 cenários, 9 testes de regra, 7 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
