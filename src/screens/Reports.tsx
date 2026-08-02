@@ -152,7 +152,7 @@ function ReportCard({
         {/* O destinatário não está no schema. Está aqui porque é o que decide o
             cuidado com o conteúdo — e sem ele o handoff produz sete telas
             iguais. */}
-        <p className="m-0 max-w-[68ch] text-[15px] text-navy">
+        <p className="m-0 max-w-[68ch] text-[0.9375rem] text-navy">
           <span className="font-semibold">Vai para:</span> {target.who}.
         </p>
 
@@ -165,7 +165,7 @@ function ReportCard({
         )}
 
         {report.attendance && (
-          <dl className="m-0 grid grid-cols-[minmax(140px,auto)_1fr] gap-x-6 gap-y-1.5 text-[14px]">
+          <dl className="m-0 grid grid-cols-[minmax(140px,auto)_1fr] gap-x-6 gap-y-1.5 text-[0.875rem]">
             <dt className="text-[var(--fg-2)]">Data</dt>
             <dd className="m-0 text-navy">
               {report.attendance.date
@@ -182,7 +182,7 @@ function ReportCard({
         )}
 
         {report.period && (
-          <p className="m-0 text-[14px] text-navy">
+          <p className="m-0 text-[0.875rem] text-navy">
             Período de {formatDate(`${report.period.start}T12:00:00.000-03:00`, locale)} a{" "}
             {formatDate(`${report.period.end}T12:00:00.000-03:00`, locale)}.
           </p>
@@ -193,16 +193,16 @@ function ReportCard({
             papel que saiu. */}
         {report.content && report.reportType !== "declaration_of_attendance" && (
           <div className="rounded-field bg-ink-50 px-4 py-3">
-            <h3 className="m-0 text-[13px] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+            <h3 className="m-0 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
               Conteúdo
             </h3>
-            <p className="m-0 mt-1 max-w-[68ch] text-[15px] leading-relaxed text-navy">
+            <p className="m-0 mt-1 max-w-[68ch] text-[0.9375rem] leading-relaxed text-navy">
               {report.content}
             </p>
           </div>
         )}
 
-        <p className="m-0 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 text-[0.8125rem] text-[var(--fg-2)]">
           Criado por {report.authorName} em {formatDateTime(report.createdAt, locale)}
           {report.ownerName && report.ownerName !== report.authorName && (
             <> · responde pelo documento: {report.ownerName}</>

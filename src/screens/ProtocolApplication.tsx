@@ -110,15 +110,15 @@ export function ProtocolApplication({ context }: ScreenProps) {
           hint={protocol.format === "abllsr" ? "Formato ABLLS-R" : "Formato padrão"}
         />
         <div className="space-y-4 px-5 py-5">
-          <p className="m-0 max-w-[68ch] text-[15px] text-navy">{protocol.explication}</p>
+          <p className="m-0 max-w-[68ch] text-[0.9375rem] text-navy">{protocol.explication}</p>
 
           {/* O número nunca aparece sozinho: "respondido" é metade da informação. */}
           <div>
-            <p className="m-0 text-[15px] font-semibold text-navy">
+            <p className="m-0 text-[0.9375rem] font-semibold text-navy">
               {total.answered} de {total.total} itens respondidos — {total.percent}% do instrumento
               preenchido
             </p>
-            <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
               É medida de preenchimento, não de desempenho do paciente.
             </p>
           </div>
@@ -133,7 +133,7 @@ export function ProtocolApplication({ context }: ScreenProps) {
               <Button id="retomar" variant="primary">
                 Retomar em {resume.code}
               </Button>
-              <p className="m-0 mt-1.5 max-w-[60ch] text-[13px] text-[var(--fg-2)]">
+              <p className="m-0 mt-1.5 max-w-[60ch] text-[0.8125rem] text-[var(--fg-2)]">
                 Retomar vai para o primeiro item ainda sem resposta — dentro da área atual primeiro,
                 depois nas seguintes. Não é o próximo da lista.
               </p>
@@ -182,13 +182,13 @@ function AreaBlock({
       <div className="px-5 py-5">
         {/* Progresso próprio da área: é por ela que a aplicação é dividida
             entre sessões, e às vezes entre profissionais. */}
-        <p className="m-0 text-[14px] font-semibold text-navy">
+        <p className="m-0 text-[0.875rem] font-semibold text-navy">
           {progress.answered} de {progress.total} respondidos nesta área
           {progress.total > 0 && ` — ${progress.percent}%`}
         </p>
 
         {area.details && (
-          <p className="m-0 mt-1 max-w-[68ch] text-[13px] text-[var(--fg-2)]">{area.details}</p>
+          <p className="m-0 mt-1 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">{area.details}</p>
         )}
 
         <ol className="m-0 mt-4 list-none space-y-4 p-0">
@@ -234,29 +234,29 @@ function QuestionRow({
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-mono text-[13px] font-bold text-navy">{question.code}</span>
-        <h3 className="m-0 flex-1 text-[15px] font-semibold text-navy">{question.question}</h3>
+        <span className="font-mono text-[0.8125rem] font-bold text-navy">{question.code}</span>
+        <h3 className="m-0 flex-1 text-[0.9375rem] font-semibold text-navy">{question.question}</h3>
         {answered ? <Chip tone="ok">Respondido</Chip> : <Chip tone="pending">Em branco</Chip>}
         {current && <Chip tone="info">Em foco</Chip>}
       </div>
 
-      <p className="m-0 mt-1.5 max-w-[68ch] text-[13px] text-[var(--fg-2)]">{question.criteria}</p>
+      <p className="m-0 mt-1.5 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">{question.criteria}</p>
 
       {question.example && (
-        <p className="m-0 mt-1 max-w-[68ch] text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">
           <span className="font-semibold">Exemplo:</span> {question.example}
         </p>
       )}
 
       <div className="mt-3">
         {control === undefined ? (
-          <p className="m-0 text-[13px] font-semibold text-danger-fg" role="alert">
+          <p className="m-0 text-[0.8125rem] font-semibold text-danger-fg" role="alert">
             Este item não tem escala nem faixa configurada. Não dá para responder sem saber o que
             está sendo perguntado.
           </p>
         ) : control.kind === "scale" ? (
           <fieldset className="m-0 border-0 p-0">
-            <legend className="mb-1.5 text-[13px] font-semibold text-navy">
+            <legend className="mb-1.5 text-[0.8125rem] font-semibold text-navy">
               Resposta — escala do protocolo
             </legend>
             <div className="flex flex-wrap gap-2">
@@ -265,7 +265,7 @@ function QuestionRow({
                 return (
                   <span
                     key={option.id}
-                    className={`inline-flex items-center gap-1.5 rounded-field border px-3 py-1.5 text-[14px] ${
+                    className={`inline-flex items-center gap-1.5 rounded-field border px-3 py-1.5 text-[0.875rem] ${
                       chosen
                         ? "border-action bg-action text-white font-semibold"
                         : "border-[var(--border-strong)] bg-surface text-navy"
@@ -280,10 +280,10 @@ function QuestionRow({
           </fieldset>
         ) : (
           <div>
-            <p className="m-0 text-[13px] font-semibold text-navy">
+            <p className="m-0 text-[0.8125rem] font-semibold text-navy">
               Resposta — faixa de {control.min} a {control.max}, própria deste item
             </p>
-            <p className="m-0 mt-1 text-[15px] text-navy">
+            <p className="m-0 mt-1 text-[0.9375rem] text-navy">
               {question.answer ? (
                 <>
                   <span className="font-semibold">{question.answer.value}</span> de {control.max}
@@ -297,13 +297,13 @@ function QuestionRow({
       </div>
 
       {question.answer && (
-        <p className="m-0 mt-2 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-2 text-[0.8125rem] text-[var(--fg-2)]">
           Registrado em {formatDateTime(question.answer.at, locale)}.
         </p>
       )}
 
       {question.observation && (
-        <p className="m-0 mt-2 max-w-[68ch] rounded-field bg-ink-50 px-3 py-2 text-[13px] text-navy">
+        <p className="m-0 mt-2 max-w-[68ch] rounded-field bg-ink-50 px-3 py-2 text-[0.8125rem] text-navy">
           <span className="font-semibold">Observação:</span> {question.observation}
         </p>
       )}

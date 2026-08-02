@@ -97,7 +97,7 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
         {status === "cancelled" && appointment.cancellation && (
           <Notice tone="danger" title="Atendimento cancelado">
             <p className="m-0">{appointment.cancellation.reason}</p>
-            <p className="m-0 mt-1.5 text-[13px]">
+            <p className="m-0 mt-1.5 text-[0.8125rem]">
               Por {appointment.cancellation.by} em{" "}
               {formatDateTime(appointment.cancellation.at, locale)}.
             </p>
@@ -134,7 +134,7 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
                     <>
                       {appointment.insurance.name}
                       {!appointment.insurance.authorized && (
-                        <span className="ml-2 text-[14px] font-semibold text-pending-fg">
+                        <span className="ml-2 text-[0.875rem] font-semibold text-pending-fg">
                           sem autorização
                         </span>
                       )}
@@ -174,7 +174,7 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
             {/* Região de status: o resultado de cancelar ou registrar ausência
                 precisa ser anunciado, não apenas exibido. É o que os cenários
                 declaram em `announces`. */}
-            <p role="status" aria-live="polite" className="m-0 min-h-6 text-[15px] text-navy">
+            <p role="status" aria-live="polite" className="m-0 min-h-6 text-[0.9375rem] text-navy">
               {outcome}
             </p>
 
@@ -214,10 +214,10 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
                   setOutcome("Atendimento cancelado. A justificativa foi registrada.");
                 }}
               >
-                <label htmlFor={cancelReasonId} className="block text-[14px] font-semibold text-navy">
+                <label htmlFor={cancelReasonId} className="block text-[0.875rem] font-semibold text-navy">
                   Justificativa do cancelamento
                 </label>
-                <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+                <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
                   Obrigatória pela regra <code>cancel-requires-reason</code>.
                 </p>
                 <textarea
@@ -226,7 +226,7 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
                   rows={3}
                   value={cancelReason}
                   onChange={(event) => setCancelReason(event.target.value)}
-                  className="mt-2 w-full rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[15px] text-navy placeholder:text-[var(--fg-3)]"
+                  className="mt-2 w-full rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[0.9375rem] text-navy placeholder:text-[var(--fg-3)]"
                   placeholder="Ex.: paciente remarcou por conflito de trabalho"
                 />
                 <div className="mt-3 flex flex-wrap gap-2.5">
@@ -257,7 +257,7 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
         <Card as="section">
           <CardHeader title="Reagendar" hint="Verificação de conflito na hora da escolha" />
           <div className="px-5 py-5">
-            <label htmlFor="novo-horario" className="block text-[14px] font-semibold text-navy">
+            <label htmlFor="novo-horario" className="block text-[0.875rem] font-semibold text-navy">
               Novo horário
             </label>
             {/* O campo segue a permissão junto com o botão. Deixar o horário
@@ -272,7 +272,7 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
               disabled={!canReschedule}
               onChange={(event) => setRescheduleTo(event.target.value)}
               aria-describedby="novo-horario-aviso"
-              className="mt-2 rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[15px] text-navy disabled:cursor-not-allowed disabled:opacity-55"
+              className="mt-2 rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[0.9375rem] text-navy disabled:cursor-not-allowed disabled:opacity-55"
             />
 
             {/* A dica inicial **não** é uma região viva.
@@ -284,13 +284,13 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
             {/* Sempre renderizada, ainda que vazia: o campo aponta para ela
                 por `aria-describedby`, e um id que some deixa a referência
                 pendurada. */}
-            <p id="novo-horario-aviso" className="m-0 mt-2 min-h-5 text-[13px] text-[var(--fg-2)]">
+            <p id="novo-horario-aviso" className="m-0 mt-2 min-h-5 text-[0.8125rem] text-[var(--fg-2)]">
               {canReschedule && rescheduleTo === ""
                 ? `Duração mantida: ${durationMinutes(appointment)} minutos.`
                 : null}
             </p>
 
-            <p role="status" aria-live="polite" className="m-0 mt-2 min-h-5 text-[13px]">
+            <p role="status" aria-live="polite" className="m-0 mt-2 min-h-5 text-[0.8125rem]">
               {/* Vazia até alguém escolher um horário. Sem permissão fica
                   calada também: o motivo já está no botão por
                   `unavailableReason`, e repeti-lo aqui faria o leitor de tela

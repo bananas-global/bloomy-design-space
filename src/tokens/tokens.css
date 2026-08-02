@@ -140,7 +140,11 @@ body {
   background: var(--color-app);
   color: var(--fg-1);
   font-family: var(--font-sans);
-  font-size: 16px;
+  /* `1rem`, e não `16px`. Em pixel, o corpo ignora a fonte padrão que a
+     pessoa escolheu no navegador — e com ele todo o resto da escala, que é
+     relativa a este valor. Quem aumenta a fonte padrão para enxergar melhor
+     não recebia mudança nenhuma. Ver `docs/decisions/0005`. */
+  font-size: 1rem;
   -webkit-font-smoothing: antialiased;
 }
 

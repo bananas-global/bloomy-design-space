@@ -135,11 +135,11 @@ function ObjectiveBlock({
   return (
     <section className="rounded-card border border-[var(--border-soft)] px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="m-0 text-[15px] font-bold text-navy">{objective.name}</h3>
+        <h3 className="m-0 text-[0.9375rem] font-bold text-navy">{objective.name}</h3>
         {objective.status === "acquired" ? (
           <Chip tone="ok">Objetivo adquirido</Chip>
         ) : (
-          <span className="text-[13px] text-[var(--fg-2)]">
+          <span className="text-[0.8125rem] text-[var(--fg-2)]">
             {objective.programs.filter((item) => item.status === "acquired").length} de{" "}
             {objective.programs.length}{" "}
             {objective.programs.length === 1 ? "programa adquirido" : "programas adquiridos"}
@@ -178,7 +178,7 @@ function ProgramBlock({
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h4 className="m-0 text-[15px] font-semibold text-navy">{program.name}</h4>
+        <h4 className="m-0 text-[0.9375rem] font-semibold text-navy">{program.name}</h4>
         <Chip tone={program.programType === "structured" ? "info" : "neutral"}>
           {program.programType === "structured" ? "Estruturado" : "Incidental"}
         </Chip>
@@ -187,20 +187,20 @@ function ProgramBlock({
       </div>
 
       {program.shortDescription && (
-        <p className="m-0 mt-1 max-w-[68ch] text-[14px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 max-w-[68ch] text-[0.875rem] text-[var(--fg-2)]">
           {program.shortDescription}
         </p>
       )}
 
       {superseded && (
-        <p className="m-0 mt-2 max-w-[68ch] text-[13px] text-navy">
+        <p className="m-0 mt-2 max-w-[68ch] text-[0.8125rem] text-navy">
           Substituída por uma versão nova, e mantida porque as tentativas já registradas pertencem a
           ela. Apagá-la apagaria a evolução medida sob o critério anterior.
         </p>
       )}
 
       {program.programType === "incidental" && (
-        <p className="m-0 mt-2 max-w-[68ch] text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-2 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">
           Registro incidental: não tem configuração de fase nem critério de domínio. É contagem, não
           aquisição.
         </p>
@@ -240,19 +240,19 @@ function StepRow({
   return (
     <li className="border-t border-[var(--border-soft)] pt-3 first:border-0 first:pt-0">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[15px] text-navy">
+        <span className="text-[0.9375rem] text-navy">
           {step.position}. {step.name}
         </span>
         <Chip tone={step.phase === "acquired" ? "ok" : "neutral"}>{phaseLabel(step.phase)}</Chip>
       </div>
 
       {step.status === "acquired" ? (
-        <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">
           Adquirido{step.acquiredAt && ` em ${formatDate(step.acquiredAt, locale)}`}.
         </p>
       ) : progress ? (
         <>
-          <p className="m-0 mt-1 text-[13px] text-navy">
+          <p className="m-0 mt-1 text-[0.8125rem] text-navy">
             {/* O critério por extenso, não só o número: é o que permite prever a
                 próxima sessão em vez de só constatar a atual. */}
             <span className="font-semibold">{criteriaSentence(progress.criteria, step.phase)}</span>
@@ -264,13 +264,13 @@ function StepRow({
           </p>
 
           {progress.criteria.criteria === "consecutive" && (
-            <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
               Consecutivas: uma sessão abaixo do alvo zera a contagem.
             </p>
           )}
         </>
       ) : (
-        <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">Sem critério de domínio.</p>
+        <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">Sem critério de domínio.</p>
       )}
 
       {regression && (
@@ -324,7 +324,7 @@ function History({ step, program }: { step: PlanStep; program: PlanProgram }) {
         return (
           <li key={session.date}>
             <span
-              className={`inline-flex items-center gap-1 rounded-field px-2 py-0.5 text-[13px] font-semibold ${
+              className={`inline-flex items-center gap-1 rounded-field px-2 py-0.5 text-[0.8125rem] font-semibold ${
                 met ? "bg-ok-bg text-ok-fg" : "bg-danger-bg text-danger-fg"
               }`}
             >

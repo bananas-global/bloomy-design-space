@@ -86,13 +86,13 @@ export function Supervision({ context }: ScreenProps) {
         <div className="px-5 py-5">
           {/* A tela diz para que lado está olhando, porque conferir e
               acompanhar pedem janelas opostas. */}
-          <p className="m-0 max-w-[68ch] text-[15px] text-navy">
+          <p className="m-0 max-w-[68ch] text-[0.9375rem] text-navy">
             {looksForward(supervision.period)
               ? "Este período alcança o que ainda vai acontecer — é a janela de acompanhar, em que dá para decidir onde estar."
               : "Este período olha só para trás — é a janela de conferir o que já aconteceu."}
           </p>
           {noPadrao && (
-            <p className="m-0 mt-2 max-w-[68ch] text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 mt-2 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">
               É o padrão do sistema: 30 dias para trás, terminando hoje. Ninguém abre a tela assim
               para decidir onde estar amanhã — e é aí que a supervisão muda o resultado.
             </p>
@@ -115,17 +115,17 @@ export function Supervision({ context }: ScreenProps) {
                       : "border-[var(--border-soft)]"
                   }`}
                 >
-                  <p className="m-0 text-[15px] font-semibold text-navy">
+                  <p className="m-0 text-[0.9375rem] font-semibold text-navy">
                     {supervisor.name}
                     {/* Selecionado dito em palavra: a borda e o fundo sozinhos
                         deixam a relação com o painel da direita por inferir. */}
                     {supervisor.id === supervision.selectedSupervisorId && (
-                      <span className="ml-2 text-[13px] font-normal text-[var(--fg-2)]">
+                      <span className="ml-2 text-[0.8125rem] font-normal text-[var(--fg-2)]">
                         · em exibição ao lado
                       </span>
                     )}
                   </p>
-                  <p className="m-0 text-[13px] text-[var(--fg-2)]">
+                  <p className="m-0 text-[0.8125rem] text-[var(--fg-2)]">
                     {supervisor.specialtyName} · {supervisor.internCount}{" "}
                     {supervisor.internCount === 1 ? "supervisionado" : "supervisionados"}
                   </p>
@@ -242,26 +242,26 @@ function ScheduleRow({
           {supervisionStateLabel(state)}
         </Chip>
         {waiting !== undefined && (
-          <span className="text-[13px] font-semibold text-warn-fg">
+          <span className="text-[0.8125rem] font-semibold text-warn-fg">
             há {waiting} {waiting === 1 ? "dia" : "dias"}
           </span>
         )}
       </div>
 
-      <p className="m-0 mt-1.5 text-[15px] font-semibold text-navy">
+      <p className="m-0 mt-1.5 text-[0.9375rem] font-semibold text-navy">
         {schedule.professionalName} · {schedule.patientName}
       </p>
-      <p className="m-0 text-[14px] text-navy">
+      <p className="m-0 text-[0.875rem] text-navy">
         {schedule.specialtyName} · {schedule.serviceName}
       </p>
-      <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+      <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
         {formatDate(schedule.start, locale)}, {formatTime(schedule.start, locale)} às{" "}
         {formatTime(schedule.end, locale)}
         {schedule.roomName && <> · {schedule.roomName}</>}
       </p>
 
       {schedule.signedByProfessionalAt && (
-        <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">
           {schedule.professionalName} assinou em{" "}
           {formatDate(schedule.signedByProfessionalAt, locale)} às{" "}
           {formatTime(schedule.signedByProfessionalAt, locale)}

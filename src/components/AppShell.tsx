@@ -108,7 +108,7 @@ export function AppShell({
                 context.navigate(item.path);
               }}
               className={[
-                "rounded-field px-3 py-2 text-[15px] font-semibold no-underline transition-colors",
+                "rounded-field px-3 py-2 text-[0.9375rem] font-semibold no-underline transition-colors",
                 isCurrent
                   ? "bg-white/12 text-white shadow-[inset_3px_0_0_0_var(--color-cyan-brand)]"
                   : "text-ink-300 hover:bg-white/8 hover:text-white",
@@ -120,7 +120,7 @@ export function AppShell({
         })}
 
         <div className="mt-auto border-t border-white/10 px-2 pt-4">
-          <p className="m-0 text-[11px] font-black uppercase tracking-wide text-ink-300">Perfil</p>
+          <p className="m-0 text-[0.6875rem] font-black uppercase tracking-wide text-ink-300">Perfil</p>
           <p className="m-0 mt-0.5 text-sm font-semibold text-white">
             {context.persona?.name ?? "—"}
           </p>
@@ -132,7 +132,7 @@ export function AppShell({
         <header className="border-b border-[var(--border-soft)] bg-surface px-7 py-5">
           {breadcrumb && breadcrumb.length > 0 && (
             <nav aria-label="Trilha de navegação" className="mb-1.5">
-              <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[13px] text-[var(--fg-2)]">
+              <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[0.8125rem] text-[var(--fg-2)]">
                 {breadcrumb.map((crumb, index) => (
                   <li key={crumb.label} className="flex items-center gap-1.5">
                     {index > 0 && (

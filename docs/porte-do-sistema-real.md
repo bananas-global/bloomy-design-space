@@ -1091,6 +1091,35 @@ reprovou, restaurei.
 1 jornada de varredura (186 cenários), 2 telas corrigidas.
 
 
+### 37. A escala tipográfica ignorava a pessoa — `porte/escala-tipografica`
+
+Toda a tipografia estava em pixel: 294 ocorrências, mais `font-size: 16px` no
+`body`. Zoom de página escala pixel; **preferência de fonte padrão, não** — e é
+essa a acomodação mais comum de quem tem baixa visão. Medido: com a raiz em
+32 px, um parágrafo de 13 px continuava em 13 px.
+
+Isto era **conforme** — a WCAG 1.4.4 é satisfeita pelo zoom de página, e é assim
+que quase todo produto em pixel passa. Não havia violação a corrigir; havia gente
+sendo ignorada. Mesmo formato da decisão `0003`: a regra permitia, o argumento
+não.
+
+Convertido para `rem`. **A saída no padrão é idêntica** — `0.9375rem × 16 = 15px`
+—, conferido no navegador antes e depois. Com a raiz dobrada, o texto dobra
+(15→30, 13→26, 14→28) e o layout cresce de 10.021 px para 20.020 px de altura em
+vez de cortar. Nenhum dos 186 cenários transborda na horizontal com a fonte
+dobrada.
+
+**A varredura nasceu cega, e a mutação revelou.** A primeira versão media *um*
+elemento por tela. Passou — e passou também com `Notifications.tsx` inteiro
+revertido para pixel, porque o único elemento amostrado por acaso escalava.
+Passou a medir todos, e aí reprovou nomeando o elemento e os dois tamanhos.
+
+É a terceira vez esta noite que a mutação expõe uma verificação cega, e as três
+foram do mesmo tipo: **medir pouco aprova muito.**
+
+Registrado em `docs/decisions/0005`. 1 jornada de varredura, 294 conversões.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

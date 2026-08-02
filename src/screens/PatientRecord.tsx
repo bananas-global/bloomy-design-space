@@ -170,12 +170,12 @@ export function PatientRecordScreen({ context }: ScreenProps) {
         />
         <div className="px-5 py-5">
           {!hasCriteria(record) ? (
-            <p className="m-0 max-w-[68ch] text-[15px] text-navy">
+            <p className="m-0 max-w-[68ch] text-[0.9375rem] text-navy">
               Nenhum critério configurado para este paciente. Sem eles, nenhum limite de falta é
               aplicado — nem um padrão da clínica, porque não existe padrão.
             </p>
           ) : (
-            <dl className="m-0 grid grid-cols-[minmax(200px,auto)_1fr] gap-x-6 gap-y-2 text-[15px]">
+            <dl className="m-0 grid grid-cols-[minmax(200px,auto)_1fr] gap-x-6 gap-y-2 text-[0.9375rem]">
               <dt className="text-[var(--fg-2)]">Faltas seguidas</dt>
               <dd className="m-0 text-navy">
                 limite {record.alertCriteria!.maximumConsecutiveAbsences} ·{" "}
@@ -216,7 +216,7 @@ function DocumentRow({
   return (
     <li className="rounded-field border border-[var(--border-soft)] px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[15px] font-semibold text-navy">{document.name}</span>
+        <span className="text-[0.9375rem] font-semibold text-navy">{document.name}</span>
         <Chip tone={document.type === "clinical" ? "info" : "neutral"}>
           {capitalize(documentTypeLabel(document.type))}
         </Chip>
@@ -229,7 +229,7 @@ function DocumentRow({
       </div>
 
       {document.validUntil && (
-        <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">
           Válido até {formatDate(`${document.validUntil}T12:00:00.000-03:00`, locale)}
           {document.alertLeadDays !== undefined &&
             ` · avisa ${document.alertLeadDays} dias antes`}

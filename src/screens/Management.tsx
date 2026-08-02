@@ -101,9 +101,9 @@ export function Management({ context }: ScreenProps) {
                     : "border-[var(--border-soft)]"
                 }`}
               >
-                <p className="m-0 text-[24px] font-bold text-navy">{front.count}</p>
-                <p className="m-0 text-[15px] font-semibold text-navy">{front.title}</p>
-                <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+                <p className="m-0 text-[1.5rem] font-bold text-navy">{front.count}</p>
+                <p className="m-0 text-[0.9375rem] font-semibold text-navy">{front.title}</p>
+                <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
                   {front.count === 0 ? "em dia" : front.owner}
                 </p>
               </li>
@@ -148,13 +148,13 @@ export function Management({ context }: ScreenProps) {
                   }`}
                 >
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-[15px] font-semibold text-navy">
+                    <span className="text-[0.9375rem] font-semibold text-navy">
                       {gap.professionalName}
                     </span>
-                    <span className="text-[13px] text-[var(--fg-2)]">{gap.specialty}</span>
+                    <span className="text-[0.8125rem] text-[var(--fg-2)]">{gap.specialty}</span>
                     {isBlocking(gap) && <Chip tone="danger">Trava fechamento de sessão</Chip>}
                   </div>
-                  <p className="m-0 mt-1 max-w-[72ch] text-[14px] text-navy">
+                  <p className="m-0 mt-1 max-w-[72ch] text-[0.875rem] text-navy">
                     {mentorshipConsequence(gap)}
                   </p>
                 </li>
@@ -171,10 +171,10 @@ export function Management({ context }: ScreenProps) {
           <div className="px-5 py-5">
             <ul className="m-0 list-none space-y-2 p-0">
               {management.incompleteProfessionals.map((professional) => (
-                <li key={professional.id} className="text-[15px] text-navy">
+                <li key={professional.id} className="text-[0.9375rem] text-navy">
                   <span className="font-semibold">{professional.name}</span>{" "}
-                  <span className="text-[13px] text-[var(--fg-2)]">{professional.specialty}</span>
-                  <span className="block text-[14px] text-[var(--fg-2)]">
+                  <span className="text-[0.8125rem] text-[var(--fg-2)]">{professional.specialty}</span>
+                  <span className="block text-[0.875rem] text-[var(--fg-2)]">
                     Falta {professional.missing.join(", ")}.
                   </span>
                 </li>
@@ -198,9 +198,9 @@ export function Management({ context }: ScreenProps) {
             </Notice>
             <ul className="m-0 mt-3 list-none space-y-2 p-0">
               {management.patientsWithoutOwner.map((patient) => (
-                <li key={patient.id} className="text-[15px] text-navy">
+                <li key={patient.id} className="text-[0.9375rem] text-navy">
                   <span className="font-semibold">{patient.name}</span>{" "}
-                  <span className="text-[14px] text-[var(--fg-2)]">
+                  <span className="text-[0.875rem] text-[var(--fg-2)]">
                     há {daysWithoutOwner(patient.sinceDate, management.now)} dias · unidade{" "}
                     {patient.unitName}
                   </span>
@@ -238,15 +238,15 @@ function ReportRow({
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[15px] font-semibold text-navy">{report.patientName}</span>
-        <span className="text-[14px] text-navy">{reportTypeLabel(report.reportType)}</span>
+        <span className="text-[0.9375rem] font-semibold text-navy">{report.patientName}</span>
+        <span className="text-[0.875rem] text-navy">{reportTypeLabel(report.reportType)}</span>
         <Chip tone={report.requester === "operator" ? "warn" : "info"}>
           Pedido por: {requesterLabel(report.requester)}
         </Chip>
         {overdue && <Chip tone="danger">Atrasado {late} dias</Chip>}
       </div>
 
-      <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+      <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
         {report.professionalName} · vence em{" "}
         {formatDate(`${report.dueDate}T12:00:00.000-03:00`, locale)}
       </p>
@@ -254,13 +254,13 @@ function ReportRow({
       {/* A consequência concreta, e não um rótulo de severidade: é ela que faz
           alguém priorizar entre dois atrasos parecidos. */}
       {overdue && (
-        <p className="m-0 mt-1.5 max-w-[72ch] text-[14px] text-navy">
+        <p className="m-0 mt-1.5 max-w-[72ch] text-[0.875rem] text-navy">
           {overdueConsequence(report)}
         </p>
       )}
 
       {report.observations && (
-        <p className="m-0 mt-1.5 max-w-[72ch] rounded-field bg-ink-50 px-3 py-2 text-[13px] text-navy">
+        <p className="m-0 mt-1.5 max-w-[72ch] rounded-field bg-ink-50 px-3 py-2 text-[0.8125rem] text-navy">
           {report.observations}
         </p>
       )}

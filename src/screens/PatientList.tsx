@@ -49,10 +49,10 @@ export function PatientList({ context }: ScreenProps) {
   return wrap(
     context,
     <Card className="overflow-hidden p-0">
-      <table className="w-full border-collapse text-[15px]">
+      <table className="w-full border-collapse text-[0.9375rem]">
         <caption className="sr-only">Pacientes da unidade e situação do cadastro</caption>
         <thead>
-          <tr className="border-b border-[var(--border-soft)] text-left text-[12px] font-black uppercase tracking-wide text-[var(--fg-2)]">
+          <tr className="border-b border-[var(--border-soft)] text-left text-[0.75rem] font-black uppercase tracking-wide text-[var(--fg-2)]">
             <th scope="col" className="px-5 py-3">
               Paciente
             </th>
@@ -102,7 +102,7 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
         >
           {patient.name}
         </a>
-        <span className="mt-0.5 block text-[13px] text-[var(--fg-2)]">
+        <span className="mt-0.5 block text-[0.8125rem] text-[var(--fg-2)]">
           {patient.cpf ?? "CPF não informado"}
         </span>
       </th>
@@ -110,7 +110,7 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
       <td className="px-5 py-4 align-top tabular-nums">
         {ageInYears(patient.birthDate)} anos
         {minor && (
-          <span className="mt-0.5 block text-[13px] font-semibold text-[var(--fg-2)]">
+          <span className="mt-0.5 block text-[0.8125rem] font-semibold text-[var(--fg-2)]">
             {patient.guardian ? `resp.: ${patient.guardian.name}` : "sem responsável"}
           </span>
         )}
@@ -120,7 +120,7 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
         {patient.insurance ? (
           <>
             {patient.insurance.name}
-            <span className="block text-[13px] text-[var(--fg-2)]">{patient.insurance.plan}</span>
+            <span className="block text-[0.8125rem] text-[var(--fg-2)]">{patient.insurance.plan}</span>
           </>
         ) : (
           <span className="text-[var(--fg-2)]">Particular</span>
@@ -133,7 +133,7 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
         ) : (
           <>
             <Chip tone="pending">Incompleto</Chip>
-            <span className="mt-1 block text-[13px] text-[var(--fg-2)]">
+            <span className="mt-1 block text-[0.8125rem] text-[var(--fg-2)]">
               falta {missing.join(", ")}
             </span>
           </>

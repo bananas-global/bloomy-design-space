@@ -77,7 +77,7 @@ export function GuardianPortal({ context }: ScreenProps) {
         <CardHeader title="Próximos atendimentos" />
         <div className="px-5 py-5">
           {schedules.length === 0 ? (
-            <p className="m-0 text-[17px] text-navy">
+            <p className="m-0 text-[1.0625rem] text-navy">
               Nenhum horário marcado por enquanto. A clínica entra em contato para combinar os
               próximos.
             </p>
@@ -93,15 +93,15 @@ export function GuardianPortal({ context }: ScreenProps) {
                   }`}
                 >
                   <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-[17px] font-semibold text-navy">
+                    <span className="text-[1.0625rem] font-semibold text-navy">
                       {formatDate(item.start, locale)} às {formatTime(item.start, locale)}
                     </span>
                     {item.cancelled && <Chip tone="danger">Cancelado</Chip>}
                   </div>
-                  <p className="m-0 mt-0.5 text-[16px] text-navy">
+                  <p className="m-0 mt-0.5 text-[1rem] text-navy">
                     {item.patientName} · {item.serviceName}
                   </p>
-                  <p className="m-0 text-[14px] text-[var(--fg-2)]">
+                  <p className="m-0 text-[0.875rem] text-[var(--fg-2)]">
                     {item.professionalName} · unidade {item.unitName}
                   </p>
                 </li>
@@ -128,11 +128,11 @@ export function GuardianPortal({ context }: ScreenProps) {
         <Card as="section">
           <CardHeader title="Termos de uso" hint="Registro do seu aceite" />
           <div className="px-5 py-5">
-            <p className="m-0 text-[15px] text-navy">
+            <p className="m-0 text-[0.9375rem] text-navy">
               Aceitos em {formatDateTime(portal.termsAcceptance.acceptedAt, locale)}, de{" "}
               {portal.termsAcceptance.device}, pelo endereço {portal.termsAcceptance.ipAddress}.
             </p>
-            <p className="m-0 mt-1.5 max-w-[52ch] text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 mt-1.5 max-w-[52ch] text-[0.8125rem] text-[var(--fg-2)]">
               Guardamos esses três dados para que o aceite tenha registro se for questionado — não
               para acompanhar sua navegação.
             </p>
@@ -190,19 +190,19 @@ function PlanCard({
         </div>
 
         {plan.observation && (
-          <p className="m-0 max-w-[52ch] text-[16px] text-navy">{plan.observation}</p>
+          <p className="m-0 max-w-[52ch] text-[1rem] text-navy">{plan.observation}</p>
         )}
 
         {/* O plano por inteiro, antes do aceite. Consentir com resumo não é
             consentir — e "meta" e "objetivo" são as palavras que a família ouve
             na devolutiva. */}
         <div>
-          <h3 className="m-0 text-[16px] font-bold text-navy">O que vai ser trabalhado</h3>
+          <h3 className="m-0 text-[1rem] font-bold text-navy">O que vai ser trabalhado</h3>
           <ul className="m-0 mt-2 list-none space-y-3 p-0">
             {plan.goals.map((goal) => (
               <li key={goal.id}>
-                <p className="m-0 text-[16px] font-semibold text-navy">{goal.name}</p>
-                <ul className="m-0 mt-1 list-disc space-y-0.5 pl-5 text-[15px] text-navy">
+                <p className="m-0 text-[1rem] font-semibold text-navy">{goal.name}</p>
+                <ul className="m-0 mt-1 list-disc space-y-0.5 pl-5 text-[0.9375rem] text-navy">
                   {goal.objectives.map((objective) => (
                     <li key={objective}>{objective}</li>
                   ))}
@@ -214,14 +214,14 @@ function PlanCard({
 
         {plan.guardianApproved ? (
           <div className="rounded-field bg-ok-bg px-4 py-3">
-            <p className="m-0 text-[15px] text-ok-fg">
+            <p className="m-0 text-[0.9375rem] text-ok-fg">
               <span className="font-semibold">Assinado por {plan.signature}</span>
               {plan.signedAt && ` em ${formatDate(plan.signedAt + "T12:00:00.000-03:00", locale)}`}.
             </p>
           </div>
         ) : (
           <div>
-            <label htmlFor={`assinatura-${plan.id}`} className="block text-[16px] font-semibold text-navy">
+            <label htmlFor={`assinatura-${plan.id}`} className="block text-[1rem] font-semibold text-navy">
               Assine com seu nome completo
             </label>
             {/* Campo, e não caixa de seleção: digitar o próprio nome é um ato;
@@ -232,13 +232,13 @@ function PlanCard({
               autoComplete="name"
               disabled={!decision.allowed}
               placeholder={portal.guardian.name}
-              className="mt-2 w-full max-w-[26rem] rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[17px] text-navy disabled:cursor-not-allowed disabled:opacity-55"
+              className="mt-2 w-full max-w-[26rem] rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[1.0625rem] text-navy disabled:cursor-not-allowed disabled:opacity-55"
             />
             <div className="mt-3">
               <Button
                 id={`aceitar-${plan.id}`}
                 variant="primary"
-                className="px-6 py-3 text-[17px]"
+                className="px-6 py-3 text-[1.0625rem]"
                 unavailableReason={decision.allowed ? undefined : decision.reason}
               >
                 Aceitar o plano

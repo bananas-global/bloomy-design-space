@@ -107,20 +107,20 @@ export function Structure({ context }: ScreenProps) {
         />
         <div className="px-5 py-5">
           {structure.rooms.length === 0 ? (
-            <p className="m-0 text-[15px] text-navy">Nenhuma sala cadastrada nesta unidade.</p>
+            <p className="m-0 text-[0.9375rem] text-navy">Nenhuma sala cadastrada nesta unidade.</p>
           ) : (
             <ul className="m-0 list-none space-y-2 p-0">
               {structure.rooms.map((room) => (
                 <li key={room.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <span className="text-[15px] font-semibold text-navy">{room.name}</span>
+                  <span className="text-[0.9375rem] font-semibold text-navy">{room.name}</span>
                   <Chip tone={room.roomType === "motricity" ? "info" : "neutral"}>
                     {capitalize(roomTypeLabel(room.roomType))}
                   </Chip>
-                  <span className="text-[14px] text-navy">
+                  <span className="text-[0.875rem] text-navy">
                     {room.capacity} {room.capacity === 1 ? "lugar" : "lugares"}
                   </span>
                   {room.areaName && (
-                    <span className="text-[13px] text-[var(--fg-2)]">{room.areaName}</span>
+                    <span className="text-[0.8125rem] text-[var(--fg-2)]">{room.areaName}</span>
                   )}
                   {!room.active && (
                     <Chip tone="danger">
@@ -152,7 +152,7 @@ export function Structure({ context }: ScreenProps) {
         />
         <div className="px-5 py-5">
           {structure.blockings.length === 0 ? (
-            <p className="m-0 text-[15px] text-navy">Nenhum bloqueio cadastrado.</p>
+            <p className="m-0 text-[0.9375rem] text-navy">Nenhum bloqueio cadastrado.</p>
           ) : (
             <ul className="m-0 list-none space-y-3 p-0">
               {structure.blockings.map((blocking) => (
@@ -178,21 +178,21 @@ function ServiceRow({ service, structure }: { service: Service; structure: Struc
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="m-0 text-[15px] font-semibold text-navy">{service.name}</h3>
-        <span className="text-[13px] text-[var(--fg-2)]">{service.durationInMinutes} minutos</span>
+        <h3 className="m-0 text-[0.9375rem] font-semibold text-navy">{service.name}</h3>
+        <span className="text-[0.8125rem] text-[var(--fg-2)]">{service.durationInMinutes} minutos</span>
         {service.tussCode && (
-          <span className="font-mono text-[13px] text-[var(--fg-2)]">TUSS {service.tussCode}</span>
+          <span className="font-mono text-[0.8125rem] text-[var(--fg-2)]">TUSS {service.tussCode}</span>
         )}
         {skipsCheckin(service) && <Chip tone="info">Não cobrável</Chip>}
       </div>
 
       {service.needsRoom && service.roomTypes.length > 0 && (
-        <p className="m-0 mt-1 text-[14px] text-navy">
+        <p className="m-0 mt-1 text-[0.875rem] text-navy">
           Precisa de sala {service.roomTypes.map(roomTypeLabel).join(" ou ")}.
         </p>
       )}
 
-      <ul className="m-0 mt-2 list-disc space-y-0.5 pl-5 text-[14px] text-navy">
+      <ul className="m-0 mt-2 list-disc space-y-0.5 pl-5 text-[0.875rem] text-navy">
         {effects.map((effect) => (
           <li key={effect}>{effect}</li>
         ))}
@@ -213,15 +213,15 @@ function BlockingRow({
   return (
     <li className="rounded-field border border-[var(--border-soft)] px-4 py-3">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[15px] font-semibold text-navy">{message.title}</span>
+        <span className="text-[0.9375rem] font-semibold text-navy">{message.title}</span>
         <Chip tone={scopeTone(blocking.scope)}>{scopeLabel(blocking.scope)}</Chip>
         <Chip tone="neutral">{blockingTypeLabel(blocking.blockingType)}</Chip>
       </div>
-      <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">
+      <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">
         De {formatDateTime(blocking.start, locale)} a {formatDateTime(blocking.end, locale)}
       </p>
       {/* A saída, e não só o motivo: é o que distingue as três origens. */}
-      <p className="m-0 mt-1 text-[14px] font-semibold text-navy">{message.exit}</p>
+      <p className="m-0 mt-1 text-[0.875rem] font-semibold text-navy">{message.exit}</p>
     </li>
   );
 }

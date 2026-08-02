@@ -131,13 +131,13 @@ export function HourMapScreen({ context }: ScreenProps) {
             {map.autoRenew && <Chip tone="info">Renova sozinho</Chip>}
           </div>
 
-          <p className="m-0 text-[15px] text-navy">
+          <p className="m-0 text-[0.9375rem] text-navy">
             {Math.floor(minutes / 60)} horas por semana, de{" "}
             {formatDate(`${map.durationStart}T12:00:00.000-03:00`, locale)} a{" "}
             {formatDate(`${map.durationEnd}T12:00:00.000-03:00`, locale)}.
           </p>
 
-          <p className="m-0 max-w-[72ch] text-[13px] text-[var(--fg-2)]">
+          <p className="m-0 max-w-[72ch] text-[0.8125rem] text-[var(--fg-2)]">
             As horas por semana contam o que foi desenhado, e não o que sobrou depois dos conflitos:
             é o número que a coordenação combinou com a família, e ele não muda porque uma sala
             estava ocupada.
@@ -195,10 +195,10 @@ function SlotRow({ slot }: { slot: HourMapSlot }) {
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[15px] font-semibold text-navy">
+        <span className="text-[0.9375rem] font-semibold text-navy">
           {weekdayLabel(slot.weekday)}, {slot.startAt} às {slot.endAt}
         </span>
-        <span className="text-[14px] text-navy">{slot.serviceName}</span>
+        <span className="text-[0.875rem] text-navy">{slot.serviceName}</span>
         {slot.scheduleType === "at" && <Chip tone="info">Acompanhamento terapêutico</Chip>}
         {slot.sessionLocation !== "in_clinic" && (
           <Chip tone="neutral">
@@ -207,7 +207,7 @@ function SlotRow({ slot }: { slot: HourMapSlot }) {
         )}
       </div>
 
-      <p className="m-0 mt-1 text-[14px] text-navy">
+      <p className="m-0 mt-1 text-[0.875rem] text-navy">
         {slot.professionalName ?? (
           <span className="font-semibold text-warn-fg">sem profissional definido</span>
         )}
@@ -225,7 +225,7 @@ function SlotRow({ slot }: { slot: HourMapSlot }) {
           {slot.conflicts.map((conflict) => {
             const message = conflictMessage(conflict);
             return (
-              <li key={conflict} className="text-[13px] text-navy">
+              <li key={conflict} className="text-[0.8125rem] text-navy">
                 <span className="font-semibold">{message.what}</span>{" "}
                 <span className="text-[var(--fg-2)]">Resolver: {message.owner}.</span>
               </li>
@@ -235,7 +235,7 @@ function SlotRow({ slot }: { slot: HourMapSlot }) {
       )}
 
       {noProfessional && noRoom && (
-        <p className="m-0 mt-1.5 text-[13px] font-semibold text-navy">
+        <p className="m-0 mt-1.5 text-[0.8125rem] font-semibold text-navy">
           Este horário perdeu profissional e sala, e mesmo assim vai virar agendamento.
         </p>
       )}

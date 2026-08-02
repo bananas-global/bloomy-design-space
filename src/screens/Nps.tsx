@@ -38,33 +38,33 @@ export function Nps({ context }: ScreenProps) {
       {answered ? (
         <Card className="px-8 py-8">
           <div role="status">
-            <h2 className="m-0 text-[24px] font-bold text-navy">Obrigado pela resposta</h2>
+            <h2 className="m-0 text-[1.5rem] font-bold text-navy">Obrigado pela resposta</h2>
             {/* Mesmo agradecimento para nota 10 e para nota 4. Quem acabou de
                 reclamar não deve receber um tratamento diferente na saída. */}
-            <p className="m-0 mt-2 max-w-[44ch] text-[18px] text-navy">
+            <p className="m-0 mt-2 max-w-[44ch] text-[1.125rem] text-navy">
               Sua avaliação chegou para a equipe da unidade {nps.unit.name}.
             </p>
           </div>
 
           <dl className="m-0 mt-6 space-y-3">
             <div>
-              <dt className="text-[15px] text-[var(--fg-2)]">Nota que você deu</dt>
-              <dd className="m-0 text-[22px] font-bold text-navy">{response.rating} de 10</dd>
+              <dt className="text-[0.9375rem] text-[var(--fg-2)]">Nota que você deu</dt>
+              <dd className="m-0 text-[1.375rem] font-bold text-navy">{response.rating} de 10</dd>
             </div>
             {response.comment && (
               <div>
-                <dt className="text-[15px] text-[var(--fg-2)]">Seu comentário</dt>
-                <dd className="m-0 max-w-[52ch] text-[17px] text-navy">{response.comment}</dd>
+                <dt className="text-[0.9375rem] text-[var(--fg-2)]">Seu comentário</dt>
+                <dd className="m-0 max-w-[52ch] text-[1.0625rem] text-navy">{response.comment}</dd>
               </div>
             )}
           </dl>
         </Card>
       ) : (
         <Card className="px-8 py-8">
-          <h2 className="m-0 text-[24px] font-bold text-navy">
+          <h2 className="m-0 text-[1.5rem] font-bold text-navy">
             Como foi o atendimento na unidade {nps.unit.name}?
           </h2>
-          <p className="m-0 mt-2 max-w-[46ch] text-[18px] text-navy">
+          <p className="m-0 mt-2 max-w-[46ch] text-[1.125rem] text-navy">
             De 0 a 10, o quanto você recomendaria a Bloomy para outra família?
           </p>
 
@@ -74,7 +74,7 @@ export function Nps({ context }: ScreenProps) {
               {Array.from({ length: 11 }, (_, value) => (
                 <label
                   key={value}
-                  className="cursor-pointer rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[19px] font-semibold text-navy hover:bg-ink-50 has-[:checked]:border-action has-[:checked]:bg-action has-[:checked]:text-white"
+                  className="cursor-pointer rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[1.1875rem] font-semibold text-navy hover:bg-ink-50 has-[:checked]:border-action has-[:checked]:bg-action has-[:checked]:text-white"
                 >
                   <input type="radio" name="nota" value={value} className="sr-only" />
                   <span aria-hidden="true">{value}</span>
@@ -85,21 +85,21 @@ export function Nps({ context }: ScreenProps) {
                 </label>
               ))}
             </div>
-            <div className="mt-2 flex justify-between text-[14px] text-[var(--fg-2)]">
+            <div className="mt-2 flex justify-between text-[0.875rem] text-[var(--fg-2)]">
               <span>0 — de jeito nenhum</span>
               <span>10 — com certeza</span>
             </div>
           </fieldset>
 
           <div className="mt-6">
-            <label htmlFor="comentario" className="block text-[16px] font-semibold text-navy">
+            <label htmlFor="comentario" className="block text-[1rem] font-semibold text-navy">
               Quer contar mais alguma coisa? <span className="font-normal">(opcional)</span>
             </label>
             <textarea
               id="comentario"
               rows={4}
               maxLength={5000}
-              className="mt-2 w-full rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[17px] text-navy"
+              className="mt-2 w-full rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[1.0625rem] text-navy"
             />
           </div>
 
@@ -107,7 +107,7 @@ export function Nps({ context }: ScreenProps) {
             <Button
               id="enviar-nps"
               variant="primary"
-              className="px-8 py-3 text-[18px]"
+              className="px-8 py-3 text-[1.125rem]"
               unavailableReason={submission.allowed ? undefined : submission.reason}
             >
               Enviar
