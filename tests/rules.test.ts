@@ -5936,3 +5936,108 @@ describe("refusal-and-crash-log-the-same-string", () => {
     expect(indistinguishableInTheLog(tentativa({ id: "d", outcome: "pending" }))).toBe(false);
   });
 });
+
+/* ============================================== Distribuição de guias */
+
+import type { DistributedSchedule, DistributionData } from "../src/contracts/index.js";
+import {
+  couldHaveBeenPaid,
+  cutoffTime,
+  demandExceededBalance,
+  startingBalance,
+  unbillableCents,
+  withoutAuthorization,
+} from "../src/rules/distribution.js";
+
+function atendimento(
+  overrides: Partial<DistributedSchedule> & { id: string },
+): DistributedSchedule {
+  return {
+    patientName: "Théo",
+    serviceName: "Sessão",
+    start: "2026-07-30T08:00:00.000-03:00",
+    amountCents: 18_000,
+    authorizationCode: "AUT-1",
+    ...overrides,
+  };
+}
+
+describe("the-list-of-unpaid-is-computed-and-discarded", () => {
+  const dia: DistributionData = {
+    date: "2026-07-30",
+    packages: [{ name: "ABA", startingBalance: 2 }],
+    schedules: [
+      atendimento({ id: "a" }),
+      atendimento({ id: "b", start: "2026-07-30T09:00:00.000-03:00" }),
+      atendimento({ id: "c", start: "2026-07-30T15:00:00.000-03:00", authorizationCode: undefined }),
+      atendimento({ id: "d", start: "2026-07-30T16:30:00.000-03:00", authorizationCode: undefined }),
+    ],
+  };
+
+  it("isola os atendimentos sem guia", () => {
+    expect(withoutAuthorization(dia).map((s) => s.id)).toEqual(["c", "d"]);
+  });
+
+  it("soma o que não vai poder ser cobrado", () => {
+    expect(unbillableCents(dia)).toBe(36_000);
+  });
+
+  it("qualquer um dos que ficaram de fora poderia estar dentro", () => {
+    // É o mesmo conjunto: nomear assim é o que torna a arbitrariedade visível.
+    expect(couldHaveBeenPaid(dia).map((s) => s.id)).toEqual(["c", "d"]);
+  });
+
+  it("sem atendimento descoberto, não há valor perdido", () => {
+    const cheio: DistributionData = { ...dia, schedules: [atendimento({ id: "a" })] };
+    expect(unbillableCents(cheio)).toBe(0);
+  });
+});
+
+describe("the-clock-decides-who-gets-paid", () => {
+  it("aponta o horário a partir do qual o saldo acabou", () => {
+    const dia: DistributionData = {
+      date: "2026-07-30",
+      packages: [{ name: "ABA", startingBalance: 1 }],
+      schedules: [
+        atendimento({ id: "a" }),
+        atendimento({ id: "c", start: "2026-07-30T15:00:00.000-03:00", authorizationCode: undefined }),
+      ],
+    };
+    expect(cutoffTime(dia)).toBe("2026-07-30T15:00:00.000-03:00");
+  });
+
+  it("acha o corte mesmo com a lista fora de ordem", () => {
+    const dia: DistributionData = {
+      date: "2026-07-30",
+      packages: [{ name: "ABA", startingBalance: 1 }],
+      schedules: [
+        atendimento({ id: "tarde", start: "2026-07-30T16:00:00.000-03:00", authorizationCode: undefined }),
+        atendimento({ id: "meio", start: "2026-07-30T14:00:00.000-03:00", authorizationCode: undefined }),
+        atendimento({ id: "manha" }),
+      ],
+    };
+    expect(cutoffTime(dia)).toBe("2026-07-30T14:00:00.000-03:00");
+  });
+
+  it("não inventa corte quando todos couberam", () => {
+    const dia: DistributionData = {
+      date: "2026-07-30",
+      packages: [{ name: "ABA", startingBalance: 5 }],
+      schedules: [atendimento({ id: "a" })],
+    };
+    expect(cutoffTime(dia)).toBeUndefined();
+    expect(demandExceededBalance(dia)).toBe(false);
+  });
+
+  it("soma o saldo de todos os pacotes do dia", () => {
+    const dia: DistributionData = {
+      date: "2026-07-30",
+      packages: [
+        { name: "ABA", startingBalance: 3 },
+        { name: "Fono", startingBalance: 2 },
+      ],
+      schedules: [atendimento({ id: "a" })],
+    };
+    expect(startingBalance(dia)).toBe(5);
+  });
+});

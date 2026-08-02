@@ -2124,3 +2124,25 @@ export interface BatchAttempt {
 export interface TissBatchData {
   attempts: BatchAttempt[];
 }
+
+/* ============================================== Distribuição de guias */
+
+/** Um atendimento do dia, e a guia que o distribuidor lhe deu — ou não. */
+export interface DistributedSchedule {
+  id: string;
+  patientName: string;
+  serviceName: string;
+  start: string;
+  amountCents: number;
+  /** Guia atribuída. Ausente é atendimento que ficou sem cobertura. */
+  authorizationCode?: string;
+  /** Pacote de onde saiu a sessão. */
+  packageName?: string;
+}
+
+export interface DistributionData {
+  date: string;
+  schedules: DistributedSchedule[];
+  /** Saldo que havia no início da distribuição, por pacote. */
+  packages: { name: string; startingBalance: number }[];
+}
