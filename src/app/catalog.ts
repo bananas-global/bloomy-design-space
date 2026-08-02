@@ -34,6 +34,7 @@ import { closureGenerationFixtures } from "../fixtures/closureGeneration.js";
 import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
 import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
 import { authorizationRenewalFixtures } from "../fixtures/authorizationRenewal.js";
+import { tissBatchFixtures } from "../fixtures/tissBatch.js";
 import {
   agendaRules,
   schedulingRules,
@@ -43,6 +44,7 @@ import {
 import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
+import { tissBatchRules } from "../rules/tissBatch.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -105,6 +107,7 @@ import { closureGenerationScenarios } from "../scenarios/closureGeneration.js";
 import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
 import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
 import { authorizationRenewalScenarios } from "../scenarios/authorizationRenewal.js";
+import { tissBatchScenarios } from "../scenarios/tissBatch.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -521,6 +524,7 @@ export const modules: Module[] = [
             decision: "E quando a virada corre bem?",
             branches: {
               "Nenhuma perda": "closures.generation-clean",
+              "O lote não foi enviado": "closures.tiss-batch-lost",
             },
           },
         ],
@@ -1009,6 +1013,7 @@ export const scenarios: Scenario[] = [
   ...absenceOriginScenarios,
   ...autoCheckoutScenarios,
   ...authorizationRenewalScenarios,
+  ...tissBatchScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -1046,6 +1051,7 @@ export const fixtures: Fixture[] = [
   ...absenceOriginFixtures,
   ...autoCheckoutFixtures,
   ...authorizationRenewalFixtures,
+  ...tissBatchFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -1058,6 +1064,7 @@ export const rules: Rule[] = [
   ...supervisorOverdueRules,
   ...coverageRules,
   ...closureGenerationRules,
+  ...tissBatchRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,

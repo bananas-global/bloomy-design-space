@@ -5855,3 +5855,84 @@ describe("only-one-window-renews-per-patient", () => {
     expect(canEnableAutoRenew(dados, "Nina").allowed).toBe(true);
   });
 });
+
+/* ============================================== Envio do lote TISS */
+
+import type { BatchAttempt, TissBatchData } from "../src/contracts/index.js";
+import {
+  amountNotBilledCents,
+  discardedByTheCode,
+  indistinguishableInTheLog,
+  loggedString,
+  lostWithoutRetry,
+  outcomeOwner,
+} from "../src/rules/tissBatch.js";
+
+function tentativa(overrides: Partial<BatchAttempt> & { id: string }): BatchAttempt {
+  return {
+    invoiceCode: "FAT-001",
+    insurerName: "Unimed",
+    authorizationCount: 18,
+    amountCents: 1_000_000,
+    attemptedAt: "2026-07-30T11:20:00.000-03:00",
+    outcome: "sent",
+    ...overrides,
+  };
+}
+
+describe("the-batch-is-never-retried", () => {
+  const dados: TissBatchData = {
+    attempts: [
+      tentativa({ id: "a" }),
+      tentativa({ id: "b", outcome: "refused", amountCents: 780_000 }),
+      tentativa({ id: "c", outcome: "crashed", amountCents: 1_610_000 }),
+      tentativa({ id: "d", outcome: "pending", amountCents: 430_000 }),
+    ],
+  };
+
+  it("isola o que não vai ser reenviado — enviado e pendente não entram", () => {
+    expect(lostWithoutRetry(dados).map((t) => t.id)).toEqual(["b", "c"]);
+  });
+
+  it("soma o que deixou de ser faturado, para a perda ter tamanho", () => {
+    expect(amountNotBilledCents(dados)).toBe(2_390_000);
+  });
+
+  it("sem fracasso, não há valor perdido", () => {
+    expect(amountNotBilledCents({ attempts: [tentativa({ id: "a" })] })).toBe(0);
+  });
+});
+
+describe("refusal-and-crash-log-the-same-string", () => {
+  it("os dois fracassos gravam a mesma frase no job", () => {
+    expect(loggedString(tentativa({ id: "b", outcome: "refused" }))).toBe("Erro ao gerar o xml");
+    expect(loggedString(tentativa({ id: "c", outcome: "crashed" }))).toBe("Erro ao gerar o xml");
+  });
+
+  it("enviado e pendente não gravam frase de erro nenhuma", () => {
+    expect(loggedString(tentativa({ id: "a" }))).toBeUndefined();
+    expect(loggedString(tentativa({ id: "d", outcome: "pending" }))).toBeUndefined();
+  });
+
+  it("mas os donos são opostos, e é isso que o registro perde", () => {
+    expect(outcomeOwner("refused")).toContain("Operação");
+    expect(outcomeOwner("crashed")).toContain("Engenharia");
+    expect(outcomeOwner("sent")).toBeUndefined();
+  });
+
+  it("a resposta da operadora só existe na recusa — a exceção não tem resposta", () => {
+    expect(
+      discardedByTheCode(tentativa({ id: "b", outcome: "refused", insurerMessage: "Sem elegibilidade." })),
+    ).toBe("Sem elegibilidade.");
+    expect(
+      discardedByTheCode(tentativa({ id: "c", outcome: "crashed", insurerMessage: "não deveria existir" })),
+    ).toBeUndefined();
+  });
+
+  it("indistinguível é exatamente o conjunto dos dois fracassos", () => {
+    expect(indistinguishableInTheLog(tentativa({ id: "b", outcome: "refused" }))).toBe(true);
+    expect(indistinguishableInTheLog(tentativa({ id: "c", outcome: "crashed" }))).toBe(true);
+    expect(indistinguishableInTheLog(tentativa({ id: "a" }))).toBe(false);
+    expect(indistinguishableInTheLog(tentativa({ id: "d", outcome: "pending" }))).toBe(false);
+  });
+});

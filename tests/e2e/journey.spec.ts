@@ -2785,3 +2785,48 @@ test.describe("renovação da janela de autorização", () => {
     await expect(page.getByText(/A renovação não acrescenta nenhuma/).first()).toBeVisible();
   });
 });
+
+test.describe("envio do lote TISS", () => {
+  test("o valor não faturado aparece somado", async ({ page }) => {
+    await page.goto(urlFor("closures.tiss-batch-lost"));
+
+    // O `Intl` pt-BR separa o símbolo com espaço não separável (U+00A0), e
+    // não com espaço comum — casar por regex literal falharia.
+    await expect(page.getByText(/23\.900,00 não foram faturados/)).toBeVisible();
+    await expect(page.getByText(/A rotina de envio tenta uma vez só/)).toBeVisible();
+    await expect(page.getByText(/nem agora, nem depois/)).toBeVisible();
+  });
+
+  test("cada tentativa perdida é marcada individualmente", async ({ page }) => {
+    await page.goto(urlFor("closures.tiss-batch-lost"));
+
+    await expect(page.getByText("Não vai ser reenviado por conta própria.")).toHaveCount(2);
+  });
+
+  test("recusa e exceção aparecem como desfechos distintos, com donos diferentes", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("closures.tiss-batch-indistinguishable"));
+
+    await expect(page.getByText("Recusado pela operadora")).toBeVisible();
+    await expect(page.getByText("Exceção ao gerar o XML")).toBeVisible();
+    await expect(page.getByText(/Resolver é da operação, conversando com a operadora/)).toBeVisible();
+    await expect(page.getByText(/Resolver é da engenharia/)).toBeVisible();
+  });
+
+  test("a resposta da operadora é mostrada, com a ressalva de que o código a descarta", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("closures.tiss-batch-indistinguishable"));
+
+    await expect(page.getByText(/Beneficiário sem elegibilidade na data do atendimento/)).toBeVisible();
+    await expect(page.getByText(/e o código descarta essa resposta/)).toBeVisible();
+  });
+
+  test("com todos enviados, os dois avisos calam", async ({ page }) => {
+    await page.goto(urlFor("closures.tiss-batch-all-sent"));
+
+    await expect(page.getByText(/não foram faturados/)).toHaveCount(0);
+    await expect(page.getByText("Não vai ser reenviado por conta própria.")).toHaveCount(0);
+  });
+});
