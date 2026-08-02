@@ -4941,3 +4941,36 @@ describe("deactivation", () => {
     ).toBe(true);
   });
 });
+
+/* ================================================ Paginação das horas */
+
+import type { PageWindow } from "../src/contracts/index.js";
+import { hiddenByPaging, pageCount } from "../src/rules/clinicalHours.js";
+
+describe("page-size-decides-what-can-be-compared", () => {
+  const mes: PageWindow = { limit: 5, total: 22 };
+
+  it("conta as páginas que o período ocupa no sistema real", () => {
+    expect(pageCount(mes)).toBe(5);
+    expect(pageCount({ limit: 5, total: 5 })).toBe(1);
+    expect(pageCount({ limit: 5, total: 6 })).toBe(2);
+  });
+
+  it("cala quando tudo cabe numa página — aí o aviso seria ruído", () => {
+    expect(hiddenByPaging({ limit: 5, total: 3 })).toBeUndefined();
+    expect(hiddenByPaging({ limit: 5, total: 5 })).toBeUndefined();
+  });
+
+  it("diz o que a paginação esconde, e não só que ela existe", () => {
+    const aviso = hiddenByPaging(mes);
+    expect(aviso).toContain("22 dias");
+    expect(aviso).toContain("5 páginas");
+    // O ponto não é a quantidade de páginas: é a soma que elas impedem.
+    expect(aviso).toContain("só aparece somado");
+  });
+
+  it("não divide por zero nem devolve zero página", () => {
+    expect(pageCount({ limit: 0, total: 22 })).toBe(1);
+    expect(pageCount({ limit: 5, total: 0 })).toBe(1);
+  });
+});

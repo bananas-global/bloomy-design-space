@@ -2310,3 +2310,20 @@ test.describe("cancelar atendimento", () => {
     await expect(confirmar).toHaveCSS("color", "rgb(144, 42, 42)");
   });
 });
+
+test.describe("paginação do controle de horas", () => {
+  test("o aviso diz quantas páginas e o que elas escondem", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.month-does-not-fit"));
+
+    await expect(page.getByText("O mês não cabe numa página")).toBeVisible();
+    await expect(page.getByText(/22 dias no período/)).toBeVisible();
+    await expect(page.getByText(/só aparece somado/)).toBeVisible();
+  });
+
+  test("sem paginação relevante o aviso não aparece", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.week"));
+
+    // O contraponto: um aviso que aparece sempre é um aviso que ninguém lê.
+    await expect(page.getByText("O mês não cabe numa página")).toHaveCount(0);
+  });
+});

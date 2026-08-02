@@ -1203,6 +1203,34 @@ restaurei.
 1 jornada (3 fusos × 6 cenários com horário visível), 1 constante.
 
 
+### 41. O Design Space não paginava, e o produto pagina em 50 lugares — `porte/paginacao`
+
+O monólito pagina com Flop em **50 schemas**: limites de 5, 8, 10 e 15. Até esta
+rodada, paginação não aparecia em lugar nenhum do Design Space — nem em tela,
+nem em regra, nem em documento. Quem aprovasse a lista de relatórios estaria
+aprovando uma lista completa que o produto entrega de cinco em cinco.
+
+**A resposta não foi reproduzir paginação em trinta telas.** Rolagem e página são
+decisão de implementação; encher as telas de controles de página adiciona ruído
+sem fixar comportamento. O critério que usei foi outro: *o limite é menor que a
+unidade de trabalho da tela?*
+
+Num caso, muito. **O controle de horas existe para conferir um mês**, e
+`default_limit: 5` dá cinco páginas para vinte e dois dias úteis. O defeito que
+a tela precisa revelar — meia hora truncada por dia — **só é visível somado**, e
+cinco linhas por vez escondem exatamente a soma. Quem confere passa a confiar no
+número que o sistema oferece porque não consegue montar o próprio.
+
+Nos demais, não muda: relatórios e autorizações têm limite 5 e unidade de
+trabalho de um documento por vez; pacientes e profissionais têm 15 e são listas
+de busca, onde se filtra antes de rolar.
+
+`hiddenByPaging/1` devolve `undefined` quando tudo cabe numa página, e há uma
+jornada para isso — **um aviso que aparece sempre é um aviso que ninguém lê**.
+
+Registrado em `docs/decisions/0006`. 1 cenário, 4 testes de regra, 2 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

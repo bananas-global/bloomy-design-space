@@ -121,6 +121,28 @@ export const clinicalHourScenarios: Scenario[] = [
     tags: ["exceção", "regra"],
   },
   {
+    id: "clinical-hours.month-does-not-fit",
+    title: "O mês não cabe numa página",
+    intent:
+      "Declarar que o recorte de cinco por página do sistema real esconde justamente a soma que esta tela existe para revelar.",
+    route: "/clinical-hours",
+    persona: "people",
+    fixture: "clinical-hours-month",
+    rules: ["page-size-decides-what-can-be-compared"],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: [
+      "`ClinicalHourRecord` declara `default_limit: 5` no Flop.",
+      "O período tem vinte e dois dias úteis.",
+    ],
+    expected: [
+      "A tela diz quantos dias existem no período e quantas páginas isso ocupa.",
+      "E diz o que a paginação esconde: o truncamento de um dia é pequeno, o do mês não.",
+      "O aviso não aparece quando tudo cabe numa página — aí seria ruído.",
+    ],
+    tags: ["regra", "decisão"],
+  },
+  {
     id: "clinical-hours.no-permission",
     title: "Quem lê e não corrige",
     intent: "Manter a ação visível para quem não a tem, dizendo de quem ela é.",

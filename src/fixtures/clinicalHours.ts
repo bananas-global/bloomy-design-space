@@ -145,6 +145,16 @@ export const clinicalHourFixtures: Fixture[] = [
     data: { records: [PREVISAO_INCOMPLETA] } satisfies ClinicalHoursData,
   },
   {
+    id: "clinical-hours-month",
+    label: "Um mês, cinco por página",
+    description:
+      "Vinte e dois dias úteis no período e cinco por página no sistema real: conferir o mês exige cinco páginas, e nenhuma delas mostra o total.",
+    data: {
+      records: [NORMAL, MISTO, SEM_VERIFICACAO, INVERTIDO, PREVISAO_INCOMPLETA],
+      page: { limit: 5, total: 22 },
+    } satisfies ClinicalHoursData,
+  },
+  {
     id: "clinical-hours-empty",
     label: "Nenhum registro no período",
     description: "O estado antes do primeiro check-in do mês.",
