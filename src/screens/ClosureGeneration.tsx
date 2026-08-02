@@ -12,6 +12,7 @@ import {
   Notice,
 } from "../components/primitives.js";
 import {
+  coveredByDeactivationWorker,
   hoursLostAtTheBoundary,
   hoursWithoutClosure,
   obanOutcome,
@@ -51,6 +52,7 @@ export function ClosureGeneration({ context }: ScreenProps) {
   if (!generation) return wrap(context, <ErrorState message="Não foi possível carregar." />);
 
   const semFechamento = workedButGetsNoClosure(generation);
+  const cobertos = coveredByDeactivationWorker(generation);
   const horasPerdidas = hoursWithoutClosure(generation);
   const falhas = silentFailures(generation);
   const oban = obanOutcome(generation);
@@ -114,11 +116,24 @@ export function ClosureGeneration({ context }: ScreenProps) {
             ))}
           </ul>
           <p className="m-0 mt-2">
-            São <span className="font-semibold">{horasPerdidas} horas</span> sem acerto. A busca
-            filtra quem está ativo <span className="font-semibold">agora</span>, e não quem estava
-            ativo durante o mês. O trabalho aconteceu; o que mudou foi o cadastro, depois — e a
-            ausência de um fechamento não gera nada que alguém veja.
+            São <span className="font-semibold">{horasPerdidas} horas</span> sem acerto. Há dois
+            workers envolvidos e eles quase se cobrem: o mensal pula quem já está inativo, e o de
+            desativação gera o fechamento — mas do mês da <span className="font-semibold">data de
+            desativação</span>. Sair no dia 1º gera um fechamento do mês novo, vazio, e o mês
+            trabalhado fica sem.
           </p>
+          <p className="m-0 mt-2">
+            E é justamente assim que se registra “trabalhou até o fim do mês”.
+          </p>
+        </Notice>
+      )}
+
+      {/* O caso coberto aparece junto, porque é ele que mostra quão estreito é
+          o buraco — e evita que alguém "conserte" o que já funciona. */}
+      {cobertos.length > 0 && (
+        <Notice tone="info" title="Estes o worker de desativação cobre" level={3}>
+          {cobertos.map((candidate) => candidate.name).join(", ")} — saiu dentro do mês fechado, e
+          o fechamento é gerado na desativação, pelo mês certo.
         </Notice>
       )}
 

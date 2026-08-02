@@ -22,15 +22,17 @@ function candidate(overrides: Partial<ClosureCandidate> & { id: string }): Closu
 export const closureGenerationFixtures: Fixture[] = [
   {
     id: "closure-generation-with-losses",
-    label: "Duas desativações e uma falha silenciosa",
+    label: "Duas desativações, e só uma perde o mês",
     description:
-      "Cinco profissionais com horas em julho. Dois foram desativados antes da virada; um teve a geração falhar e o worker devolveu sucesso.",
+      "Cinco profissionais com horas em julho. Uma saiu em 28/07 e é coberta pelo worker de desativação; o outro saiu em 1º/08 e julho fica sem. E uma geração falhou com o worker devolvendo sucesso.",
     data: {
       month: "2026-07",
       ranAt: "2026-08-01T00:00:00.000Z",
       candidates: [
         candidate({ id: "p1" }),
         candidate({ id: "p2", name: "Otávio Ferrandini", hoursInMonth: 96 }),
+        // Saiu dentro de julho: o worker de desativação gera o fechamento de
+        // julho para ela. Coberta.
         candidate({
           id: "p3",
           name: "Bruna Kishimoto",
@@ -38,11 +40,14 @@ export const closureGenerationFixtures: Fixture[] = [
           deactivatedOn: "2026-07-28",
           hoursInMonth: 118,
         }),
+        // Saiu no dia 1º de agosto — que é como se registra "trabalhou até o
+        // fim de julho". O worker de desativação gera o fechamento de agosto,
+        // vazio, e julho fica sem.
         candidate({
           id: "p4",
           name: "Renato Bezerra Alcântara",
           activeNow: false,
-          deactivatedOn: "2026-07-31",
+          deactivatedOn: "2026-08-01",
           hoursInMonth: 140,
         }),
         candidate({

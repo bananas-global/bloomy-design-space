@@ -2554,9 +2554,13 @@ test.describe("geração mensal de fechamentos", () => {
   test("as horas sem acerto aparecem somadas, e não como adjetivo", async ({ page }) => {
     await page.goto(urlFor("closures.generation-with-losses"));
 
-    await expect(page.getByText(/2 profissionais trabalharam e não recebem fechamento/)).toBeVisible();
-    await expect(page.getByText("258 horas")).toBeVisible();
-    await expect(page.getByText(/filtra quem está ativo/)).toBeVisible();
+    await expect(page.getByText(/1 profissional trabalhou e não recebe fechamento/)).toBeVisible();
+    // Aparece na linha do profissional e na soma: as duas são certas.
+    await expect(page.getByText("São 140 horas sem acerto")).toBeVisible();
+    // Os dois workers quase se cobrem: o buraco é estreito e precisa ser dito
+    // com precisão, não como acusação geral.
+    await expect(page.getByText(/Há dois workers envolvidos e eles quase se cobrem/)).toBeVisible();
+    await expect(page.getByText("Estes o worker de desativação cobre")).toBeVisible();
   });
 
   test("a falha é apontada ao lado do sucesso que o Oban registrou", async ({ page }) => {
