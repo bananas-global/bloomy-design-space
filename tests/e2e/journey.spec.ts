@@ -3195,3 +3195,63 @@ test.describe("data de desativação", () => {
     await expect(page.getByText("A data escolhida já passou.")).toHaveCount(1);
   });
 });
+
+test.describe("que dia o sistema acha que é", () => {
+  test("a escala aparece em número, antes do exemplo", async ({ page }) => {
+    await page.goto(urlFor("structure.today-window-open"));
+
+    await expect(page.getByText("Agora o sistema e o calendário discordam")).toBeVisible();
+    await expect(
+      page.getByText(/Na clínica é 30 de jul\. de 2026\. O sistema está contando 31 de jul\. de 2026/),
+    ).toBeVisible();
+    await expect(page.getByText(/vale para as 205 perguntas que ele faz sobre a data/)).toBeVisible();
+    await expect(page.getByText(/das 21h à meia-noite: 180 minutos diários/)).toBeVisible();
+  });
+
+  test("as duas formas de perguntar aparecem contadas lado a lado", async ({ page }) => {
+    await page.goto(urlFor("structure.today-window-open"));
+
+    await expect(
+      page.getByText("205 vezes ao relógio de fora · 104 vezes ao ajudante"),
+    ).toBeVisible();
+    await expect(page.getByText(/é usado em 34% das vezes em que a data importa/)).toBeVisible();
+    await expect(page.getByText(/qualquer conserto isolado deixa 204 pontos iguais atrás/)).toBeVisible();
+  });
+
+  test("cada superfície diz o que acontece, e não em que arquivo está", async ({ page }) => {
+    await page.goto(urlFor("structure.today-what-breaks"));
+
+    await expect(
+      page.getByText("O dia de hoje deixa de ser selecionável no seletor de data."),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Fecha três horas antes da meia-noite: o atendimento de hoje deixa de ser de hoje/),
+    ).toBeVisible();
+    await expect(page.getByText("errando agora")).toHaveCount(5);
+    // Nenhum caminho de arquivo vaza para a tela.
+    await expect(page.getByText(/lib\/bloomy/)).toHaveCount(0);
+  });
+
+  test("a idade real e a mostrada aparecem lado a lado, com os dias que faltam", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("structure.today-age-off-by-days"));
+
+    await expect(page.getByText(/tem 12 anos completos hoje\. O sistema mostra 13/)).toBeVisible();
+    await expect(page.getByText(/Faltam 2 dias para o aniversário/)).toBeVisible();
+    await expect(
+      page.getByText(/Quem for procurar pelas crianças de 12 anos não vai achar esta/),
+    ).toBeVisible();
+  });
+
+  test("fora da janela as datas concordam, e a idade continua errada", async ({ page }) => {
+    await page.goto(urlFor("structure.today-window-closed"));
+
+    await expect(page.getByText("Agora as duas datas concordam")).toBeVisible();
+    await expect(page.getByText("errando agora")).toHaveCount(0);
+    await expect(page.getByText("certo agora")).toHaveCount(5);
+    // O erro da divisão por 365 não depende da janela.
+    await expect(page.getByText(/tem 12 anos completos hoje\. O sistema mostra 13/)).toBeVisible();
+    await expect(page.getByText(/Faltam 3 dias para o aniversário/)).toBeVisible();
+  });
+});
