@@ -195,9 +195,22 @@ function Complete({ kiosk }: { kiosk: KioskData }) {
 function Failure({ error }: { error: KioskData["error"] | "unit_not_found" }) {
   const message = errorMessage(error!);
 
+  /**
+   * `role="alert"` interrompe a leitura. Isso é certo quando a falha responde a
+   * algo que a pessoa acabou de fazer — digitou um CPF, mandou. É errado quando
+   * a falha **é o estado de chegada**: unidade não encontrada acontece porque o
+   * endereço aberto está errado, e ninguém fez nada para provocá-la. Anunciar
+   * assertivamente aí atropela a leitura do título da própria página.
+   */
+  const segueUmaAcao = error !== "unit_not_found";
+
   return (
     <Card className="px-8 py-8">
-      <Notice tone={error === "invalid_cpf" ? "warn" : "info"} title={message.title} live>
+      <Notice
+        tone={error === "invalid_cpf" ? "warn" : "info"}
+        title={message.title}
+        live={segueUmaAcao}
+      >
         <p className="m-0 max-w-[46ch] text-[18px]">{message.body}</p>
       </Notice>
 

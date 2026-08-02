@@ -994,6 +994,43 @@ ser possível, e o teste mede os dois estados.
 1 script, 1 jornada.
 
 
+### 34. O que a tela anuncia contra o que o cenário declara — `porte/anuncios`
+
+Varredura de regiões vivas. O axe não alcança nada disto: ele valida a marcação,
+não a coerência entre o que a especificação promete anunciar e o que a tela
+anuncia de fato.
+
+**A direção que importava estava sã:** nenhum cenário declara `announces` sem a
+tela ter região viva. A especificação não promete anúncio inexistente.
+
+A direção inversa achou quatro casos, de duas naturezas.
+
+**Defeito de código — região viva já preenchida no primeiro quadro.** Uma
+`role="status"` com texto ao carregar é lida na chegada: quem usa leitor de tela
+ouve uma frase sobre uma ação que não praticou.
+
+- Em Detalhe do atendimento, a dica "Duração mantida: 30 minutos" morava dentro
+  da região viva do campo de reagendamento. Separada: a dica é texto estático,
+  alcançado por `aria-describedby` no foco; a região viva ficou vazia até alguém
+  escolher um horário. O elemento da dica continua sempre renderizado, ainda que
+  sem texto — um id que some deixa o `aria-describedby` pendurado.
+- No quiosque, `role="alert"` era incondicional. Interromper é certo quando a
+  falha responde a algo que a pessoa acabou de fazer — digitou um CPF, mandou.
+  É errado quando a falha **é o estado de chegada**: "unidade não encontrada"
+  acontece porque o endereço aberto está errado, e anunciar assertivamente aí
+  atropela a leitura do título da própria página.
+
+**Lacuna de especificação — anúncio real não declarado.** O agradecimento do NPS
+e o vazio do quiosque são anunciados de verdade, e os cenários não diziam.
+Declarados.
+
+A varredura virou `tests/e2e/anuncios.spec.ts` e foi **provada por mutação**:
+devolvi o `role="status"` à dica inicial, confirmei a reprovação, restaurei.
+
+1 jornada de varredura (186 cenários), 2 telas corrigidas, 2 cenários
+completados.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

@@ -272,16 +272,27 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
               className="mt-2 rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[15px] text-navy disabled:cursor-not-allowed disabled:opacity-55"
             />
 
-            <p id="novo-horario-aviso" role="status" aria-live="polite" className="m-0 mt-2 min-h-5 text-[13px]">
-              {/* Sem permissão, esta região fica calada: o motivo já está no
-                  botão por `unavailableReason`, e repeti-lo numa região viva
-                  faria o leitor de tela anunciar a mesma negativa duas vezes ao
-                  abrir a página. */}
-              {!canReschedule ? null : rescheduleTo === "" ? (
-                <span className="text-[var(--fg-2)]">
-                  Duração mantida: {durationMinutes(appointment)} minutos.
-                </span>
-              ) : rescheduleConflicts ? (
+            {/* A dica inicial **não** é uma região viva.
+                Com o texto dentro de um `role="status"`, ele é anunciado na
+                chegada à página — o leitor de tela diz "Duração mantida: 30
+                minutos" para quem não fez nada. Região viva carrega mudança;
+                dica carrega contexto, e chega pelo `aria-describedby` quando o
+                campo recebe foco. */}
+            {/* Sempre renderizada, ainda que vazia: o campo aponta para ela
+                por `aria-describedby`, e um id que some deixa a referência
+                pendurada. */}
+            <p id="novo-horario-aviso" className="m-0 mt-2 min-h-5 text-[13px] text-[var(--fg-2)]">
+              {canReschedule && rescheduleTo === ""
+                ? `Duração mantida: ${durationMinutes(appointment)} minutos.`
+                : null}
+            </p>
+
+            <p role="status" aria-live="polite" className="m-0 mt-2 min-h-5 text-[13px]">
+              {/* Vazia até alguém escolher um horário. Sem permissão fica
+                  calada também: o motivo já está no botão por
+                  `unavailableReason`, e repeti-lo aqui faria o leitor de tela
+                  anunciar a mesma negativa duas vezes. */}
+              {!canReschedule || rescheduleTo === "" ? null : rescheduleConflicts ? (
                 <span className="font-semibold text-danger-fg">
                   {rescheduleTo} colide com outro atendimento da mesma profissional.
                 </span>

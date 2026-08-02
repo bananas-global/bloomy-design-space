@@ -97,7 +97,7 @@ export const publicPortalScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "kiosk-no-patients",
     rules: ["kiosk-lists-only-today-and-unstarted"],
-    a11y: { keyboard: "full", contrast: "AA" },
+    a11y: { keyboard: "full", contrast: "AA", announces: ["kiosk.no-patients"] },
     status: "in-review",
     expected: [
       "A mensagem levanta as duas hipóteses: outro dia, ou outra unidade.",
@@ -169,7 +169,7 @@ export const publicPortalScenarios: Scenario[] = [
     route: "/nps",
     persona: "applicator",
     fixture: "nps-low-rating",
-    a11y: { keyboard: "full", contrast: "AA" },
+    a11y: { keyboard: "full", contrast: "AA", announces: ["nps.received"] },
     status: "in-review",
     preconditions: ["Nota 4, com comentário sobre dificuldade de horário."],
     expected: [
