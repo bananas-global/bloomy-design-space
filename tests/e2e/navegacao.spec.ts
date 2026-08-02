@@ -99,3 +99,33 @@ test("voltar para os dados certos recupera a tela, sem recarregar", async ({ pag
   ).toHaveCount(0);
   await expect(page.locator("#conteudo")).toBeVisible();
 });
+
+/**
+ * O drawer nasce recolhido, como no sistema.
+ *
+ * `BackofficeComponents.drawer/1` traz `data-collapsed="true"` no atributo
+ * inicial: 72px no desktop, só ícone. Quem abre o Bloomy pela primeira vez vê o
+ * menu estreito, e este teste impede que a especificação passe a descrever um
+ * produto mais confortável do que o que existe.
+ */
+test("a navegação começa recolhida e o botão do cabeçalho a expande", async ({ page }) => {
+  await page.goto(pathFor(scenarios[0]!));
+
+  const drawer = page.locator(".bloomy-drawer");
+  const botao = page.getByRole("button", { name: /a navegação/ });
+
+  await expect(drawer).toHaveCSS("width", "72px");
+  await expect(botao).toHaveAttribute("aria-expanded", "false");
+  // Recolhido o rótulo sai da tela, e o nome continua alcançável por quem usa
+  // leitor de tela — é o que o tooltip do sistema faz.
+  await expect(drawer.getByRole("link", { name: "Agendamentos" })).toBeVisible();
+
+  await botao.click();
+
+  await expect(drawer).toHaveCSS("width", "256px");
+  await expect(botao).toHaveAttribute("aria-expanded", "true");
+  await expect(drawer.getByText("Agendamentos", { exact: true })).toBeVisible();
+
+  await botao.click();
+  await expect(drawer).toHaveCSS("width", "72px");
+});

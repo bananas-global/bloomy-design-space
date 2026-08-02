@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { ScenarioContext } from "@brucesantos/design-space";
 import logotipo from "../assets/bloomy-negative.svg";
+import simbolo from "../assets/bloomy-symbol-negative.svg";
 import { Icon } from "./Icon.js";
 
 /**
@@ -95,6 +96,18 @@ export function AppShell({
   children: ReactNode;
 }) {
   const currentPath = typeof window === "undefined" ? "" : window.location.pathname;
+
+  /**
+   * O drawer nasce **recolhido**, como no sistema: o `<aside>` do monólito tem
+   * `data-collapsed="true"` no atributo inicial, e nesse estado ele fica com
+   * 72px no desktop, só ícone.
+   *
+   * Um detalhe do original que vale conhecer antes de mexer: o `aside` e o link
+   * usam a mesma palavra com sentidos opostos. No `aside`, `collapsed=true` é o
+   * estreito; no link, quem produz o estreito é `collapsed=false`. Aqui o estado
+   * é um só e tem nome afirmativo — `expandido` —, para não herdar a inversão.
+   */
+  const [expandido, setExpandido] = useState(false);
   const visiveis = NAV.filter(
     (item) => item.permission === undefined || context.can(item.permission),
   );
@@ -114,13 +127,19 @@ export function AppShell({
 
       {surface === "backoffice" && (
         <nav
-          className="bloomy-drawer espelho-do-sistema sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-hidden bg-[var(--color-brand-blue)] p-4"
+          className={[
+            "bloomy-drawer espelho-do-sistema sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[var(--color-brand-blue)]",
+            "transition-[width] duration-500",
+            expandido ? "w-64 p-4" : "w-[72px] p-2",
+          ].join(" ")}
           aria-label="Navegação principal"
         >
-          {/* Logotipo cheio com o drawer aberto, símbolo quando recolhido —
-              como o sistema faz. Aqui ele fica sempre aberto, então é sempre o
-              cheio. */}
-          <img src={logotipo} alt="Bloomy" className="mx-auto mb-8 mt-4 h-12" />
+          {/* Logotipo cheio com o drawer aberto, símbolo quando recolhido. */}
+          <img
+            src={expandido ? logotipo : simbolo}
+            alt="Bloomy"
+            className={["mx-auto mb-8 mt-4", expandido ? "h-12" : "h-12 w-12"].join(" ")}
+          />
 
           <ul className="m-0 flex list-none flex-col gap-2 overflow-y-auto overflow-x-hidden p-0">
             {visiveis.map((item) => {
@@ -134,11 +153,14 @@ export function AppShell({
                 return (
                   <li key={item.label}>
                     <span
-                      className="flex h-12 w-full cursor-default items-center gap-2.5 rounded-lg px-4 text-lg font-bold text-white/45"
-                      title={`Existe no sistema (${item.origem}) e ainda não foi portado`}
+                      className={[
+                        "flex h-12 cursor-default items-center gap-2.5 rounded-lg text-lg font-bold text-white/45",
+                        expandido ? "w-full px-4" : "mx-auto w-12 justify-center px-2",
+                      ].join(" ")}
+                      title={`${item.label} — existe no sistema (${item.origem}) e ainda não foi portado`}
                     >
                       <Icon name={item.icon} className="w-6 shrink-0 text-center" />
-                      <span className="truncate">{item.label}</span>
+                      {expandido && <span className="truncate">{item.label}</span>}
                     </span>
                   </li>
                 );
@@ -153,15 +175,22 @@ export function AppShell({
                       event.preventDefault();
                       context.navigate(item.path!);
                     }}
+                    // Recolhido, o rótulo sai da tela mas continua acessível: o
+                    // `title` e o `aria-label` seguram o nome para leitor de tela
+                    // e para quem passa o mouse. O sistema resolve isso com um
+                    // tooltip; o efeito para quem depende do nome é o mesmo.
+                    title={expandido ? undefined : item.label}
+                    aria-label={expandido ? undefined : item.label}
                     className={[
-                      "flex h-12 w-full items-center gap-2.5 rounded-lg px-4 text-lg font-bold text-white no-underline transition-colors",
+                      "flex h-12 items-center gap-2.5 rounded-lg text-lg font-bold text-white no-underline transition-colors",
+                      expandido ? "w-full px-4" : "mx-auto w-12 justify-center px-2",
                       atual
                         ? "bg-[var(--color-brand-blue-dark)]"
                         : "hover:bg-[var(--color-brand-blue-dark)]/40",
                     ].join(" ")}
                   >
                     <Icon name={item.icon} className="w-6 shrink-0 text-center" />
-                    <span className="truncate">{item.label}</span>
+                    {expandido && <span className="truncate">{item.label}</span>}
                   </a>
                 </li>
               );
@@ -174,7 +203,15 @@ export function AppShell({
         {surface === "backoffice" && (
           <header className="sticky top-0 z-40 flex items-center justify-between gap-4 bg-surface px-4 py-4 shadow-[var(--shadow-main)] lg:px-8">
             <div className="flex min-w-0 items-center gap-4">
-              <Icon name="fa-sidebar" className="hidden shrink-0 text-[var(--color-brand-purple-dark)]/60 lg:block" />
+              <button
+                type="button"
+                onClick={() => setExpandido((antes) => !antes)}
+                aria-expanded={expandido}
+                aria-label={expandido ? "Recolher a navegação" : "Expandir a navegação"}
+                className="hidden h-5 w-5 shrink-0 items-center justify-center text-[var(--color-brand-purple-dark)]/60 lg:flex"
+              >
+                <Icon name="fa-sidebar" />
+              </button>
               {breadcrumb && breadcrumb.length > 0 && (
                 <nav aria-label="Trilha de navegação" className="min-w-0">
                   <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[0.8125rem] text-[var(--fg-2)]">
