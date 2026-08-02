@@ -56,7 +56,7 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Testes de regra | 667 |
 | Jornadas Playwright | 874 |
 | Achados sobre o sistema real | 98 |
-| Rodadas registradas | 69 |
+| Rodadas registradas | 70 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
@@ -78,6 +78,13 @@ fuso da clínica; um reduzido por exagero (`inspect` sem efeito visível, por
 causa de uma guarda que eu não tinha lido); e uma numeração errada numa tabela
 de referência cruzada. Estão registradas porque a taxa de erro é informação: um
 achado exagerado gasta o crédito dos outros.
+
+**Um problema aberto, com diagnóstico.** Sete varredores esperam a tela assentar
+terminando em `.catch(() => {})`, que descarta o resultado da espera. Medi o dano
+— é tempo perdido, não aprovação indevida, porque a página está renderizada
+depois dos cinco segundos —, tentei consertar duas vezes na rodada 70 e as duas
+derrubaram a suíte por custo. A entrada da rodada 70 traz o diagnóstico completo
+e a forma que a correção precisa ter. Está aberto de propósito.
 
 **O que ficou de fora.** As PRs não foram abertas — a escolha foi “branch por
 módulo, PR no fim”, e abrir PR é ação para fora, que depende do teu aval. O
@@ -2473,6 +2480,59 @@ sinal que não é confiável não é meio-sinal, é ruído.
 3 achados, 3 cenários, 3 regras testáveis, 6 testes de regra, 5 jornadas, e um
 defeito de corrida corrigido na varredura de acessibilidade.
 
+
+### 70. Tentei consertar um defeito meu, piorei, e voltei atrás
+
+A corrida da rodada 69 me fez desconfiar dos outros varredores. Fui olhar, e os
+sete terminavam a espera assim:
+
+```ts
+await page.locator("#conteudo").getByRole("heading").first()
+  .waitFor({ timeout: 5000 })
+  .catch(() => {});
+```
+
+**`.catch(() => {})`.** Se o título nunca aparecesse, a espera falhava, o
+resultado era descartado, e o varredor media o que estivesse na tela. É a
+família de achados número 1 deste documento — *o valor que diria o que aconteceu
+é calculado e jogado fora* — escrita por mim, no teste que existe para pegar
+esse tipo de coisa.
+
+Antes de consertar, medi. Uma sonda contra os 254 cenários mostrou que **dois
+não têm título nenhum dentro de `#conteudo`**: `agenda.day` e `patients.list`.
+Nesses, os sete varredores esperavam cinco segundos em silêncio e seguiam. Não
+estavam aprovando tela vazia — depois de cinco segundos a página está
+renderizada —, então o dano real era **tempo perdido, não aprovação indevida**.
+Registro isso porque a tentação era publicar o susto em vez da medição.
+
+Aí tentei consertar. Extraí a espera para um lugar só, fiz o timeout **levantar**
+com uma lista de exceções que carrega o motivo de cada uma, e acrescentei
+`networkidle`. Passou. Rodei a suíte inteira e o varredor de anúncios morreu com
+a mesma corrida — o roteador normaliza o endereço **depois** da montagem, e essa
+segunda navegação é do lado do cliente, então `networkidle` já assentou quando
+ela acontece. Acrescentei a espera pela URL parar de mudar. Passou de novo,
+isolado.
+
+**E aí a suíte inteira caiu.** Cinco varredores estouraram o prazo de três
+minutos, porque a espera nova custa uma fração de segundo por cenário e são 254
+deles, com oito varreduras concorrendo. O erro que eu tinha ido consertar
+aconteceu de novo, junto com cinco novos.
+
+**Voltei atrás.** Os sete varredores estão como estavam; o `networkidle` da
+varredura de acessibilidade, que é a correção da rodada 69 e está provada,
+continua. O repositório fecha verde.
+
+Fica registrado como problema aberto, com o diagnóstico pronto: a espera correta
+é por “o roteador parou de mexer no endereço”, e ela precisa custar quase nada
+para caber em 254 cenários. Não achei essa forma em vinte minutos, e vinte
+minutos antes do prazo não é hora de descobrir.
+
+O que não fiz foi o que mais me tentou: rodar de novo até passar, ou baixar a
+exigência do varredor para caber. **Deixar vermelho e explicar é pior para o
+número e melhor para quem lê depois.**
+
+1 defeito meu diagnosticado, 2 tentativas de correção revertidas, 1 problema
+aberto com diagnóstico registrado.
 
 ## Achados sobre o sistema real
 
