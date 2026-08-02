@@ -55,8 +55,8 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Telas React | 48 |
 | Testes de regra | 667 |
 | Jornadas Playwright | 877 |
-| Achados sobre o sistema real | 102 |
-| Rodadas registradas | 72 |
+| Achados sobre o sistema real | 103 |
+| Rodadas registradas | 73 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
@@ -2634,6 +2634,55 @@ filtrados por ela.
 aproximados com o nome do original registrado.
 
 
+### 73. A galeria, e os primeiros componentes de verdade
+
+O Bruno perguntou onde estão os componentes e se havia um índice. Não havia — os
+meus quatorze viviam num arquivo só, sem lugar para olhar, e o sistema tem
+**quarenta e sete**. Os meus também não eram um subconjunto dos dele: eram
+invenção com nomes meus.
+
+A galeria veio primeiro, a pedido dele, e foi a decisão certa: ela é onde eu
+comparo cada peça com o original enquanto porto. Está em `/componentes`, lista
+os 47 na ordem do arquivo, e **mantém os pendentes visíveis** com a descrição do
+que resolvem. Um índice que só mostra o que já existe não serve para planejar.
+
+As demonstrações usam o componente de verdade, nunca imagem: galeria com captura
+de tela desatualiza no primeiro commit.
+
+Sete portados nesta rodada — `button`, `card`, `info_card`, `tag`, `tag_list`,
+`status_tag` e `table`. Três coisas que o original me obrigou a copiar em vez de
+simplificar:
+
+- **`extract_bg_class/1`.** O cartão é branco *a menos que* quem o usa já tenha
+  passado uma classe de fundo. É uma regra pequena, e é o que permite os cartões
+  coloridos sem uma propriedade a mais.
+- **A linha de vazio da tabela.** Ela existe sempre, escondida, e `first:table-row`
+  a revela quando é a primeira do corpo. O estado vazio é resolvido em CSS, sem
+  condicional. Conferi no navegador: funciona igual aqui.
+- **O `info_card` sem número** mostra uma barra pulsando no lugar. O carregamento
+  mora dentro do componente, não numa tela à parte.
+
+**E o espelho refletiu mais três problemas**, os dois primeiros medidos no
+navegador. O botão primário é `bg-brand-blue text-white` — os mesmos 2,22:1 do
+menu, o que tira o achado 99 do confinamento da navegação. O `outline` amarelo dá
+1,46:1, praticamente invisível, enquanto o `tint` amarelo passa com 9,24:1 — a
+correção é pontual. E o `status_tag` é um ponto de 10px sem texto, com `title`
+opcional: onde ele falta, a situação existe só na cor.
+
+Um detalhe que quase virou erro meu de cópia: a variante `blue` do `tag` inverte
+o par das outras — fundo forte, texto claro, onde todas as demais fazem o
+oposto. Está assim no arquivo, é o único caso, e deixei a nota no código para o
+próximo que passar não "corrigir".
+
+**O conferidor de citações passou a cobrir a galeria**, que são 47 apontamentos
+para arquivo e linha. Testei com mutação — e aí descobri que o contador não
+somava os novos: dizia 102 conferindo 149. Um número que mente é o defeito que
+passei a noite inteira documentando, escrito por mim, no script que existe para
+impedir exatamente isso.
+
+3 achados, 1 galeria, 7 componentes portados, 1 conferidor ampliado e corrigido.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2743,3 +2792,4 @@ bugs do Design Space; são observações sobre o produto.
 | 100 | No cabeçalho, o rótulo “Unidade” usa `--color-green` (`#3db03a`) sobre branco: **2,81:1**. Mesmo problema, em texto menor e permanente. O rótulo “Perfil”, em roxo, passa com 4,89:1 — então a correção é pontual, não uma revisão de paleta. | `lib/bloomy_web/components/layouts/backoffice.html.heex:141,180` |
 | 101 | O botão de ação principal — `variant="default" color="blue"` — é `bg-brand-blue text-white`: **2,22:1**, o mesmo par do menu lateral. É o botão primário do sistema inteiro, então o problema do achado 99 não está confinado à navegação. | `lib/bloomy_web/components/core_components.ex:470` |
 | 102 | `variant="outline" color="yellow"` usa `#ffc402` como texto sobre fundo claro: **1,46:1** — praticamente invisível. O `tint` amarelo, que usa o tom escuro sobre o claro, passa com 9,24:1; a correção é pontual, não uma revisão do amarelo. | `lib/bloomy_web/components/core_components.ex:483` |
+| 103 | `status_tag/1` é **só um ponto colorido** de 10px, verde ou vermelho, sem texto. O `title` é opcional, e onde ele não é passado a situação existe apenas na cor — quem não distingue verde de vermelho não recebe a informação, e quem usa leitor de tela não recebe nada. | `lib/bloomy_web/components/core_components.ex:2302-2314` |

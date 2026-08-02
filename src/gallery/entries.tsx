@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { Button } from "../components/bloomy/Button.js";
+import { Card, InfoCard } from "../components/bloomy/Card.js";
+import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
+import { Table } from "../components/bloomy/Table.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -25,6 +28,17 @@ export type GalleryEntry = {
 const CORES = ["blue", "red", "green", "purple", "yellow"] as const;
 const VARIANTES = ["default", "outline", "tint", "ghost"] as const;
 const TAMANHOS = ["small", "medium", "normal"] as const;
+const TAGS: TagVariant[] = [
+  "light-blue", "blue", "cyan", "purple", "light-purple",
+  "red", "orange", "brand", "green", "yellow",
+];
+
+/** Linhas sintéticas para a tabela da galeria. */
+const LINHAS = [
+  { horario: "08:00", paciente: "Helena M.", servico: "Terapia ocupacional", situacao: true },
+  { horario: "09:30", paciente: "Otávio L.", servico: "Fonoaudiologia", situacao: false },
+  { horario: "11:00", paciente: "Bruna S.", servico: "Psicologia ABA", situacao: true },
+];
 
 export const GALLERY: GalleryEntry[] = [
   {
@@ -102,12 +116,93 @@ export const GALLERY: GalleryEntry[] = [
   { name: "label", origem: "lib/bloomy_web/components/core_components.ex:1536", descricao: "Rótulo de campo." },
   { name: "error", origem: "lib/bloomy_web/components/core_components.ex:1559", descricao: "Mensagem de erro de campo." },
   { name: "header", origem: "lib/bloomy_web/components/core_components.ex:1583", descricao: "Cabeçalho de seção, com título e ações." },
-  { name: "table", origem: "lib/bloomy_web/components/core_components.ex:1638", descricao: "Tabela de listagem, com colunas e ações por linha." },
+  {
+    name: "table",
+    origem: "lib/bloomy_web/components/core_components.ex:1638",
+    descricao: "Tabela de listagem, com colunas e ações por linha.",
+    demos: [
+      {
+        titulo: "Com dados e com ação",
+        render: () => (
+          <Table
+            rows={LINHAS}
+            rowId={(l) => l.horario}
+            cols={[
+              { label: "Horário", render: (l) => l.horario },
+              { label: "Paciente", render: (l) => l.paciente },
+              { label: "Serviço", render: (l) => l.servico },
+              {
+                label: "Situação",
+                render: (l) => <StatusTag status={l.situacao} title={l.situacao ? "Ativo" : "Inativo"} />,
+              },
+            ]}
+            actions={() => "Abrir"}
+          />
+        ),
+      },
+      {
+        titulo: "Vazia",
+        nota: "A linha de vazio existe sempre, escondida; quem a revela é `first:table-row`, no navegador.",
+        render: () => (
+          <Table
+            rows={[] as typeof LINHAS}
+            cols={[
+              { label: "Horário", render: (l) => l.horario },
+              { label: "Paciente", render: (l) => l.paciente },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
   { name: "simple_table", origem: "lib/bloomy_web/components/core_components.ex:1703", descricao: "Tabela sem ações, para leitura." },
   { name: "list", origem: "lib/bloomy_web/components/core_components.ex:1740", descricao: "Lista de descrição, termo e valor." },
   { name: "back", origem: "lib/bloomy_web/components/core_components.ex:1763", descricao: "Link de voltar." },
-  { name: "card", origem: "lib/bloomy_web/components/core_components.ex:1792", descricao: "Cartão de conteúdo." },
-  { name: "info_card", origem: "lib/bloomy_web/components/core_components.ex:1830", descricao: "Cartão de destaque com ícone e número." },
+  {
+    name: "card",
+    origem: "lib/bloomy_web/components/core_components.ex:1792",
+    descricao: "Cartão de conteúdo.",
+    demos: [
+      {
+        titulo: "Branco por padrão, e colorido quando a classe já traz fundo",
+        nota: "`extract_bg_class/1`: o branco só entra se ninguém tiver pedido outro fundo.",
+        render: () => (
+          <div className="flex flex-wrap gap-4">
+            <Card className="w-64">
+              <p className="m-0 text-sm text-navy">Cartão padrão, fundo branco.</p>
+            </Card>
+            <Card className="w-64 bg-[var(--color-brand-blue)]/20">
+              <p className="m-0 text-sm text-navy">Com `bg-*` na classe, o branco não entra.</p>
+            </Card>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    name: "info_card",
+    origem: "lib/bloomy_web/components/core_components.ex:1830",
+    descricao: "Cartão de destaque com ícone e número.",
+    demos: [
+      {
+        titulo: "As cinco variantes",
+        render: () => (
+          <div className="flex flex-wrap gap-6">
+            <InfoCard variant="blue" icon="fa-calendar-day" info="34" title="Atendimentos hoje" />
+            <InfoCard variant="orange" icon="fa-clock" info="6" title="Em atraso" />
+            <InfoCard variant="accent" icon="fa-users" info="128" title="Pacientes ativos" />
+            <InfoCard variant="green" icon="fa-check" info="92%" title="Presença" />
+            <InfoCard variant="info" icon="fa-bullhorn" info="3" title="Autorizações" />
+          </div>
+        ),
+      },
+      {
+        titulo: "Sem número, o próprio cartão carrega o carregamento",
+        nota: "Está no original: sem `info`, entra uma barra pulsando no lugar.",
+        render: () => <InfoCard variant="blue" icon="fa-calendar-day" title="Atendimentos hoje" />,
+      },
+    ],
+  },
   { name: "inside_card", origem: "lib/bloomy_web/components/core_components.ex:1870", descricao: "Cartão aninhado, sem sombra própria." },
   { name: "dropdown", origem: "lib/bloomy_web/components/core_components.ex:2030", descricao: "Menu suspenso ancorado num gatilho." },
   { name: "dropdown_menu", origem: "lib/bloomy_web/components/core_components.ex:2054", descricao: "A lista de itens do menu suspenso." },
@@ -115,9 +210,68 @@ export const GALLERY: GalleryEntry[] = [
   { name: "image_upload", origem: "lib/bloomy_web/components/core_components.ex:2114", descricao: "Envio de imagem com pré-visualização." },
   { name: "avatar", origem: "lib/bloomy_web/components/core_components.ex:2163", descricao: "Foto ou iniciais de uma pessoa." },
   { name: "progress", origem: "lib/bloomy_web/components/core_components.ex:2201", descricao: "Barra de progresso." },
-  { name: "tag", origem: "lib/bloomy_web/components/core_components.ex:2237", descricao: "Etiqueta de categoria." },
-  { name: "tag_list", origem: "lib/bloomy_web/components/core_components.ex:2271", descricao: "Conjunto de etiquetas, com transbordo." },
-  { name: "status_tag", origem: "lib/bloomy_web/components/core_components.ex:2302", descricao: "Etiqueta de situação, com cor por estado." },
+  {
+    name: "tag",
+    origem: "lib/bloomy_web/components/core_components.ex:2237",
+    descricao: "Etiqueta de categoria.",
+    demos: [
+      {
+        titulo: "As dez variantes",
+        nota: "`blue` é a única invertida: fundo forte e texto claro, onde as outras fazem o oposto.",
+        render: () => (
+          <div className="flex flex-wrap items-center gap-2">
+            {TAGS.map((v) => (
+              <Tag key={v} item={v} variant={v} />
+            ))}
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    name: "tag_list",
+    origem: "lib/bloomy_web/components/core_components.ex:2271",
+    descricao: "Conjunto de etiquetas, com transbordo.",
+    demos: [
+      {
+        titulo: "Com e sem limite",
+        nota: "Acima do limite, o excedente vira `+N` e os nomes ficam no `title`.",
+        render: () => (
+          <div className="space-y-2">
+            <TagList items={["Fonoaudiologia", "Terapia ocupacional", "Psicologia"]} />
+            <TagList
+              items={["Fonoaudiologia", "Terapia ocupacional", "Psicologia", "Psicomotricidade"]}
+              limit={2}
+            />
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    name: "status_tag",
+    origem: "lib/bloomy_web/components/core_components.ex:2302",
+    descricao: "Etiqueta de situação, com cor por estado.",
+    demos: [
+      {
+        titulo: "Ativo e inativo",
+        nota: "É só um ponto colorido: sem `title`, a informação existe apenas na cor — achado 103.",
+        render: () => (
+          <div className="flex items-center gap-4 text-sm text-navy">
+            <span className="flex items-center gap-2">
+              <StatusTag status title="Ativo" /> com título
+            </span>
+            <span className="flex items-center gap-2">
+              <StatusTag status={false} title="Inativo" /> com título
+            </span>
+            <span className="flex items-center gap-2">
+              <StatusTag status /> sem título
+            </span>
+          </div>
+        ),
+      },
+    ],
+  },
   { name: "empty_state_card", origem: "lib/bloomy_web/components/core_components.ex:2322", descricao: "Cartão de lista vazia." },
   { name: "range_datepicker", origem: "lib/bloomy_web/components/core_components.ex:2348", descricao: "Seleção de intervalo de datas." },
   { name: "range_monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2394", descricao: "Seleção de intervalo de meses." },
