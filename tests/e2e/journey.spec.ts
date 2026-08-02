@@ -2066,3 +2066,78 @@ test.describe("marcar atendimento", () => {
     await expect(marcar).toBeEnabled();
   });
 });
+
+test.describe("fase terapêutica", () => {
+  test("cada especialidade tem o próprio percurso", async ({ page }) => {
+    await page.goto(urlFor("patients.phases-uneven"));
+
+    await expect(page.getByRole("heading", { name: "Fonoaudiologia" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Psicologia" })).toBeVisible();
+    await expect(page.getByText("etapa 4 de 6")).toBeVisible();
+    await expect(page.getByText("etapa 1 de 6")).toBeVisible();
+  });
+
+  test("a tela afirma que o percurso não caminhar junto é o normal", async ({ page }) => {
+    await page.goto(urlFor("patients.phases-uneven"));
+
+    await expect(page.getByText("O percurso não caminha junto, e não deveria")).toBeVisible();
+    await expect(page.getByText(/obrigaria a escolher qual delas mente/)).toBeVisible();
+  });
+
+  test("a fase sem especialidade é apontada", async ({ page }) => {
+    await page.goto(urlFor("patients.phases-uneven"));
+
+    await expect(page.getByText("Uma fase não tem especialidade")).toBeVisible();
+    await expect(page.getByText(/some da leitura/)).toBeVisible();
+  });
+
+  test("ambientação é marcada como ambígua", async ({ page }) => {
+    await page.goto(urlFor("patients.phases-all-beginning"));
+
+    // Três especialidades no valor padrão, e a ressalva em cada uma.
+    await expect(page.getByText(/Ambientação é o valor padrão do campo/)).toHaveCount(3);
+  });
+
+  test("sem fase registrada é diferente de estar em ambientação", async ({ page }) => {
+    await page.goto(urlFor("patients.phases-empty"));
+
+    await expect(page.getByText("Nenhuma fase registrada")).toBeVisible();
+    await expect(page.getByText(/cada uma tem o percurso dela/)).toBeVisible();
+  });
+});
+
+test.describe("inativar paciente", () => {
+  test("o resumo traz os números antes do botão", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-impact"));
+
+    await expect(page.getByText("O que esta ação vai fazer")).toBeVisible();
+    await expect(page.getByText(/5 agendamentos serão cancelados/)).toBeVisible();
+    await expect(page.getByText(/2 mapas de horas em vigor serão encerrados/)).toBeVisible();
+    await expect(page.getByText(/Nada disso volta ao trocar o status/)).toBeVisible();
+  });
+
+  test("o corte real aparece com hora, e pega a véspera", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-eve"));
+
+    await expect(page.getByText("O corte começa na véspera, às 21h")).toBeVisible();
+    await expect(page.getByText(/O corte real é 29\/07 às 21:00/)).toBeVisible();
+    await expect(
+      page.getByText(/num dia em que o paciente ainda estava ativo/),
+    ).toBeVisible();
+  });
+
+  test("a data futura mantém o paciente ativo e não adia a destruição", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-scheduled"));
+
+    await expect(page.getByText("A data é futura, e a destruição não espera por ela")).toBeVisible();
+    await expect(page.getByText(/o status espera, a parte irreversível não/)).toBeVisible();
+  });
+
+  test("com data de hoje, o aviso de adiamento não aparece", async ({ page }) => {
+    await page.goto(urlFor("patients.deactivation-impact"));
+
+    await expect(
+      page.getByText("A data é futura, e a destruição não espera por ela"),
+    ).toHaveCount(0);
+  });
+});
