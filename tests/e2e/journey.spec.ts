@@ -2511,3 +2511,41 @@ test.describe("a conta do supervisor", () => {
     await expect(page.getByText("Definição da coordenação")).toBeVisible();
   });
 });
+
+test.describe("vigência dos planos", () => {
+  test("os planos com meia vigência são apontados como invisíveis", async ({ page }) => {
+    await page.goto(urlFor("authorizations.coverage-half-filled"));
+
+    await expect(page.getByText(/2 planos somem de qualquer consulta por operadora/)).toBeVisible();
+    await expect(page.getByText(/a entrada de dado mais provável produz o pior resultado/)).toBeVisible();
+  });
+
+  test("cada estado tem etiqueta em texto, e não só cor", async ({ page }) => {
+    await page.goto(urlFor("authorizations.coverage-half-filled"));
+
+    await expect(page.getByText("Coberto nesta data")).toBeVisible();
+    await expect(page.getByText("Fora da vigência nesta data")).toBeVisible();
+    await expect(page.getByText("Só uma das datas preenchida — não cobre data nenhuma").first()).toBeVisible();
+  });
+
+  test("a assimetria é declarada, mesmo não sendo defeito", async ({ page }) => {
+    await page.goto(urlFor("authorizations.coverage-half-filled"));
+
+    await expect(page.getByText("Sem nenhuma data, o filtro cobre sempre")).toBeVisible();
+    await expect(page.getByText(/nenhuma data cobre tudo, uma data cobre nada/)).toBeVisible();
+  });
+
+  test("a correção sugerida diz qual das duas datas falta", async ({ page }) => {
+    await page.goto(urlFor("authorizations.coverage-half-filled"));
+
+    await expect(page.getByText(/Preencha o fim da vigência, ou apague o início/)).toBeVisible();
+    await expect(page.getByText(/Preencha o início da vigência, ou apague o fim/)).toBeVisible();
+  });
+
+  test("com todas completas, nenhum aviso e nenhuma correção", async ({ page }) => {
+    await page.goto(urlFor("authorizations.coverage-well-formed"));
+
+    await expect(page.getByText(/somem de qualquer consulta/)).toHaveCount(0);
+    await expect(page.getByText(/Preencha o/)).toHaveCount(0);
+  });
+});

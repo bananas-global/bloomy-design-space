@@ -1942,3 +1942,27 @@ export interface OverdueData {
    */
   viewerProfessionalName?: string;
 }
+
+/* ================================================ Cobertura de plano */
+
+/**
+ * A vigência de um plano de saúde do paciente.
+ *
+ * As duas datas são **independentemente opcionais** no cadastro, e o filtro de
+ * operadora só reconhece dois dos quatro estados possíveis.
+ */
+export interface PlanCoverage {
+  id: string;
+  patientName: string;
+  healthCareName: string;
+  /** Início da cobertura. Ausente é permitido. */
+  startOfCoverage?: string;
+  /** Fim da cobertura. Ausente é permitido. */
+  endOfCoverage?: string;
+}
+
+export interface PlanCoverageData {
+  plans: PlanCoverage[];
+  /** Data de referência. Fixture não olha o relógio. */
+  today: string;
+}
