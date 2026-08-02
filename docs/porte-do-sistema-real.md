@@ -271,6 +271,34 @@ Seis regras, dez cenários, a tela `Team` e vinte e cinco testes.
 
 Verde: `pnpm check` e 269 jornadas Playwright.
 
+### 10. Portais externos, parte 1: público — `porte/portal-publico`
+
+Concluída.
+
+O totem de chegada e a pesquisa de satisfação: a única parte do Bloomy usada por
+quem não trabalha na clínica. Isso muda o critério de qualidade. Numa tela
+interna, um erro mal explicado custa um chamado ao suporte; aqui custa uma
+pessoa com uma criança no colo desistindo do totem e indo para a fila da
+recepção.
+
+- **Três falhas, três mensagens, três saídas.** CPF com dígito errado se resolve
+  digitando de novo; CPF correto sem cadastro, não; nenhum agendamento hoje pode
+  ser dia ou unidade errada. Uma mensagem genérica manda todo mundo para a fila
+  e anula o totem.
+- **O texto e os alvos são maiores que os das telas internas**, de propósito:
+  quem opera está de pé, muitas vezes segurando alguém.
+- **A faixa do NPS não aparece para quem responde.** Dizer "você é um detrator"
+  a alguém que acabou de dar nota 4 é hostil; a classificação é leitura interna.
+
+A validação de CPF entrou de verdade, com dígito verificador. Isso tem um efeito
+conveniente: os CPFs sintéticos deste repositório são reprovados por ela
+exatamente como um erro de digitação seria, o que mantém honesta a promessa de
+que nenhum CPF real entrou aqui.
+
+Cinco regras, nove cenários, as telas `Kiosk` e `Nps`, e vinte e quatro testes.
+
+Verde: `pnpm check` e 295 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

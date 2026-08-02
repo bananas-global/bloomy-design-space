@@ -901,6 +901,78 @@ test.describe("Equipe", () => {
   });
 });
 
+test.describe("Portal público", () => {
+  test("o totem anuncia a etapa e usa alvos grandes", async ({ page }) => {
+    await page.goto(urlFor("public.kiosk-identification"));
+
+    await expect(page.getByText("Etapa 1 de 3, atual:")).toBeAttached();
+    await expect(page.locator('[aria-current="step"]')).toHaveText(/Identificação/);
+    await expect(page.getByLabel("CPF do responsável")).toBeVisible();
+  });
+
+  test("CPF errado e CPF sem cadastro dão saídas opostas", async ({ page }) => {
+    await page.goto(urlFor("public.kiosk-invalid-cpf"));
+    await expect(page.getByRole("heading", { name: "CPF inválido" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Digitar de novo" })).toBeVisible();
+
+    await page.goto(urlFor("public.kiosk-guardian-not-found"));
+    await expect(page.getByRole("heading", { name: "Não encontramos esse CPF" })).toBeVisible();
+    await expect(page.getByText(/O CPF está correto/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Falar com a recepção" })).toBeVisible();
+  });
+
+  test("quem já está dentro recebe registrar saída", async ({ page }) => {
+    await page.goto(urlFor("public.kiosk-select-patient"));
+
+    await expect(page.getByText("Registrar chegada")).toBeVisible();
+    await expect(page.getByText("Registrar saída")).toBeVisible();
+    await expect(page.getByText("Atendimentos às 10:00 e 11:00")).toBeVisible();
+  });
+
+  test("nenhum agendamento levanta as duas hipóteses", async ({ page }) => {
+    await page.goto(urlFor("public.kiosk-no-patients"));
+
+    await expect(page.getByText(/Pode ser outro dia, ou outra unidade/)).toBeVisible();
+  });
+
+  test("a confirmação diz o que fazer agora", async ({ page }) => {
+    await page.goto(urlFor("public.kiosk-complete"));
+
+    await expect(page.getByRole("heading", { name: "Chegada registrada" })).toBeVisible();
+    await expect(page.getByText(/Podem aguardar aqui na recepção/)).toBeVisible();
+    // Confirmação é status, não alerta: não interrompe.
+    await expect(page.getByRole("status")).toContainText("Chegada registrada");
+  });
+
+  test("sem unidade, o totem não mostra etapas a percorrer", async ({ page }) => {
+    await page.goto(urlFor("public.kiosk-unit-not-found"));
+
+    await expect(page.getByRole("heading", { name: "Unidade não encontrada" })).toBeVisible();
+    await expect(page.getByLabel("Etapas do check-in")).toHaveCount(0);
+  });
+
+  test("a escala do NPS é um grupo de rádio com extremos nomeados", async ({ page }) => {
+    await page.goto(urlFor("public.nps-form"));
+
+    await expect(page.getByRole("group", { name: "Nota de 0 a 10" })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Nota 0, de jeito nenhum" })).toBeVisible();
+    await expect(page.getByRole("radio", { name: "Nota 10, com certeza" })).toBeVisible();
+
+    // Enviar fica bloqueado até haver nota.
+    await expect(page.getByRole("button", { name: "Enviar" })).toBeDisabled();
+    await expect(page.getByText(/nada foi contabilizado/)).toBeVisible();
+  });
+
+  test("nota baixa recebe o mesmo agradecimento, sem classificação", async ({ page }) => {
+    await page.goto(urlFor("public.nps-low-rating"));
+
+    await expect(page.getByRole("heading", { name: "Obrigado pela resposta" })).toBeVisible();
+    await expect(page.getByText("4 de 10")).toBeVisible();
+    // A faixa do NPS é leitura interna e não pode vazar para a família.
+    await expect(page.getByText(/detrator|neutro|promotor/i)).toHaveCount(0);
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

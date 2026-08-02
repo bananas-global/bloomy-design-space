@@ -905,6 +905,79 @@ export type TeamData = {
 };
 
 /* ================================================================== *
+ * Portal público — a única superfície que a família usa
+ * ================================================================== */
+
+/**
+ * Etapas do totem de auto check-in.
+ *
+ * O monólito as declara como `@steps ["identification", "select_patient",
+ * "registration_complete"]` e avança por índice, sem voltar: só há um botão de
+ * recomeçar. É um totem na recepção, operado por quem chegou com uma criança no
+ * colo — cada etapa a mais é uma chance de desistir.
+ */
+export type CheckinStep = "identification" | "select_patient" | "registration_complete";
+
+/**
+ * Por que o totem parou.
+ *
+ * Os três motivos exigem respostas diferentes de quem está na frente da tela, e
+ * é por isso que são valores distintos e não uma mensagem genérica: CPF digitado
+ * errado se resolve digitando de novo; responsável não cadastrado exige a
+ * recepção; nenhum agendamento hoje pode significar que a pessoa veio no dia
+ * errado.
+ */
+export type CheckinError =
+  | "invalid_cpf"
+  | "guardian_not_found"
+  | "no_scheduled_patients"
+  | "unit_not_found";
+
+export type KioskPatient = {
+  id: string;
+  name: string;
+  /** Horários de hoje naquela unidade, em ordem. */
+  times: string[];
+  /** Já tem check-in aberto: a ação disponível vira a saída. */
+  hasOpenCheckin: boolean;
+};
+
+export type KioskData = {
+  /** Ausente quando o slug da URL não corresponde a nenhuma unidade. */
+  unit?: Unit;
+  step: CheckinStep;
+  error?: CheckinError;
+  guardian?: { id: string; name: string };
+  patients: KioskPatient[];
+  selectedPatientId?: string;
+  action?: "checkin" | "checkout";
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/**
+ * Resposta de NPS.
+ *
+ * `sent` distingue o convite enviado da resposta dada: enquanto ele é verdadeiro
+ * e não há nota, o registro é só o convite. `code` tem exatamente cinco
+ * caracteres e é único — é por ele que a família abre o link.
+ */
+export type NpsResponse = {
+  code: string;
+  /** Zero a dez. Ausente quando só o convite foi enviado. */
+  rating?: number;
+  comment?: string;
+  sent: boolean;
+  guardianName?: string;
+};
+
+export type NpsData = {
+  response: NpsResponse;
+  unit: Unit;
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

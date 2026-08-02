@@ -14,6 +14,8 @@ import { AuthorizationHub } from "../screens/AuthorizationHub.js";
 import { Closures } from "../screens/Closures.js";
 import { HealthcareInvoiceScreen } from "../screens/HealthcareInvoice.js";
 import { Team } from "../screens/Team.js";
+import { Kiosk } from "../screens/Kiosk.js";
+import { Nps } from "../screens/Nps.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -48,6 +50,8 @@ export const productDefinition: ProductDefinition = {
     { path: "/closures", screen: Closures },
     { path: "/invoices/:id", screen: HealthcareInvoiceScreen },
     { path: "/team", screen: Team },
+    { path: "/kiosk", screen: Kiosk },
+    { path: "/nps", screen: Nps },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build

@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-89 cenários em dez módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+98 cenários em onze módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,6 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
+| **Portal público** | totem esperando CPF, CPF errado, CPF sem cadastro, escolher quem chegou, nenhum atendimento hoje, chegada registrada, QR Code inválido, pesquisa de satisfação, nota baixa |
 | **Equipe** | equipe da unidade, supervisão define a assinatura, profissional a definir, cadastro incompleto, contrato com taxa faltando, hora zerada válida, contrato sem nota, desativar sem data, quem atende sem acesso, unidade vazia |
 | **Faturas** | pronta para fechar, as duas perdas silenciosas, faltam identificadores, nada atendido, lote já gerado, operadora sem códigos TISS, operação sem acesso |
 | **Fechamentos** | o mês etapa por etapa, aguardando aceite, invisível em conferência, nota é do profissional, bloqueada para outros, contrato sem nota, pagar sem comprovante, pagar com comprovante, pago congelado, vazio |
@@ -83,6 +84,11 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `contract-type-decides-required-rates` | Fixo e horista exigem valores diferentes — e zero vale só num deles. |
 | `contract-decides-invoice-requirement` | O contrato do mês decide se o fechamento pede nota fiscal. |
 | `deactivation-needs-a-date` | Desativar exige a data que separa o histórico do que ainda vale. |
+| `kiosk-distinguishes-three-failures` | CPF errado, sem cadastro e sem agendamento são três mensagens. |
+| `kiosk-lists-only-today-and-unstarted` | O totem lista só o de hoje, sem cancelamento e sem atendimento iniciado. |
+| `kiosk-never-goes-back` | As etapas do totem avançam; a única saída é recomeçar. |
+| `nps-rating-is-zero-to-ten` | Nota de 0 a 10, obrigatória exceto no convite ainda sem resposta. |
+| `nps-code-identifies-the-invite` | Código de cinco caracteres, único por convite. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

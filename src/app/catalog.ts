@@ -11,6 +11,7 @@ import { authorizationFixtures } from "../fixtures/authorizations.js";
 import { closureFixtures } from "../fixtures/closures.js";
 import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
+import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -21,6 +22,7 @@ import { authorizationRules } from "../rules/authorizations.js";
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
 import { teamRules } from "../rules/team.js";
+import { publicPortalRules } from "../rules/publicPortal.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -31,6 +33,7 @@ import { authorizationScenarios } from "../scenarios/authorizations.js";
 import { closureScenarios } from "../scenarios/closures.js";
 import { invoiceScenarios } from "../scenarios/invoices.js";
 import { teamScenarios } from "../scenarios/team.js";
+import { publicPortalScenarios } from "../scenarios/publicPortal.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -376,6 +379,38 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "public",
+    name: "Portal público",
+    description:
+      "O totem de chegada e a pesquisa de satisfação — a única parte do Bloomy usada por quem não trabalha na clínica.",
+    flows: [
+      {
+        id: "arrive-at-the-clinic",
+        title: "Registrar a chegada pelo totem",
+        description:
+          "Três telas que não voltam, e as três falhas que exigem respostas diferentes de quem está na frente.",
+        steps: [
+          {
+            scenario: "public.kiosk-identification",
+            label: "Digitar o CPF do responsável",
+            decision: "O que aconteceu com o CPF digitado?",
+            branches: {
+              "Números não fecham": "public.kiosk-invalid-cpf",
+              "Correto e sem cadastro": "public.kiosk-guardian-not-found",
+            },
+          },
+          {
+            scenario: "public.kiosk-select-patient",
+            label: "Escolher quem chegou",
+            decision: "Há agendamento hoje nesta unidade?",
+            branches: { "Nenhum hoje": "public.kiosk-no-patients" },
+          },
+          { scenario: "public.kiosk-complete", label: "Ver a confirmação" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -389,6 +424,7 @@ export const scenarios: Scenario[] = [
   ...closureScenarios,
   ...invoiceScenarios,
   ...teamScenarios,
+  ...publicPortalScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -402,6 +438,8 @@ export const fixtures: Fixture[] = [
   ...closureFixtures,
   ...invoiceFixtures,
   ...teamFixtures,
+  ...publicPortalFixtures,
+  ...npsFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -415,6 +453,7 @@ export const rules: Rule[] = [
   ...closureRules,
   ...invoiceRules,
   ...teamRules,
+  ...publicPortalRules,
 ];
 
 export { personas };

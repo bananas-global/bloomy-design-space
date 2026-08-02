@@ -115,6 +115,19 @@ import {
   requiresSupervisorSignature,
   signingSupervisors,
 } from "../src/rules/team.js";
+import {
+  actionFor,
+  canSubmitNps,
+  errorMessage,
+  identify,
+  isValidCpf,
+  isValidNpsCode,
+  kioskError,
+  nextStep as nextKioskStep,
+  npsBand,
+  stepIndex,
+  validateNps,
+} from "../src/rules/publicPortal.js";
 
 /**
  * Testes das regras de negócio.
@@ -2170,5 +2183,173 @@ describe("deactivation-needs-a-date", () => {
 
   it("bloqueia por permissão antes de tudo", () => {
     expect(canDeactivate(member(), []).reason).toMatch(/não edita profissionais/);
+  });
+});
+
+/* ======================================================== portal público */
+
+/**
+ * A única superfície usada por quem não trabalha na clínica. O erro mal
+ * explicado aqui não vira chamado de suporte — vira uma pessoa desistindo do
+ * totem e indo para a fila.
+ */
+
+const RESPONSAVEIS = [
+  { cpf: "529.982.247-25", id: "resp-1", name: "Renata Andrade Lins" },
+  { cpf: "111.444.777-35", id: "resp-2", name: "Alceu Menendes Pinto" },
+];
+
+describe("validação de CPF", () => {
+  it("aceita CPF com dígito verificador correto", () => {
+    expect(isValidCpf("529.982.247-25")).toBe(true);
+    expect(isValidCpf("52998224725")).toBe(true);
+  });
+
+  it("recusa os CPFs sintéticos deste repositório", () => {
+    // As fixtures usam dígito inválido de propósito. É conveniente: o cenário
+    // de CPF inválido usa um número que é de fato inválido.
+    expect(isValidCpf("000.111.222-00")).toBe(false);
+    expect(isValidCpf("000.333.444-00")).toBe(false);
+  });
+
+  it("recusa comprimento errado e todos os dígitos iguais", () => {
+    expect(isValidCpf("5299822472")).toBe(false);
+    expect(isValidCpf("111.111.111-11")).toBe(false);
+    expect(isValidCpf("")).toBe(false);
+  });
+});
+
+describe("kiosk-distinguishes-three-failures", () => {
+  it("CPF malformado é erro de digitação, não de cadastro", () => {
+    const result = identify("000.111.222-00", RESPONSAVEIS);
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.error).toBe("invalid_cpf");
+  });
+
+  it("CPF correto e desconhecido é falta de cadastro", () => {
+    // O mesmo número válido do teste anterior, contra uma base sem ele.
+    const result = identify("529.982.247-25", []);
+    expect(result.ok === false && result.error).toBe("guardian_not_found");
+  });
+
+  it("CPF correto e conhecido identifica o responsável", () => {
+    const result = identify("529.982.247-25", RESPONSAVEIS);
+    expect(result.ok).toBe(true);
+    expect(result.ok === true && result.guardian.name).toBe("Renata Andrade Lins");
+  });
+
+  it("a formatação não importa para o reconhecimento", () => {
+    expect(identify("52998224725", RESPONSAVEIS).ok).toBe(true);
+  });
+
+  it("cada falha tem mensagem e saída próprias", () => {
+    expect(errorMessage("invalid_cpf").exit).toBe("Digitar de novo");
+    expect(errorMessage("guardian_not_found").exit).toBe("Falar com a recepção");
+    expect(errorMessage("no_scheduled_patients").body).toMatch(/outro dia, ou outra unidade/);
+    expect(errorMessage("unit_not_found").body).toMatch(/QR Code/);
+  });
+});
+
+describe("kiosk-never-goes-back", () => {
+  it("as etapas avançam em ordem e param no fim", () => {
+    expect(nextKioskStep("identification")).toBe("select_patient");
+    expect(nextKioskStep("select_patient")).toBe("registration_complete");
+    expect(nextKioskStep("registration_complete")).toBeUndefined();
+  });
+
+  it("a posição da etapa é conhecida, para a tela poder anunciá-la", () => {
+    expect(stepIndex("identification")).toBe(0);
+    expect(stepIndex("registration_complete")).toBe(2);
+  });
+});
+
+describe("kiosk-lists-only-today-and-unstarted", () => {
+  const base = { step: "select_patient" as const, patients: [], now: "2026-07-30T09:24:00.000-03:00" };
+
+  it("lista vazia na etapa de escolha vira o erro de nenhum agendamento", () => {
+    expect(kioskError({ ...base, unit: { id: "u", name: "Pinheiros" } })).toBe(
+      "no_scheduled_patients",
+    );
+  });
+
+  it("sem unidade, o erro é do link, e vem antes de qualquer outro", () => {
+    expect(kioskError({ ...base, error: "invalid_cpf" })).toBe("unit_not_found");
+  });
+
+  it("com paciente na lista, não há erro", () => {
+    expect(
+      kioskError({
+        ...base,
+        unit: { id: "u", name: "Pinheiros" },
+        patients: [{ id: "p", name: "Théo", times: ["10:00"], hasOpenCheckin: false }],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("quem já está dentro recebe a ação de saída", () => {
+    expect(actionFor({ id: "p", name: "x", times: [], hasOpenCheckin: true })).toBe("checkout");
+    expect(actionFor({ id: "p", name: "x", times: [], hasOpenCheckin: false })).toBe("checkin");
+  });
+});
+
+describe("nps-rating-is-zero-to-ten", () => {
+  it("convite enviado sem nota é registro legítimo", () => {
+    expect(validateNps({ code: "K7M2Q", sent: true }).allowed).toBe(true);
+  });
+
+  it("resposta sem nota é recusada", () => {
+    expect(validateNps({ code: "K7M2Q", sent: false }).reason).toMatch(/Escolha uma nota de 0 a 10/);
+  });
+
+  it("as duas pontas da escala são válidas", () => {
+    expect(validateNps({ code: "K7M2Q", sent: false, rating: 0 }).allowed).toBe(true);
+    expect(validateNps({ code: "K7M2Q", sent: false, rating: 10 }).allowed).toBe(true);
+  });
+
+  it("fora da escala é recusado", () => {
+    expect(validateNps({ code: "K7M2Q", sent: false, rating: 11 }).reason).toMatch(/entre 0 e 10/);
+    expect(validateNps({ code: "K7M2Q", sent: true, rating: -1 }).reason).toMatch(/entre 0 e 10/);
+  });
+
+  it("comentário tem teto de cinco mil caracteres", () => {
+    const longo = "a".repeat(5001);
+    expect(validateNps({ code: "K7M2Q", sent: false, rating: 9, comment: longo }).reason).toMatch(
+      /5000 caracteres/,
+    );
+  });
+});
+
+describe("nps-code-identifies-the-invite", () => {
+  it("o código tem exatamente cinco caracteres", () => {
+    expect(isValidNpsCode("K7M2Q")).toBe(true);
+    expect(isValidNpsCode("K7M2")).toBe(false);
+    expect(isValidNpsCode("K7M2QX")).toBe(false);
+  });
+});
+
+describe("faixa do NPS", () => {
+  it("classifica para a leitura interna, não para a tela da família", () => {
+    expect(npsBand(0)).toBe("detractor");
+    expect(npsBand(6)).toBe("detractor");
+    expect(npsBand(7)).toBe("passive");
+    expect(npsBand(8)).toBe("passive");
+    expect(npsBand(9)).toBe("promoter");
+    expect(npsBand(10)).toBe("promoter");
+  });
+});
+
+describe("envio do NPS é pergunta diferente da validade do registro", () => {
+  it("o convite sem nota é registro válido e envio inválido", () => {
+    const convite = { code: "K7M2Q", sent: true };
+    expect(validateNps(convite).allowed).toBe(true);
+    expect(canSubmitNps(convite).reason).toMatch(/Escolha uma nota/);
+  });
+
+  it("com nota escolhida, o envio libera", () => {
+    expect(canSubmitNps({ code: "K7M2Q", sent: true, rating: 9 }).allowed).toBe(true);
+  });
+
+  it("o envio ainda recusa nota fora da escala", () => {
+    expect(canSubmitNps({ code: "K7M2Q", sent: true, rating: 42 }).reason).toMatch(/entre 0 e 10/);
   });
 });
