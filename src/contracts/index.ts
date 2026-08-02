@@ -1532,10 +1532,26 @@ export function formatMoney(amountCents: number, locale = "pt-BR"): string {
   );
 }
 
+/**
+ * O fuso da clínica, e não o de quem olha.
+ *
+ * `Intl.DateTimeFormat` sem `timeZone` formata no fuso do navegador. Sem isto,
+ * a mesma URL mostrava **08:00 em São Paulo, 12:00 em Lisboa e 20:00 em
+ * Tóquio** — três situações diferentes para o mesmo cenário, o que desfaz a
+ * promessa central deste Design Space.
+ *
+ * E é errado no produto antes de ser errado aqui: horário de atendimento é do
+ * lugar onde o atendimento acontece. O monólito fixa o mesmo valor em
+ * `Bloomy.CalendarHelper.local_timezone/0`.
+ */
+export const CLINIC_TIMEZONE = "America/Sao_Paulo";
+
 export function formatTime(iso: string, locale = "pt-BR"): string {
-  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
-    parseIsoDate(iso),
-  );
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: CLINIC_TIMEZONE,
+  }).format(parseIsoDate(iso));
 }
 
 export function formatDate(iso: string, locale = "pt-BR"): string {
@@ -1543,6 +1559,7 @@ export function formatDate(iso: string, locale = "pt-BR"): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: CLINIC_TIMEZONE,
   }).format(parseIsoDate(iso));
 }
 
