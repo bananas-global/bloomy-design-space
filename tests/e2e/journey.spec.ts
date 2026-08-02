@@ -1721,7 +1721,9 @@ test.describe("notificações", () => {
     // envio, visto agora do lado de quem recebeu.
     const abrir = page.getByRole("button", { name: "Abrir" });
     await expect(abrir).toBeDisabled();
-    await expect(page.getByText(/exige patients\.edit/)).toBeVisible();
+    // A frase diz o que a tela de destino é, e não o nome da permissão: o
+    // identificador vive na regra e no cenário, onde quem implementa o lê.
+    await expect(page.getByText(/ela é o cadastro do paciente, que o seu perfil não edita/)).toBeVisible();
   });
 
   test("o texto que nomeia o paciente é apontado na própria notificação", async ({ page }) => {

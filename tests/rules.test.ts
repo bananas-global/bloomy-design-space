@@ -4151,7 +4151,10 @@ describe("notification-may-lead-nowhere", () => {
 
     const bloqueado = canOpen(mencao, []);
     expect(bloqueado.allowed).toBe(false);
-    expect(bloqueado.reason).toContain("patients.edit");
+    // O motivo fala do que a tela é, não do nome da permissão — o
+    // identificador fica na regra, para quem implementa.
+    expect(bloqueado.reason).toContain("cadastro do paciente");
+    expect(bloqueado.reason).not.toContain("patients.edit");
   });
 
   it("não exige permissão para uma URL fora da tabela — declarar o que se sabe, não adivinhar", () => {

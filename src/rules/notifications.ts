@@ -148,9 +148,13 @@ export function canOpen(item: NotificationItem, permissions: string[]): Decision
   }
 
   if (target.requiredPermission && !permissions.includes(target.requiredPermission)) {
+    // O identificador da permissão fica na regra e no cenário, onde quem
+    // implementa o lê. Aqui vai a frase que a pessoa precisa: o que é a tela
+    // de destino e por que ela não abre. Um "exige patients.edit" na cara de
+    // quem recebeu a notificação não ajuda ninguém a agir.
     return {
       allowed: false,
-      reason: `A notificação chegou e a tela de destino não abre para o seu perfil — ela exige ${target.requiredPermission}.`,
+      reason: `A notificação chegou e a tela de destino não abre para o seu perfil: ela é o cadastro do paciente, que o seu perfil não edita.`,
     };
   }
 
