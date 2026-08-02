@@ -30,9 +30,11 @@ import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyP
 import { patientGapFixtures } from "../fixtures/patientGaps.js";
 import { overdueFixtures } from "../fixtures/overdue.js";
 import { coverageFixtures } from "../fixtures/coverage.js";
+import { closureGenerationFixtures } from "../fixtures/closureGeneration.js";
 import { agendaRules, schedulingRules, absenceRules } from "../rules/agenda.js";
 import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
+import { closureGenerationRules } from "../rules/closureGeneration.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -85,6 +87,7 @@ import { therapyPhaseScenarios } from "../scenarios/therapyPhases.js";
 import { patientGapScenarios } from "../scenarios/patientGaps.js";
 import { overdueScenarios } from "../scenarios/overdue.js";
 import { coverageScenarios } from "../scenarios/coverage.js";
+import { closureGenerationScenarios } from "../scenarios/closureGeneration.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -454,6 +457,22 @@ export const modules: Module[] = [
     description:
       "O pagamento mensal do profissional: sete etapas, e a cada uma a bola troca de lado.",
     flows: [
+      {
+        id: "generate-the-month",
+        title: "Gerar os fechamentos do mês",
+        description:
+          "A rotina que roda sozinha, e as três decisões dela que custam dinheiro sem produzir erro.",
+        steps: [
+          {
+            scenario: "closures.generation-with-losses",
+            label: "Ver o que a virada perdeu",
+            decision: "E quando a virada corre bem?",
+            branches: {
+              "Nenhuma perda": "closures.generation-clean",
+            },
+          },
+        ],
+      },
       {
         id: "close-the-month",
         title: "Fechar o mês de um profissional",
@@ -934,6 +953,7 @@ export const scenarios: Scenario[] = [
   ...patientGapScenarios,
   ...overdueScenarios,
   ...coverageScenarios,
+  ...closureGenerationScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -967,6 +987,7 @@ export const fixtures: Fixture[] = [
   ...patientGapFixtures,
   ...overdueFixtures,
   ...coverageFixtures,
+  ...closureGenerationFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -977,6 +998,7 @@ export const rules: Rule[] = [
   ...overdueRules,
   ...supervisorOverdueRules,
   ...coverageRules,
+  ...closureGenerationRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,

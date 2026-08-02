@@ -2549,3 +2549,48 @@ test.describe("vigência dos planos", () => {
     await expect(page.getByText(/Preencha o/)).toHaveCount(0);
   });
 });
+
+test.describe("geração mensal de fechamentos", () => {
+  test("as horas sem acerto aparecem somadas, e não como adjetivo", async ({ page }) => {
+    await page.goto(urlFor("closures.generation-with-losses"));
+
+    await expect(page.getByText(/2 profissionais trabalharam e não recebem fechamento/)).toBeVisible();
+    await expect(page.getByText("258 horas")).toBeVisible();
+    await expect(page.getByText(/filtra quem está ativo/)).toBeVisible();
+  });
+
+  test("a falha é apontada ao lado do sucesso que o Oban registrou", async ({ page }) => {
+    await page.goto(urlFor("closures.generation-with-losses"));
+
+    await expect(page.getByText(/O Oban registrou/)).toBeVisible();
+    await expect(page.getByText("Falha registrada como sucesso")).toBeVisible();
+    await expect(page.getByText(/não tenta de novo, e ninguém é avisado/)).toBeVisible();
+  });
+
+  test("o deslocamento da virada é dito com a faixa exata", async ({ page }) => {
+    await page.goto(urlFor("closures.generation-with-losses"));
+
+    await expect(page.getByText("O mês fechou três horas antes")).toBeVisible();
+    await expect(page.getByText(/21:00 e 24:00 de 2026-07-31/)).toBeVisible();
+  });
+
+  test("cada profissional diz se foi pulado, se falhou ou se gerou", async ({ page }) => {
+    await page.goto(urlFor("closures.generation-with-losses"));
+
+    // Escopado à lista: "fechamento gerado" também aparece dentro de "sem
+    // fechamento gerado", no aviso de falha.
+    const lista = page.getByRole("listitem");
+    await expect(lista.filter({ hasText: "pulado por estar inativo" })).toHaveCount(2);
+    await expect(lista.filter({ hasText: "tentou e falhou" })).toHaveCount(1);
+    await expect(lista.filter({ hasText: /^\S.*fechamento gerado$/ })).toHaveCount(2);
+  });
+
+  test("numa virada sem perda, os três avisos calam", async ({ page }) => {
+    await page.goto(urlFor("closures.generation-clean"));
+
+    await expect(page.getByText("Virada sem perda")).toBeVisible();
+    await expect(page.getByText(/não recebem fechamento/)).toHaveCount(0);
+    await expect(page.getByText("Falha registrada como sucesso")).toHaveCount(0);
+    await expect(page.getByText("O mês fechou três horas antes")).toHaveCount(0);
+  });
+});

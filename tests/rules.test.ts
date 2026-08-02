@@ -5436,3 +5436,82 @@ describe("no-dates-means-always-covered", () => {
     expect(coveredByOmission(dados).map((p) => p.id)).toEqual(["b"]);
   });
 });
+
+/* =========================================== Geração mensal de fechamento */
+
+import type { ClosureCandidate, ClosureGenerationData } from "../src/contracts/index.js";
+import {
+  hoursLostAtTheBoundary,
+  hoursWithoutClosure,
+  obanOutcome,
+  processedByWorker,
+  silentFailures,
+  workedButGetsNoClosure,
+} from "../src/rules/closureGeneration.js";
+
+function candidato(overrides: Partial<ClosureCandidate> & { id: string }): ClosureCandidate {
+  return { name: "Marina", activeNow: true, hasClinicalHours: true, hoursInMonth: 132, ...overrides };
+}
+
+function geracao(candidates: ClosureCandidate[], ranAt = "2026-08-01T00:00:00.000Z"): ClosureGenerationData {
+  return { month: "2026-07", ranAt, candidates };
+}
+
+describe("deactivated-professional-gets-no-closure", () => {
+  it("o worker só processa quem está ativo agora e tem horas", () => {
+    expect(processedByWorker(candidato({ id: "a" }))).toBe(true);
+    expect(processedByWorker(candidato({ id: "b", activeNow: false }))).toBe(false);
+    expect(processedByWorker(candidato({ id: "c", hasClinicalHours: false }))).toBe(false);
+  });
+
+  it("isola quem trabalhou e não vai receber", () => {
+    const dados = geracao([
+      candidato({ id: "a" }),
+      candidato({ id: "b", activeNow: false, hoursInMonth: 118 }),
+      // Inativo e sem horas: não trabalhou, então não é perda.
+      candidato({ id: "c", activeNow: false, hasClinicalHours: false }),
+    ]);
+    expect(workedButGetsNoClosure(dados).map((e) => e.id)).toEqual(["b"]);
+  });
+
+  it("soma as horas sem acerto, para a perda ter tamanho", () => {
+    const dados = geracao([
+      candidato({ id: "b", activeNow: false, hoursInMonth: 118 }),
+      candidato({ id: "d", activeNow: false, hoursInMonth: 140 }),
+    ]);
+    expect(hoursWithoutClosure(dados)).toBe(258);
+  });
+});
+
+describe("the-worker-reports-success-with-failures-inside", () => {
+  const dados = geracao([
+    candidato({ id: "a" }),
+    candidato({ id: "b", generationFailed: true }),
+    // Pulado: não conta como falha, porque o worker nem tentou.
+    candidato({ id: "c", activeNow: false }),
+  ]);
+
+  it("reproduz o retorno: sempre ok, com a contagem de falhas dentro", () => {
+    expect(obanOutcome(dados)).toEqual({ status: "ok", successes: 1, failures: 1 });
+  });
+
+  it("falha silenciosa é só quem o worker tentou e não conseguiu", () => {
+    expect(silentFailures(dados).map((e) => e.id)).toEqual(["b"]);
+  });
+});
+
+describe("the-month-closes-three-hours-early", () => {
+  it("nomeia a faixa que cai no mês seguinte quando roda na virada UTC", () => {
+    const aviso = hoursLostAtTheBoundary(geracao([], "2026-08-01T00:00:00.000Z"));
+    expect(aviso).toContain("2026-07-31");
+    expect(aviso).toContain("21:00");
+  });
+
+  it("cala quando o worker roda depois do deslocamento", () => {
+    expect(hoursLostAtTheBoundary(geracao([], "2026-08-01T06:00:00.000Z"))).toBeUndefined();
+  });
+
+  it("cala quando não roda no primeiro dia do mês", () => {
+    expect(hoursLostAtTheBoundary(geracao([], "2026-08-02T00:00:00.000Z"))).toBeUndefined();
+  });
+});

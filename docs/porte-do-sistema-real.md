@@ -1429,6 +1429,36 @@ que ninguém tenha decidido.
 2 cenários, 6 testes de regra, 5 jornadas.
 
 
+### 48. A rotina que gera fechamentos — `porte/geracao-de-fechamento`
+
+Os filtros de fechamento são triviais. O que vale é como o fechamento **nasce**:
+`GenerateMonthlyClosuresWorker` roda na virada, procura quem tem horas
+registradas no mês anterior e gera um acerto para cada.
+
+Três decisões dessa rotina custam dinheiro, e **nenhuma produz erro**.
+
+**A busca filtra `p.status == true`** — ativo na hora em que o worker roda, e
+não durante o mês fechado. Quem trabalhou o mês inteiro e foi desativado antes
+da virada não recebe fechamento. O trabalho aconteceu, as horas estão
+registradas; o que mudou foi o cadastro, depois. E a ausência de um fechamento
+não gera nada que alguém veja. Na fixture são **258 horas** sem acerto.
+
+**O worker conta falhas e devolve `{:ok, ...}` assim mesmo.** O Oban registra
+sucesso, não tenta de novo, ninguém é avisado. A contagem existe — está no
+retorno — e não vira erro, nem alerta, nem reprocessamento. É a mesma forma do
+achado 14 (anamnese relata sucesso e não finaliza) e do 30 (log de
+geolocalização descartado): **um padrão do código, não um caso isolado**.
+
+**O mês fecha três horas antes.** `Date.utc_today()` na virada UTC é 21h do
+último dia em Brasília — sexta ocorrência do padrão de fuso, e a primeira com
+consequência financeira direta. Cai justamente na faixa em que acompanhamento
+terapêutico acontece.
+
+Os três avisos calam quando não há o que reportar, e há uma jornada para isso.
+
+2 cenários, 8 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1482,3 +1512,6 @@ bugs do Design Space; são observações sobre o produto.
 | 44 | Somando o achado 43 ao 21: a etapa `pending_supervisor_signature` some da lista de atraso da coordenação **e** da tela de Supervisão. É a única das quatro situações abertas que não aparece em lista nenhuma de cobrança. | `lib/bloomy/schedules/schedule_filters.ex:87` |
 | 45 | `supervisor_query` é a quarta definição de atraso do arquivo e a única com duas janelas na mesma consulta: imediata para os agendamentos do próprio supervisor, 48 horas para os dos colegas da unidade. É a única vez que o sistema aplica a alguém um prazo mais duro que aos outros — vale preservar explicitamente, porque parece erro para quem for simplificar. | `lib/bloomy/schedules/schedule_filters.ex:95-118` |
 | 46 | O filtro `health_care` reconhece duas das quatro combinações de vigência: ambas as datas dentro do período, ou ambas nulas. Um plano com **só uma** das datas não casa em nenhum ramo e não cobre data nenhuma, em consulta nenhuma. É a forma mais natural de registrar cobertura em curso, e ela falha em silêncio. | `lib/bloomy/schedules/schedule_filters.ex:246-249` |
+| 47 | `GenerateMonthlyClosuresWorker` filtra `p.status == true` — ativo **quando o worker roda**, não durante o mês fechado. Um profissional desativado antes da virada não recebe fechamento pelas horas que trabalhou, e a ausência de um fechamento não gera sinal nenhum. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:41` |
+| 48 | O mesmo worker conta `failures` e devolve `{:ok, ...}` de qualquer jeito. O Oban registra sucesso, não reprocessa, e ninguém é avisado — a contagem de falhas existe no retorno e não vira nada. Mesmo padrão dos achados 14 e 30. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:24-27` |
+| 49 | O worker usa `Date.utc_today()` para decidir a competência. Rodando à meia-noite UTC do dia 1º, em Brasília são 21h do último dia do mês que está sendo fechado — as três últimas horas caem no fechamento seguinte, na faixa em que acompanhamento terapêutico acontece. Sexta ocorrência do padrão de fuso. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:14` |

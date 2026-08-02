@@ -1966,3 +1966,32 @@ export interface PlanCoverageData {
   /** Data de referência. Fixture não olha o relógio. */
   today: string;
 }
+
+/* ========================================== Geração mensal de fechamento */
+
+/**
+ * Um profissional na virada do mês, do ponto de vista do worker que gera
+ * fechamentos.
+ */
+export interface ClosureCandidate {
+  id: string;
+  name: string;
+  /** Ativo **hoje**, na hora em que o worker roda — não durante o mês fechado. */
+  activeNow: boolean;
+  /** Tem registro de horas no mês fechado. */
+  hasClinicalHours: boolean;
+  /** Dia em que foi desativado, quando foi. */
+  deactivatedOn?: string;
+  /** Horas registradas no mês, para a perda ter tamanho. */
+  hoursInMonth: number;
+  /** A geração falhou para este profissional. */
+  generationFailed?: boolean;
+}
+
+export interface ClosureGenerationData {
+  /** Competência fechada, como `AAAA-MM`. */
+  month: string;
+  /** Instante em que o worker rodou. */
+  ranAt: string;
+  candidates: ClosureCandidate[];
+}
