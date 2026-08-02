@@ -1,4 +1,20 @@
 import type {
+  FieldOrderingData as OrdemData,
+  ValidatedField as CampoValidado,
+} from "../src/contracts/index.js";
+import {
+  approvedButStoredInvalid,
+  checksWhatItStores,
+  coherent,
+  invisibleCharacters,
+  isAccepted,
+  rejectedForInvisibleCharacters,
+  sizeLabel,
+  storedValue,
+  validatedValue,
+  wouldBeAcceptedAsStored,
+} from "../src/rules/fieldOrdering.js";
+import type {
   MeetingComment as ResumoComentario,
   MeetingRecord as ResumoRegistro,
   MeetingSummaryData as ResumoData,
@@ -6409,5 +6425,138 @@ describe("resumo da reunião — autoria do texto atual", () => {
 
   it("não afirma autoria quando não há texto", () => {
     expect(authorLabel(registroResumo({ id: "a" }))).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Validação e limpeza fora de ordem
+// ---------------------------------------------------------------------------
+
+function campo(o: Partial<CampoValidado> & { id: string }): CampoValidado {
+  return {
+    where: "Pesquisa de satisfação",
+    label: "Código da pesquisa",
+    typed: "K7M2P",
+    check: { kind: "exact", value: 5, message: "deve ter exatamente 5 caracteres" },
+    trimsAfterValidation: true,
+    source: "lib/bloomy/nps/nps_response.ex:23",
+    ...o,
+  };
+}
+
+const ordem = (fields: CampoValidado[]): OrdemData => ({ fields });
+
+describe("ordem da validação — o que é conferido e o que é gravado", () => {
+  it("o valor gravado é o aparado, nas duas ordens", () => {
+    // A ordem muda o veredito, nunca o conteúdo. É o eixo do achado.
+    expect(storedValue(campo({ id: "a", typed: "  K7M2P  " }))).toBe("K7M2P");
+    expect(
+      storedValue(campo({ id: "b", typed: "  K7M2P  ", trimsAfterValidation: false })),
+    ).toBe("K7M2P");
+  });
+
+  it("a validação examina o texto cru quando a limpeza vem depois", () => {
+    expect(validatedValue(campo({ id: "a", typed: "K7M2P " }))).toBe("K7M2P ");
+  });
+
+  it("a validação examina o texto já normalizado quando a ordem está certa", () => {
+    expect(
+      validatedValue(campo({ id: "a", typed: "K7M2P ", trimsAfterValidation: false })),
+    ).toBe("K7M2P");
+  });
+});
+
+describe("ordem da validação — as duas direções do defeito", () => {
+  it("recusa um valor que caberia depois de aparado", () => {
+    const dados = ordem([campo({ id: "recusado", typed: "K7M2P " })]);
+    expect(isAccepted(dados.fields[0]!)).toBe(false);
+    expect(wouldBeAcceptedAsStored(dados.fields[0]!)).toBe(true);
+    expect(rejectedForInvisibleCharacters(dados).map((c) => c.id)).toEqual(["recusado"]);
+    expect(approvedButStoredInvalid(dados)).toEqual([]);
+  });
+
+  it("aceita um valor que, aparado, não cumpre a regra — e grava assim mesmo", () => {
+    const dados = ordem([campo({ id: "aceito", typed: "K7M  " })]);
+    expect(isAccepted(dados.fields[0]!)).toBe(true);
+    expect(wouldBeAcceptedAsStored(dados.fields[0]!)).toBe(false);
+    expect(approvedButStoredInvalid(dados).map((c) => c.id)).toEqual(["aceito"]);
+    expect(rejectedForInvisibleCharacters(dados)).toEqual([]);
+  });
+
+  it("na ordem certa, nenhuma das duas direções acontece", () => {
+    const dados = ordem([
+      campo({ id: "curto", typed: "K7M  ", trimsAfterValidation: false }),
+      campo({ id: "longo", typed: "K7M2P ", trimsAfterValidation: false }),
+    ]);
+    expect(approvedButStoredInvalid(dados)).toEqual([]);
+    expect(rejectedForInvisibleCharacters(dados)).toEqual([]);
+    // O curto continua recusado, que é o certo: ele tem três caracteres.
+    expect(isAccepted(dados.fields[0]!)).toBe(false);
+    expect(isAccepted(dados.fields[1]!)).toBe(true);
+    expect(checksWhatItStores(dados)).toHaveLength(2);
+  });
+
+  it("sem caractere invisível, a ordem errada não produz sintoma nenhum", () => {
+    // É exatamente por isso que ela sobrevive em 123 changesets.
+    const dados = ordem([
+      campo({ id: "a", typed: "K7M2P" }),
+      campo({ id: "b", typed: "K7M" }),
+    ]);
+    expect(rejectedForInvisibleCharacters(dados)).toEqual([]);
+    expect(approvedButStoredInvalid(dados)).toEqual([]);
+    expect(coherent(dados)).toHaveLength(2);
+  });
+});
+
+describe("ordem da validação — as outras formas de regra", () => {
+  it("vale para tamanho máximo", () => {
+    const limite = (typed: string) =>
+      campo({
+        id: "c",
+        typed,
+        check: { kind: "max", value: 2000, message: "deve ter no máximo 2000 caracteres" },
+      });
+    // 2002 na conferência, 1999 no banco: recusado por três espaços.
+    const dados = ordem([limite("a".repeat(1999) + "   ")]);
+    expect(rejectedForInvisibleCharacters(dados)).toHaveLength(1);
+    // Dentro do limite dos dois jeitos: coerente.
+    expect(rejectedForInvisibleCharacters(ordem([limite("a".repeat(10) + " ")]))).toEqual([]);
+  });
+
+  it("vale para expressão de formato", () => {
+    const letra = (typed: string, ordemCerta: boolean) =>
+      campo({
+        id: "n",
+        typed,
+        check: { kind: "pattern", value: "^[A-Z]$", message: "deve ser uma única letra" },
+        trimsAfterValidation: !ordemCerta,
+      });
+    expect(rejectedForInvisibleCharacters(ordem([letra("B ", false)]))).toHaveLength(1);
+    expect(rejectedForInvisibleCharacters(ordem([letra("B ", true)]))).toEqual([]);
+  });
+
+  it("vale para tamanho mínimo, e aí o lado grave é o aceito", () => {
+    const minimo = (typed: string) =>
+      campo({
+        id: "m",
+        typed,
+        check: { kind: "min", value: 5, message: "deve ter ao menos 5 caracteres" },
+      });
+    expect(approvedButStoredInvalid(ordem([minimo("abc  ")]))).toHaveLength(1);
+    expect(coherent(ordem([minimo("abcdef")]))).toHaveLength(1);
+  });
+});
+
+describe("ordem da validação — como o tamanho é dito", () => {
+  it("conta os caracteres invisíveis", () => {
+    expect(invisibleCharacters(campo({ id: "a", typed: "K7M2P " }))).toBe(1);
+    expect(invisibleCharacters(campo({ id: "a", typed: "  K7M2P  " }))).toBe(4);
+    expect(invisibleCharacters(campo({ id: "a", typed: "K7M2P" }))).toBe(0);
+  });
+
+  it("mostra as duas contagens só quando elas divergem", () => {
+    expect(sizeLabel(campo({ id: "a", typed: "K7M2P" }))).toBe("5 caracteres");
+    expect(sizeLabel(campo({ id: "a", typed: "K7M2P " }))).toBe("6 como veio, 5 depois de aparado");
+    expect(sizeLabel(campo({ id: "a", typed: "K" }))).toBe("1 caractere");
   });
 });

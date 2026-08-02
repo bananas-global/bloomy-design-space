@@ -2192,3 +2192,41 @@ export interface MeetingSummaryData {
   runsAt: string;
   records: MeetingRecord[];
 }
+
+/**
+ * Validação e limpeza fora de ordem.
+ *
+ * 123 changesets do sistema terminam em `Bloomy.Helpers.trim_changed_fields/1`,
+ * que apara os espaços **depois** de todas as validações. O que é conferido e o
+ * que é gravado são valores diferentes.
+ */
+export interface FieldCheck {
+  kind: "exact" | "max" | "min" | "pattern";
+  /** Número de caracteres, ou a expressão, conforme o tipo. */
+  value: number | string;
+  /** Como a regra é dita para quem preenche. */
+  message: string;
+}
+
+export interface ValidatedField {
+  id: string;
+  /** Onde no sistema esse campo aparece. */
+  where: string;
+  label: string;
+  /** O que a pessoa enviou, espaços inclusive. */
+  typed: string;
+  check: FieldCheck;
+  /**
+   * A limpeza acontece depois da validação.
+   *
+   * `false` marca o contraexemplo que existe no mesmo repositório: o nome do
+   * ponto de atendimento é normalizado com `update_change` **antes** do
+   * `validate_format`.
+   */
+  trimsAfterValidation: boolean;
+  source: string;
+}
+
+export interface FieldOrderingData {
+  fields: ValidatedField[];
+}

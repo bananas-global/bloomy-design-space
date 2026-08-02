@@ -3000,3 +3000,70 @@ test.describe("resumo da reunião — a noite que trava", () => {
     await expect(page.getByText("Um atendimento sem registro trava a fila inteira")).toHaveCount(0);
   });
 });
+
+test.describe("validação e limpeza fora de ordem", () => {
+  test("os caracteres invisíveis aparecem como número, e não como adjetivo", async ({ page }) => {
+    await page.goto(urlFor("structure.field-ordering-rejected"));
+
+    await expect(
+      page.getByText("2 envios foram recusados por caracteres que não seriam gravados"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Código da pesquisa, em Pesquisa de satisfação: 1 caractere invisível no fim/),
+    ).toBeVisible();
+    // Os dois recusados dizem a mesma frase, cada um na sua linha.
+    await expect(page.getByText(/Sem eles, caberia/)).toHaveCount(2);
+    await expect(
+      page.getByText(/Conteúdo do comentário, em Comentário da reunião: 3 caracteres invisíveis/),
+    ).toBeVisible();
+  });
+
+  test("o tamanho aparece nas duas contagens quando elas divergem", async ({ page }) => {
+    await page.goto(urlFor("structure.field-ordering-rejected"));
+
+    await expect(page.getByText("6 como veio, 5 depois de aparado")).toBeVisible();
+    await expect(page.getByText("2002 como veio, 1999 depois de aparado")).toBeVisible();
+    // O número da guia não tem espaço nenhum: uma contagem só.
+    await expect(page.getByText("11 caracteres", { exact: true })).toBeVisible();
+  });
+
+  test("o valor aceito e gravado fora da regra tem aviso próprio", async ({ page }) => {
+    await page.goto(urlFor("structure.field-ordering-approved-invalid"));
+
+    await expect(page.getByText("1 valor foi aceito e gravado fora da regra")).toBeVisible();
+    await expect(
+      page.getByText(/passou com 5 caracteres e foi gravado com 3/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/todo código que confia no formato encontra um valor que não deveria existir/),
+    ).toBeVisible();
+  });
+
+  test("o veredito e a incoerência dele são ditos em palavras", async ({ page }) => {
+    await page.goto(urlFor("structure.field-ordering-approved-invalid"));
+
+    await expect(page.getByText("mas o valor gravado não cumpre a regra")).toHaveCount(1);
+    await expect(page.getByText("mas o valor gravado cumpriria")).toHaveCount(2);
+  });
+
+  test("o campo que acerta a ordem é nomeado, e a correção é dita como extensão", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("structure.field-ordering-correct-order-exists"));
+
+    await expect(page.getByText("A ordem certa já existe neste sistema")).toBeVisible();
+    await expect(page.getByText(/Nome da sala normaliza o texto/)).toBeVisible();
+    // O aviso e a linha dizem a mesma coisa com palavras diferentes de
+    // propósito; esta é a marca da linha.
+    await expect(page.getByText("normaliza antes de conferir", { exact: false })).toHaveCount(1);
+    await expect(page.getByText(/é estender a que já foi decidida uma vez/)).toBeVisible();
+  });
+
+  test("sem espaço colado, os dois avisos calam e nada é marcado incoerente", async ({ page }) => {
+    await page.goto(urlFor("structure.field-ordering-no-symptom"));
+
+    await expect(page.getByText(/foram recusados por caracteres/)).toHaveCount(0);
+    await expect(page.getByText(/aceito e gravado fora da regra/)).toHaveCount(0);
+    await expect(page.getByText(/mas o valor gravado/)).toHaveCount(0);
+  });
+});
