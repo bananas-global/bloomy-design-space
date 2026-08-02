@@ -284,3 +284,80 @@ export function Switch({
     </div>
   );
 }
+
+/** `switch_card/1`: título, descrição e chave formam uma única área clicável. */
+export function SwitchCard({
+  id,
+  name,
+  inputValue,
+  multiple = false,
+  title,
+  description,
+  checked,
+  onChange,
+  disabled,
+  className,
+}: {
+  id: string;
+  name: string;
+  inputValue?: string;
+  multiple?: boolean;
+  title: string;
+  description: string;
+  checked: boolean;
+  onChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={["inline-block w-full", disabled && "opacity-50", className].filter(Boolean).join(" ")}
+      onClick={(event) => {
+        if (disabled || event.target instanceof HTMLInputElement) return;
+        onChange?.(!checked);
+        document.getElementById(id)?.focus();
+      }}
+    >
+      <div
+        className={[
+          "flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-colors delay-100",
+          disabled && "cursor-not-allowed",
+          checked
+            ? "border-[var(--color-brand-blue)]/40 bg-[var(--color-brand-blue)]/10"
+            : "border-transparent bg-[var(--color-brand-purple-dark)]/5",
+        ].filter(Boolean).join(" ")}
+      >
+        <div>
+          <h3 id={`${id}-title`} className="m-0 font-extrabold text-[var(--color-brand-purple-dark)]">{title}</h3>
+          <p id={`${id}-description`} className="m-0 text-sm text-[var(--color-brand-purple-dark)]/60">{description}</p>
+        </div>
+        <div className="relative">
+          <div className="flex h-12 items-center">
+            <input
+              id={id}
+              name={multiple ? `${name}[]` : name}
+              value={inputValue ?? "true"}
+              type="checkbox"
+              className="peer sr-only"
+              checked={checked}
+              disabled={disabled}
+              aria-labelledby={`${id}-title`}
+              aria-describedby={`${id}-description`}
+              onChange={(event) => onChange?.(event.target.checked)}
+            />
+            <div
+              aria-hidden="true"
+              className={[
+                "relative h-6 w-12 cursor-pointer rounded-full border transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--color-brand-blue)]",
+                "after:absolute after:top-[2px] after:h-[18px] after:w-[18px] after:rounded-full after:bg-white after:shadow-xl after:transition-all after:content-['']",
+                checked
+                  ? "border-[var(--color-blue-dark)]/60 bg-[var(--color-blue)] after:end-[20px] after:translate-x-full"
+                  : "border-[var(--color-neutral-100)] bg-[var(--color-neutral-50)] after:start-[2px]",
+              ].join(" ")}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

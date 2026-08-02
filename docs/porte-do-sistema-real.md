@@ -2683,6 +2683,28 @@ impedir exatamente isso.
 3 achados, 1 galeria, 7 componentes portados, 1 conferidor ampliado e corrigido.
 
 
+### 74. Linha do tempo, chave em cartão e navegação por dia
+
+O bloco seguinte de `core_components.ex` trouxe três componentes para a galeria:
+`timeline_list`, `switch_card` e `date_navigator`. O primeiro preserva a lista
+ordenada e os marcadores azul/verde usados pelo histórico de documentos. O
+segundo mantém título, descrição e chave numa área clicável única, inclusive o
+contrato de nome com `[]` quando o campo é múltiplo.
+
+O navegador diário mantém as duas setas, o calendário central, o valor escondido
+e o texto “Hoje” quando a data coincide com a referência. A conta de dias foi
+portada como aritmética civil explícita: atravessa mês, ano e ano bissexto sem
+consultar o relógio do navegador.
+
+O espelho encontrou um problema verificável: no original, a data central que
+abre o Flatpickr é uma `div` sem entrada na ordem de tabulação. O porte conserva
+o desenho, mas usa um botão nomeado porque a jornada precisa ser executável pelo
+teclado sem foco artificial. O achado 107 registra a divergência e as linhas
+atuais do monólito.
+
+3 componentes portados, 3 demos interativas e 4 achados.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2796,3 +2818,7 @@ bugs do Design Space; são observações sobre o produto.
 | 104 | `tag/1` declara `light-red` entre os valores válidos de `variant` e **não tem ramo para ele**. Quem usar recebe uma etiqueta sem fundo e sem cor de texto, com a validação de atributo dizendo que está tudo certo. Hoje ninguém usa — é armadilha latente, e o primeiro a cair nela vai procurar o erro no lugar errado. | `lib/bloomy_web/components/core_components.ex:2231,2237-2255` |
 | 105 | `progress/1` define cor de trilho para `default`, `accent` e `error`, e **não para `purple`** — essa variante fica com o trilho azul da classe base e a barra roxa por cima. Não quebra, mas é a única das quatro em que trilho e barra não combinam. | `lib/bloomy_web/components/core_components.ex:2201-2235` |
 | 106 | Em `radio_selector/1`, o rótulo externo da opção marcada recebe `has-[input:checked]:text-brand-blue/30` — texto azul a 30% de opacidade. O texto interno tem regra própria (`peer-checked:text-brand-blue-dark`) e vence, então o 30% nunca aparece. É classe morta, não defeito visível — e vira defeito visível no dia em que alguém mexer no `span`. | `lib/bloomy_web/components/core_components.ex:1441-1443,1457` |
+| 107 | No `date_navigator/1`, a data que abre o calendário é uma `div` com evento de ponteiro indireto do Flatpickr, sem `tabindex`, função ou nome acessível. As setas entram na ordem de tabulação; o calendário entre elas não. Quem usa só teclado consegue mudar um dia por vez, mas não escolher diretamente uma data distante. | `lib/bloomy_web/components/core_components.ex:2632-2646,2682-2690` |
+| 108 | `switch_card/1` calcula `name` com `[]` para `multiple` e lê o valor do campo, mas chama `<.input type="switch" field={@field} />` sem repassar `name`, `input_value` ou `multiple`. O `input(type: "switch")` reconstrói o nome sem `multiple`; ao chegar ao checkbox, `input_value` segue ausente e o valor cai no padrão `"true"`. Por isso o sufixo e o valor customizado se perdem. O Design Space diverge de propósito e fixa o contrato corrigido no checkbox. | `lib/bloomy_web/components/core_components.ex:2562-2577,2591`; `lib/bloomy_web/components/core_components.ex:688-714,907-925` |
+| 109 | `switch_card/1` abre um `<label>` que contém `<.input type="switch">`; essa função abre outro `<label>` em torno do checkbox. O HTML resultante aninha elementos `label`, estrutura inválida. O Design Space não reproduz a marcação: usa contêiner clicável e associa título e descrição ao checkbox por ARIA. | `lib/bloomy_web/components/core_components.ex:2580-2593`; `lib/bloomy_web/components/core_components.ex:912-935` |
+| 110 | `date_navigator/1` sempre inicializa o Flatpickr no controle central. Quando `disable` é verdadeiro, somente `initButtons()` retorna antes de registrar os listeners das setas; o atributo `disabled` é colocado num `span`, onde é inerte. Assim, o calendário central continua abrindo e alterando a data. O Design Space diverge de propósito: desabilita os três botões de interação. | `lib/bloomy_web/components/core_components.ex:2632-2646,2682-2690,2693-2699` |

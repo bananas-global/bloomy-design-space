@@ -191,6 +191,44 @@ export function LoadingCard({ message }: { message: string }) {
   );
 }
 
+export type TimelineItem = {
+  icon: string;
+  color: "blue" | "green";
+  content: ReactNode;
+};
+
+/** `timeline_list/1`: lista cronológica com marcador azul ou verde. */
+export function TimelineList({ items, className }: { items: TimelineItem[]; className?: string }) {
+  return (
+    <ol
+      className={["relative border-s border-[var(--color-brand-purple-dark)]/10", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {items.map((item, index) => (
+        <li key={index} className="mb-10 ms-6">
+          <div className="absolute -start-4 rounded-full bg-white">
+            <span
+              className={[
+                "relative flex h-8 w-8 items-center justify-center rounded-full ring-8 ring-white",
+                item.color === "blue" &&
+                  "bg-[var(--color-brand-blue)]/20 text-[var(--color-brand-blue-dark)]",
+                item.color === "green" &&
+                  "bg-[var(--color-brand-green)]/20 text-[var(--color-brand-green-dark)]",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              <Icon name={item.icon} className="text-sm" />
+            </span>
+          </div>
+          {item.content}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /** `avatar/1`: dois formatos, seis tamanhos, fundo azul quando não há foto. */
 export function Avatar({
   imageUrl,

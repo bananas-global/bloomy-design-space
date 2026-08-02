@@ -3,15 +3,15 @@ import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
 import { Table } from "../components/bloomy/Table.js";
-import { Checkbox, FieldError, Input, Label, Switch, Textarea } from "../components/bloomy/Input.js";
+import { Checkbox, FieldError, Input, Label, Switch, SwitchCard, Textarea } from "../components/bloomy/Input.js";
 import {
   Avatar, Back, DescriptionList, EmptyStateCard, InsideCard,
-  LoadingCard, MetaInfo, Progress, SectionHeader,
+  LoadingCard, MetaInfo, Progress, SectionHeader, TimelineList,
 } from "../components/bloomy/Layout.js";
 import { Dropdown, DropdownMenu, Modal } from "../components/bloomy/Overlay.js";
 import { CheckboxGroup, RadioGroup, RadioSelector, Tooltip } from "../components/bloomy/Choice.js";
 import {
-  MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
+  DateNavigator, MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
 } from "../components/bloomy/DatePickers.js";
 
 /**
@@ -127,6 +127,16 @@ function DemoMonthPicker() {
 function DemoWeekSelector() {
   const [valor, setValor] = useState({ inicio: "2025-12-29", fim: "2026-01-04" });
   return <WeekSelector first={valor.inicio} last={valor.fim} onChange={setValor} />;
+}
+
+function DemoSwitchCard() {
+  const [ativo, setAtivo] = useState(false);
+  return <div className="space-y-3"><SwitchCard id="g-registro-abc" name="programa[is_abc]" title="Registro Tipo ABC" description="Ativa o formato ABC para detalhar o comportamento com antecedentes e consequências." checked={ativo} onChange={setAtivo} /><SwitchCard id="g-programa-bloqueado" name="programa[fases]" inputValue="manutencao" multiple title="Fase de manutenção" description="Configuração indisponível durante a aplicação." checked disabled /></div>;
+}
+
+function DemoDateNavigator() {
+  const [data, setData] = useState("2026-07-30");
+  return <div className="space-y-3"><DateNavigator id="g-navegador-data" name="filtro[data]" date={data} onChange={setData} /><div className="flex flex-wrap gap-2"><Button size="small" variant="outline" onClick={() => setData("2024-02-28")}>Carregar limite bissexto</Button><Button size="small" variant="outline" onClick={() => setData("2025-12-31")}>Carregar fim do ano</Button><Button size="small" variant="outline" onClick={() => setData("2026-09-14")}>Carregar valor externo</Button></div><DateNavigator id="g-navegador-bloqueado" name="filtro[data_bloqueada]" date="2026-08-15" disable /></div>;
 }
 
 export const GALLERY: GalleryEntry[] = [
@@ -618,12 +628,12 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "timeline_list", origem: "lib/bloomy_web/components/core_components.ex:2528", descricao: "Linha do tempo de eventos." },
+  { name: "timeline_list", origem: "lib/bloomy_web/components/core_components.ex:2528", descricao: "Linha do tempo de eventos.", demos: [{ titulo: "Histórico de documento", render: () => <TimelineList items={[{ icon: "fa-pencil", color: "green", content: <><div className="mb-2"><Tag item="Criado" variant="green" className="mr-1.5" /> por <span className="font-bold text-[var(--color-brand-blue)] underline">Marina Alves</span></div><p className="mb-1 text-sm text-[var(--color-brand-purple-dark)]/80">Documento inicial anexado à unidade.</p><time className="text-sm text-[var(--color-brand-purple-dark)]/80">30/07/2026 às 09:15</time></> }, { icon: "fa-rotate", color: "blue", content: <><div className="mb-2"><Tag item="Editado" variant="light-blue" className="mr-1.5" /> por <span className="font-bold text-[var(--color-brand-blue)] underline">Caio Nunes</span></div><p className="mb-1 text-sm text-[var(--color-brand-purple-dark)]/80">Validade do documento atualizada.</p><time className="text-sm text-[var(--color-brand-purple-dark)]/80">01/08/2026 às 14:40</time></> }]} /> }] },
   { name: "loading_card", origem: "lib/bloomy_web/components/core_components.ex:2550", descricao: "Cartão de carregamento.",
     demos: [{ titulo: "Mensagem e roda", render: () => <LoadingCard message="Carregando os fechamentos" /> }],
   },
-  { name: "switch_card", origem: "lib/bloomy_web/components/core_components.ex:2570", descricao: "Cartão com chave liga-desliga." },
-  { name: "date_navigator", origem: "lib/bloomy_web/components/core_components.ex:2603", descricao: "Navegação por dia, com setas e calendário." },
+  { name: "switch_card", origem: "lib/bloomy_web/components/core_components.ex:2570", descricao: "Cartão com chave liga-desliga.", demos: [{ titulo: "Configuração de programa", nota: "Correção intencional do Design Space: preserva `[]` e o valor customizado no checkbox, com título e descrição associados por ARIA; o original perde esses assigns e aninha labels.", render: () => <DemoSwitchCard /> }] },
+  { name: "date_navigator", origem: "lib/bloomy_web/components/core_components.ex:2603", descricao: "Navegação por dia, com setas e calendário.", demos: [{ titulo: "Dia da execução da guia", nota: "Correção intencional do Design Space: os três controles ficam realmente desabilitados; no original, `disable` bloqueia apenas as setas e deixa o calendário central ativo.", render: () => <DemoDateNavigator /> }] },
 ];
 
 export const portados = () => GALLERY.filter((e) => e.demos !== undefined);
