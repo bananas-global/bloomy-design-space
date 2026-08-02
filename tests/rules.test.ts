@@ -4688,3 +4688,132 @@ describe("leitura de horas", () => {
     expect(decision.reason).toContain("aplicativo");
   });
 });
+
+/* =================================================== Marcar atendimento */
+
+import type { ScheduleAttempt } from "../src/contracts/index.js";
+import {
+  IMPEDIMENT_ORDER,
+  allImpediments,
+  canSchedule as canScheduleAttempt,
+  firstImpediment,
+  impedimentOwner,
+  roomHeadroom,
+  roomVerificationSkipped,
+  savesToSeeEverything,
+} from "../src/rules/agenda.js";
+
+function scheduleAttempt(overrides: Partial<ScheduleAttempt> = {}): ScheduleAttempt {
+  return {
+    patientName: "Théo Andrade Lins",
+    professionalName: "Marina Okabe",
+    serviceName: "Sessão de intervenção ABA",
+    roomName: "Girassol 2",
+    unitName: "Unidade Pinheiros",
+    start: "2026-08-03T14:00:00.000-03:00",
+    end: "2026-08-03T15:00:00.000-03:00",
+    scheduleType: "patient",
+    roomCapacity: 3,
+    roomOccupancy: 1,
+    impediments: [],
+    ...overrides,
+  };
+}
+
+describe("impediments-are-revealed-one-at-a-time", () => {
+  const quatro = scheduleAttempt({
+    impediments: [
+      { kind: "room_full", message: "sala cheia" },
+      { kind: "professional_blocked", message: "profissional bloqueado" },
+      { kind: "duplicate_slot", message: "atendimento duplicado" },
+      { kind: "unit_blocked", message: "unidade bloqueada" },
+    ],
+  });
+
+  it("reproduz o Enum.find_value: devolve um só, o primeiro da ordem do código", () => {
+    expect(firstImpediment(quatro)?.kind).toBe("professional_blocked");
+  });
+
+  it("a ordem do código não é a ordem em que os impedimentos chegaram", () => {
+    // A lista de entrada começa por sala cheia, que é a última verificação.
+    expect(quatro.impediments[0]!.kind).toBe("room_full");
+    expect(firstImpediment(quatro)?.kind).not.toBe("room_full");
+  });
+
+  it("devolve todos na ordem do código — o que esta especificação propõe", () => {
+    expect(allImpediments(quatro).map((entry) => entry.kind)).toEqual([
+      "professional_blocked",
+      "unit_blocked",
+      "duplicate_slot",
+      "room_full",
+    ]);
+  });
+
+  it("conta quantas vezes alguém salvaria hoje para ver tudo", () => {
+    expect(savesToSeeEverything(quatro)).toBe(4);
+    expect(savesToSeeEverything(scheduleAttempt())).toBe(0);
+  });
+
+  it("sem impedimento, marcar é permitido", () => {
+    expect(canScheduleAttempt(scheduleAttempt()).allowed).toBe(true);
+  });
+
+  it("com impedimento, o motivo é a frase do sistema real — e só a primeira", () => {
+    const decision = canScheduleAttempt(quatro);
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toBe("profissional bloqueado");
+  });
+});
+
+describe("impediment-order-is-code-order", () => {
+  it("fixa a ordem exata do array de verificadores", () => {
+    expect(IMPEDIMENT_ORDER).toEqual([
+      "professional_inactive",
+      "professional_blocked",
+      "unit_blocked",
+      "room_blocked",
+      "general_blocking",
+      "duplicate_slot",
+      "room_full",
+    ]);
+  });
+
+  it("a lotação da sala, a mais fácil de contornar, é a última a ser dita", () => {
+    expect(IMPEDIMENT_ORDER[IMPEDIMENT_ORDER.length - 1]).toBe("room_full");
+  });
+
+  it("cada impedimento tem dono, para a lista encaminhar e não só informar", () => {
+    expect(impedimentOwner("professional_inactive")).toContain("People");
+    expect(impedimentOwner("room_full")).toContain("Recepção");
+    expect(impedimentOwner("unit_blocked")).toContain("unidade");
+  });
+});
+
+describe("room-capacity-is-not-one", () => {
+  it("mede a folga, e não só se há alguém na sala", () => {
+    expect(roomHeadroom(scheduleAttempt({ roomCapacity: 3, roomOccupancy: 2 }))).toBe(1);
+    expect(roomHeadroom(scheduleAttempt({ roomCapacity: 3, roomOccupancy: 3 }))).toBe(0);
+  });
+
+  it("sem sala, não há folga a informar", () => {
+    expect(roomHeadroom(scheduleAttempt({ roomCapacity: undefined, roomOccupancy: undefined }))).toBeUndefined();
+  });
+});
+
+describe("room-is-not-verified-outside-the-clinic", () => {
+  it("diz por que a verificação não rodou no acompanhamento terapêutico", () => {
+    const message = roomVerificationSkipped(scheduleAttempt({ scheduleType: "at", roomName: undefined }));
+    expect(message).toContain("não acontece na clínica");
+    expect(message).toContain("não é cadastro incompleto");
+  });
+
+  it("distingue “não se aplica” de “ainda não escolhida”", () => {
+    const semSala = roomVerificationSkipped(scheduleAttempt({ roomName: undefined }));
+    expect(semSala).toContain("ainda pode ser definida");
+    expect(semSala).not.toContain("não acontece na clínica");
+  });
+
+  it("com sala e tipo de paciente, não há nada a explicar", () => {
+    expect(roomVerificationSkipped(scheduleAttempt())).toBeUndefined();
+  });
+});

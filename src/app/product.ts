@@ -27,6 +27,7 @@ import { Notifications } from "../screens/Notifications.js";
 import { Supervision } from "../screens/Supervision.js";
 import { UnitMap } from "../screens/UnitMap.js";
 import { ClinicalHours } from "../screens/ClinicalHours.js";
+import { NewAppointment } from "../screens/NewAppointment.js";
 import { Prospects } from "../screens/Prospects.js";
 import { Reports } from "../screens/Reports.js";
 
@@ -65,6 +66,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/supervision", screen: Supervision },
     { path: "/unit-map", screen: UnitMap },
     { path: "/clinical-hours", screen: ClinicalHours },
+    { path: "/agenda/new", screen: NewAppointment },
     { path: "/patients/:id/reports", screen: Reports },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },

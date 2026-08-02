@@ -1739,3 +1739,47 @@ export interface ClinicalHourRecord {
 export interface ClinicalHoursData {
   records: ClinicalHourRecord[];
 }
+
+/* =================================================== Marcar atendimento */
+
+/** Os sete verificadores do sistema real, na ordem em que ele os executa. */
+export type ImpedimentKind =
+  | "professional_inactive"
+  | "professional_blocked"
+  | "unit_blocked"
+  | "room_blocked"
+  | "general_blocking"
+  | "duplicate_slot"
+  | "room_full";
+
+export interface Impediment {
+  kind: ImpedimentKind;
+  /** A frase que o sistema real produz, com nomes e horários dentro. */
+  message: string;
+}
+
+/**
+ * Uma tentativa de marcar.
+ *
+ * Os campos booleanos não descrevem o agendamento: descrevem o **resultado de
+ * cada verificação**. É assim de propósito — o Design Space não reimplementa
+ * as sete consultas, e sim o comportamento de quem as recebe.
+ */
+export interface ScheduleAttempt {
+  patientName?: string;
+  professionalName?: string;
+  serviceName: string;
+  roomName?: string;
+  unitName: string;
+  start: string;
+  end: string;
+  scheduleType: "patient" | "at" | "professional";
+  /** Capacidade da sala. Maior que um: salas comportam atendimentos simultâneos. */
+  roomCapacity?: number;
+  roomOccupancy?: number;
+  impediments: Impediment[];
+}
+
+export interface NewAppointmentData {
+  attempt: ScheduleAttempt;
+}

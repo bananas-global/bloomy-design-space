@@ -25,7 +25,8 @@ import { notificationFixtures } from "../fixtures/notifications.js";
 import { supervisionFixtures } from "../fixtures/supervision.js";
 import { unitMapFixtures } from "../fixtures/unitMap.js";
 import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
-import { agendaRules } from "../rules/agenda.js";
+import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
+import { agendaRules, schedulingRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -73,6 +74,7 @@ import { notificationScenarios } from "../scenarios/notifications.js";
 import { supervisionScenarios } from "../scenarios/supervision.js";
 import { unitMapScenarios } from "../scenarios/unitMap.js";
 import { clinicalHourScenarios } from "../scenarios/clinicalHours.js";
+import { newAppointmentScenarios } from "../scenarios/newAppointment.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -95,6 +97,24 @@ export const modules: Module[] = [
     name: "Agenda",
     description: "O dia da clínica: marcar, confirmar, remarcar, cancelar e receber.",
     flows: [
+      {
+        id: "schedule-something",
+        title: "Marcar um atendimento",
+        description:
+          "As sete verificações do sistema real, e o custo de recebê-las uma por vez.",
+        steps: [
+          {
+            scenario: "agenda.new-four-impediments",
+            label: "Tentar marcar um horário com problema",
+            decision: "O que impede este horário?",
+            branches: {
+              "O profissional está desativado": "agenda.new-inactive-professional",
+              "A sala parecia cheia e não está": "agenda.new-room-has-room",
+              "Não tem sala, e não precisa ter": "agenda.new-therapeutic-companion",
+            },
+          },
+        ],
+      },
       {
         id: "resolve-conflict",
         title: "Resolver um conflito de horário",
@@ -813,6 +833,7 @@ export const scenarios: Scenario[] = [
   ...supervisionScenarios,
   ...unitMapScenarios,
   ...clinicalHourScenarios,
+  ...newAppointmentScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -841,10 +862,12 @@ export const fixtures: Fixture[] = [
   ...supervisionFixtures,
   ...unitMapFixtures,
   ...clinicalHourFixtures,
+  ...newAppointmentFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
   ...agendaRules,
+  ...schedulingRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,
