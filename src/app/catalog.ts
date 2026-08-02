@@ -2,12 +2,15 @@ import type { Fixture, Module, Persona, Rule, Scenario } from "@brucesantos/desi
 
 import { personas } from "../personas/index.js";
 import { agendaFixtures } from "../fixtures/agenda.js";
+import { sessionFixtures } from "../fixtures/session.js";
 import { patientFixtures } from "../fixtures/patients.js";
 import { financeFixtures } from "../fixtures/finance.js";
 import { agendaRules } from "../rules/agenda.js";
+import { sessionRules } from "../rules/session.js";
 import { patientRules } from "../rules/patients.js";
 import { financeRules } from "../rules/finance.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
+import { sessionScenarios } from "../scenarios/session.js";
 import { patientScenarios } from "../scenarios/patients.js";
 import { financeScenarios } from "../scenarios/finance.js";
 
@@ -121,21 +124,76 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "session",
+    name: "Atendimento",
+    description:
+      "A sessão de terapia: check-in, início, tentativas, evolução, assinatura e supervisão.",
+    flows: [
+      {
+        id: "conduct-session",
+        title: "Conduzir um atendimento do começo ao fim",
+        description:
+          "O caminho completo de uma sessão de paciente, com as três guardas de início e a cadeia de assinatura.",
+        steps: [
+          {
+            scenario: "session.ready",
+            label: "Abrir o atendimento com o paciente já na unidade",
+            decision: "O paciente fez check-in e a profissional está livre?",
+            branches: {
+              "Falta check-in": "session.no-checkin",
+              "Profissional com atendimento aberto": "session.professional-busy",
+            },
+          },
+          { scenario: "session.running", label: "Registrar as tentativas durante a sessão" },
+          {
+            scenario: "session.pending-signature",
+            label: "Finalizar e assinar",
+            decision: "A evolução foi escrita?",
+            branches: {
+              "Evolução em branco": "session.pending-register",
+              "Atendimento exige supervisão": "session.pending-supervisor",
+            },
+          },
+          { scenario: "session.finished", label: "Ver o atendimento fechado" },
+        ],
+      },
+      {
+        id: "undo-session",
+        title: "Desfazer um atendimento aberto por engano",
+        description:
+          "A janela em que reverter ainda não destrói registro clínico, e as duas saídas de bloqueio.",
+        steps: [
+          {
+            scenario: "session.revert-allowed",
+            label: "Reverter antes de qualquer tentativa",
+            decision: "Já existe tentativa ou resposta de protocolo registrada?",
+            branches: {
+              "Há registro clínico": "session.revert-blocked",
+              "Perfil sem permissão": "session.revert-no-permission",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
   ...agendaScenarios,
+  ...sessionScenarios,
   ...patientScenarios,
   ...financeScenarios,
 ];
 
 export const fixtures: Fixture[] = [
   ...agendaFixtures,
+  ...sessionFixtures,
   ...patientFixtures,
   ...financeFixtures,
 ] as Fixture[];
 
-export const rules: Rule[] = [...agendaRules, ...patientRules, ...financeRules];
+export const rules: Rule[] = [...agendaRules, ...sessionRules, ...patientRules, ...financeRules];
 
 export { personas };
 export type { Persona };

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { Appointment, Claim, Patient } from "../src/contracts/index.js";
+import type {
+  Appointment,
+  ClinicalSession,
+  ClinicalSessionData,
+  Claim,
+  Patient,
+} from "../src/contracts/index.js";
 import { ageInYears, isMinor, TODAY } from "../src/contracts/index.js";
 import {
   canCancel,
@@ -10,6 +16,19 @@ import {
 } from "../src/rules/agenda.js";
 import { canReadRecord, canSchedule, missingRequiredFields } from "../src/rules/patients.js";
 import { canResubmit, documentProgress, missingDocuments } from "../src/rules/finance.js";
+import {
+  canRevert,
+  canSign,
+  canStartSession,
+  countTrials,
+  isRegisterEmpty,
+  pendingSigner,
+  pendingWork,
+  requiresCheckin,
+  statusAfterFinish,
+  statusAfterRevert,
+  statusAfterSign,
+} from "../src/rules/session.js";
 
 /**
  * Testes das regras de negócio.
@@ -270,5 +289,314 @@ describe("progresso de documentação", () => {
 
   it("lista só o que falta", () => {
     expect(missingDocuments(claim()).map((d) => d.name)).toEqual(["Relatório clínico assinado"]);
+  });
+});
+
+/* ============================================================ atendimento */
+
+/**
+ * O ciclo de vida do atendimento é onde o Bloomy concentra regra de negócio.
+ * Estes testes existem para que a engenharia não precise reler quatro módulos de
+ * Elixir para saber em que ordem as guardas disparam — e a ordem é metade da
+ * regra: dizer "falta check-in" para quem esqueceu de fechar o atendimento
+ * anterior manda a pessoa resolver o problema errado.
+ */
+
+function clinicalSession(overrides: Partial<ClinicalSession> = {}): ClinicalSession {
+  return {
+    id: "atd-1",
+    scheduleId: "agd-1",
+    status: "ready_for_service",
+    scheduleType: "patient",
+    sessionType: "in_person",
+    location: "in_clinic",
+    patient: { id: "pac-1", name: "Théo Andrade Lins", birthDate: "2019-11-04" },
+    professionals: [{ id: "prof-marina", name: "Marina Okabe", specialty: "Aplicador ABA" }],
+    supervisor: { id: "prof-clara", name: "Clara Vidigal", specialty: "Psicologia" },
+    needsSupervisorSignature: true,
+    service: { name: "Terapia ABA", chargeable: true },
+    start: "2026-07-30T14:00:00.000-03:00",
+    end: "2026-07-30T15:00:00.000-03:00",
+    now: "2026-07-30T14:02:00.000-03:00",
+    checkin: { at: "2026-07-30T13:51:00.000-03:00", by: "web" },
+    register: "",
+    programExecutions: [],
+    protocolAnswers: 0,
+    signatures: [],
+    ...overrides,
+  };
+}
+
+function clinicalData(
+  session: ClinicalSession,
+  open: ClinicalSessionData["openSessionsForProfessional"] = [],
+): ClinicalSessionData {
+  return { session, openSessionsForProfessional: open };
+}
+
+const REGISTRA = ["custom_services.edit", "patients.see_clinic_overview"];
+const REVERTE = [...REGISTRA, "custom_services.revert"];
+
+describe("session-requires-checkin", () => {
+  it("bloqueia paciente sem check-in em serviço cobrável, nomeando quem falta", () => {
+    const result = canStartSession(
+      clinicalData(clinicalSession({ status: "scheduled", checkin: undefined })),
+      REGISTRA,
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Théo Andrade Lins ainda não fez check-in/);
+  });
+
+  it("dispensa o check-in quando o serviço não é cobrável", () => {
+    const session = clinicalSession({
+      status: "scheduled",
+      checkin: undefined,
+      service: { name: "Devolutiva", chargeable: false },
+    });
+    expect(requiresCheckin(session)).toBe(false);
+    expect(canStartSession(clinicalData(session), REGISTRA).allowed).toBe(true);
+  });
+
+  it("dispensa o check-in em atendimento entre profissionais", () => {
+    const session = clinicalSession({
+      status: "scheduled",
+      scheduleType: "professional",
+      checkin: undefined,
+    });
+    expect(requiresCheckin(session)).toBe(false);
+    expect(canStartSession(clinicalData(session), REGISTRA).allowed).toBe(true);
+  });
+
+  it("aceita começar em não iniciado e em atrasado: o check-in já aconteceu", () => {
+    for (const status of ["ready_for_service", "not_started", "delayed"] as const) {
+      expect(canStartSession(clinicalData(clinicalSession({ status })), REGISTRA).allowed).toBe(
+        true,
+      );
+    }
+  });
+});
+
+describe("one-open-session-per-professional", () => {
+  const aberto = [
+    { id: "atd-0", patientName: "Isadora Bueno", start: "2026-07-30T13:00:00.000-03:00" },
+  ];
+
+  it("bloqueia nomeando o paciente e o horário do atendimento em aberto", () => {
+    const result = canStartSession(clinicalData(clinicalSession(), aberto), REGISTRA);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Isadora Bueno, das 13:00/);
+  });
+
+  it("vem antes do bloqueio por check-in, como no monólito", () => {
+    // Sem check-in E com atendimento aberto: a pessoa precisa fechar o outro
+    // atendimento, e mandá-la à recepção seria mandá-la ao lugar errado.
+    const result = canStartSession(
+      clinicalData(clinicalSession({ status: "scheduled", checkin: undefined }), aberto),
+      REGISTRA,
+    );
+    expect(result.reason).toMatch(/já tem um atendimento em aberto/);
+  });
+
+  it("bloqueia por permissão antes de tudo", () => {
+    const result = canStartSession(clinicalData(clinicalSession(), aberto), [
+      "patients.see_clinic_overview",
+    ]);
+    expect(result.reason).toMatch(/não registra atendimento/);
+  });
+});
+
+describe("empty-register-blocks-signature", () => {
+  it("evolução vazia leva a pendente de registro, não a assinatura", () => {
+    expect(statusAfterFinish(clinicalSession({ register: "" }))).toBe("pending_register");
+  });
+
+  it("texto só com marcação continua contando como vazio", () => {
+    // O monólito passa por `strip_tags` antes de medir: um parágrafo vazio
+    // deixado por editor de texto rico não é evolução escrita.
+    expect(statusAfterFinish(clinicalSession({ register: "<p></p>  " }))).toBe("pending_register");
+    expect(isRegisterEmpty(clinicalSession({ register: "<p> </p>" }))).toBe(true);
+  });
+
+  it("evolução escrita leva a assinatura pendente", () => {
+    expect(statusAfterFinish(clinicalSession({ register: "<p>Boa sessão.</p>" }))).toBe(
+      "pending_signature",
+    );
+  });
+
+  it("atendimento entre profissionais finaliza direto, sem registro nem assinatura", () => {
+    expect(statusAfterFinish(clinicalSession({ scheduleType: "professional", register: "" }))).toBe(
+      "finished",
+    );
+  });
+});
+
+describe("owner-signs-before-supervisor", () => {
+  const pendente = clinicalSession({ status: "pending_signature", register: "<p>ok</p>" });
+
+  it("o responsável assina primeiro", () => {
+    expect(canSign(pendente, "prof-marina").allowed).toBe(true);
+  });
+
+  it("o supervisor não pode furar a fila, e a negativa diz quem assina antes", () => {
+    const result = canSign(pendente, "prof-clara");
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/primeiro por Marina Okabe/);
+  });
+
+  it("na etapa do supervisor, o responsável já não assina", () => {
+    const supervisao = clinicalSession({ status: "pending_supervisor_signature" });
+    expect(canSign(supervisao, "prof-marina").reason).toMatch(/deve ser feita por Clara Vidigal/);
+    expect(canSign(supervisao, "prof-clara").allowed).toBe(true);
+  });
+
+  it("não assina o que não está pendente de assinatura", () => {
+    expect(canSign(clinicalSession({ status: "finished" }), "prof-marina").reason).toMatch(
+      /não possui a assinatura como pendente/,
+    );
+    expect(canSign(clinicalSession({ status: "ongoing" }), "prof-marina").allowed).toBe(false);
+  });
+
+  it("em atendimento entre profissionais, qualquer participante assina", () => {
+    const reuniao = clinicalSession({
+      status: "pending_signature",
+      scheduleType: "professional",
+      professionals: [
+        { id: "prof-marina", name: "Marina Okabe", specialty: "Aplicador ABA" },
+        { id: "prof-clara", name: "Clara Vidigal", specialty: "Psicologia" },
+      ],
+    });
+    expect(canSign(reuniao, "prof-clara").allowed).toBe(true);
+    expect(canSign(reuniao, "prof-estranho").reason).toMatch(/que participaram/);
+  });
+
+  it("a assinatura do responsável só vai a supervisão quando o atendimento exige", () => {
+    expect(statusAfterSign(pendente)).toBe("pending_supervisor_signature");
+    expect(statusAfterSign({ ...pendente, needsSupervisorSignature: false })).toBe("finished");
+    expect(statusAfterSign(clinicalSession({ status: "pending_supervisor_signature" }))).toBe(
+      "finished",
+    );
+  });
+
+  it("nomeia quem a cadeia espera agora", () => {
+    expect(pendingSigner(pendente)).toEqual({
+      name: "Marina Okabe",
+      role: "responsável pelo atendimento",
+    });
+    expect(pendingSigner(clinicalSession({ status: "pending_supervisor_signature" }))).toEqual({
+      name: "Clara Vidigal",
+      role: "supervisor",
+    });
+    expect(pendingSigner(clinicalSession({ status: "finished" }))).toBeUndefined();
+  });
+});
+
+describe("revert-requires-clean-session", () => {
+  const comTentativa = clinicalSession({
+    status: "ongoing",
+    programExecutions: [
+      {
+        id: "pe-1",
+        programId: "prog-1",
+        programName: "Imitação motora grossa",
+        programType: "structured",
+        result: "pending",
+        steps: [
+          {
+            id: "s-1",
+            name: "Bater palmas",
+            phase: "intervention",
+            targetTrials: 10,
+            trials: [{ id: "t-1", result: "success", at: "2026-07-30T14:06:00.000-03:00" }],
+          },
+        ],
+      },
+    ],
+  });
+
+  it("libera enquanto nada clínico foi registrado", () => {
+    expect(canRevert(clinicalSession({ status: "ongoing" }), REVERTE).allowed).toBe(true);
+  });
+
+  it("bloqueia contando as tentativas que seriam apagadas", () => {
+    const result = canRevert(comTentativa, REVERTE);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/Uma tentativa de programa já foi registrada/);
+    expect(countTrials(comTentativa)).toBe(1);
+  });
+
+  it("concorda em número com o plural", () => {
+    const duas = {
+      ...comTentativa,
+      programExecutions: [
+        {
+          ...comTentativa.programExecutions[0]!,
+          steps: [
+            {
+              ...comTentativa.programExecutions[0]!.steps[0]!,
+              trials: [
+                { id: "t-1", result: "success" as const, at: "2026-07-30T14:06:00.000-03:00" },
+                { id: "t-2", result: "failure" as const, at: "2026-07-30T14:08:00.000-03:00" },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    expect(canRevert(duas, REVERTE).reason).toMatch(/2 tentativas de programa já foram/);
+  });
+
+  it("resposta de protocolo bloqueia igual a tentativa de programa", () => {
+    const result = canRevert(clinicalSession({ status: "ongoing", protocolAnswers: 3 }), REVERTE);
+    expect(result.reason).toMatch(/3 respostas de protocolo já foram registradas/);
+  });
+
+  it("bloqueia por permissão antes de contar o que existe", () => {
+    expect(canRevert(comTentativa, REGISTRA).reason).toMatch(/não reverte atendimentos/);
+  });
+});
+
+describe("para onde o agendamento volta ao reverter", () => {
+  it("volta a pronto quando é de hoje e há check-in de hoje", () => {
+    expect(statusAfterRevert(clinicalSession({ status: "ongoing" }))).toBe("ready_for_service");
+  });
+
+  it("volta a agendado quando é de hoje e não há check-in de hoje", () => {
+    expect(statusAfterRevert(clinicalSession({ status: "ongoing", checkin: undefined }))).toBe(
+      "scheduled",
+    );
+  });
+
+  it("volta a não iniciado quando o agendamento não é de hoje", () => {
+    // Reverter no dia seguinte não pode devolver a "pronto": o paciente foi
+    // para casa, e a recepção precisaria fazer um novo check-in.
+    const ontem = clinicalSession({
+      status: "ongoing",
+      start: "2026-07-29T14:00:00.000-03:00",
+      checkin: { at: "2026-07-29T13:51:00.000-03:00", by: "web" },
+    });
+    expect(statusAfterRevert(ontem)).toBe("not_started");
+  });
+
+  it("atendimento entre profissionais volta sempre a agendado", () => {
+    expect(statusAfterRevert(clinicalSession({ scheduleType: "professional" }))).toBe("scheduled");
+  });
+});
+
+describe("o que ainda falta acontecer", () => {
+  it("traduz cada situação pendente para uma frase de ação", () => {
+    expect(pendingWork(clinicalSession({ status: "pending_register" }))).toMatch(
+      /escrever a evolução/,
+    );
+    expect(pendingWork(clinicalSession({ status: "pending_signature" }))).toMatch(
+      /assinatura de Marina Okabe/,
+    );
+    expect(pendingWork(clinicalSession({ status: "ready_for_service" }))).toMatch(
+      /aguardando o início/,
+    );
+  });
+
+  it("não inventa pendência para o que está fechado", () => {
+    expect(pendingWork(clinicalSession({ status: "finished" }))).toBeUndefined();
+    expect(pendingWork(clinicalSession({ status: "cancelled" }))).toBeUndefined();
   });
 });

@@ -4,6 +4,7 @@ import { fixtures, modules, personas, rules, scenarios } from "./catalog.js";
 import { contrastPairs } from "../tokens/contrast.js";
 import { AgendaDay } from "../screens/AgendaDay.js";
 import { AppointmentDetail } from "../screens/AppointmentDetail.js";
+import { SessionDetail } from "../screens/SessionDetail.js";
 import { PatientList } from "../screens/PatientList.js";
 import { PatientDetail } from "../screens/PatientDetail.js";
 import { ClaimList } from "../screens/ClaimList.js";
@@ -32,6 +33,7 @@ export const productDefinition: ProductDefinition = {
   routes: [
     { path: "/agenda", screen: AgendaDay },
     { path: "/agenda/:id", screen: AppointmentDetail },
+    { path: "/sessions/:id", screen: SessionDetail },
     { path: "/patients", screen: PatientList },
     { path: "/patients/:id", screen: PatientDetail },
     { path: "/finance", screen: ClaimList },

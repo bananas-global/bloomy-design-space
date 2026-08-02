@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import type { AppointmentStatus, ClaimStatus } from "../contracts/index.js";
+import type { AppointmentStatus, ClaimStatus, ScheduleStatus } from "../contracts/index.js";
 
 /**
  * Componentes locais do Bloomy.
@@ -102,6 +102,43 @@ const APPOINTMENT_STATUS: Record<AppointmentStatus, { label: string; tone: Tone 
 export function AppointmentStatusChip({ status }: { status: AppointmentStatus }) {
   const { label, tone } = APPOINTMENT_STATUS[status];
   return <Chip tone={tone}>{label}</Chip>;
+}
+
+/**
+ * Situação do agendamento, com os rótulos que o Bloomy mostra hoje.
+ *
+ * Vêm de `priv/gettext/pt_BR/LC_MESSAGES/enums.po`, inclusive quando são
+ * estranhos fora de contexto: "Assinar" é o que aparece no quadro da agenda, e
+ * trocar por "Assinatura pendente" aqui faria a especificação e o produto
+ * divergirem numa palavra que a clínica usa em voz alta.
+ *
+ * Cinco destes doze estados são trabalho pendente de alguém — pronto, não
+ * iniciado, atrasado, pendente de registro e as duas assinaturas. Todos usam
+ * tom de pendência de propósito: são a fila invisível que a coordenação precisa
+ * enxergar para fechar o mês.
+ */
+const SCHEDULE_STATUS: Record<ScheduleStatus, { label: string; tone: Tone }> = {
+  scheduled: { label: "Agendado", tone: "info" },
+  incomplete: { label: "Incompleto", tone: "warn" },
+  ready_for_service: { label: "Pronto", tone: "ok" },
+  not_started: { label: "Não iniciado", tone: "pending" },
+  delayed: { label: "Atrasado", tone: "warn" },
+  ongoing: { label: "Em sessão", tone: "neutral" },
+  pending_register: { label: "Pendente", tone: "pending" },
+  pending_signature: { label: "Assinar", tone: "pending" },
+  pending_supervisor_signature: { label: "Assinatura Supervisor", tone: "pending" },
+  finished: { label: "Finalizado", tone: "neutral" },
+  cancelled: { label: "Cancelado", tone: "danger" },
+  missed: { label: "Faltou", tone: "danger" },
+};
+
+export function ScheduleStatusChip({ status }: { status: ScheduleStatus }) {
+  const { label, tone } = SCHEDULE_STATUS[status];
+  return <Chip tone={tone}>{label}</Chip>;
+}
+
+export function scheduleStatusLabel(status: ScheduleStatus): string {
+  return SCHEDULE_STATUS[status].label;
 }
 
 const CLAIM_STATUS: Record<ClaimStatus, { label: string; tone: Tone }> = {

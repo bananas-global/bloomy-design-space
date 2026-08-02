@@ -36,6 +36,180 @@ export type Unit = {
 export const TODAY = "2026-07-30";
 
 /* ================================================================== *
+ * Atendimento — o ciclo de vida clínico
+ * ================================================================== */
+
+/**
+ * Situação do agendamento.
+ *
+ * Doze valores, todos vindos de `Bloomy.Schedules.Schedule`. Não é enfeite de
+ * modelagem: o agendamento é a entidade que carrega o estado do atendimento
+ * inteiro, do check-in até a assinatura do supervisor. Uma tela que trate isso
+ * como "agendado / realizado / cancelado" esconde cinco estados em que alguém
+ * ainda precisa fazer alguma coisa.
+ *
+ * Os rótulos em português são os do produto, em
+ * `priv/gettext/pt_BR/LC_MESSAGES/enums.po` — inclusive as abreviações do quadro
+ * de agenda, como "Assinar" em vez de "Assinatura pendente".
+ */
+export type ScheduleStatus =
+  | "scheduled"
+  | "incomplete"
+  | "ready_for_service"
+  | "not_started"
+  | "delayed"
+  | "ongoing"
+  | "pending_register"
+  | "pending_signature"
+  | "pending_supervisor_signature"
+  | "finished"
+  | "cancelled"
+  | "missed";
+
+/**
+ * Quem é atendido.
+ *
+ * Muda a regra, não só o rótulo: atendimento de profissional (`professional`)
+ * dispensa check-in, pula registro e assinatura, e vai direto para finalizado.
+ * `at` é acompanhamento terapêutico fora da clínica.
+ */
+export type ScheduleType = "patient" | "legal_guardian" | "professional" | "at";
+
+export type SessionType =
+  | "initial"
+  | "feedback"
+  | "supervision"
+  | "case_discussion"
+  | "pedagogical"
+  | "in_person"
+  | "camera_observation"
+  | "clinical_meeting"
+  | "data_collection"
+  | "session_training";
+
+export type SessionLocation = "in_clinic" | "school" | "home";
+
+/** Motivos de falta. O monólito só tem estes dois. */
+export type MissingReason = "missing_patient" | "delay";
+
+export type CancellationReason =
+  | "illness"
+  | "setback"
+  | "vacation"
+  | "rescheduled"
+  | "unit_unlinked"
+  | "patient_deactivated"
+  | "unavailable_professionals"
+  | "duplicity";
+
+/** Fase do programa no momento da tentativa. */
+export type ProgramPhase = "intervention" | "generalization" | "maintenance" | "transition";
+
+/** Ajuda dada na tentativa, quando houve. */
+export type Prompt = "verbal" | "motor" | "other";
+
+/**
+ * Uma tentativa registrada dentro do atendimento.
+ *
+ * É a unidade de dado clínico do Bloomy: o que a terapeuta marca, tentativa a
+ * tentativa, enquanto atende. `prompt` vazio significa resposta independente —
+ * e é essa distinção que a evolução do paciente mede.
+ */
+export type Trial = {
+  id: string;
+  result: "success" | "failure";
+  prompt?: Prompt;
+  at: string;
+};
+
+/** Execução de um passo do programa dentro do atendimento. */
+export type ProgramStepExecution = {
+  id: string;
+  /** Nome do passo no vocabulário do programa. */
+  name: string;
+  phase: ProgramPhase;
+  trials: Trial[];
+  /** Quantas tentativas o passo exige antes de fechar. */
+  targetTrials: number;
+  /** Preenchido quando o passo foi encerrado antes de completar. */
+  earlyTerminationReason?: string;
+};
+
+export type ProgramExecution = {
+  id: string;
+  programId: string;
+  programName: string;
+  /** `structured` entra pela especialidade do serviço; `incidental` é registro solto. */
+  programType: "structured" | "incidental";
+  result: "pending" | "success" | "failure";
+  steps: ProgramStepExecution[];
+};
+
+export type Signature = {
+  professionalId: string;
+  professionalName: string;
+  at: string;
+  /** `owner` é o responsável pelo atendimento; `supervisor` fecha depois dele. */
+  role: "owner" | "supervisor";
+};
+
+/**
+ * O atendimento em si.
+ *
+ * Espelha `Bloomy.CustomServices.CustomService` mais o que o agendamento carrega
+ * de estado. Os dois vivem juntos aqui porque, para quem opera, são uma coisa
+ * só — e separar obrigaria toda tela a costurar os dois para responder "o que
+ * falta neste atendimento".
+ */
+export type ClinicalSession = {
+  id: string;
+  scheduleId: string;
+  status: ScheduleStatus;
+  scheduleType: ScheduleType;
+  sessionType: SessionType;
+  location: SessionLocation;
+  patient?: PatientRef;
+  /** O primeiro da lista é o responsável pelo atendimento. Ordem importa. */
+  professionals: Professional[];
+  /** Supervisor do responsável, quando o atendimento exige segunda assinatura. */
+  supervisor?: Professional;
+  needsSupervisorSignature: boolean;
+  service: { name: string; chargeable: boolean; specialty?: string };
+  start: string;
+  end: string;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+  /** Check-in ativo do paciente, quando houve. */
+  checkin?: { at: string; by: "admin" | "web" | "app" };
+  /** Texto da evolução. Vazio é o que empurra o atendimento para pendente de registro. */
+  register: string;
+  programExecutions: ProgramExecution[];
+  /**
+   * Respostas de protocolo já registradas neste atendimento.
+   *
+   * Só a contagem, porque é só isso que a regra de reversão pergunta: o
+   * monólito faz um `exists?` em `ProtocolExecutionOption`. Guardar o conteúdo
+   * aqui sugeriria que a tela de atendimento o exibe, e ela não exibe.
+   */
+  protocolAnswers: number;
+  signatures: Signature[];
+  /** Preenchido quando `status` é `cancelled`. */
+  cancellation?: { reason: CancellationReason; description?: string; at: string };
+  /** Preenchido quando `status` é `missed`. */
+  missing?: { reason: MissingReason; description?: string; at: string };
+};
+
+export type ClinicalSessionData = {
+  session: ClinicalSession;
+  /**
+   * Atendimentos em aberto do profissional responsável, em qualquer agendamento.
+   * O monólito bloqueia iniciar um novo enquanto existir um destes, e a tela só
+   * consegue explicar o bloqueio se souber qual é o outro.
+   */
+  openSessionsForProfessional: { id: string; patientName: string; start: string }[];
+};
+
+/* ================================================================== *
  * Agenda
  * ================================================================== */
 

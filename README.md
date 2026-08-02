@@ -23,13 +23,19 @@ própria.
 
 ## O que existe hoje
 
-24 cenários em três módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+38 cenários em quatro módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
 | **Agenda** | dia normal, vazia, conflito de horário, reagendamento com conflito, consulta cancelada, cancelamento exige justificativa, sem permissão para cancelar, ausência antes da tolerância, paciente ausente |
+| **Atendimento** | pronto para atendimento, sem check-in, serviço não cobrável, profissional com atendimento em aberto, em andamento, pendente de registro, aguardando quem atendeu, aguardando o supervisor, finalizado, reverter permitido, reverter bloqueado, sem permissão para reverter, aplicador só lê, supervisão entre profissionais |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Financeiro** | fila de guias, vazia, fatura em análise, convênio recusado, documentos pendentes, reenvio permitido, sem permissão para reenviar |
+
+O módulo **Atendimento** é o que descreve o produto de verdade: o Bloomy é um
+sistema de terapia ABA para autismo, e a sessão — com programas, tentativas,
+evolução e cadeia de assinatura — é onde isso aparece. O porte do sistema real
+está registrado em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 
 Nenhum está com status `aprovado` ainda. A aprovação depende de revisar com uma
 pessoa de negócio pelo link público — e marcar antes disso seria tratar
@@ -43,15 +49,21 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | Id | Regra |
 | --- | --- |
 | `cancel-requires-reason` | Cancelamento exige justificativa registrada. |
-| `cancel-requires-permission` | Só perfis com `agenda.cancel` cancelam. |
+| `cancel-requires-permission` | Só perfis com `schedules.cancel` cancelam: recepção, coordenador e admin. |
 | `no-double-booking` | Mesmo profissional não pode ter atendimentos sobrepostos. |
 | `no-show-after-tolerance` | Ausência só 15 minutos depois do horário. |
 | `minor-requires-guardian` | Menor de 18 exige responsável legal completo. |
 | `incomplete-registration-blocks-scheduling` | Campo obrigatório em falta bloqueia agendar. |
 | `restricted-record-requires-permission` | Prontuário restrito exige permissão específica. |
 | `retry-after-document-review` | Reenvio de guia exige documentação completa. |
-| `resubmit-requires-permission` | Só perfis com `claims.retry` reenviam. |
+| `resubmit-requires-permission` | Só perfis com `authorizations.hub` reenviam. |
 | `denial-reason-always-visible` | Motivo e código da recusa ficam na tela. |
+| `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
+| `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
+| `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |
+| `owner-signs-before-supervisor` | Quem atendeu assina antes do supervisor. |
+| `revert-requires-clean-session` | Reverter só enquanto não há tentativa nem resposta de protocolo. |
+| `revert-requires-permission` | Só perfis com `custom_services.revert` revertem. |
 
 ## Tokens: divergência deliberada com o produto real
 

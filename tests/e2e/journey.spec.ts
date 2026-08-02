@@ -160,6 +160,125 @@ test.describe("Agenda", () => {
   });
 });
 
+/* ============================================================= atendimento */
+
+test.describe("Atendimento", () => {
+  test("as três guardas de início disparam na ordem do sistema real", async ({ page }) => {
+    // Pronto: nada bloqueia.
+    await page.goto(urlFor("session.ready"));
+    await expect(page.getByRole("button", { name: "Iniciar atendimento" })).toBeEnabled();
+
+    // Sem check-in: o bloqueio nomeia o paciente, porque quem resolve é a recepção.
+    await page.goto(urlFor("session.no-checkin"));
+    await expect(page.getByRole("button", { name: "Iniciar atendimento" })).toBeDisabled();
+    await expect(page.locator("#iniciar-motivo")).toHaveText(/Théo Andrade Lins ainda não fez check-in/);
+
+    // Atendimento aberto: o bloqueio nomeia o outro atendimento, porque quem
+    // resolve é a própria profissional — e esta guarda vem antes do check-in.
+    await page.goto(urlFor("session.professional-busy"));
+    await expect(page.locator("#iniciar-motivo")).toHaveText(/Isadora Bueno, das 13:00/);
+  });
+
+  test("serviço não cobrável dispensa o check-in em vez de acusar falta", async ({ page }) => {
+    await page.goto(urlFor("session.not-chargeable"));
+
+    await expect(page.getByRole("button", { name: "Iniciar atendimento" })).toBeEnabled();
+    await expect(page.getByText("não exigido neste serviço")).toBeVisible();
+  });
+
+  test("cada tentativa é legível sem depender de cor", async ({ page }) => {
+    await page.goto(urlFor("session.running"));
+
+    // O rótulo textual carrega acerto/erro e se houve ajuda. Uma captura em
+    // preto e branco, ou um leitor de tela, precisa distinguir os três casos.
+    await expect(page.getByText("Tentativa 1: acerto, com ajuda motora.")).toBeAttached();
+    await expect(page.getByText("Tentativa 3: erro, independente.")).toBeAttached();
+
+    // O programa incidental fica identificado, separado dos estruturados.
+    await expect(page.getByText("Incidental")).toBeVisible();
+    await expect(page.getByText("6 tentativas registradas")).toBeVisible();
+  });
+
+  test("evolução vazia leva a pendente de registro, e a tela explica por quê", async ({ page }) => {
+    await page.goto(urlFor("session.pending-register"));
+
+    await expect(page.getByRole("heading", { name: "Falta registrar" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Evolução ainda não escrita" })).toBeVisible();
+    await expect(page.getByText(/Assinar é declarar que o registro está correto/)).toBeVisible();
+  });
+
+  test("a cadeia de assinatura respeita a ordem e nomeia quem falta", async ({ page }) => {
+    await page.goto(urlFor("session.pending-signature"));
+
+    // A responsável pode; a supervisora ainda não.
+    await expect(page.getByRole("button", { name: "Assinar como Marina Okabe" })).toBeEnabled();
+    const supervisora = page.getByRole("button", { name: "Assinar como Clara Vidigal" });
+    await expect(supervisora).toBeDisabled();
+    await expect(page.locator("#assinar-supervisor-motivo")).toHaveText(
+      /primeiro por Marina Okabe/,
+    );
+
+    // Assinar anuncia o resultado e a próxima situação, não só "assinado".
+    await page.getByRole("button", { name: "Assinar como Marina Okabe" }).click();
+    await expect(page.getByRole("status").first()).toContainText("Assinatura Supervisor");
+  });
+
+  test("na etapa do supervisor, quem atendeu já não assina", async ({ page }) => {
+    await page.goto(urlFor("session.pending-supervisor"));
+
+    await expect(page.getByRole("button", { name: "Assinar como Clara Vidigal" })).toBeEnabled();
+    await expect(page.locator("#assinar-responsavel-motivo")).toHaveText(
+      /deve ser feita por Clara Vidigal/,
+    );
+    // A assinatura já feita fica visível com autoria e horário.
+    await expect(page.getByText("responsável pelo atendimento")).toBeVisible();
+  });
+
+  test("reverter conta o que seria apagado antes de bloquear", async ({ page }) => {
+    await page.goto(urlFor("session.revert-blocked"));
+
+    const reverter = page.getByRole("button", { name: "Reverter atendimento" });
+    await expect(reverter).toBeDisabled();
+    await expect(page.locator("#reverter-motivo")).toHaveText(
+      /6 tentativas de programa já foram registradas.*apagaria o registro/,
+    );
+  });
+
+  test("reverter diz para onde o agendamento volta, antes de reverter", async ({ page }) => {
+    await page.goto(urlFor("session.revert-allowed"));
+
+    await expect(page.getByText(/Reverter devolve o agendamento para/)).toBeVisible();
+    await expect(page.getByText(/depende de o agendamento ser de hoje/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Reverter atendimento" })).toBeEnabled();
+  });
+
+  test("quem atendeu não reverte o próprio atendimento", async ({ page }) => {
+    await page.goto(urlFor("session.revert-no-permission"));
+
+    await expect(page.getByRole("button", { name: "Reverter atendimento" })).toBeDisabled();
+    await expect(page.locator("#reverter-motivo")).toHaveText(/Peça à coordenação/);
+  });
+
+  test("o aplicador lê tudo e não escreve nada", async ({ page }) => {
+    await page.goto(urlFor("session.applicator-cannot-register"));
+
+    // A tela não pode virar um vazio: ler é o uso legítimo deste perfil.
+    await expect(page.getByText("Théo Andrade Lins").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Iniciar atendimento" })).toBeDisabled();
+    await expect(page.locator("#iniciar-motivo")).toHaveText(/não registra atendimento/);
+  });
+
+  test("atendimento entre profissionais pula registro e assinatura", async ({ page }) => {
+    await page.goto(urlFor("session.professional-meeting"));
+
+    await expect(page.getByText("sem paciente — atendimento entre profissionais")).toBeVisible();
+    await expect(page.getByText("não exigido neste serviço")).toBeVisible();
+    // As duas seções não existem para este tipo: ele finaliza direto.
+    await expect(page.getByRole("heading", { name: "Evolução" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Assinatura" })).toHaveCount(0);
+  });
+});
+
 /* =============================================================== pacientes */
 
 test.describe("Pacientes", () => {

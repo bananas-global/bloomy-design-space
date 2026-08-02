@@ -64,6 +64,31 @@ Concluída.
 
 Verde: `pnpm check` e 76 jornadas Playwright.
 
+### 2. Clínico, parte 1: o atendimento — `porte/clinico-atendimento`
+
+Concluída.
+
+O ciclo de vida da sessão, que é onde o Bloomy é mais Bloomy. Traduzido de
+quatro módulos do monólito — `CustomServices.Create`, `Finish`,
+`SignCustomService` e `RevertCustomService` — e não de uma leitura de tela.
+
+- **Doze situações de agendamento** entraram no contrato, contra as seis
+  genéricas que existiam. Cinco delas significam trabalho pendente de alguém:
+  pronto, não iniciado, atrasado, pendente de registro e as duas assinaturas.
+  Um desenho que trate isso como realizado/não realizado esconde justamente a
+  fila que a coordenação precisa enxergar para fechar o mês.
+- **Seis regras novas**, todas com implementação e teste: as três guardas de
+  início, a que manda evolução vazia para pendente de registro, a ordem da
+  cadeia de assinatura, e as duas de reversão.
+- **Catorze cenários** e a tela `SessionDetail`, com programas, passos, fases e
+  tentativas — a unidade de dado clínico do produto.
+- A ordem das guardas de início foi preservada de propósito e tem teste próprio:
+  o bloqueio por atendimento em aberto vem antes do bloqueio por check-in.
+  Invertida, a tela mandaria à recepção quem só esqueceu de fechar a sessão
+  anterior.
+
+Verde: `pnpm check` e 115 jornadas Playwright, com axe em todos os cenários.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -75,3 +100,4 @@ bugs do Design Space; são observações sobre o produto.
 | 2 | Metade das policies concede por lista negativa (`role not in`), liberando por omissão para papéis não considerados. `people` aparece com permissões de paciente que outra policy bloqueia antes. | várias |
 | 3 | `patients.see_behavior_intervention_plan` exclui `therapeutic_companion` e `specialist`, e não exclui `applicator`. Quem conduz a intervenção não vê o plano; quem aplica, vê. | `lib/bloomy/patients/patient_policy.ex:29` |
 | 4 | A Central de Autorizações verifica permissão na entrada da tela; nenhuma ação interna — adicionar autorização, editar agendamento, abrir token — tem verificação própria. | `lib/bloomy_web/backoffice/live/authorization_hub/` |
+| 5 | `Appointment.valid_register?/1` retorna `true` quando o texto está **vazio**. O comportamento em `Finish` está correto; o nome diz o oposto do que a função faz. | `lib/bloomy/custom_services/appointment.ex:89` |
