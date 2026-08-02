@@ -28,6 +28,7 @@ function record(overrides: Partial<MeetingRecord> & { id: string }): MeetingReco
     finishedAt: "2026-07-30T17:00:00.000-03:00",
     commentsReviewed: true,
     failedNights: 0,
+    hasAppointmentRow: true,
     comments: [comment({ id: `${overrides.id}-c1` })],
     ...overrides,
   };
@@ -152,6 +153,18 @@ export const meetingSummaryFixtures: Fixture[] = [
               contentWrittenAt: "2026-07-30T03:00:00.000-03:00",
             }
           : { ...r, commentsReviewed: true, failedNights: 0 },
+      ),
+    } satisfies MeetingSummaryData,
+  },
+  {
+    id: "meeting-summary-blocked-night",
+    label: "Um atendimento sem registro trava a noite inteira",
+    description:
+      "O terceiro da fila nunca teve a linha de registro criada. O laço levanta ali, e o que vinha depois não é sequer tentado.",
+    data: {
+      runsAt: noite.runsAt,
+      records: noite.records.map((r) =>
+        r.id === "r3" ? { ...r, hasAppointmentRow: false } : r,
       ),
     } satisfies MeetingSummaryData,
   },

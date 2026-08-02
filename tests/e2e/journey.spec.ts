@@ -2965,3 +2965,38 @@ test.describe("resumo automático da reunião", () => {
     await expect(page.getByText(/montado de madrugada a partir dos comentários/)).toBeVisible();
   });
 });
+
+test.describe("resumo da reunião — a noite que trava", () => {
+  test("o atendimento que interrompe é nomeado, junto do motivo", async ({ page }) => {
+    await page.goto(urlFor("session.meeting-summary-blocked-night"));
+
+    await expect(
+      page.getByText("Um atendimento sem registro trava a fila inteira"),
+    ).toBeVisible();
+    await expect(page.getByText(/O atendimento de Bruna S\. nunca teve o registro criado/)).toBeVisible();
+    await expect(page.getByText(/a falha desse passo é descartada/)).toBeVisible();
+  });
+
+  test("as reuniões bloqueadas atrás dele são listadas uma a uma", async ({ page }) => {
+    await page.goto(urlFor("session.meeting-summary-blocked-night"));
+
+    // A fila tem quatro; Bruna S. é a terceira, então só Ivo P. fica atrás.
+    await expect(page.getByText("1 reunião depois dela não chega a ser tentada")).toBeVisible();
+    await expect(page.getByText("Ivo P. — Reunião de pais")).toBeVisible();
+  });
+
+  test("separa o que foi gravado antes da interrupção do que nem foi tentado", async ({ page }) => {
+    await page.goto(urlFor("session.meeting-summary-blocked-night"));
+
+    await expect(
+      page.getByText(/2 reuniões foram gravadas antes disso, e continuam gravadas/),
+    ).toBeVisible();
+    await expect(page.getByText(/amanhã a fila trava aqui outra vez/)).toBeVisible();
+  });
+
+  test("sem defeito nenhum, o aviso de fila travada não aparece", async ({ page }) => {
+    await page.goto(urlFor("session.meeting-summary-overwrites-a-person"));
+
+    await expect(page.getByText("Um atendimento sem registro trava a fila inteira")).toHaveCount(0);
+  });
+});

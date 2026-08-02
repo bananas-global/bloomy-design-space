@@ -13,14 +13,17 @@ import {
 } from "../components/primitives.js";
 import {
   authorLabel,
+  blockedByTheCrash,
   commentsThatEscape,
   daysWaiting,
   humanTextAtRisk,
   likelyToSucceed,
   numberTheJobWillReport,
   oldestInQueue,
+  processedBeforeTheCrash,
   escapingAlreadyGenerated,
   escapingInTheQueue,
+  firstToRaise,
   stuckInTheQueue,
   willBeRewrittenTonight,
 } from "../rules/meetingSummary.js";
@@ -75,10 +78,48 @@ export function MeetingSummary({ context }: ScreenProps) {
   const escapamNaFila = escapingInTheQueue(summary);
   const jaGerados = escapingAlreadyGenerated(summary);
   const maisAntigo = oldestInQueue(summary);
+  const queEstoura = firstToRaise(summary);
+  const bloqueados = blockedByTheCrash(summary);
 
   return wrap(
     context,
     <div className="space-y-4">
+      {queEstoura && (
+        <Notice tone="danger" title="Um atendimento sem registro trava a fila inteira">
+          <p className="m-0 max-w-[68ch]">
+            O atendimento de <span className="font-semibold">{queEstoura.patientName}</span> nunca
+            teve o registro criado — na criação, a falha desse passo é descartada e o atendimento
+            segue como se tudo tivesse dado certo. A rotina da madrugada tenta gravar ali e para.
+          </p>
+          {bloqueados.length > 0 && (
+            <>
+              <p className="m-0 mt-2">
+                {bloqueados.length}{" "}
+                {bloqueados.length === 1
+                  ? "reunião depois dela não chega a ser tentada"
+                  : "reuniões depois dela não chegam a ser tentadas"}
+                :
+              </p>
+              <ul className="m-0 mt-1 list-disc space-y-1 pl-5">
+                {bloqueados.map((registro) => (
+                  <li key={registro.id}>
+                    {registro.patientName} — {registro.meetingKind}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          <p className="m-0 mt-2 max-w-[68ch]">
+            {processedBeforeTheCrash(summary).length > 0
+              ? `${processedBeforeTheCrash(summary).length} ${processedBeforeTheCrash(summary).length === 1 ? "reunião foi gravada" : "reuniões foram gravadas"} antes disso, e continuam gravadas.`
+              : "Nenhuma reunião chega a ser gravada nesta noite."}{" "}
+            A tarefa tenta de novo vinte vezes e as vinte param no mesmo ponto. E como falhar mantém
+            a marca de revisão como estava, amanhã a fila trava aqui outra vez — sem sintoma, porque
+            ninguém pediu resumo nenhum: ele só nunca chega.
+          </p>
+        </Notice>
+      )}
+
       {emRisco.length > 0 && (
         <Notice
           tone="danger"

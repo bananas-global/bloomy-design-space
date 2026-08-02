@@ -1864,6 +1864,54 @@ rodada 44. O prazo passou a acompanhar o catálogo.
 6 achados, 6 cenários, 5 regras testáveis, 22 testes de regra, 10 jornadas.
 
 
+### 60. A noite que trava num registro só
+
+Fui ler o outro lado da gravação — o que `update_custom_service` aceita quando a
+rotina das 3h escreve — e o achado estava um passo antes, na criação do
+atendimento:
+
+```elixir
+defp create_appointment({:ok, custom_service}) do
+  CustomServices.add_appointment(%{custom_service_id: custom_service.id, ...})
+  {:ok, custom_service}
+end
+```
+
+O resultado do insert é **descartado**. Se ele falhar, o atendimento existe sem
+o lugar onde o registro oficial seria escrito, e devolve sucesso. É o padrão que
+mais se repete neste sistema, e desta vez ele não perde informação: **cria um
+estado que o resto do código não espera encontrar**.
+
+Porque a rotina da madrugada faz exatamente isto:
+
+```elixir
+appointment: %{id: custom_service.appointment.id, content: content}
+```
+
+`custom_service.appointment` é `nil` quando a linha não existe. `nil.id` levanta,
+e não há `rescue` nem no laço nem no worker. A consequência não é uma reunião
+perdida: **é toda a fila a partir dali**. O que o `Enum.each` já tinha gravado
+fica gravado; o que vinha depois não chega a ser tentado.
+
+E não se resolve sozinho. O worker não declara `max_attempts`, então herda as
+vinte do Oban — vinte tentativas parando no mesmo ponto. Como falhar mantém a
+marca de revisão como estava, o registro problemático continua na fila amanhã e
+trava de novo. O impedimento é permanente, e não tem sintoma nenhum: ninguém
+pediu resumo, ele apenas nunca chega.
+
+A regra que escrevi para isso separa três conjuntos — o que foi gravado antes da
+interrupção, o registro que estoura, e o que ficou atrás dele —, e um dos testes
+fixa a diferença que eu quase deixei implícita: o laço para no **primeiro**
+defeito, não no pior. Um segundo atendimento quebrado mais atrás não muda o
+corte, ele só entra na lista dos bloqueados.
+
+Outro teste fixa o limite oposto: um atendimento sem registro que **não está na
+fila** é um defeito real e não trava nada, porque a consulta nem o alcança.
+Sem esse teste, a regra acusaria um problema que ela não sabe medir.
+
+2 achados, 1 cenário, 2 regras testáveis, 6 testes de regra, 4 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1938,3 +1986,5 @@ bugs do Design Space; são observações sobre o produto.
 | 65 | O laço descarta o resultado de cada geração, e a rotina devolve `{:ok, length(custom_services_to_review)}` — a quantidade que **entrou** na fila, medida antes de gerar. Quarenta sucessos e quarenta fracassos registram o mesmo número. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:10-14` |
 | 66 | Quando a geração falha, a marca continua em `false`, então o mesmo registro volta à fila na noite seguinte — sem limite de tentativas e sem ninguém ser avisado. Uma falha permanente é reenviada ao modelo toda madrugada para sempre, e a reunião fica sem registro oficial em silêncio. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:17-35` |
 | 67 | O conteúdo de cada comentário é interpolado cru entre `<conteudo>` e `</conteudo>` no pedido ao modelo. Um comentário que feche a etiqueta e escreva depois dela vira instrução para quem redige o registro oficial. Dois estados: na fila ainda dá para prevenir; com a marca já em `true`, o prontuário **já saiu** daquele pedido. | `lib/bloomy/custom_services/generate_appointment_content.ex:36-48` |
+| 68 | `Create.create_appointment/1` insere a linha do registro do atendimento e **descarta o resultado**, devolvendo `{:ok, custom_service}` de qualquer jeito. Um insert que falhe deixa o atendimento sem o lugar onde o registro oficial seria escrito, sem erro e sem sintoma. | `lib/bloomy/custom_services/create.ex:90-100` |
+| 69 | A rotina das 3h lê `custom_service.appointment.id` sem conferir nulo. Um atendimento na situação do achado 68 levanta dentro do `Enum.each`, que não é protegido: **toda a fila a partir dali é perdida naquela noite**. O worker não declara `max_attempts` (herda 20 do Oban) e as 20 tentativas param no mesmo registro; como falhar mantém a marca de revisão, o bloqueio se repete todas as noites. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:10-21` |

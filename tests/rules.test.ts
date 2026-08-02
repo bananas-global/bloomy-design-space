@@ -5,11 +5,15 @@ import type {
 } from "../src/contracts/index.js";
 import {
   authorLabel,
+  blockedByTheCrash,
   commentsThatEscape,
   daysWaiting as diasNaFila,
   escapesItsDelimiter,
   escapingAlreadyGenerated,
   escapingInTheQueue,
+  firstToRaise,
+  missingAppointmentRow,
+  processedBeforeTheCrash,
   humanTextAtRisk,
   likelyToSucceed,
   numberTheJobWillReport,
@@ -6088,6 +6092,7 @@ function registroResumo(o: Partial<ResumoRegistro> & { id: string }): ResumoRegi
     finishedAt: "2026-07-30T17:00:00.000-03:00",
     commentsReviewed: true,
     failedNights: 0,
+    hasAppointmentRow: true,
     comments: [],
     ...o,
   };
@@ -6314,6 +6319,79 @@ describe("resumo da reunião — os dois estados do comentário que escapa", () 
     const fila = escapingInTheQueue(dados).map((r) => r.id);
     const gerados = escapingAlreadyGenerated(dados).map((r) => r.id);
     expect(fila.filter((id) => gerados.includes(id))).toEqual([]);
+  });
+});
+
+describe("resumo da reunião — a noite que trava num registro só", () => {
+  const fila = (ids: [string, boolean][]) =>
+    noiteResumo(
+      ids.map(([id, temRegistro]) =>
+        registroResumo({ id, commentsReviewed: false, hasAppointmentRow: temRegistro }),
+      ),
+    );
+
+  it("acha o atendimento sem a linha de registro", () => {
+    const dados = fila([
+      ["a", true],
+      ["b", false],
+      ["c", true],
+    ]);
+    expect(missingAppointmentRow(dados).map((r) => r.id)).toEqual(["b"]);
+    expect(firstToRaise(dados)?.id).toBe("b");
+  });
+
+  it("bloqueia tudo que vem depois na fila, e só o que vem depois", () => {
+    const dados = fila([
+      ["a", true],
+      ["b", true],
+      ["estoura", false],
+      ["d", true],
+      ["e", true],
+    ]);
+    expect(processedBeforeTheCrash(dados).map((r) => r.id)).toEqual(["a", "b"]);
+    expect(blockedByTheCrash(dados).map((r) => r.id)).toEqual(["d", "e"]);
+  });
+
+  it("quando o primeiro da fila estoura, nada da noite é gravado", () => {
+    const dados = fila([
+      ["estoura", false],
+      ["b", true],
+    ]);
+    expect(processedBeforeTheCrash(dados)).toEqual([]);
+    expect(blockedByTheCrash(dados).map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("para no primeiro, e não no pior: um segundo defeito atrás não muda o corte", () => {
+    const dados = fila([
+      ["a", true],
+      ["primeiro", false],
+      ["segundo", false],
+      ["d", true],
+    ]);
+    expect(firstToRaise(dados)?.id).toBe("primeiro");
+    expect(blockedByTheCrash(dados).map((r) => r.id)).toEqual(["segundo", "d"]);
+  });
+
+  it("sem nenhum defeito, a fila inteira é processada e nada é bloqueado", () => {
+    const dados = fila([
+      ["a", true],
+      ["b", true],
+    ]);
+    expect(firstToRaise(dados)).toBeUndefined();
+    expect(blockedByTheCrash(dados)).toEqual([]);
+    expect(processedBeforeTheCrash(dados).map((r) => r.id)).toEqual(["a", "b"]);
+  });
+
+  it("um atendimento sem registro que não está na fila não trava nada", () => {
+    // A consulta só pega quem está com a marca em `false`; um defeito fora dela
+    // é real, mas não é o que interrompe a noite.
+    const dados = noiteResumo([
+      registroResumo({ id: "fora", commentsReviewed: true, hasAppointmentRow: false }),
+      registroResumo({ id: "na-fila", commentsReviewed: false }),
+    ]);
+    expect(missingAppointmentRow(dados).map((r) => r.id)).toEqual(["fora"]);
+    expect(firstToRaise(dados)).toBeUndefined();
+    expect(blockedByTheCrash(dados)).toEqual([]);
   });
 });
 

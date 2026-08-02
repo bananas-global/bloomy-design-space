@@ -2177,6 +2177,14 @@ export interface MeetingRecord {
   comments: MeetingComment[];
   /** Noites seguidas em que a geração falhou para este registro. */
   failedNights: number;
+  /**
+   * Existe a linha em `custom_service_appointments`.
+   *
+   * `Create.create_appointment/1` descarta o resultado do insert, então pode
+   * não existir — e a rotina das 3h lê `custom_service.appointment.id` sem
+   * conferir.
+   */
+  hasAppointmentRow: boolean;
 }
 
 export interface MeetingSummaryData {
