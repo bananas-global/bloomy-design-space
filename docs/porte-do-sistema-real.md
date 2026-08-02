@@ -2219,6 +2219,59 @@ uniforme.
 novas.
 
 
+### 66. O totem, e o caso mais curto de todos
+
+Última rodada de porte. Fui ao portal público — a parte que a família opera
+sozinha — e encontrei o melhor exemplo possível do achado 82.
+
+O mesmo recurso tem **duas funções com o mesmo nome**, e elas discordam sobre
+que dia é hoje:
+
+```elixir
+# Checkin.get_scheduled_patients/1 — certo
+date = DateTime.now!("America/Sao_Paulo") |> DateTime.to_date()
+
+# select_patient_step.ex, get_scheduled_patients/3 — errado
+date = Date.utc_today()
+```
+
+A tela do totem chama a segunda. É a prova mais curta de que a forma errada não
+foi escolhida: alguém escreveu a certa, no mesmo fluxo, com o mesmo nome. E é
+também o motivo de uma revisão de código não pegar isso — as duas linhas nunca
+aparecem juntas, e cada uma isolada parece razoável.
+
+**O que a família lê** quando a busca não acha nada:
+
+> Nenhum dos seus filhos tem consultas agendadas para hoje.
+
+Pus a frase literal na tela, entre aspas, e essa foi a decisão que mais me
+custou a escrever. A frase **não fala do sistema, fala da família**. Não é “não
+encontramos” nem “tente de novo”: é uma afirmação específica sobre os filhos de
+quem está lendo, e das 21h à meia-noite ela é falsa — dita a alguém de pé na
+recepção, com a criança do lado e a consulta marcada. Parafrasear esconderia
+exatamente o que há de errado nela.
+
+E o totem é o pior lugar possível para o defeito. Numa tela interna, ele vira uma
+pergunta ao colega. Aqui não há colega: é a única superfície do sistema operada
+por quem não trabalha nele. Isso muda a prioridade entre as 205 ocorrências —
+elas não são equivalentes.
+
+**Um achado que veio do teste, não do código.** Escrevi um caso para fixar o
+limite oposto — que uma chegada com atendimento *amanhã* não fosse recusada — e o
+que apareceu foi que ela é **aceita**. A mesma janela que barra quem tem consulta
+hoje libera quem tem consulta amanhã, e o sistema registra presença num dia em
+que não houve atendimento. Este é o pior dos dois: recusar alguém deixa uma
+pessoa do lado de fora para reclamar; aceitar cria um registro falso que ninguém
+vai procurar.
+
+Um teste que escrevi por hábito — verificar que os três conjuntos cobrem todas as
+chegadas e não se sobrepõem — é o que garante que nenhum caso desses suma da tela
+sem ninguém notar. E o cenário do dia mostra a mesma chegada das 22h40 sendo
+**corretamente recusada** às 18h: é o mesmo dado, e só a hora muda o veredito.
+
+5 achados, 5 cenários, 4 regras testáveis, 8 testes de regra, 6 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2311,3 +2364,7 @@ bugs do Design Space; são observações sobre o produto.
 | 83 | No chat, a linha que decide se a data é hoje pergunta a UTC e a **linha seguinte** formata a mesma data no fuso da clínica. As duas formas convivem no mesmo componente — prova de que ninguém escolheu UTC, e de que a correção precisa de alcance, não de decisão. | `lib/bloomy_web/backoffice/live/chat_live/chat_modal.ex:61,66` |
 | 84 | O campo de data de encerramento do mapa de horas usa `min={Date.utc_today()}`. Depois das 21h o dia de hoje deixa de ser selecionável no calendário do próprio formulário — sem mensagem nenhuma para interpretar. | `lib/bloomy_web/backoffice/live/patient_live/components/hour_map/finish_modal.ex:25` |
 | 85 | A idade do paciente é `floor(Date.diff(hoje, nascimento) / 365)`, em oito telas. Como o ano tem 365,2425 dias, a idade vira cedo — medido: três dias antes do aniversário aos doze anos, quatro aos vinte. A idade é faixa de protocolo e critério do que a operadora autoriza. | `lib/bloomy_web/backoffice/live/patient_live/components/card_header.ex:54` |
+| 86 | O auto check-in tem **duas funções com o mesmo nome** perguntando quais pacientes têm atendimento hoje: `Checkin.get_scheduled_patients/1` usa `DateTime.now!("America/Sao_Paulo")`, e a `get_scheduled_patients/3` do passo de seleção usa `Date.utc_today()`. A tela do totem chama a segunda. Caso mais concreto do achado 82. | `lib/bloomy/service_records/checkin.ex:39`, `lib/bloomy_web/public/live/auto_checkin_live/components/select_patient_step.ex:201` |
+| 87 | Quando a busca não acha nada, o totem responde “Nenhum dos seus filhos tem consultas agendadas para hoje.” Das 21h à meia-noite isso é dito a uma família de pé na recepção, com a consulta marcada. A frase não fala do sistema, fala da família — e é falsa. | `lib/bloomy_web/public/live/auto_checkin_live/components/no_scheduled_patients.ex:18` |
+| 88 | A mesma janela tem o efeito oposto: quem tem atendimento **amanhã** e passa pelo totem depois das 21h **consegue fazer check-in**, e fica registrada presença num dia sem atendimento. Encontrado ao escrever o teste do limite, não lendo o código. | `lib/bloomy_web/public/live/auto_checkin_live/components/select_patient_step.ex:201` |
+| 89 | O totem é a única superfície operada pela família, sem ninguém do lado para explicar. As 205 ocorrências do achado 82 não são equivalentes: as internas têm quem contorne e quem reclame; esta não tem nenhum dos dois. | `lib/bloomy_web/public/live/auto_checkin_live/` |

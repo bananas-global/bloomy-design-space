@@ -1,3 +1,19 @@
+import type {
+  AutoCheckinData as TotemData,
+  CheckinArrival as Chegada,
+} from "../src/contracts/index.js";
+import {
+  TOTEM_MESSAGE,
+  arrivalHour,
+  checkedIn,
+  dateTheOtherFunctionQueries,
+  dateTheScreenQueries,
+  found,
+  implementationsDisagree,
+  turnedAwayCorrectly,
+  turnedAwayWrongly,
+  wouldBeFoundByTheOtherFunction,
+} from "../src/rules/autoCheckin.js";
 import {
   ageAsTheSystemComputes,
   ageInFullYears,
@@ -6957,5 +6973,100 @@ describe("que dia o sistema acha que é — a idade dividida por 365", () => {
     expect(daysAgeTurnsEarly(nascimento, systemDate(hojeData.now))).toBe(2);
     expect(ageAsTheSystemComputes(nascimento, systemDate(hojeData.now))).toBe(13);
     expect(ageInFullYears(nascimento, clinicDate(hojeData.now))).toBe(12);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auto check-in do totem
+// ---------------------------------------------------------------------------
+
+function chegadaTotem(o: Partial<Chegada> & { id: string }): Chegada {
+  return {
+    guardianName: "Renata Alencar",
+    patientName: "Helena M.",
+    arrivedAt: "2026-07-30T18:20:00.000-03:00",
+    scheduleDate: "2026-07-30",
+    scheduleTime: "18:30",
+    ...o,
+  };
+}
+
+const totem = (arrivals: Chegada[]): TotemData => ({ arrivals });
+
+describe("auto check-in — as duas funções com o mesmo nome", () => {
+  it("a da tela pergunta em UTC; a outra, no fuso da clínica", () => {
+    const noite = chegadaTotem({ id: "a", arrivedAt: "2026-07-30T21:15:00.000-03:00" });
+    expect(dateTheScreenQueries(noite)).toBe("2026-07-31");
+    expect(dateTheOtherFunctionQueries(noite)).toBe("2026-07-30");
+    expect(implementationsDisagree(noite)).toBe(true);
+  });
+
+  it("fora da janela as duas concordam, e é por isso que ninguém percebe", () => {
+    const tarde = chegadaTotem({ id: "a" });
+    expect(dateTheScreenQueries(tarde)).toBe(dateTheOtherFunctionQueries(tarde));
+    expect(implementationsDisagree(tarde)).toBe(false);
+  });
+});
+
+describe("auto check-in — quem o totem recusa", () => {
+  it("recusa por engano quem tem consulta hoje e chegou depois das 21h", () => {
+    const dados = totem([
+      chegadaTotem({ id: "engano", arrivedAt: "2026-07-30T21:15:00.000-03:00" }),
+    ]);
+    expect(found(dados.arrivals[0]!)).toBe(false);
+    expect(wouldBeFoundByTheOtherFunction(dados.arrivals[0]!)).toBe(true);
+    expect(turnedAwayWrongly(dados).map((c) => c.id)).toEqual(["engano"]);
+  });
+
+  it("separa a recusa por engano da recusa correta", () => {
+    const dados = totem([
+      chegadaTotem({ id: "engano", arrivedAt: "2026-07-30T22:10:00.000-03:00" }),
+      chegadaTotem({ id: "outro-dia", scheduleDate: "2026-08-04" }),
+      chegadaTotem({ id: "liberada" }),
+    ]);
+    expect(turnedAwayWrongly(dados).map((c) => c.id)).toEqual(["engano"]);
+    expect(turnedAwayCorrectly(dados).map((c) => c.id)).toEqual(["outro-dia"]);
+    expect(checkedIn(dados).map((c) => c.id)).toEqual(["liberada"]);
+  });
+
+  it("os três conjuntos cobrem todas as chegadas e não se sobrepõem", () => {
+    // Sem isto, um caso poderia sumir da tela sem ninguém notar.
+    const dados = totem([
+      chegadaTotem({ id: "a", arrivedAt: "2026-07-30T22:10:00.000-03:00" }),
+      chegadaTotem({ id: "b", scheduleDate: "2026-08-04" }),
+      chegadaTotem({ id: "c" }),
+      chegadaTotem({ id: "d", arrivedAt: "2026-07-30T23:50:00.000-03:00" }),
+    ]);
+    const ids = [
+      ...turnedAwayWrongly(dados),
+      ...turnedAwayCorrectly(dados),
+      ...checkedIn(dados),
+    ].map((c) => c.id);
+    expect(ids.sort()).toEqual(["a", "b", "c", "d"]);
+    expect(new Set(ids).size).toBe(4);
+  });
+
+  it("uma chegada na janela cujo atendimento é de amanhã é liberada, e não é engano", () => {
+    // O limite oposto: a janela adianta o dia, então quem tem consulta amanhã
+    // consegue fazer check-in hoje. Também é errado, e de outro jeito.
+    const dados = totem([
+      chegadaTotem({
+        id: "adiantada",
+        arrivedAt: "2026-07-30T22:10:00.000-03:00",
+        scheduleDate: "2026-07-31",
+      }),
+    ]);
+    expect(found(dados.arrivals[0]!)).toBe(true);
+    expect(turnedAwayWrongly(dados)).toEqual([]);
+  });
+
+  it("lê a hora local da chegada", () => {
+    expect(arrivalHour(chegadaTotem({ id: "a", arrivedAt: "2026-07-30T21:15:00.000-03:00" }))).toBe(
+      21,
+    );
+  });
+
+  it("guarda a frase do totem literal, sem parafrasear", () => {
+    expect(TOTEM_MESSAGE).toBe("Nenhum dos seus filhos tem consultas agendadas para hoje.");
   });
 });

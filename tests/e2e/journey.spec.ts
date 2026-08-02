@@ -3255,3 +3255,71 @@ test.describe("que dia o sistema acha que é", () => {
     await expect(page.getByText(/Faltam 3 dias para o aniversário/)).toBeVisible();
   });
 });
+
+test.describe("auto check-in no totem", () => {
+  test("a frase que a família recebe aparece literal, entre aspas", async ({ page }) => {
+    await page.goto(urlFor("public.auto-checkin-turned-away"));
+
+    await expect(
+      page.getByText("2 famílias estão de pé na recepção ouvindo que não tem consulta"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("“Nenhum dos seus filhos tem consultas agendadas para hoje.”"),
+    ).toBeVisible();
+    await expect(page.getByText(/A frase não fala do sistema, fala da família/)).toBeVisible();
+  });
+
+  test("cada família é nomeada com a hora da chegada e a do atendimento", async ({ page }) => {
+    await page.goto(urlFor("public.auto-checkin-turned-away"));
+
+    await expect(
+      page.getByText(/Tiago Barreto chegou às 21h com Otávio L\., que tem atendimento hoje às 21:30/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Cláudia Ferrez chegou às 22h com Bruna S\., que tem atendimento hoje às 22:15/),
+    ).toBeVisible();
+  });
+
+  test("as duas datas consultadas aparecem lado a lado", async ({ page }) => {
+    await page.goto(urlFor("public.auto-checkin-two-functions"));
+
+    await expect(
+      page.getByText(
+        /a tela procura em 31 de jul\. de 2026, e a outra procuraria em 30 de jul\. de 2026/,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/alguém escreveu a certa, no mesmo fluxo, com o mesmo nome/),
+    ).toBeVisible();
+    await expect(page.getByText(/aqui vira uma pessoa parada, com uma criança/)).toBeVisible();
+  });
+
+  test("o check-in num dia sem atendimento fica separado das recusas", async ({ page }) => {
+    await page.goto(urlFor("public.auto-checkin-wrong-day"));
+
+    await expect(page.getByText("1 check-in foi liberado num dia sem atendimento")).toBeVisible();
+    await expect(
+      page.getByText(/Sônia Vasques passou às 22h com Nina C\., cujo atendimento é amanhã/),
+    ).toBeVisible();
+    await expect(page.getByText(/não há quem reclame/)).toBeVisible();
+  });
+
+  test("recusar quem é de outro dia aparece como recusa certa", async ({ page }) => {
+    await page.goto(urlFor("public.auto-checkin-correct-refusal"));
+
+    await expect(page.getByText("recusada, e é de outro dia")).toHaveCount(1);
+    await expect(
+      page.getByText(/o problema não é recusar, é recusar quem tem consulta/),
+    ).toBeVisible();
+  });
+
+  test("durante o dia, ninguém é recusado por engano", async ({ page }) => {
+    await page.goto(urlFor("public.auto-checkin-daytime"));
+
+    await expect(page.getByText(/ouvindo que não tem consulta/)).toHaveCount(0);
+    await expect(page.getByText(/liberado num dia sem atendimento/)).toHaveCount(0);
+    // Duas, e a segunda é a mesma chegada que à noite era liberada por engano:
+    // durante o dia ela é corretamente recusada, porque o atendimento é amanhã.
+    await expect(page.getByText("recusada, e é de outro dia")).toHaveCount(2);
+  });
+});

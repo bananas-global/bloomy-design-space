@@ -36,6 +36,7 @@ import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
 import { authorizationRenewalFixtures } from "../fixtures/authorizationRenewal.js";
 import { fieldOrderingFixtures } from "../fixtures/fieldOrdering.js";
 import { deactivationDateFixtures } from "../fixtures/deactivationDate.js";
+import { autoCheckinFixtures } from "../fixtures/autoCheckin.js";
 import { todayInUtcFixtures } from "../fixtures/todayInUtc.js";
 import { patientAddressFixtures } from "../fixtures/patientAddress.js";
 import { meetingSummaryFixtures } from "../fixtures/meetingSummary.js";
@@ -52,6 +53,7 @@ import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
 import { fieldOrderingRules } from "../rules/fieldOrdering.js";
 import { deactivationDateRules } from "../rules/deactivationDate.js";
+import { autoCheckinRules } from "../rules/autoCheckin.js";
 import { todayInUtcRules } from "../rules/todayInUtc.js";
 import { patientAddressRules } from "../rules/patientAddress.js";
 import { appointmentRowRules, meetingSummaryRules } from "../rules/meetingSummary.js";
@@ -121,6 +123,7 @@ import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
 import { authorizationRenewalScenarios } from "../scenarios/authorizationRenewal.js";
 import { fieldOrderingScenarios } from "../scenarios/fieldOrdering.js";
 import { deactivationDateScenarios } from "../scenarios/deactivationDate.js";
+import { autoCheckinScenarios } from "../scenarios/autoCheckin.js";
 import { todayInUtcScenarios } from "../scenarios/todayInUtc.js";
 import { patientAddressScenarios } from "../scenarios/patientAddress.js";
 import { meetingSummaryScenarios } from "../scenarios/meetingSummary.js";
@@ -1056,6 +1059,7 @@ export const scenarios: Scenario[] = [
   ...authorizationRenewalScenarios,
   ...fieldOrderingScenarios,
   ...deactivationDateScenarios,
+  ...autoCheckinScenarios,
   ...todayInUtcScenarios,
   ...patientAddressScenarios,
   ...meetingSummaryScenarios,
@@ -1100,6 +1104,7 @@ export const fixtures: Fixture[] = [
   ...authorizationRenewalFixtures,
   ...fieldOrderingFixtures,
   ...deactivationDateFixtures,
+  ...autoCheckinFixtures,
   ...todayInUtcFixtures,
   ...patientAddressFixtures,
   ...meetingSummaryFixtures,
@@ -1119,6 +1124,7 @@ export const rules: Rule[] = [
   ...closureGenerationRules,
   ...fieldOrderingRules,
   ...deactivationDateRules,
+  ...autoCheckinRules,
   ...todayInUtcRules,
   ...patientAddressRules,
   ...appointmentRowRules,
