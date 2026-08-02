@@ -1155,6 +1155,40 @@ test.describe("Estrutura", () => {
   });
 });
 
+test.describe("superfícies", () => {
+  const portais = [
+    ["public.kiosk-identification", "totem"],
+    ["public.nps-form", "pesquisa"],
+    ["guardian.home", "portal da família"],
+    ["insurer.attendance", "portal da operadora"],
+  ] as const;
+
+  for (const [scenarioId, nome] of portais) {
+    test(`o ${nome} não mostra a navegação do backoffice`, async ({ page }) => {
+      await page.goto(urlFor(scenarioId));
+
+      // O erro contrário é silencioso e embaraçoso: uma família no totem vendo
+      // "Agenda · Pacientes · Autorizações" no canto da tela.
+      await expect(page.getByLabel("Navegação principal")).toHaveCount(0);
+      await expect(page.locator("#conteudo")).toBeVisible();
+    });
+  }
+
+  test("as telas do backoffice mostram a navegação", async ({ page }) => {
+    await page.goto(urlFor("agenda.day"));
+    await expect(page.getByLabel("Navegação principal")).toBeVisible();
+  });
+
+  test("o menu do backoffice cobre os módulos com tela de lista", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.morning"));
+
+    const nav = page.getByLabel("Navegação principal");
+    for (const item of ["Agenda", "Na Clínica", "Pacientes", "Equipe", "Estrutura"]) {
+      await expect(nav.getByRole("link", { name: item })).toBeVisible();
+    }
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

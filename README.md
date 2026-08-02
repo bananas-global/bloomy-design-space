@@ -1,8 +1,9 @@
 # Bloomy Design Space
 
-Especificação executável da experiência pretendida do Bloomy. Agenda, pacientes e
-financeiro em situações nomeadas pelo domínio, abertas por link, com dados
-sintéticos e regras de negócio visíveis.
+Especificação executável da experiência pretendida do Bloomy, sistema de gestão
+de clínicas de **terapia ABA para autismo**. Atendimento, programas, protocolos,
+autorizações, fechamentos e os três portais externos, em situações nomeadas pelo
+domínio, abertas por link, com dados sintéticos e regras de negócio visíveis.
 
 Não é um sistema de produção, não é um design system e não é promessa de reuso de
 código. O Bloomy real é um monólito Elixir/Phoenix: a engenharia traduz o
@@ -23,7 +24,12 @@ própria.
 
 ## O que existe hoje
 
-116 cenários em catorze módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+116 cenários em catorze módulos, cobrindo sucesso, vazio, permissão, regra e
+exceção.
+
+O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
+porte — o que foi traduzido de onde, e treze achados sobre o sistema real — está
+em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 
 | Módulo | Situações |
 | --- | --- |

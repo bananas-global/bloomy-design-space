@@ -133,7 +133,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, nps?: 
       context={context}
       title="Bloomy"
       subtitle={nps ? `Pesquisa de satisfação · ${nps.unit.name}` : undefined}
-      breadcrumb={[]}
+      surface="standalone"
     >
       {children}
     </AppShell>

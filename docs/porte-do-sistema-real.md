@@ -381,6 +381,33 @@ Cinco regras, seis cenários, a tela `Structure` e dezesseis testes.
 
 Verde: `pnpm check` e 350 jornadas Playwright.
 
+### 14. Consolidação — `porte/consolidacao`
+
+Concluída.
+
+Passagem sobre o conjunto, depois de treze módulos. Duas correções e uma
+atualização de instruções.
+
+**Os portais externos herdavam o menu do backoffice.** O `AppShell` sempre
+renderizava o drawer, então o totem, a pesquisa, o portal da família e o da
+operadora mostravam "Agenda · Pacientes · Autorizações" no canto da tela. É o
+tipo de erro que passa em toda revisão de conteúdo e aparece na primeira captura
+de tela mostrada a alguém de fora. Agora há uma propriedade `surface` explícita,
+com teste que fixa as duas superfícies.
+
+**O menu não cobria os módulos novos.** Ganhou Na Clínica, Equipe, Estrutura e
+Fechamentos. Atendimento, plano e protocolo continuam fora: alcançam-se a partir
+da agenda e do paciente, e inventar itens de menu para eles descreveria uma
+navegação que o produto não tem.
+
+**`AGENTS.md` estava descrevendo o repositório de ontem** — 24 cenários, três
+módulos, personas inventadas. Foi reescrito com o que o porte estabeleceu: que o
+Bloomy é um sistema de terapia ABA, os catorze módulos, a proibição de editar a
+matriz de permissões à mão, a regra de nunca perguntar por papel numa tela, e
+uma tabela dos três elos entre módulos que não são óbvios de descobrir.
+
+Verde: `pnpm check` e 356 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

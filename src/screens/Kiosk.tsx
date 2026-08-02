@@ -228,7 +228,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, kiosk?
       context={context}
       title={kiosk?.unit ? `Bloomy ${kiosk.unit.name}` : "Bloomy"}
       subtitle="Registro de chegada"
-      breadcrumb={[]}
+      surface="standalone"
     >
       {children}
     </AppShell>

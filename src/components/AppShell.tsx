@@ -18,11 +18,35 @@ type NavItem = {
   permission: string;
 };
 
+/**
+ * Navegação do backoffice.
+ *
+ * Só o que tem uma tela de lista própria. Atendimento, plano e protocolo se
+ * alcançam a partir da agenda e do paciente — inventar itens de menu para eles
+ * descreveria uma navegação que o produto não tem.
+ */
 const NAV: NavItem[] = [
   { label: "Agenda", path: "/agenda", permission: "schedules.list" },
+  { label: "Na Clínica", path: "/in-clinic", permission: "closures.list" },
   { label: "Pacientes", path: "/patients", permission: "patients.list" },
+  { label: "Equipe", path: "/team", permission: "professionals.list" },
+  { label: "Estrutura", path: "/structure", permission: "services.list" },
   { label: "Autorizações", path: "/authorizations", permission: "authorizations.hub" },
+  { label: "Fechamentos", path: "/closures", permission: "closures.list" },
 ];
+
+/**
+ * Em que superfície a tela vive.
+ *
+ * O Bloomy não é uma aplicação só: o backoffice tem menu lateral, e os três
+ * portais externos — totem, família e operadora — são páginas próprias, abertas
+ * por link ou QR Code, sem navegação de clínica nenhuma.
+ *
+ * Existe como propriedade explícita porque o erro contrário é silencioso e
+ * embaraçoso: uma família no totem vendo "Agenda · Pacientes · Autorizações" no
+ * canto da tela.
+ */
+export type Surface = "backoffice" | "standalone";
 
 export function AppShell({
   context,
@@ -30,6 +54,7 @@ export function AppShell({
   subtitle,
   breadcrumb,
   actions,
+  surface = "backoffice",
   children,
 }: {
   context: ScenarioContext;
@@ -37,6 +62,7 @@ export function AppShell({
   subtitle?: string;
   breadcrumb?: { label: string; path?: string }[];
   actions?: ReactNode;
+  surface?: Surface;
   children: ReactNode;
 }) {
   const currentPath = typeof window === "undefined" ? "" : window.location.pathname;
@@ -44,8 +70,9 @@ export function AppShell({
   return (
     <div className="flex min-h-full bg-app">
       {/* O link de pulo é o primeiro elemento focável da página. Sem ele, cada
-          tela obriga a atravessar o drawer inteiro por Tab antes de chegar ao
-          conteúdo — e o drawer tem três itens em toda tela. */}
+          tela do backoffice obriga a atravessar o drawer inteiro por Tab antes
+          de chegar ao conteúdo. Nos portais o drawer não existe, e o link
+          continua útil por causa do cabeçalho. */}
       <a
         href="#conteudo"
         className="sr-only rounded-field bg-action px-3 py-2 text-sm font-semibold text-white focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50"
@@ -53,6 +80,7 @@ export function AppShell({
         Pular para o conteúdo
       </a>
 
+      {surface === "backoffice" && (
       <nav
         className="bloomy-drawer sticky top-0 flex h-screen w-[220px] shrink-0 flex-col gap-1 bg-navy px-3 py-5 text-white"
         aria-label="Navegação principal"
@@ -92,6 +120,7 @@ export function AppShell({
           </p>
         </div>
       </nav>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b border-[var(--border-soft)] bg-surface px-7 py-5">

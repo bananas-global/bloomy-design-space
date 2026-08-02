@@ -231,7 +231,7 @@ function wrap(
       context={context}
       title={portal?.healthCare.name ?? "Portal da operadora"}
       subtitle="Conferência de atendimentos"
-      breadcrumb={[]}
+      surface="standalone"
     >
       {children}
     </AppShell>

@@ -261,7 +261,7 @@ function wrap(
       context={context}
       title="Bloomy"
       subtitle={portal ? `Olá, ${portal.guardian.name.split(" ")[0]}` : undefined}
-      breadcrumb={[]}
+      surface="standalone"
     >
       {children}
     </AppShell>
