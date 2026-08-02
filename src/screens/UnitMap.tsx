@@ -95,7 +95,13 @@ export function UnitMap({ context }: ScreenProps) {
           <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
             {AXES.map((axis) => (
               <li key={axis}>
-                <Chip tone={axis === map.axis ? "info" : "neutral"}>{axisLabel(axis)}</Chip>
+                {/* Os chips listam os eixos que existem; eles não são
+                    controles. Marcar o atual em palavra evita que a cor
+                    sozinha tenha de carregar a distinção. */}
+                <Chip tone={axis === map.axis ? "info" : "neutral"}>
+                  {axisLabel(axis)}
+                  {axis === map.axis && " · em uso"}
+                </Chip>
               </li>
             ))}
           </ul>
@@ -253,12 +259,22 @@ function RowCard({
                       const items = day.itemsByHour[hour] ?? [];
                       const defined = day.availableHours.includes(hour);
                       return (
-                        <td key={hour} className="px-2 py-1.5 text-center">
+                        <td
+                          key={hour}
+                          className={`px-2 py-1.5 text-center ${!defined ? "bg-ink-50" : ""}`}
+                        >
                           {/* Três estados, três textos. A cor sozinha não os
-                              distingue para quem não a enxerga. */}
+                              distingue para quem não a enxerga.
+
+                              "Sem agenda padrão" é o estado que este módulo
+                              inteiro existe para separar de "livre" — usar o
+                              ponto médio, o glifo mais apagado disponível,
+                              invertia a ênfase. Travessão mais banda de fundo:
+                              a faixa sem agenda vira um bloco legível de longe,
+                              que é como ela de fato acontece (o dia todo). */}
                           {!defined ? (
                             <span className="text-[var(--fg-2)]" aria-label="fora da agenda padrão">
-                              ·
+                              —
                             </span>
                           ) : items.length === 0 ? (
                             <span className="text-[var(--fg-2)]" aria-label="hora livre">

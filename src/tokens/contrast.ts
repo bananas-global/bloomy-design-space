@@ -26,6 +26,10 @@ export const contrastPairs: ContrastPair[] = [
   { name: "anel de foco sobre superfície", foreground: "#6144c5", background: "#ffffff" }, // 6.69
   { name: "anel de foco sobre fundo do app", foreground: "#6144c5", background: "#f0f6f8" }, // 6.12
 
+  // Célula do mapa fora da agenda padrão: banda de fundo para o estado mais
+  // importante do módulo não depender do glifo mais apagado disponível.
+  { name: "texto secundário sobre banda ink-50", foreground: "rgba(43,35,91,0.72)", background: "#f0eef5" }, // 5.38
+
   /* ---------------------------------------------------------------- ação */
   { name: "link sobre superfície", foreground: "#276e8c", background: "#ffffff" }, // 5.68
   { name: "link sobre fundo do app", foreground: "#276e8c", background: "#f0f6f8" }, // 5.21

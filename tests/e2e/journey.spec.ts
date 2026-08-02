@@ -1856,6 +1856,26 @@ test.describe("mapa da unidade", () => {
     ).toBeVisible();
   });
 
+  test("a célula sem agenda tem banda própria, e não o glifo mais apagado", async ({ page }) => {
+    await page.goto(urlFor("unit-map.week"));
+
+    // O ponto médio era o glifo mais invisível disponível para o estado que
+    // este módulo inteiro existe para separar de "livre". Travessão mais banda.
+    // O nome acessível da célula vem do rótulo, e não do glifo — o que já
+    // prova as duas metades: quem lê a tela ouve a frase, quem a enxerga vê a
+    // banda.
+    const marca = page.getByLabel("fora da agenda padrão").first();
+    await expect(marca).toHaveText("—");
+    const celula = page.getByRole("cell").filter({ has: marca }).first();
+    await expect(celula).toHaveCSS("background-color", "rgb(240, 238, 245)");
+  });
+
+  test("o eixo em uso é dito em palavra, e não só em cor", async ({ page }) => {
+    await page.goto(urlFor("unit-map.week"));
+
+    await expect(page.getByText("Por profissional · em uso")).toBeVisible();
+  });
+
   test("sem agenda definida não vira zero por cento", async ({ page }) => {
     await page.goto(urlFor("unit-map.no-agenda-is-not-zero"));
 
@@ -2228,5 +2248,16 @@ test.describe("anel de foco", () => {
 
     const cor = await link.evaluate((el) => getComputedStyle(el).outlineColor);
     expect(cor).toBe("rgb(88, 186, 218)");
+  });
+});
+
+test.describe("plurais", () => {
+  test("um registro é “1 dia”, e não “1 dias”", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.truncation"));
+
+    // Erro pequeno, efeito grande: uma especificação que erra a concordância
+    // perde a autoridade para exigir precisão de quem a implementa.
+    await expect(page.getByText("1 dia", { exact: true })).toBeVisible();
+    await expect(page.getByText("1 dias")).toHaveCount(0);
   });
 });
