@@ -114,3 +114,79 @@ export function hiddenFromCoordinator(data: OverdueData): OverdueSchedule[] {
 export function hoursOpen(entry: OverdueSchedule, now: string): number {
   return Math.max(0, Math.floor(hoursSince(entry.start, now)));
 }
+
+/* ============================================ A conta do supervisor */
+
+/**
+ * Regras de `supervisor_query`.
+ *
+ * É a quarta definição de atraso do arquivo, e a única com **duas janelas na
+ * mesma consulta**: o supervisor vê o próprio atraso na hora e o dos outros da
+ * unidade só depois de 48 horas.
+ *
+ * Também é sobre outro assunto: as três anteriores olham atendimentos abertos
+ * (`pending_*`); esta olha agendamentos que **nem viraram atendimento**
+ * (`scheduled`, `incomplete`).
+ */
+export const supervisorOverdueRules: Rule[] = [
+  {
+    id: "stricter-with-myself-than-with-others",
+    statement:
+      "Na consulta do supervisor, o atraso dele aparece imediatamente e o dos colegas da unidade só depois de 48 horas. Duas janelas, uma consulta.",
+    rationale:
+      "É a única vez no sistema em que alguém se cobra antes de cobrar os outros, e é uma escolha boa demais para se perder numa reescrita. Sem estar nomeada, ela vira “inconsistência” na primeira leitura de quem simplifica.",
+    source: "src/rules/overdue.ts",
+  },
+  {
+    id: "the-supervisor-list-is-about-a-different-thing",
+    statement:
+      "As outras três definições olham atendimentos abertos. Esta olha agendamentos que nem começaram — `scheduled` e `incomplete` — e ainda por cima só os que não têm atendimento associado.",
+    rationale:
+      "Chamar as duas listas de “atrasados” faz parecer que uma é subconjunto da outra. Não é: uma pergunta “o que não foi fechado”, a outra “o que não foi nem começado”. São dois problemas com donos diferentes.",
+    source: "src/rules/overdue.ts",
+  },
+];
+
+/** As situações que `supervisor_query` procura: agendamento que não virou atendimento. */
+export const NEVER_STARTED_STATUSES: ScheduleStatus[] = ["scheduled", "incomplete"];
+
+export type SupervisorScope = { supervisorProfessionalName: string };
+
+/** Implementação de `stricter-with-myself-than-with-others`. */
+export function inSupervisorQuery(
+  entry: OverdueSchedule,
+  now: string,
+  scope: SupervisorScope,
+): boolean {
+  if (!NEVER_STARTED_STATUSES.includes(entry.status)) return false;
+
+  const meu = entry.professionalName === scope.supervisorProfessionalName;
+  const horas = (new Date(now).getTime() - new Date(entry.start).getTime()) / 3_600_000;
+
+  return meu ? horas > 0 : horas > 48;
+}
+
+/** O que a consulta traz por ser do próprio supervisor, e não por tempo. */
+export function onlyBecauseItIsMine(
+  data: OverdueData,
+  scope: SupervisorScope,
+): OverdueSchedule[] {
+  return data.schedules.filter((entry) => {
+    if (!inSupervisorQuery(entry, data.now, scope)) return false;
+    if (entry.professionalName !== scope.supervisorProfessionalName) return false;
+    const horas = (new Date(data.now).getTime() - new Date(entry.start).getTime()) / 3_600_000;
+    return horas <= 48;
+  });
+}
+
+/**
+ * Implementação de `the-supervisor-list-is-about-a-different-thing`.
+ *
+ * Devolve o que está aberto (pendente de fechamento) e **não** entraria nesta
+ * consulta — a prova de que as duas listas não se contêm.
+ */
+export function openButNotInSupervisorQuery(data: OverdueData): OverdueSchedule[] {
+  return data.schedules.filter(
+    (entry) => OPEN_STATUSES.includes(entry.status) && !NEVER_STARTED_STATUSES.includes(entry.status),
+  );
+}

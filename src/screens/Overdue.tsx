@@ -13,6 +13,9 @@ import {
 } from "../components/primitives.js";
 import {
   hiddenFromCoordinator,
+  inSupervisorQuery,
+  onlyBecauseItIsMine,
+  openButNotInSupervisorQuery,
   hoursOpen,
   verdict,
   visibleTo,
@@ -51,9 +54,96 @@ export function Overdue({ context }: ScreenProps) {
   if (!overdue) return wrap(context, <ErrorState message="Não foi possível carregar." />);
 
   const daCoordenacao = overdue.viewerRole === "coordinator";
+  const doSupervisor =
+    overdue.viewerRole === "supervisor" && overdue.viewerProfessionalName !== undefined;
   const lista = visibleTo(overdue);
   const divergem = whereTheDefinitionsDisagree(overdue);
   const cego = hiddenFromCoordinator(overdue);
+
+  if (doSupervisor) {
+    const escopo = { supervisorProfessionalName: overdue.viewerProfessionalName! };
+    const minha = overdue.schedules.filter((entry) =>
+      inSupervisorQuery(entry, overdue.now, escopo),
+    );
+    const soPorSerMinha = onlyBecauseItIsMine(overdue, escopo);
+    const outroAssunto = openButNotInSupervisorQuery(overdue);
+
+    return wrap(
+      context,
+      <div className="space-y-4">
+        {/* A única vez no sistema em que alguém se cobra antes de cobrar os
+            outros. Sem estar nomeada, vira "inconsistência" na primeira leitura
+            de quem simplifica. */}
+        <Notice tone="info" title="Você se cobra antes de cobrar os outros">
+          <p className="m-0">
+            Nesta lista, um agendamento seu que passou do horário aparece na hora. Um de colega da
+            unidade só aparece depois de 48 horas.
+          </p>
+          <p className="m-0 mt-2">
+            São duas janelas na mesma consulta, e é a única vez que o sistema faz isso. É uma
+            escolha boa: quem cobra começa por si.
+          </p>
+        </Notice>
+
+        {soPorSerMinha.length > 0 && (
+          <Notice
+            tone="warn"
+            title={
+              soPorSerMinha.length === 1
+                ? "1 agendamento seu aparece por ser seu"
+                : `${soPorSerMinha.length} agendamentos seus aparecem por serem seus`
+            }
+          >
+            <ul className="m-0 list-disc space-y-1 pl-5">
+              {soPorSerMinha.map((entry) => (
+                <li key={entry.id}>
+                  {entry.patientName} — {hoursOpen(entry, overdue.now)} horas. Fosse de colega,
+                  ainda não estaria aqui.
+                </li>
+              ))}
+            </ul>
+          </Notice>
+        )}
+
+        {outroAssunto.length > 0 && (
+          <Notice tone="info" title="Esta lista não é a de atendimentos pendentes">
+            <p className="m-0">
+              Aqui estão agendamentos que <span className="font-semibold">não começaram</span>. O
+              que já começou e falta fechar — registro, assinatura — é outra lista, com outro dono.
+            </p>
+            <p className="m-0 mt-2">
+              {outroAssunto.length}{" "}
+              {outroAssunto.length === 1 ? "atendimento está" : "atendimentos estão"} nessa outra
+              situação agora, e não aparecem aqui. Uma não é subconjunto da outra.
+            </p>
+          </Notice>
+        )}
+
+        <Card as="section">
+          <CardHeader
+            title="Agendamentos que não começaram"
+            hint={`${minha.length} ${minha.length === 1 ? "agendamento" : "agendamentos"}`}
+          />
+          <div className="px-5 py-5">
+            {minha.length === 0 ? (
+              <EmptyState
+                title="Nenhum agendamento parado"
+                description="Nem os seus, nem os de colegas da unidade além de 48 horas."
+              />
+            ) : (
+              <ul className="m-0 list-none space-y-3 p-0">
+                {minha.map((entry) => (
+                  <li key={entry.id}>
+                    <Row entry={entry} now={overdue.now} locale={locale} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Card>
+      </div>,
+    );
+  }
 
   return wrap(
     context,

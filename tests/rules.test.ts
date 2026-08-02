@@ -5277,3 +5277,91 @@ describe("leitura do atraso", () => {
     expect(hoursOpen(atrasado({ id: "b", start: "2026-07-31T10:00:00.000-03:00" }), AGORA_ATRASO)).toBe(0);
   });
 });
+
+/* ============================================== A conta do supervisor */
+
+import {
+  NEVER_STARTED_STATUSES,
+  inSupervisorQuery,
+  onlyBecauseItIsMine,
+  openButNotInSupervisorQuery,
+} from "../src/rules/overdue.js";
+
+describe("stricter-with-myself-than-with-others", () => {
+  const escopo = { supervisorProfessionalName: "Clara Vidigal" };
+  const minhaDeCincoHoras = atrasado({
+    id: "m1",
+    start: "2026-07-30T10:00:00.000-03:00",
+    status: "scheduled",
+    professionalName: "Clara Vidigal",
+  });
+  const deColegaDeCincoHoras = atrasado({
+    id: "c1",
+    start: "2026-07-30T10:00:00.000-03:00",
+    status: "scheduled",
+    professionalName: "Marina Okabe",
+  });
+  const deColegaDeSessenta = atrasado({
+    id: "c2",
+    start: "2026-07-28T03:00:00.000-03:00",
+    status: "scheduled",
+    professionalName: "Marina Okabe",
+  });
+
+  it("o meu entra na hora; o do colega, só depois de 48 horas", () => {
+    expect(inSupervisorQuery(minhaDeCincoHoras, AGORA_ATRASO, escopo)).toBe(true);
+    expect(inSupervisorQuery(deColegaDeCincoHoras, AGORA_ATRASO, escopo)).toBe(false);
+    expect(inSupervisorQuery(deColegaDeSessenta, AGORA_ATRASO, escopo)).toBe(true);
+  });
+
+  it("isola o que só está na lista por ser de quem olha", () => {
+    const dados: OverdueData = {
+      schedules: [minhaDeCincoHoras, deColegaDeSessenta],
+      now: AGORA_ATRASO,
+      viewerRole: "supervisor",
+      viewerProfessionalName: "Clara Vidigal",
+    };
+    expect(onlyBecauseItIsMine(dados, escopo).map((entry) => entry.id)).toEqual(["m1"]);
+  });
+
+  it("o meu de mais de 48 horas não conta como “só por ser meu”", () => {
+    const meuAntigo = atrasado({
+      id: "m2",
+      start: "2026-07-28T03:00:00.000-03:00",
+      status: "scheduled",
+      professionalName: "Clara Vidigal",
+    });
+    const dados: OverdueData = {
+      schedules: [meuAntigo],
+      now: AGORA_ATRASO,
+      viewerRole: "supervisor",
+      viewerProfessionalName: "Clara Vidigal",
+    };
+    expect(onlyBecauseItIsMine(dados, escopo)).toEqual([]);
+  });
+});
+
+describe("the-supervisor-list-is-about-a-different-thing", () => {
+  it("olha agendamento que não começou, e não atendimento aberto", () => {
+    expect(NEVER_STARTED_STATUSES).toEqual(["scheduled", "incomplete"]);
+  });
+
+  it("uma lista não é subconjunto da outra", () => {
+    const dados: OverdueData = {
+      schedules: [
+        atrasado({ id: "a", status: "scheduled", professionalName: "Clara Vidigal" }),
+        atrasado({ id: "b", status: "pending_signature", professionalName: "Marina Okabe" }),
+      ],
+      now: AGORA_ATRASO,
+      viewerRole: "supervisor",
+      viewerProfessionalName: "Clara Vidigal",
+    };
+    // O pendente de assinatura está aberto e não entra na consulta do supervisor.
+    expect(openButNotInSupervisorQuery(dados).map((entry) => entry.id)).toEqual(["b"]);
+    expect(
+      inSupervisorQuery(dados.schedules[1]!, AGORA_ATRASO, {
+        supervisorProfessionalName: "Clara Vidigal",
+      }),
+    ).toBe(false);
+  });
+});

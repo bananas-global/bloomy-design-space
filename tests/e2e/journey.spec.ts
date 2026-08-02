@@ -2480,3 +2480,34 @@ test.describe("atendimentos em atraso", () => {
     await expect(page.getByText("Definição da coordenação")).toBeVisible();
   });
 });
+
+test.describe("a conta do supervisor", () => {
+  test("a tela nomeia as duas janelas e afirma que a escolha é boa", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-supervisor-query"));
+
+    await expect(page.getByText("Você se cobra antes de cobrar os outros")).toBeVisible();
+    await expect(page.getByText(/Um de colega da unidade só aparece depois de 48 horas/)).toBeVisible();
+    await expect(page.getByText(/quem cobra começa por si/)).toBeVisible();
+  });
+
+  test("aponta o que aparece só por ser de quem está olhando", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-supervisor-query"));
+
+    await expect(page.getByText(/agendamento seu aparece por ser seu|agendamentos seus aparecem por serem seus/)).toBeVisible();
+    await expect(page.getByText(/Fosse de colega, ainda não estaria aqui/)).toBeVisible();
+  });
+
+  test("distingue esta lista da de atendimentos pendentes", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-supervisor-query"));
+
+    await expect(page.getByText("Esta lista não é a de atendimentos pendentes")).toBeVisible();
+    await expect(page.getByText(/Uma não é subconjunto da outra/)).toBeVisible();
+  });
+
+  test("a coordenação continua vendo a lista dela, e não esta", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-coordinator"));
+
+    await expect(page.getByText("Você se cobra antes de cobrar os outros")).toHaveCount(0);
+    await expect(page.getByText("Definição da coordenação")).toBeVisible();
+  });
+});

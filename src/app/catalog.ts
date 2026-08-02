@@ -30,7 +30,7 @@ import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyP
 import { patientGapFixtures } from "../fixtures/patientGaps.js";
 import { overdueFixtures } from "../fixtures/overdue.js";
 import { agendaRules, schedulingRules, absenceRules } from "../rules/agenda.js";
-import { overdueRules } from "../rules/overdue.js";
+import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -135,6 +135,7 @@ export const modules: Module[] = [
             branches: {
               "Ela usa a folga de 48 horas": "agenda.overdue-as-everyone-else",
               "Hoje as duas concordam": "agenda.overdue-in-agreement",
+              "Sou supervisor e vejo outra conta": "agenda.overdue-supervisor-query",
             },
           },
         ],
@@ -953,6 +954,7 @@ export const rules: Rule[] = [
   ...schedulingRules,
   ...absenceRules,
   ...overdueRules,
+  ...supervisorOverdueRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,

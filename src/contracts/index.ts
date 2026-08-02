@@ -1934,4 +1934,11 @@ export interface OverdueData {
   now: string;
   /** Papel de quem abriu — decide qual das definições o sistema aplicaria. */
   viewerRole: string;
+  /**
+   * Nome do profissional de quem abriu, quando é supervisor.
+   *
+   * `supervisor_query` trata os agendamentos dele com uma janela diferente da
+   * dos colegas — a única vez no sistema em que alguém se cobra antes.
+   */
+  viewerProfessionalName?: string;
 }

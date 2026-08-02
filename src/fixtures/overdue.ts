@@ -53,7 +53,64 @@ const MISTURA: OverdueSchedule[] = [
   entry({ id: "s5", start: "2026-07-29T14:00:00.000-03:00", status: "finished" }),
 ];
 
+/**
+ * Agendamentos que nem viraram atendimento — o assunto de `supervisor_query`.
+ *
+ * Dois da própria supervisora, um de 5 horas e um de 60; dois de colegas, nas
+ * mesmas distâncias. É a combinação que torna as duas janelas mensuráveis.
+ */
+const NUNCA_COMECARAM: OverdueSchedule[] = [
+  entry({
+    id: "n1",
+    start: "2026-07-30T10:00:00.000-03:00",
+    status: "scheduled",
+    professionalName: "Clara Vidigal",
+    patientName: "Théo Andrade Lins",
+  }),
+  entry({
+    id: "n2",
+    start: "2026-07-28T03:00:00.000-03:00",
+    status: "incomplete",
+    professionalName: "Clara Vidigal",
+    patientName: "Nina Corrêa Bastos",
+  }),
+  entry({
+    id: "n3",
+    start: "2026-07-30T10:00:00.000-03:00",
+    status: "scheduled",
+    professionalName: "Marina Okabe",
+    patientName: "Helena Vasconcelos Prado",
+  }),
+  entry({
+    id: "n4",
+    start: "2026-07-28T03:00:00.000-03:00",
+    status: "scheduled",
+    professionalName: "Marina Okabe",
+    patientName: "Bento Queiroga Farias",
+  }),
+  // Aberto, mas de outro assunto: pendente de fechamento, não de começo.
+  entry({
+    id: "n5",
+    start: "2026-07-27T09:00:00.000-03:00",
+    status: "pending_signature",
+    professionalName: "Marina Okabe",
+    patientName: "Alice Bandeira Nogueira",
+  }),
+];
+
 export const overdueFixtures: Fixture[] = [
+  {
+    id: "overdue-supervisor-query",
+    label: "A conta do supervisor: dele agora, dos outros em 48h",
+    description:
+      "Cinco agendamentos. Os dois da Clara entram por serem dela; dos colegas, só o de 60 horas. E há um pendente de assinatura que não é deste assunto.",
+    data: {
+      schedules: NUNCA_COMECARAM,
+      now: NOW,
+      viewerRole: "supervisor",
+      viewerProfessionalName: "Clara Vidigal",
+    } satisfies OverdueData,
+  },
   {
     id: "overdue-as-coordinator",
     label: "A lista da coordenação",

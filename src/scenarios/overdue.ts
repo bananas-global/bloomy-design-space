@@ -55,6 +55,31 @@ export const overdueScenarios: Scenario[] = [
     tags: ["regra", "decisão"],
   },
   {
+    id: "agenda.overdue-supervisor-query",
+    title: "O supervisor se cobra antes de cobrar os outros",
+    intent:
+      "Nomear a única escolha do sistema em que alguém aplica a si um prazo mais duro que aos colegas — e que uma reescrita apagaria como inconsistência.",
+    route: "/agenda/overdue",
+    persona: "supervisor",
+    fixture: "overdue-supervisor-query",
+    rules: [
+      "stricter-with-myself-than-with-others",
+      "the-supervisor-list-is-about-a-different-thing",
+    ],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: [
+      "`supervisor_query` une duas consultas: a do próprio supervisor com `start_time < now`, a dos colegas da unidade com 48 horas.",
+      "As duas olham `status in [:scheduled, :incomplete]` — agendamento que não virou atendimento.",
+    ],
+    expected: [
+      "A tela afirma que as duas janelas existem, e que a escolha é boa.",
+      "Aponta quais agendamentos aparecem só por serem de quem está olhando.",
+      "E distingue esta lista da de atendimentos pendentes: uma não contém a outra.",
+    ],
+    tags: ["regra", "decisão"],
+  },
+  {
     id: "agenda.overdue-in-agreement",
     title: "Quando as duas definições concordam",
     intent:
