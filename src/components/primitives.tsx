@@ -20,12 +20,21 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: "primary" | "secondary" | "danger" | "ghost";
   /**
    * Motivo pelo qual a ação está indisponível. Quando presente, o botão fica
-   * desabilitado, o motivo aparece abaixo dele e é associado por
-   * `aria-describedby`.
+   * inativo, o motivo aparece abaixo dele e é associado por `aria-describedby`.
    *
    * Esconder a ação seria mais limpo e seria pior: ação que desaparece sem
    * explicação torna a regra de negócio invisível, e quem opera conclui que o
    * sistema está quebrado. Ver `docs/decisions/0002`.
+   *
+   * O botão usa `aria-disabled`, e não o atributo `disabled`, **de propósito**.
+   * Um botão `disabled` sai da ordem de foco: quem navega por teclado nunca o
+   * encontra, nunca é levado até ele e por isso nunca ouve o `aria-describedby`
+   * que carrega o motivo. Toda a convenção de "manter visível e explicar" vale
+   * só para quem enxerga a tela — que é o oposto do que ela se propõe.
+   *
+   * Com `aria-disabled` o botão continua alcançável pelo Tab, é anunciado como
+   * indisponível, e o motivo é lido no foco. O clique é barrado no manipulador.
+   * Ver `docs/decisions/0003`.
    */
   unavailableReason?: string;
 };
@@ -35,6 +44,7 @@ export function Button({
   unavailableReason,
   children,
   className = "",
+  onClick,
   ...props
 }: ButtonProps) {
   const base =
@@ -47,15 +57,40 @@ export function Button({
     ghost: "text-action hover:bg-ink-50",
   } as const;
 
+  /**
+   * O estado indisponível tem cor própria, e não opacidade.
+   *
+   * `opacity-55` sobre o botão primário dá 2,35:1 e sobre o secundário 3,48:1.
+   * Hoje isso é **conforme**: a WCAG 1.4.3 isenta componentes inativos, e um
+   * botão `disabled` é inativo. Ao devolvê-lo à ordem de foco a isenção deixa
+   * de valer — e deixaria de valer o argumento, não só a regra: um controle que
+   * a pessoa alcança e não consegue ler não ajuda ninguém.
+   *
+   * Este par é `rgba(43,35,91,0.72)` sobre `#f4f6f7`, 5,56:1, e está declarado
+   * em `src/tokens/contrast.ts` para que o teste de tokens o proteja.
+   */
+  const unavailable =
+    "cursor-not-allowed border border-[var(--border-strong)] bg-[#f4f6f7] text-[rgba(43,35,91,0.72)]";
+
   const reasonId = unavailableReason ? `${props.id ?? "acao"}-motivo` : undefined;
+  const blocked = Boolean(unavailableReason);
 
   return (
     <span className="inline-flex max-w-full flex-col items-start gap-1">
       <button
         type="button"
-        className={`${base} ${variants[variant]} ${className}`}
-        disabled={props.disabled || Boolean(unavailableReason)}
+        className={`${base} ${blocked ? unavailable : variants[variant]} ${className}`}
+        // `disabled` só quando quem chamou pediu explicitamente. O bloqueio por
+        // regra de negócio usa `aria-disabled` para não sair do Tab.
+        disabled={props.disabled}
+        aria-disabled={blocked || undefined}
         aria-describedby={reasonId}
+        // A barreira que importa é esta: bloqueado, o `onClick` de quem chamou
+        // não chega a ser ligado. O `stopPropagation` alcança só os handlers
+        // React de elementos ancestrais — não ouvintes nativos, que o React
+        // registra na raiz e por isso disparam antes deste. E `preventDefault`
+        // não serviria: um `type="button"` não tem ação padrão a prevenir.
+        onClick={blocked ? (event) => event.stopPropagation() : onClick}
         {...props}
       >
         {children}

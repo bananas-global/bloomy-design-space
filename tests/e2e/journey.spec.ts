@@ -2141,3 +2141,52 @@ test.describe("inativar paciente", () => {
     ).toHaveCount(0);
   });
 });
+
+test.describe("ação indisponível alcança o teclado", () => {
+  test("o botão bloqueado continua na ordem de foco", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-inactive-professional"));
+
+    // Com o atributo `disabled` o botão sairia do Tab: quem navega por teclado
+    // nunca chegaria nele e nunca ouviria o motivo. É o oposto do que a
+    // convenção "manter visível e explicar" se propõe a fazer.
+    const marcar = page.getByRole("button", { name: "Marcar atendimento" });
+    await marcar.focus();
+    await expect(marcar).toBeFocused();
+  });
+
+  test("é anunciado como indisponível, e não removido", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-inactive-professional"));
+
+    const marcar = page.getByRole("button", { name: "Marcar atendimento" });
+    await expect(marcar).toHaveAttribute("aria-disabled", "true");
+    // Sem o atributo nativo: é ele que tiraria o botão do Tab.
+    await expect(marcar).not.toHaveAttribute("disabled", /.*/);
+  });
+
+  test("o motivo é associado ao botão, e não só desenhado ao lado", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-inactive-professional"));
+
+    const marcar = page.getByRole("button", { name: "Marcar atendimento" });
+    const id = await marcar.getAttribute("aria-describedby");
+    expect(id).toBeTruthy();
+    await expect(page.locator(`#${id}`)).toContainText("está desativado");
+  });
+
+  test("o rótulo indisponível tem cor própria, e não opacidade", async ({ page }) => {
+    await page.goto(urlFor("agenda.new-inactive-professional"));
+
+    // Opacidade sobre o primário dava 2,35:1. Alcançável pelo Tab, o botão
+    // perde a isenção da WCAG 1.4.3 para componentes inativos e precisa passar
+    // por mérito — este par mede 5,56:1.
+    const estilo = await page
+      .getByRole("button", { name: "Marcar atendimento" })
+      .evaluate((el) => {
+        const cs = getComputedStyle(el);
+        return { cor: cs.color, fundo: cs.backgroundColor, opacidade: cs.opacity };
+      });
+
+    expect(estilo.opacidade).toBe("1");
+    expect(estilo.cor).toBe("rgba(43, 35, 91, 0.72)");
+    expect(estilo.fundo).toBe("rgb(244, 246, 247)");
+  });
+});
