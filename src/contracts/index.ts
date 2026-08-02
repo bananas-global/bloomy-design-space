@@ -1595,3 +1595,48 @@ export interface NotificationsData {
   currentUser: { id: string; name: string; role: string };
   items: NotificationItem[];
 }
+
+/* ============================================================ Supervisão */
+
+/** Um supervisor como a tela de supervisão o lista. */
+export interface SupervisorRow {
+  id: string;
+  name: string;
+  specialtyName: string;
+  active: boolean;
+  /** Quantas pessoas ele supervisiona. Zero faz a linha sumir da tela real. */
+  internCount: number;
+}
+
+/**
+ * Um atendimento de alguém supervisionado.
+ *
+ * Os quatro últimos campos são o que a tela do sistema real **não** mostra —
+ * ela lista serviço, profissional, paciente, sala, horário e situação, e para
+ * por aí. O estado da supervisão, que é a razão de o vínculo existir, fica de
+ * fora.
+ */
+export interface SupervisedSchedule {
+  id: string;
+  professionalName: string;
+  patientName: string;
+  specialtyName: string;
+  serviceName: string;
+  roomName?: string;
+  start: string;
+  end: string;
+  status: ScheduleStatus;
+  needsSupervisorSignature: boolean;
+  signedByProfessionalAt?: string;
+  signedBySupervisorAt?: string;
+}
+
+export interface SupervisionData {
+  /** Quem abriu a tela — usado para dizer se a assinatura pendente é dele. */
+  currentSupervisorId?: string;
+  /** O intervalo em vigor. O sistema real o inicializa em [hoje-30, hoje]. */
+  period: { start: string; end: string };
+  supervisors: SupervisorRow[];
+  selectedSupervisorId?: string;
+  schedules: SupervisedSchedule[];
+}

@@ -22,6 +22,7 @@ import { chatFixtures } from "../fixtures/chat.js";
 import { prospectFixtures } from "../fixtures/prospects.js";
 import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
+import { supervisionFixtures } from "../fixtures/supervision.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -43,6 +44,7 @@ import { chatRules } from "../rules/chat.js";
 import { prospectRules } from "../rules/prospects.js";
 import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
+import { supervisionRules } from "../rules/supervision.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -64,6 +66,7 @@ import { chatScenarios } from "../scenarios/chat.js";
 import { prospectScenarios } from "../scenarios/prospects.js";
 import { reportScenarios } from "../scenarios/reports.js";
 import { notificationScenarios } from "../scenarios/notifications.js";
+import { supervisionScenarios } from "../scenarios/supervision.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -698,6 +701,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "supervision",
+    name: "Supervisão",
+    description:
+      "A tela que leva o nome do supervisor e não abre para ele — uma visão da coordenação.",
+    flows: [
+      {
+        id: "follow-the-supervised",
+        title: "Acompanhar quem é supervisionado",
+        description:
+          "Do período padrão até as três coisas que a tela atual não diz: quem ela atende, o que está parado e quem ela perde.",
+        steps: [
+          {
+            scenario: "supervision.default-period",
+            label: "Abrir a supervisão como o sistema a abre",
+            decision: "O que esta tela não está me contando?",
+            branches: {
+              "O que está parado esperando assinatura": "supervision.awaiting-signature",
+              "Que ela não é do supervisor": "supervision.not-for-the-supervisor",
+              "Quem sumiu da lista": "supervision.supervisor-without-links",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -722,6 +751,7 @@ export const scenarios: Scenario[] = [
   ...prospectScenarios,
   ...reportScenarios,
   ...notificationScenarios,
+  ...supervisionScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -747,6 +777,7 @@ export const fixtures: Fixture[] = [
   ...prospectFixtures,
   ...reportFixtures,
   ...notificationFixtures,
+  ...supervisionFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -771,6 +802,7 @@ export const rules: Rule[] = [
   ...prospectRules,
   ...reportRules,
   ...notificationRules,
+  ...supervisionRules,
 ];
 
 export { personas };

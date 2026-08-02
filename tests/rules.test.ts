@@ -4225,3 +4225,147 @@ describe("ordem da lista", () => {
     expect(lista.items.map((entry) => entry.id)).toEqual(["velha", "nova"]);
   });
 });
+
+/* ============================================================ Supervisão */
+
+import type { SupervisedSchedule, SupervisionData, SupervisorRow } from "../src/contracts/index.js";
+import {
+  awaitingProfessional,
+  awaitingSupervisor,
+  canOpenSupervision,
+  daysWaiting,
+  defaultPeriod,
+  hiddenForHavingNoLinks,
+  listedSupervisors,
+  looksForward,
+  supervisionState,
+} from "../src/rules/supervision.js";
+
+function supervised(overrides: Partial<SupervisedSchedule> & { id: string }): SupervisedSchedule {
+  return {
+    professionalName: "Marina Okabe",
+    patientName: "Théo Andrade Lins",
+    specialtyName: "Fonoaudiologia",
+    serviceName: "Sessão de intervenção ABA",
+    start: "2026-07-24T14:00:00.000-03:00",
+    end: "2026-07-24T15:00:00.000-03:00",
+    status: "finished",
+    needsSupervisorSignature: true,
+    ...overrides,
+  };
+}
+
+function supervisor(overrides: Partial<SupervisorRow> & { id: string }): SupervisorRow {
+  return { name: "Clara Vidigal", specialtyName: "Fonoaudiologia", active: true, internCount: 1, ...overrides };
+}
+
+function supervisionData(schedules: SupervisedSchedule[]): SupervisionData {
+  return { period: { start: "2026-06-30", end: "2026-07-30" }, supervisors: [], schedules };
+}
+
+describe("supervision-screen-is-not-for-the-supervisor", () => {
+  it("libera quem tem list_supervisor", () => {
+    expect(canOpenSupervision(["professionals.list_supervisor"], "coordinator").allowed).toBe(true);
+  });
+
+  it("recusa o supervisor e diz por onde ele acompanha os casos dele", () => {
+    const decision = canOpenSupervision([], "supervisor");
+    expect(decision.allowed).toBe(false);
+    // Um "sem permissão" seco deixaria a pessoa procurando: o destino faz
+    // parte da recusa.
+    expect(decision.reason).toContain("atendimento");
+  });
+
+  it("recusa os demais com o motivo genérico, sem prometer um destino que não existe", () => {
+    const decision = canOpenSupervision([], "attendant");
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("coordenação");
+    expect(decision.reason).not.toContain("assinatura");
+  });
+});
+
+describe("supervision-defaults-to-the-past", () => {
+  it("monta [hoje - 30, hoje], como Date.shift(today, day: -30)", () => {
+    expect(defaultPeriod("2026-07-30")).toEqual({ start: "2026-06-30", end: "2026-07-30" });
+  });
+
+  it("atravessa a virada de ano sem erro de mês", () => {
+    expect(defaultPeriod("2026-01-15")).toEqual({ start: "2025-12-16", end: "2026-01-15" });
+  });
+
+  it("o padrão nunca alcança o que vem — é a constatação, medida", () => {
+    expect(looksForward(defaultPeriod("2026-07-30"), "2026-07-30")).toBe(false);
+    expect(looksForward({ start: "2026-07-30", end: "2026-08-14" }, "2026-07-30")).toBe(true);
+  });
+});
+
+describe("supervisor-is-derived-from-links", () => {
+  const todos = [
+    supervisor({ id: "clara", internCount: 3 }),
+    supervisor({ id: "iara", name: "Iara Monteiro Sales", internCount: 0 }),
+  ];
+
+  it("lista só quem tem vínculo, como has_supervisor_internships", () => {
+    expect(listedSupervisors(todos).map((entry) => entry.id)).toEqual(["clara"]);
+  });
+
+  it("nomeia quem sumiu, para que o efeito colateral seja dito e não corrigido em silêncio", () => {
+    expect(hiddenForHavingNoLinks(todos).map((entry) => entry.id)).toEqual(["iara"]);
+  });
+});
+
+describe("supervision-table-omits-supervision", () => {
+  it("um atendimento futuro não é pendência — a ordem das perguntas evita atrasos falsos", () => {
+    expect(supervisionState(supervised({ id: "a", status: "scheduled" }))).toBe("not-yet");
+    expect(supervisionState(supervised({ id: "b", status: "ready_for_service" }))).toBe("not-yet");
+  });
+
+  it("distingue quem espera o supervisor de quem espera quem atendeu", () => {
+    expect(supervisionState(supervised({ id: "a", status: "pending_supervisor_signature" }))).toBe(
+      "awaiting-supervisor",
+    );
+    expect(supervisionState(supervised({ id: "b", status: "pending_signature" }))).toBe(
+      "awaiting-professional",
+    );
+    expect(supervisionState(supervised({ id: "c", status: "pending_register" }))).toBe(
+      "awaiting-professional",
+    );
+  });
+
+  it("cancelado e ausência não viram pendência, mesmo exigindo segunda assinatura", () => {
+    expect(supervisionState(supervised({ id: "a", status: "cancelled" }))).toBe("will-not-happen");
+    expect(supervisionState(supervised({ id: "b", status: "missed" }))).toBe("will-not-happen");
+  });
+
+  it("sem exigência de segunda assinatura, o atendimento é marcado e não some", () => {
+    expect(
+      supervisionState(supervised({ id: "a", status: "pending_signature", needsSupervisorSignature: false })),
+    ).toBe("not-supervised");
+  });
+
+  it("separa as duas filas, porque a cobrança tem destinatários diferentes", () => {
+    const dados = supervisionData([
+      supervised({ id: "a", status: "pending_supervisor_signature" }),
+      supervised({ id: "b", status: "pending_signature" }),
+      supervised({ id: "c", status: "finished" }),
+    ]);
+
+    expect(awaitingSupervisor(dados).map((entry) => entry.id)).toEqual(["a"]);
+    expect(awaitingProfessional(dados).map((entry) => entry.id)).toEqual(["b"]);
+  });
+
+  it("conta os dias parados contra a data do atendimento, e não a da primeira assinatura", () => {
+    const parado = supervised({
+      id: "a",
+      start: "2026-07-13T14:00:00.000-03:00",
+      status: "pending_supervisor_signature",
+      signedByProfessionalAt: "2026-07-29T09:00:00.000-03:00",
+    });
+
+    expect(daysWaiting(parado, "2026-07-30")).toBe(17);
+  });
+
+  it("não devolve dias negativos para um atendimento futuro", () => {
+    expect(daysWaiting(supervised({ id: "a", start: "2026-08-10T14:00:00.000-03:00" }), "2026-07-30")).toBe(0);
+  });
+});
