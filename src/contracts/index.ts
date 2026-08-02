@@ -1909,3 +1909,29 @@ export interface PatientGapsData {
   /** Total de pacientes ativos, para a lacuna ter proporção. */
   activePatients: number;
 }
+
+/* ============================================== Atendimento em atraso */
+
+/**
+ * Um atendimento que passou do horário e não fechou.
+ *
+ * O sistema real tem **três** definições de "pendente/atrasado", e elas não
+ * coincidem — ver `src/rules/overdue.ts`. O contrato guarda o fato bruto e
+ * deixa a classificação para a regra.
+ */
+export interface OverdueSchedule {
+  id: string;
+  patientName: string;
+  professionalName: string;
+  serviceName: string;
+  start: string;
+  status: ScheduleStatus;
+}
+
+export interface OverdueData {
+  schedules: OverdueSchedule[];
+  /** Instante de referência. Fixture não olha o relógio. */
+  now: string;
+  /** Papel de quem abriu — decide qual das definições o sistema aplicaria. */
+  viewerRole: string;
+}

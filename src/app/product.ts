@@ -31,6 +31,7 @@ import { NewAppointment } from "../screens/NewAppointment.js";
 import { TherapyPhases } from "../screens/TherapyPhases.js";
 import { PatientDeactivation } from "../screens/PatientDeactivation.js";
 import { PatientGaps } from "../screens/PatientGaps.js";
+import { Overdue } from "../screens/Overdue.js";
 import { Prospects } from "../screens/Prospects.js";
 import { Reports } from "../screens/Reports.js";
 
@@ -73,6 +74,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients/:id/phases", screen: TherapyPhases },
     { path: "/patients/:id/deactivate", screen: PatientDeactivation },
     { path: "/patients/gaps", screen: PatientGaps },
+    { path: "/agenda/overdue", screen: Overdue },
     { path: "/patients/:id/reports", screen: Reports },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },

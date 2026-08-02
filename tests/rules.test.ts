@@ -5176,3 +5176,104 @@ describe("the-absence-filter-counts-cancellations", () => {
     expect(shareThatWasWarned({ missed: 0, cancelled: 0, countedTogether: 0 })).toBeUndefined();
   });
 });
+
+/* ================================================== Atendimento em atraso */
+
+import type { OverdueData, OverdueSchedule } from "../src/contracts/index.js";
+import {
+  hiddenFromCoordinator,
+  hoursOpen,
+  overdueForCoordinator,
+  overdueGenerally,
+  pending,
+  verdict,
+  visibleTo,
+  whereTheDefinitionsDisagree,
+} from "../src/rules/overdue.js";
+
+const AGORA_ATRASO = "2026-07-30T15:00:00.000-03:00";
+
+function atrasado(overrides: Partial<OverdueSchedule> & { id: string }): OverdueSchedule {
+  return {
+    patientName: "Théo",
+    professionalName: "Marina",
+    serviceName: "Sessão",
+    start: "2026-07-30T12:00:00.000-03:00",
+    status: "pending_register",
+    ...overrides,
+  };
+}
+
+describe("overdue-means-two-different-things", () => {
+  const tresHoras = atrasado({ id: "a" });
+  const sessentaHoras = atrasado({ id: "b", start: "2026-07-28T03:00:00.000-03:00" });
+
+  it("para a coordenação, passar do horário já é atraso", () => {
+    expect(overdueForCoordinator(tresHoras, AGORA_ATRASO)).toBe(true);
+  });
+
+  it("para o resto, três horas ainda está dentro da folga", () => {
+    expect(overdueGenerally(tresHoras, AGORA_ATRASO)).toBe(false);
+    expect(overdueGenerally(sessentaHoras, AGORA_ATRASO)).toBe(true);
+  });
+
+  it("a terceira definição não tem janela nenhuma", () => {
+    expect(pending(tresHoras)).toBe(true);
+    expect(pending(atrasado({ id: "c", status: "finished" }))).toBe(false);
+  });
+
+  it("nenhuma das três pega um atendimento fechado", () => {
+    const fechado = atrasado({ id: "d", status: "finished", start: "2026-07-27T10:00:00.000-03:00" });
+    expect(verdict(fechado, AGORA_ATRASO)).toEqual({
+      paraCoordenacao: false,
+      paraOResto: false,
+      aberto: false,
+    });
+  });
+
+  it("isola a faixa em que as duas discordam — enquanto concordam não custa nada", () => {
+    const dados: OverdueData = {
+      schedules: [tresHoras, sessentaHoras],
+      now: AGORA_ATRASO,
+      viewerRole: "coordinator",
+    };
+    expect(whereTheDefinitionsDisagree(dados).map((entry) => entry.id)).toEqual(["a"]);
+  });
+
+  it("mostra listas diferentes para papéis diferentes, com a mesma fixture", () => {
+    const base = { schedules: [tresHoras, sessentaHoras], now: AGORA_ATRASO };
+    expect(visibleTo({ ...base, viewerRole: "coordinator" }).map((e) => e.id)).toEqual(["a", "b"]);
+    expect(visibleTo({ ...base, viewerRole: "clinic_admin" }).map((e) => e.id)).toEqual(["b"]);
+  });
+});
+
+describe("the-coordinator-list-hides-the-supervisor-step", () => {
+  const esperandoSupervisor = atrasado({
+    id: "s",
+    status: "pending_supervisor_signature",
+    start: "2026-07-29T09:00:00.000-03:00",
+  });
+
+  it("a etapa do supervisor nunca entra na lista da coordenação", () => {
+    expect(overdueForCoordinator(esperandoSupervisor, AGORA_ATRASO)).toBe(false);
+    // Mas entra na conta geral — ela só some de uma das duas.
+    expect(overdueGenerally(esperandoSupervisor, AGORA_ATRASO)).toBe(false);
+    expect(pending(esperandoSupervisor)).toBe(true);
+  });
+
+  it("isola o ponto cego para a tela poder nomeá-lo", () => {
+    const dados: OverdueData = {
+      schedules: [esperandoSupervisor, atrasado({ id: "a" })],
+      now: AGORA_ATRASO,
+      viewerRole: "coordinator",
+    };
+    expect(hiddenFromCoordinator(dados).map((entry) => entry.id)).toEqual(["s"]);
+  });
+});
+
+describe("leitura do atraso", () => {
+  it("conta as horas em aberto sem devolver negativo para o futuro", () => {
+    expect(hoursOpen(atrasado({ id: "a" }), AGORA_ATRASO)).toBe(3);
+    expect(hoursOpen(atrasado({ id: "b", start: "2026-07-31T10:00:00.000-03:00" }), AGORA_ATRASO)).toBe(0);
+  });
+});

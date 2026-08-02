@@ -2432,3 +2432,51 @@ test.describe("ausência e cancelamento", () => {
     await expect(page.getByText("Ausência e cancelamento não são a mesma coisa")).toHaveCount(0);
   });
 });
+
+test.describe("atendimentos em atraso", () => {
+  test("a tela diz qual das duas definições está aplicando", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-coordinator"));
+
+    await expect(page.getByText("Definição da coordenação")).toBeVisible();
+    await expect(page.getByText(/atrasado assim que passa do horário/)).toBeVisible();
+    await expect(page.getByText(/o que não se defende é não dizer qual está em vigor/)).toBeVisible();
+  });
+
+  test("a faixa de divergência é apontada, com as horas", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-coordinator"));
+
+    await expect(page.getByText(/aparecem numa lista e não na outra/)).toBeVisible();
+    await expect(page.getByText(/dentro da folga de 48/).first()).toBeVisible();
+  });
+
+  test("a etapa do supervisor é nomeada como ponto cego das duas listas", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-coordinator"));
+
+    await expect(page.getByText("A etapa do supervisor não entra em lista nenhuma")).toBeVisible();
+    await expect(page.getByText(/É a única que some das duas/)).toBeVisible();
+  });
+
+  test("a mesma fixture produz outra lista pela conta geral", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-everyone-else"));
+
+    await expect(page.getByText("Definição geral")).toBeVisible();
+    await expect(page.getByText("Atrasados há mais de 48 horas")).toBeVisible();
+    // O ponto cego é da coordenação: aqui o aviso não aparece.
+    await expect(page.getByText("A etapa do supervisor não entra em lista nenhuma")).toHaveCount(0);
+  });
+
+  test("cada linha traz as duas contas lado a lado, em texto", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-coordinator"));
+
+    await expect(page.getByText("atrasado para a coordenação").first()).toBeVisible();
+    await expect(page.getByText("dentro da folga de 48h").first()).toBeVisible();
+  });
+
+  test("quando as duas concordam, nenhuma divergência é apontada", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-in-agreement"));
+
+    await expect(page.getByText(/aparecem numa lista e não na outra/)).toHaveCount(0);
+    // A definição em vigor continua declarada: isso não depende de haver conflito.
+    await expect(page.getByText("Definição da coordenação")).toBeVisible();
+  });
+});

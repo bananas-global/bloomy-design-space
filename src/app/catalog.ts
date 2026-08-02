@@ -28,7 +28,9 @@ import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
 import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
 import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyPhases.js";
 import { patientGapFixtures } from "../fixtures/patientGaps.js";
+import { overdueFixtures } from "../fixtures/overdue.js";
 import { agendaRules, schedulingRules, absenceRules } from "../rules/agenda.js";
+import { overdueRules } from "../rules/overdue.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -79,6 +81,7 @@ import { clinicalHourScenarios } from "../scenarios/clinicalHours.js";
 import { newAppointmentScenarios } from "../scenarios/newAppointment.js";
 import { therapyPhaseScenarios } from "../scenarios/therapyPhases.js";
 import { patientGapScenarios } from "../scenarios/patientGaps.js";
+import { overdueScenarios } from "../scenarios/overdue.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -115,6 +118,23 @@ export const modules: Module[] = [
               "O profissional está desativado": "agenda.new-inactive-professional",
               "A sala parecia cheia e não está": "agenda.new-room-has-room",
               "Não tem sala, e não precisa ter": "agenda.new-therapeutic-companion",
+            },
+          },
+        ],
+      },
+      {
+        id: "chase-what-is-late",
+        title: "Cobrar o que está atrasado",
+        description:
+          "Duas definições de atraso na mesma palavra, e a etapa que some das duas listas.",
+        steps: [
+          {
+            scenario: "agenda.overdue-as-coordinator",
+            label: "Ver a lista da coordenação",
+            decision: "Por que a outra pessoa vê uma lista diferente?",
+            branches: {
+              "Ela usa a folga de 48 horas": "agenda.overdue-as-everyone-else",
+              "Hoje as duas concordam": "agenda.overdue-in-agreement",
             },
           },
         ],
@@ -892,6 +912,7 @@ export const scenarios: Scenario[] = [
   ...newAppointmentScenarios,
   ...therapyPhaseScenarios,
   ...patientGapScenarios,
+  ...overdueScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -923,6 +944,7 @@ export const fixtures: Fixture[] = [
   ...newAppointmentFixtures,
   ...therapyPhaseFixtures,
   ...patientGapFixtures,
+  ...overdueFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -930,6 +952,7 @@ export const rules: Rule[] = [
   ...agendaRules,
   ...schedulingRules,
   ...absenceRules,
+  ...overdueRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,
