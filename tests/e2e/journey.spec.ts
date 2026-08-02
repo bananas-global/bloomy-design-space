@@ -1189,6 +1189,76 @@ test.describe("superfícies", () => {
   });
 });
 
+test.describe("Prontuário", () => {
+  test("documento que ninguém abre continua listado", async ({ page }) => {
+    await page.goto(urlFor("record.complete"));
+
+    // O registro fica; o conteúdo é que não abre. Esconder faria a recepção
+    // pedir de novo o que a família já entregou.
+    await expect(page.getByText("Documento de identidade do responsável")).toBeVisible();
+    await expect(page.locator("#abrir-doc-3-motivo")).toHaveText(/em nenhum perfil/);
+    await expect(page.locator("#abrir-doc-2-motivo")).toHaveText(/em nenhum perfil/);
+
+    // Clínico abre para a coordenação.
+    await expect(page.getByRole("button", { name: "Abrir documento" }).first()).toBeEnabled();
+  });
+
+  test("a negativa distingue nenhum-perfil de seu-perfil", async ({ page }) => {
+    await page.goto(urlFor("record.document-not-openable"));
+
+    await expect(page.locator("#abrir-doc-3-motivo")).toHaveText(/em nenhum perfil/);
+    // A terapeuta abre clínico, então o motivo do clínico não aparece para ela.
+    await expect(page.locator("#abrir-doc-1-motivo")).toHaveCount(0);
+  });
+
+  test("o vencimento é acionável antes de parar o atendimento", async ({ page }) => {
+    await page.goto(urlFor("record.documents-expiring"));
+
+    await expect(page.getByRole("heading", { name: /documentos exigem atenção/ })).toBeVisible();
+    await expect(page.getByText("Vence em 13 dias")).toBeVisible();
+    await expect(page.getByText("Vence em 6 dias")).toBeVisible();
+    await expect(page.getByText("Vencido há 59 dias")).toBeVisible();
+    // O prazo de aviso configurado fica visível junto da validade.
+    await expect(page.getByText(/avisa 60 dias antes/)).toBeVisible();
+  });
+
+  test("a anamnese mostra o comportamento atual ao lado do proposto", async ({ page }) => {
+    await page.goto(urlFor("record.anamnese-incomplete"));
+
+    await expect(page.getByText(/Não foi respondido: chupa o dedo, uso de telas/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finalizar anamnese" })).toBeDisabled();
+
+    // O contraste: sem ele, a regra seria lida como descrição do que já existe.
+    await expect(
+      page.getByRole("heading", { name: "O sistema atual se comporta diferente aqui" }),
+    ).toBeVisible();
+    await expect(page.getByText(/devolve sucesso e a anamnese continua pendente/)).toBeVisible();
+  });
+
+  test("os alertas de falta citam o número e o limite do paciente", async ({ page }) => {
+    await page.goto(urlFor("record.absence-alerts"));
+
+    await expect(page.getByText("4 faltas seguidas, e o limite deste paciente é 3.")).toBeVisible();
+    await expect(page.getByText("7 faltas no período, e o limite deste paciente é 6.")).toBeVisible();
+    await expect(page.getByText(/9 sessões realizadas, abaixo das 12/)).toBeVisible();
+  });
+
+  test("sem critérios, a tela diz que não há padrão da clínica", async ({ page }) => {
+    await page.goto(urlFor("record.no-criteria"));
+
+    await expect(page.getByText(/não existe padrão/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Critérios de falta/ })).toHaveCount(0);
+  });
+
+  test("a recepção não alcança a visão clínica", async ({ page }) => {
+    await page.goto(urlFor("record.no-access"));
+
+    await expect(
+      page.getByRole("heading", { name: "Você não tem acesso ao prontuário" }),
+    ).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

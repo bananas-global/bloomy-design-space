@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  PatientDocument,
+  PatientRecord as PatientRecordType,
   Room,
   Service,
   StructureData,
@@ -163,6 +165,16 @@ import {
   serviceEffects,
   skipsCheckin,
 } from "../src/rules/structure.js";
+import {
+  absenceAlerts,
+  canFinishAnamnese,
+  canViewDocument,
+  currentMonolithBehaviour,
+  documentValidity,
+  documentsNeedingAttention,
+  hasCriteria,
+  missingBehaviors,
+} from "../src/rules/record.js";
 
 /**
  * Testes das regras de negócio.
@@ -2944,5 +2956,224 @@ describe("not-chargeable-service-skips-checkin", () => {
     );
     expect(efeitos.join(" ")).toMatch(/dispensa o check-in/);
     expect(efeitos.join(" ")).toMatch(/guarda de início do atendimento não se aplica/);
+  });
+});
+
+/* ============================================================ prontuário */
+
+/**
+ * O prontuário substituiu um modelo inventado — um booleano de "restrito" e uma
+ * permissão que não existe. O real é por tipo de documento, e dois dos três
+ * tipos não são abertos por ninguém.
+ */
+
+function patientDocument(
+  overrides: Partial<PatientDocument> & { id: string },
+): PatientDocument {
+  return { name: overrides.id, type: "clinical", ...overrides };
+}
+
+function patientRecord(overrides: Partial<PatientRecordType> = {}): PatientRecordType {
+  return {
+    patient: { id: "pac-theo", name: "Théo Andrade Lins", birthDate: "2019-11-04" },
+    documents: [],
+    anamnese: {
+      status: "finished",
+      behaviors: {
+        usesBottle: "Não",
+        sucksThumb: "Sim",
+        sittingPositionAtHome: "Em W",
+        usesScreenDevices: "2 horas",
+      },
+    },
+    alertCriteria: {
+      maximumConsecutiveAbsences: 3,
+      maximumAbsences: 6,
+      requiredSessionCount: 12,
+    },
+    attendance: { consecutiveAbsences: 1, absences: 2, sessions: 14 },
+    now: "2026-07-30T09:00:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("only-clinical-documents-are-visible", () => {
+  it("documento pessoal e administrativo não abrem em papel nenhum", () => {
+    for (const type of ["personal", "administrative"] as const) {
+      const doc = patientDocument({ id: "d", type });
+      for (const role of ["admin", "coordinator", "therapeutic_companion", "attendant"]) {
+        const result = canViewDocument(doc, role);
+        expect(result.allowed).toBe(false);
+        expect(result.reason).toMatch(/em nenhum perfil/);
+      }
+    }
+  });
+
+  it("documento clínico abre para os sete papéis da cláusula permissiva", () => {
+    const doc = patientDocument({ id: "d" });
+    for (const role of [
+      "admin",
+      "clinic_admin",
+      "attendant",
+      "coordinator",
+      "operation",
+      "therapeutic_companion",
+      "supervisor",
+    ]) {
+      expect(canViewDocument(doc, role).allowed).toBe(true);
+    }
+  });
+
+  it("especialista, aplicador e People ficam de fora até do clínico", () => {
+    const doc = patientDocument({ id: "d" });
+    for (const role of ["specialist", "applicator", "people"]) {
+      const result = canViewDocument(doc, role);
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toMatch(/Seu perfil não abre documento clínico/);
+    }
+  });
+
+  it("a negativa distingue nenhum-perfil-abre de seu-perfil-não-abre", () => {
+    // As duas frases levam a ações diferentes: uma manda procurar outro canal,
+    // a outra manda procurar outra pessoa.
+    expect(canViewDocument(patientDocument({ id: "d", type: "personal" }), "admin").reason).toMatch(
+      /em nenhum perfil/,
+    );
+    expect(canViewDocument(patientDocument({ id: "d" }), "specialist").reason).toMatch(
+      /Seu perfil/,
+    );
+  });
+});
+
+describe("documents-warn-before-expiring", () => {
+  const NOW = "2026-07-30T09:00:00.000-03:00";
+
+  it("avisa dentro da antecedência configurada no próprio documento", () => {
+    const laudo = patientDocument({ id: "l", validUntil: "2026-08-12", alertLeadDays: 60 });
+    expect(documentValidity(laudo, NOW)).toEqual({ state: "warning", daysLeft: 13 });
+  });
+
+  it("não avisa quando ainda está fora da antecedência", () => {
+    const carteirinha = patientDocument({ id: "c", validUntil: "2026-08-30", alertLeadDays: 15 });
+    expect(documentValidity(carteirinha, NOW).state).toBe("valid");
+  });
+
+  it("sem antecedência configurada, só o vencimento importa", () => {
+    const semAviso = patientDocument({ id: "s", validUntil: "2026-08-01" });
+    expect(documentValidity(semAviso, NOW).state).toBe("valid");
+    expect(documentValidity({ ...semAviso, validUntil: "2026-07-29" }, NOW).state).toBe("expired");
+  });
+
+  it("documento sem validade não entra na conta", () => {
+    expect(documentValidity(patientDocument({ id: "x" }), NOW)).toEqual({ state: "undated" });
+  });
+
+  it("ordena o que exige atenção pelo mais urgente", () => {
+    const record = patientRecord({
+      documents: [
+        patientDocument({ id: "laudo", validUntil: "2026-08-12", alertLeadDays: 60 }),
+        patientDocument({ id: "vencido", validUntil: "2026-06-01", alertLeadDays: 30 }),
+        patientDocument({ id: "carteirinha", validUntil: "2026-08-05", alertLeadDays: 15 }),
+        patientDocument({ id: "tranquilo", validUntil: "2027-01-01", alertLeadDays: 10 }),
+      ],
+    });
+    expect(documentsNeedingAttention(record).map((d) => d.id)).toEqual([
+      "vencido",
+      "carteirinha",
+      "laudo",
+    ]);
+  });
+});
+
+describe("anamnese-cannot-finish-incomplete", () => {
+  const incompleta = {
+    status: "pending" as const,
+    behaviors: { usesBottle: "Não", sucksThumb: "   ", sittingPositionAtHome: "Em W" },
+  };
+
+  it("campo em branco e campo só com espaço contam como faltando", () => {
+    expect(missingBehaviors(incompleta)).toEqual(["chupa o dedo", "uso de telas"]);
+  });
+
+  it("recusa a finalização nomeando o que falta", () => {
+    const result = canFinishAnamnese(incompleta);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/chupa o dedo, uso de telas/);
+  });
+
+  it("libera quando os quatro estão respondidos", () => {
+    expect(canFinishAnamnese(patientRecord().anamnese).allowed).toBe(false); // já finalizada
+    expect(
+      canFinishAnamnese({
+        status: "pending",
+        behaviors: {
+          usesBottle: "Não",
+          sucksThumb: "Sim",
+          sittingPositionAtHome: "Em W",
+          usesScreenDevices: "2 horas",
+        },
+      }).allowed,
+    ).toBe(true);
+  });
+
+  it("descreve o comportamento atual do monólito, que é diferente", () => {
+    // Hoje a operação relata sucesso e o status volta para pendente em silêncio.
+    // O teste existe para que a divergência seja visível, não para aprová-la.
+    const atual = currentMonolithBehaviour(incompleta);
+    expect(atual.reportedSuccess).toBe(true);
+    expect(atual.resultingStatus).toBe("pending");
+  });
+
+  it("com os campos completos, o comportamento atual e o proposto coincidem", () => {
+    const completa = {
+      status: "pending" as const,
+      behaviors: {
+        usesBottle: "Não",
+        sucksThumb: "Sim",
+        sittingPositionAtHome: "Em W",
+        usesScreenDevices: "2 horas",
+      },
+    };
+    expect(currentMonolithBehaviour(completa).resultingStatus).toBe("finished");
+    expect(canFinishAnamnese(completa).allowed).toBe(true);
+  });
+});
+
+describe("absence-alerts-are-per-patient", () => {
+  it("cada critério estourado vira um alerta com número e limite", () => {
+    const alertas = absenceAlerts(
+      patientRecord({ attendance: { consecutiveAbsences: 4, absences: 7, sessions: 9 } }),
+    );
+    expect(alertas).toHaveLength(3);
+    expect(alertas[0]).toMatch(/4 faltas seguidas, e o limite deste paciente é 3/);
+    expect(alertas[2]).toMatch(/9 sessões realizadas, abaixo das 12/);
+  });
+
+  it("dentro dos limites não alerta", () => {
+    expect(absenceAlerts(patientRecord())).toEqual([]);
+  });
+
+  it("o mesmo número alarma um paciente e não alarma outro", () => {
+    // É a razão de o critério ser por paciente e não da clínica.
+    const attendance = { consecutiveAbsences: 3, absences: 3, sessions: 20 };
+    const rigoroso = patientRecord({
+      attendance,
+      alertCriteria: { maximumConsecutiveAbsences: 2, maximumAbsences: 4, requiredSessionCount: 12 },
+    });
+    const tolerante = patientRecord({
+      attendance,
+      alertCriteria: { maximumConsecutiveAbsences: 5, maximumAbsences: 8, requiredSessionCount: 12 },
+    });
+    expect(absenceAlerts(rigoroso)).toHaveLength(1);
+    expect(absenceAlerts(tolerante)).toHaveLength(0);
+  });
+
+  it("sem critérios, nenhum alerta — e não há padrão da clínica", () => {
+    const semCriterio = patientRecord({
+      alertCriteria: undefined,
+      attendance: { consecutiveAbsences: 20, absences: 30, sessions: 0 },
+    });
+    expect(absenceAlerts(semCriterio)).toEqual([]);
+    expect(hasCriteria(semCriterio)).toBe(false);
   });
 });

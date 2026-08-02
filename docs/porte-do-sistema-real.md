@@ -408,6 +408,29 @@ uma tabela dos três elos entre módulos que não são óbvios de descobrir.
 
 Verde: `pnpm check` e 356 jornadas Playwright.
 
+### 15. Clínico, parte 5: prontuário — `porte/clinico-prontuario`
+
+Concluída.
+
+Substitui o modelo de "prontuário restrito" que este repositório tinha e que era
+invenção: um booleano no paciente e uma permissão que não existe. O real é mais
+rígido e mais interessante.
+
+- **A restrição é por tipo de documento.** Só `:clinical` tem cláusula
+  permissiva, e para sete dos dez papéis. Documento pessoal e administrativo não
+  são abertos por ninguém, em papel nenhum. A tela mantém os três listados: o
+  registro fica, o conteúdo é que não abre — esconder faria a recepção pedir de
+  novo o que a família já entregou.
+- **O prazo de aviso de vencimento é por documento.** Renovar um laudo
+  neurológico demora meses; uma carteirinha, dias.
+- **Os limites de falta são do paciente, não da clínica.** Uma criança em
+  adaptação tolera mais faltas que outra em manutenção, e o mesmo número alarma
+  uma e não alarma a outra.
+
+Quatro regras, sete cenários, a tela `PatientRecord` e dezoito testes.
+
+Verde: `pnpm check` e 377 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -426,5 +449,6 @@ bugs do Design Space; são observações sobre o produto.
 | 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |
 | 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |
 | 12 | `provider_code` e `requester_code` de `HealthCare` são opcionais no changeset e obrigatórios na geração do lote TISS. O cadastro passa e o envio falha. | `lib/bloomy/health_cares/health_care.ex` |
+| 14 | Finalizar uma anamnese incompleta **relata sucesso e não finaliza**. `keep_pending_until_required_fields/1` devolve o status para `pending` dentro do changeset, sem erro — quem clicou vê a anamnese ainda aberta, sem explicação. O cenário `record.anamnese-incomplete` mostra o atual e o proposto lado a lado. | `lib/bloomy/anamneses/anamnese.ex:31` |
 | 13 | `SchedulePolicy.scope/2` esconde agendamentos `:incomplete` do usuário de operadora sem sinalizar. A lista de presença fica impossível de conciliar com a fatura quando os números não batem. | `lib/bloomy/schedules/schedule_policy.ex` |
 | 11 | `ClosurePolicy` se contradiz sobre o especialista: `can_interact?` diz que ele age na etapa de aceite, mas `scope/2` não o lista e ele cai no `where: false`. O especialista não vê fechamento nenhum, nem o próprio. | `lib/bloomy/professionals/closures/closure_policy.ex` |

@@ -1180,6 +1180,71 @@ export type StructureData = {
 };
 
 /* ================================================================== *
+ * Prontuário — documentos, anamnese e critérios de alerta
+ * ================================================================== */
+
+/**
+ * Tipo do documento do paciente.
+ *
+ * Decide quem pode ver: `PatientPolicy.can?/3` tem cláusula permissiva apenas
+ * para `:clinical`. `:personal` e `:administrative` caem no `false` final — e
+ * ninguém, em papel nenhum, os abre pela interface.
+ */
+export type PatientDocumentType = "clinical" | "personal" | "administrative";
+
+export type PatientDocument = {
+  id: string;
+  name: string;
+  type: PatientDocumentType;
+  /** Validade do documento, quando tem. Laudo e autorização costumam ter. */
+  validFrom?: string;
+  validUntil?: string;
+  /** Quantos dias antes do vencimento o alerta começa. */
+  alertLeadDays?: number;
+};
+
+/**
+ * Anamnese do paciente.
+ *
+ * `data` é um mapa livre no monólito. O que está modelado aqui são os quatro
+ * campos de comportamento que impedem a finalização — os únicos com
+ * consequência de fluxo.
+ */
+export type Anamnese = {
+  status: "pending" | "finished";
+  behaviors: {
+    usesBottle?: string;
+    sucksThumb?: string;
+    sittingPositionAtHome?: string;
+    usesScreenDevices?: string;
+  };
+  updatedAt?: string;
+};
+
+/**
+ * Critérios de alerta do paciente.
+ *
+ * São por paciente, e não da clínica: uma criança em adaptação tolera mais
+ * faltas que outra em manutenção. Configurá-los é do coordenador.
+ */
+export type AlertCriteria = {
+  maximumConsecutiveAbsences: number;
+  maximumAbsences: number;
+  requiredSessionCount: number;
+};
+
+export type PatientRecord = {
+  patient: PatientRef;
+  documents: PatientDocument[];
+  anamnese: Anamnese;
+  alertCriteria?: AlertCriteria;
+  /** O que aconteceu no período de referência dos critérios. */
+  attendance: { consecutiveAbsences: number; absences: number; sessions: number };
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

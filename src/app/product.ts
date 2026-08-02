@@ -19,6 +19,7 @@ import { Nps } from "../screens/Nps.js";
 import { GuardianPortal } from "../screens/GuardianPortal.js";
 import { InsurerPortal } from "../screens/InsurerPortal.js";
 import { Structure } from "../screens/Structure.js";
+import { PatientRecordScreen } from "../screens/PatientRecord.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -48,6 +49,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients", screen: PatientList },
     { path: "/patients/:id", screen: PatientDetail },
     { path: "/patients/:id/plan", screen: InterventionPlanScreen },
+    { path: "/patients/:id/record", screen: PatientRecordScreen },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },
     { path: "/closures", screen: Closures },

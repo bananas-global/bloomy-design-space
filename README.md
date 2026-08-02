@@ -24,7 +24,7 @@ própria.
 
 ## O que existe hoje
 
-116 cenários em catorze módulos, cobrindo sucesso, vazio, permissão, regra e
+123 cenários em quinze módulos, cobrindo sucesso, vazio, permissão, regra e
 exceção.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
@@ -38,6 +38,7 @@ em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 | **Programas** | plano de intervenção, sem plano, critério de domínio, linha de base, cascata de aquisição, regressão, programa incidental, versão substituída, aplicador sem acesso |
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
+| **Prontuário** | prontuário completo, documento que ninguém abre, documentos vencendo, anamnese incompleta, faltas acima do limite, sem critérios, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Estrutura** | estrutura da unidade, serviço sem sala, serviço impossível de agendar, três origens de bloqueio, não cobrável dispensa check-in, unidade sem estrutura |
 | **Portal da operadora** | lista de presença, atendimentos sem fechar, agendamentos omitidos pelo escopo, o que a operadora não vê, competência sem movimento |
@@ -112,6 +113,10 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `three-scopes-of-blocking` | Unidade, profissional e calendário — três origens, três saídas. |
 | `service-without-room-type-is-a-contradiction` | Exigir sala sem declarar tipo torna o serviço inagendável. |
 | `not-chargeable-service-skips-checkin` | O cadastro do serviço é que dispensa o check-in. |
+| `only-clinical-documents-are-visible` | Só documento clínico abre, e para sete dos dez papéis. |
+| `documents-warn-before-expiring` | O prazo de aviso é configurado em cada documento. |
+| `anamnese-cannot-finish-incomplete` | Quatro campos de comportamento travam a finalização. |
+| `absence-alerts-are-per-patient` | Os limites de falta são do paciente, não da clínica. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

@@ -15,6 +15,7 @@ import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
 import { structureFixtures } from "../fixtures/structure.js";
+import { recordFixtures } from "../fixtures/record.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -29,6 +30,7 @@ import { publicPortalRules } from "../rules/publicPortal.js";
 import { guardianPortalRules } from "../rules/guardianPortal.js";
 import { insurerPortalRules } from "../rules/insurerPortal.js";
 import { structureRules } from "../rules/structure.js";
+import { recordRules } from "../rules/record.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -43,6 +45,7 @@ import { publicPortalScenarios } from "../scenarios/publicPortal.js";
 import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
 import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
 import { structureScenarios } from "../scenarios/structure.js";
+import { recordScenarios } from "../scenarios/record.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -497,6 +500,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "record",
+    name: "Prontuário",
+    description:
+      "Documentos com validade, anamnese e critérios de alerta — e os dois tipos de documento que ninguém abre.",
+    flows: [
+      {
+        id: "keep-the-record-current",
+        title: "Manter o prontuário em dia",
+        description:
+          "Do prontuário completo até as três coisas que exigem ação: documento vencendo, anamnese aberta e falta em excesso.",
+        steps: [
+          {
+            scenario: "record.complete",
+            label: "Ver o prontuário",
+            decision: "O que exige ação agora?",
+            branches: {
+              "Documento vencendo": "record.documents-expiring",
+              "Anamnese incompleta": "record.anamnese-incomplete",
+              "Faltas acima do limite": "record.absence-alerts",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -514,6 +543,7 @@ export const scenarios: Scenario[] = [
   ...guardianPortalScenarios,
   ...insurerPortalScenarios,
   ...structureScenarios,
+  ...recordScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -532,6 +562,7 @@ export const fixtures: Fixture[] = [
   ...guardianPortalFixtures,
   ...insurerPortalFixtures,
   ...structureFixtures,
+  ...recordFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -549,6 +580,7 @@ export const rules: Rule[] = [
   ...guardianPortalRules,
   ...insurerPortalRules,
   ...structureRules,
+  ...recordRules,
 ];
 
 export { personas };
