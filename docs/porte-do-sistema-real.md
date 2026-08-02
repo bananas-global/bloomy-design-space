@@ -1912,6 +1912,51 @@ Sem esse teste, a regra acusaria um problema que ela não sabe medir.
 2 achados, 1 cenário, 2 regras testáveis, 6 testes de regra, 4 jornadas.
 
 
+### 61. O sistema confere um texto e grava outro
+
+Fui ler `Bloomy.Helpers.trim_changed_fields/1`, que passa por todo changeset de
+atendimento. O ajudante é curto e faz o que promete — apara os espaços de todo
+campo de texto alterado. O problema é a **posição**: ele é a última etapa de
+**123 changesets**, depois de todas as validações.
+
+Então o valor conferido e o valor gravado são diferentes, e a diferença são
+exatamente os caracteres que ninguém vê. Isso produz os dois erros opostos:
+
+- **Recusa o que caberia.** O código da pesquisa de satisfação exige exatamente
+  cinco caracteres. Colado de um e-mail com um espaço no fim, a conferência vê
+  seis e recusa — e o campo, na tela, mostra cinco. Quem não desconfia de espaço
+  invisível não tem como resolver.
+- **Aceita o que não cabe.** Um código de três caracteres enviado com dois
+  espaços passa na mesma validação de “exatamente cinco”, e é gravado com três.
+  Este é o lado grave: não fica na tela, fica no banco, e daí em diante todo
+  código que confia no formato encontra um valor que não deveria existir.
+
+Foi por isso que separei os dois em avisos distintos. Um é problema de quem
+preenche e tem quem reclame; o outro não tem sintoma nenhum.
+
+**O contraexemplo está no mesmo repositório.** Em `RoomServicePoint`:
+
+```elixir
+|> update_change(:name, &normalize_name/1)
+|> validate_format(:name, ~r/^[A-Z]$/, message: "deve ser uma única letra")
+```
+
+Normaliza primeiro, valida depois. Alguém já resolveu isso aqui dentro, num
+campo só. Pus esse campo na mesma listagem dos outros de propósito: muda a
+natureza da correção de “decidir uma política” para “estender a que já existe”.
+
+Uma coisa que o teste me obrigou a dizer melhor: `storedValue` não depende da
+ordem — nas duas o valor guardado é o mesmo texto aparado. **A ordem só muda o
+veredito, nunca o conteúdo.** Eu tinha escrito a função com um ternário cujos
+dois ramos eram idênticos, e apagá-lo deixou o eixo do achado visível.
+
+E o cenário que mais importa é o que não acusa nada: sem espaço colado, a ordem
+errada não produz sintoma. É exatamente por isso que ela sobreviveu em 123
+changesets.
+
+4 achados, 4 cenários, 4 regras testáveis, 12 testes de regra, 6 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1988,3 +2033,7 @@ bugs do Design Space; são observações sobre o produto.
 | 67 | O conteúdo de cada comentário é interpolado cru entre `<conteudo>` e `</conteudo>` no pedido ao modelo. Um comentário que feche a etiqueta e escreva depois dela vira instrução para quem redige o registro oficial. Dois estados: na fila ainda dá para prevenir; com a marca já em `true`, o prontuário **já saiu** daquele pedido. | `lib/bloomy/custom_services/generate_appointment_content.ex:36-48` |
 | 68 | `Create.create_appointment/1` insere a linha do registro do atendimento e **descarta o resultado**, devolvendo `{:ok, custom_service}` de qualquer jeito. Um insert que falhe deixa o atendimento sem o lugar onde o registro oficial seria escrito, sem erro e sem sintoma. | `lib/bloomy/custom_services/create.ex:90-100` |
 | 69 | A rotina das 3h lê `custom_service.appointment.id` sem conferir nulo. Um atendimento na situação do achado 68 levanta dentro do `Enum.each`, que não é protegido: **toda a fila a partir dali é perdida naquela noite**. O worker não declara `max_attempts` (herda 20 do Oban) e as 20 tentativas param no mesmo registro; como falhar mantém a marca de revisão, o bloqueio se repete todas as noites. | `lib/bloomy/custom_services/regenerate_appointment_content.ex:10-21` |
+| 70 | `Bloomy.Helpers.trim_changed_fields/1` apara os espaços na **última** etapa de 123 changesets, depois de todas as validações. O sistema confere um texto e grava outro, e a diferença são caracteres invisíveis. | `lib/bloomy/helpers.ex:75-83` |
+| 71 | Consequência A: um envio é recusado por caracteres que nunca seriam gravados. O código da pesquisa de satisfação exige exatamente 5; colado com um espaço, a conferência vê 6 e recusa, enquanto o campo mostra 5. A mensagem conta o que não seria guardado. | `lib/bloomy/nps/nps_response.ex:23,26`, `lib/bloomy/custom_services/comments/comment.ex:32,35` |
+| 72 | Consequência B, mais grave: um valor curto demais **passa** por causa dos espaços e é gravado sem eles. Um código com `is: 5` é guardado com 3 caracteres. O defeito não aparece na tela — fica no banco, e todo código que confia no formato encontra um valor impossível. | `lib/bloomy/nps/nps_response.ex:23,26` |
+| 73 | A ordem certa já existe no repositório: `RoomServicePoint` normaliza com `update_change` **antes** do `validate_format`. Corrigir os outros 122 é estender uma decisão já tomada aqui dentro, e não escolher uma política nova. | `lib/bloomy/units/room_service_point.ex:31-32,37-41` |
