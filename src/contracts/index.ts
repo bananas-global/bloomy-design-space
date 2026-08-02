@@ -2327,3 +2327,34 @@ export interface TodayData {
   birthdate: string;
   surfaces: TodaySurface[];
 }
+
+/**
+ * Auto check-in do totem público.
+ *
+ * Duas funções com o **mesmo nome**, no mesmo fluxo, perguntam que dia é hoje
+ * de maneiras diferentes:
+ *
+ * ```elixir
+ * # Checkin.get_scheduled_patients/1 — certo
+ * date = DateTime.now!("America/Sao_Paulo") |> DateTime.to_date()
+ *
+ * # select_patient_step.ex get_scheduled_patients/3 — errado
+ * date = Date.utc_today()
+ * ```
+ *
+ * A tela usa a segunda.
+ */
+export interface CheckinArrival {
+  id: string;
+  guardianName: string;
+  patientName: string;
+  /** Instante local da chegada ao totem. */
+  arrivedAt: string;
+  /** Data e hora do atendimento marcado. */
+  scheduleDate: string;
+  scheduleTime: string;
+}
+
+export interface AutoCheckinData {
+  arrivals: CheckinArrival[];
+}

@@ -39,6 +39,7 @@ import { AutoCheckout } from "../screens/AutoCheckout.js";
 import { AuthorizationRenewal } from "../screens/AuthorizationRenewal.js";
 import { FieldOrdering } from "../screens/FieldOrdering.js";
 import { DeactivationDate } from "../screens/DeactivationDate.js";
+import { AutoCheckin } from "../screens/AutoCheckin.js";
 import { TodayInUtc } from "../screens/TodayInUtc.js";
 import { PatientAddress } from "../screens/PatientAddress.js";
 import { MeetingSummary } from "../screens/MeetingSummary.js";
@@ -97,6 +98,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/authorizations/renewal", screen: AuthorizationRenewal },
     { path: "/structure/fields", screen: FieldOrdering },
     { path: "/structure/today", screen: TodayInUtc },
+    { path: "/public/auto-checkin", screen: AutoCheckin },
     { path: "/sessions/meeting-summary", screen: MeetingSummary },
     { path: "/closures/tiss-batch", screen: TissBatch },
     { path: "/authorizations/distribution", screen: Distribution },
