@@ -14,6 +14,11 @@ import { scenarios } from "../../src/app/catalog.js";
  * ilegível, sem sinal nenhum — passava como sucesso. Medido no elemento, 400
  * caracteres produziam 2.782 px de texto dentro de um parágrafo de 726 px.
  */
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test("cadeia longa sem espaços quebra dentro da caixa", async ({ page }) => {
   const estouram: string[] = [];
 

@@ -26,6 +26,11 @@ const COM_HORARIO = [
   "notifications.unread-list",
 ];
 
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test("a mesma URL mostra o mesmo horário em qualquer fuso", async ({ browser }) => {
   const divergem: string[] = [];
 

@@ -16,6 +16,11 @@ import { scenarios } from "../../src/app/catalog.js";
  *   texto no primeiro quadro é lida na chegada, e quem usa leitor de tela ouve
  *   uma frase sobre uma ação que não praticou.
  */
+// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
+// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
+// caber em 30s seria medir menos para aprovar mais.
+test.setTimeout(180_000);
+
 test("o que a tela anuncia é o que o cenário declara", async ({ page }) => {
   const declaradoSemRegiao: string[] = [];
   const anunciaSemDeclarar: string[] = [];
