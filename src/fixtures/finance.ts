@@ -5,7 +5,7 @@ import type { Claim, FinanceData } from "../contracts/index.js";
  * Fixtures do financeiro.
  *
  * Os códigos de recusa (`TUSS-3001` e afins) são inventados, mas seguem o formato
- * que a analista vê na resposta do convênio — porque é esse código que ela usa
+ * que a operação vê na resposta do convênio — porque é esse código que ela usa
  * para conversar com o convênio, e um placeholder genérico esconderia que ele
  * precisa estar visível na tela.
  */
@@ -137,7 +137,7 @@ export const financeFixtures: Fixture<FinanceData>[] = [
   {
     id: "claims-queue",
     label: "Fila de guias",
-    description: "Análise, recusa, pendência e autorizada convivendo. É a fila da analista.",
+    description: "Análise, recusa, pendência e autorizada convivendo. É a fila da operação.",
     data: { claims: [denied, pendingDocuments, underReview, approved] },
   },
   {

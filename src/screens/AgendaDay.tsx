@@ -25,7 +25,7 @@ export function AgendaDay({ context }: ScreenProps) {
   if (isLoading) return wrap(context, <LoadingState label="Carregando a agenda" />);
   if (error) return wrap(context, <ErrorState message={error.message} />);
 
-  if (!can("agenda.read")) {
+  if (!can("schedules.list")) {
     return wrap(
       context,
       <EmptyState

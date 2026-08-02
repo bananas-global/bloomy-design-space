@@ -119,18 +119,29 @@ test.describe("Agenda", () => {
     await expect(page.getByRole("status").first()).toContainText("Atendimento cancelado");
   });
 
-  test("sem permissão, cancelar aparece bloqueado mas reagendar continua", async ({ page }) => {
+  test("quem atende não cancela nem remarca, e a tela diz a quem pedir", async ({ page }) => {
     await page.goto(urlFor("agenda.cancel-no-permission"));
 
     const cancel = page.getByRole("button", { name: "Cancelar atendimento" });
     await expect(cancel).toBeVisible();
     await expect(cancel).toBeDisabled();
-    await expect(page.getByText(/recepção líder/)).toBeVisible();
+    await expect(page.locator("#cancelar-motivo")).toHaveText(
+      /não cancela atendimentos\. Peça à recepção ou à coordenação/,
+    );
 
-    // A restrição é de cancelamento, não de tudo: o campo de reagendamento
-    // continua operável. Um teste que só checasse o bloqueio não pegaria uma
-    // implementação que desabilitasse a tela inteira.
-    await expect(page.getByLabel("Novo horário")).toBeEnabled();
+    // No Bloomy real, `schedules.cancel` e `schedules.edit` têm exatamente a
+    // mesma lista — coordenador, admin e recepção. Então a terapeuta perde as
+    // duas ações juntas, e o desenho não pode sugerir que remarcar é a saída.
+    await expect(page.getByLabel("Novo horário")).toBeDisabled();
+    await expect(page.locator("#reagendar-motivo")).toHaveText(/não reagenda atendimentos/);
+
+    // O motivo aparece uma vez por ação, não duas: a região viva do
+    // reagendamento fica calada quando a negativa é de permissão.
+    await expect(page.locator("#novo-horario-aviso")).toBeEmpty();
+
+    // O que não pode acontecer é a tela virar inútil: ler o atendimento
+    // continua liberado, e é para isso que ela abre esse link.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   });
 
   test("a tolerância de ausência informa quantos minutos faltam", async ({ page }) => {
@@ -293,7 +304,7 @@ test.describe("Financeiro", () => {
     await expect(page.getByRole("heading", { name: /TUSS-3001/ })).toBeVisible();
   });
 
-  test("a gestora lê tudo e não reenvia", async ({ page }) => {
+  test("o coordenador lê tudo e não reenvia", async ({ page }) => {
     await page.goto(urlFor("finance.resubmit-no-permission"));
 
     await expect(page.getByText("R$ 1.425,00")).toBeVisible();
@@ -342,20 +353,35 @@ test.describe("determinismo", () => {
 });
 
 test.describe("navegação por permissão", () => {
-  test("o menu esconde o que a persona não alcança", async ({ page }) => {
-    await page.goto(urlFor("finance.queue"));
+  test("o menu esconde o financeiro de quem atende", async ({ page }) => {
+    await page.goto(urlFor("agenda.cancel-no-permission"));
 
-    // Analista financeira não tem `agenda.read`: o item não deve existir. Um item
-    // visível e sem acesso ensina a recepção a clicar em algo que sempre falha.
-    await expect(page.getByRole("link", { name: "Financeiro" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Agenda" })).toHaveCount(0);
+    // A terapeuta tem `schedules.list` e `patients.list`, e não tem
+    // `authorizations.hub`. Um item visível e sem acesso ensina a pessoa a
+    // clicar em algo que sempre falha.
+    const nav = page.getByLabel("Navegação principal");
+    await expect(nav.getByRole("link", { name: "Agenda" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Pacientes" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Financeiro" })).toHaveCount(0);
   });
 
-  test("a recepção alcança agenda e pacientes, mas o financeiro é leitura", async ({ page }) => {
+  test("a recepção alcança agenda e pacientes, e não a central de autorizações", async ({
+    page,
+  }) => {
     await page.goto(urlFor("agenda.day"));
 
-    await expect(page.getByRole("link", { name: "Agenda" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Pacientes" })).toBeVisible();
+    // `authorizations.hub` é de admin, admin de clínica e operação. A recepção
+    // opera a agenda o dia inteiro e nunca vê a central — o que vale conferir,
+    // porque é ela quem recebe a ligação do convênio.
+    const nav = page.getByLabel("Navegação principal");
+    await expect(nav.getByRole("link", { name: "Agenda" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Pacientes" })).toBeVisible();
+    await expect(nav.getByRole("link", { name: "Financeiro" })).toHaveCount(0);
+  });
+
+  test("a operação alcança a central de autorizações", async ({ page }) => {
+    await page.goto(urlFor("finance.queue"));
+
     await expect(page.getByRole("link", { name: "Financeiro" })).toBeVisible();
   });
 });

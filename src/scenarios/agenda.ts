@@ -19,7 +19,7 @@ export const agendaScenarios: Scenario[] = [
     title: "Agenda do dia",
     intent: "Ver o estado geral do dia e decidir o que fazer primeiro.",
     route: "/agenda",
-    persona: "receptionist",
+    persona: "attendant",
     fixture: "agenda-day",
     a11y: {
       keyboard: "full",
@@ -42,7 +42,7 @@ export const agendaScenarios: Scenario[] = [
     title: "Agenda vazia",
     intent: "Garantir que um dia sem atendimento não pareça defeito do sistema.",
     route: "/agenda",
-    persona: "receptionist",
+    persona: "attendant",
     fixture: "agenda-empty",
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
@@ -55,7 +55,7 @@ export const agendaScenarios: Scenario[] = [
     intent:
       "Definir como o conflito aparece antes dos dois pacientes chegarem à recepção ao mesmo tempo.",
     route: "/agenda",
-    persona: "receptionist",
+    persona: "attendant",
     fixture: "agenda-double-booking",
     rules: ["no-double-booking"],
     a11y: {
@@ -80,7 +80,7 @@ export const agendaScenarios: Scenario[] = [
     intent:
       "Validar que a recepção descobre a colisão antes de prometer o horário ao paciente no telefone.",
     route: "/agenda/ap-107",
-    persona: "receptionist",
+    persona: "attendant",
     fixture: "agenda-double-booking",
     rules: ["no-double-booking"],
     a11y: {
@@ -104,7 +104,7 @@ export const agendaScenarios: Scenario[] = [
     title: "Consulta cancelada",
     intent: "Definir o que fica registrado de um cancelamento e quem consegue ver.",
     route: "/agenda/ap-105",
-    persona: "receptionist-lead",
+    persona: "attendant",
     fixture: "agenda-cancelled",
     rules: ["cancel-requires-reason", "cancel-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["appointment.cancelled"] },
@@ -121,7 +121,7 @@ export const agendaScenarios: Scenario[] = [
     title: "Cancelamento exige justificativa",
     intent: "Verificar que a justificativa é obrigatória sem virar um passo burocrático extra.",
     route: "/agenda/ap-105",
-    persona: "receptionist-lead",
+    persona: "attendant",
     fixture: "agenda-day",
     rules: ["cancel-requires-reason"],
     a11y: {
@@ -141,16 +141,21 @@ export const agendaScenarios: Scenario[] = [
   {
     id: "agenda.cancel-no-permission",
     title: "Sem permissão para cancelar",
-    intent: "Definir o que a recepcionista vê ao abrir um atendimento que ela não pode cancelar.",
+    intent:
+      "Definir o que a terapeuta vê ao abrir um atendimento da própria agenda que ela não pode cancelar.",
     route: "/agenda/ap-105",
-    persona: "receptionist",
+    persona: "therapeutic_companion",
     fixture: "agenda-day",
     rules: ["cancel-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
+    preconditions: [
+      "No Bloomy real, `SchedulePolicy.can?/2` dá cancelamento a coordenador, admin e recepção — e não a quem atende.",
+    ],
     expected: [
       "A ação de cancelar aparece desabilitada, com o motivo e para quem pedir.",
-      "Reagendar continua disponível: a restrição é de cancelamento, não de tudo.",
+      "Reagendar também fica indisponível: `schedules.edit` tem a mesma lista de `schedules.cancel`.",
+      "Ver o atendimento continua liberado — a restrição é de escrita, não de leitura.",
     ],
     tags: ["permissão", "exceção"],
   },
@@ -160,7 +165,7 @@ export const agendaScenarios: Scenario[] = [
     intent:
       "Verificar se a tolerância de 15 minutos fica compreensível sem que a recepção precise calcular.",
     route: "/agenda/ap-104",
-    persona: "receptionist-lead",
+    persona: "attendant",
     fixture: "agenda-no-show-window",
     rules: ["no-show-after-tolerance"],
     a11y: { keyboard: "full", contrast: "AA" },
@@ -177,7 +182,7 @@ export const agendaScenarios: Scenario[] = [
     title: "Paciente ausente",
     intent: "Definir o que fica visível depois de registrar uma ausência.",
     route: "/agenda/ap-104",
-    persona: "receptionist-lead",
+    persona: "attendant",
     fixture: "agenda-no-show-elapsed",
     rules: ["no-show-after-tolerance"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["appointment.no-show"] },

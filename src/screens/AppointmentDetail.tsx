@@ -56,6 +56,10 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
 
   const cancellation = canCancel(effective, permissions);
   const noShow = canMarkNoShow(effective, permissions, agenda!.now);
+  // `schedules.edit` e `schedules.cancel` têm a mesma lista de papéis no
+  // monólito, mas são permissões separadas — e a tela pergunta por cada uma,
+  // porque a lista pode divergir sem aviso.
+  const canReschedule = permissions.includes("schedules.edit");
   const conflicts = (appointment.conflictsWith ?? [])
     .map((id) => appointments.find((item) => item.id === id))
     .filter((item): item is Appointment => Boolean(item));
@@ -249,18 +253,27 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
             <label htmlFor="novo-horario" className="block text-[14px] font-semibold text-navy">
               Novo horário
             </label>
+            {/* O campo segue a permissão junto com o botão. Deixar o horário
+                editável e só barrar no envio faria a pessoa escolher, verificar
+                conflito e descobrir a negativa depois — trabalho jogado fora, e
+                a impressão de que remarcar seria possível. */}
             <input
               id="novo-horario"
               type="time"
               step={300}
               value={rescheduleTo}
+              disabled={!canReschedule}
               onChange={(event) => setRescheduleTo(event.target.value)}
               aria-describedby="novo-horario-aviso"
-              className="mt-2 rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[15px] text-navy"
+              className="mt-2 rounded-field border border-[var(--border-strong)] bg-surface px-3 py-2 text-[15px] text-navy disabled:cursor-not-allowed disabled:opacity-55"
             />
 
             <p id="novo-horario-aviso" role="status" aria-live="polite" className="m-0 mt-2 min-h-5 text-[13px]">
-              {rescheduleTo === "" ? (
+              {/* Sem permissão, esta região fica calada: o motivo já está no
+                  botão por `unavailableReason`, e repeti-lo numa região viva
+                  faria o leitor de tela anunciar a mesma negativa duas vezes ao
+                  abrir a página. */}
+              {!canReschedule ? null : rescheduleTo === "" ? (
                 <span className="text-[var(--fg-2)]">
                   Duração mantida: {durationMinutes(appointment)} minutos.
                 </span>
@@ -278,8 +291,8 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
                 id="reagendar"
                 variant="primary"
                 unavailableReason={
-                  !permissions.includes("agenda.reschedule")
-                    ? "Seu perfil não reagenda atendimentos."
+                  !canReschedule
+                    ? "Seu perfil não reagenda atendimentos. Peça à recepção ou à coordenação."
                     : rescheduleTo === ""
                       ? "Escolha um horário."
                       : rescheduleConflicts

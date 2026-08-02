@@ -21,7 +21,7 @@ export const patientRules: Rule[] = [
   {
     id: "restricted-record-requires-permission",
     statement:
-      "Prontuário restrito só é legível por perfis com `patients.record.restricted`. Os demais veem que existe restrição, não o conteúdo.",
+      "Prontuário restrito só é legível por perfis com `patients.view_clinical_document`. Os demais veem que existe restrição, não o conteúdo.",
     rationale:
       "Esconder a existência da restrição seria pior: a recepção precisa saber que há informação clínica sensível para não insistir em perguntar.",
     source: "src/rules/patients.ts",
@@ -32,7 +32,7 @@ type Decision = { allowed: boolean; reason?: string };
 
 /** Implementação de `incomplete-registration-blocks-scheduling` e `minor-requires-guardian`. */
 export function canSchedule(patient: Patient, permissions: string[]): Decision {
-  if (!permissions.includes("agenda.create")) {
+  if (!permissions.includes("schedules.create")) {
     return { allowed: false, reason: "Seu perfil não cria agendamentos." };
   }
   if (patient.missingFields.length > 0) {
@@ -53,10 +53,10 @@ export function canSchedule(patient: Patient, permissions: string[]): Decision {
 
 /** Implementação de `restricted-record-requires-permission`. */
 export function canReadRecord(patient: Patient, permissions: string[]): Decision {
-  if (!permissions.includes("patients.record.read")) {
+  if (!permissions.includes("patients.see_clinic_overview")) {
     return { allowed: false, reason: "Seu perfil não acessa prontuário." };
   }
-  if (patient.recordRestricted && !permissions.includes("patients.record.restricted")) {
+  if (patient.recordRestricted && !permissions.includes("patients.view_clinical_document")) {
     return {
       allowed: false,
       reason: "Prontuário com acesso restrito. Fale com o profissional responsável.",

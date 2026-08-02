@@ -19,9 +19,9 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { label: "Agenda", path: "/agenda", permission: "agenda.read" },
-  { label: "Pacientes", path: "/patients", permission: "patients.read" },
-  { label: "Financeiro", path: "/finance", permission: "finance.read" },
+  { label: "Agenda", path: "/agenda", permission: "schedules.list" },
+  { label: "Pacientes", path: "/patients", permission: "patients.list" },
+  { label: "Financeiro", path: "/finance", permission: "authorizations.hub" },
 ];
 
 export function AppShell({

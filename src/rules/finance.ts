@@ -22,7 +22,7 @@ export const financeRules: Rule[] = [
     statement:
       "O motivo e o código da recusa ficam visíveis na tela da guia, não em um histórico que precise ser aberto.",
     rationale:
-      "Sem o motivo à vista, a analista reenvia adivinhando. O código é o que permite conversar com o convênio.",
+      "Sem o motivo à vista, a operação reenvia adivinhando. O código é o que permite conversar com o convênio.",
     source: "src/rules/finance.ts",
   },
 ];
@@ -31,7 +31,7 @@ type Decision = { allowed: boolean; reason?: string };
 
 /** Implementação de `retry-after-document-review` e `resubmit-requires-permission`. */
 export function canResubmit(claim: Claim, permissions: string[]): Decision {
-  if (!permissions.includes("claims.retry")) {
+  if (!permissions.includes("authorizations.hub")) {
     return { allowed: false, reason: "Seu perfil não reenvia guias." };
   }
   if (claim.status !== "denied" && claim.status !== "pending_documents") {

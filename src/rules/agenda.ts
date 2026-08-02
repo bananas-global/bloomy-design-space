@@ -18,9 +18,10 @@ export const agendaRules: Rule[] = [
   },
   {
     id: "cancel-requires-permission",
-    statement: "Só perfis com `agenda.cancel` podem cancelar um atendimento.",
+    statement:
+      "Só perfis com `schedules.cancel` podem cancelar um atendimento: recepção, coordenador e admin.",
     rationale:
-      "Cancelamento tem efeito financeiro e sobre a fila de espera. A recepcionista remarca; a líder cancela.",
+      "Cancelamento tem efeito financeiro e sobre a fila de espera. No Bloomy real, `SchedulePolicy` dá cancelamento a quem opera a agenda — inclusive a recepção — e nega a quem atende. O terapeuta que precisa desmarcar passa pela recepção ou pela coordenação, e a tela precisa dizer isso em vez de sumir com o botão.",
     source: "src/rules/agenda.ts",
   },
   {
@@ -34,7 +35,7 @@ export const agendaRules: Rule[] = [
   {
     id: "no-show-after-tolerance",
     statement:
-      "Ausência só pode ser registrada 15 minutos depois do horário marcado, e exige `agenda.no_show`.",
+      "Ausência só pode ser registrada 15 minutos depois do horário marcado, e exige `schedules.edit`.",
     rationale:
       "Marcar ausência cedo demais gera cobrança indevida e discussão no balcão. A tolerância é do processo da clínica.",
     source: "src/rules/agenda.ts",
@@ -47,8 +48,8 @@ type Decision = { allowed: boolean; reason?: string };
 
 /** Implementação de `cancel-requires-permission` e `cancel-requires-reason`. */
 export function canCancel(appointment: Appointment, permissions: string[]): Decision {
-  if (!permissions.includes("agenda.cancel")) {
-    return { allowed: false, reason: "Seu perfil não cancela atendimentos. Peça à recepção líder." };
+  if (!permissions.includes("schedules.cancel")) {
+    return { allowed: false, reason: "Seu perfil não cancela atendimentos. Peça à recepção ou à coordenação." };
   }
   if (appointment.status === "cancelled") {
     return { allowed: false, reason: "Este atendimento já está cancelado." };
@@ -70,7 +71,7 @@ export function canMarkNoShow(
   permissions: string[],
   now: string,
 ): Decision {
-  if (!permissions.includes("agenda.no_show")) {
+  if (!permissions.includes("schedules.edit")) {
     return { allowed: false, reason: "Seu perfil não registra ausência." };
   }
   if (appointment.status !== "scheduled" && appointment.status !== "confirmed") {

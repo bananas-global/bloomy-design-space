@@ -37,24 +37,24 @@ function appointment(overrides: Partial<Appointment> = {}): Appointment {
 /* ================================================================== agenda */
 
 describe("cancel-requires-permission", () => {
-  it("bloqueia quem não tem agenda.cancel, dizendo a quem pedir", () => {
-    const result = canCancel(appointment(), ["agenda.read", "agenda.reschedule"]);
+  it("bloqueia quem não tem schedules.cancel, dizendo a quem pedir", () => {
+    const result = canCancel(appointment(), ["schedules.list", "schedules.edit"]);
     expect(result.allowed).toBe(false);
-    expect(result.reason).toMatch(/recepção líder/);
+    expect(result.reason).toMatch(/recepção ou à coordenação/);
   });
 
   it("permite quem tem a permissão", () => {
-    expect(canCancel(appointment(), ["agenda.cancel"]).allowed).toBe(true);
+    expect(canCancel(appointment(), ["schedules.cancel"]).allowed).toBe(true);
   });
 
   it("não cancela o que já está cancelado nem o que já foi finalizado", () => {
-    expect(canCancel(appointment({ status: "cancelled" }), ["agenda.cancel"]).allowed).toBe(false);
-    expect(canCancel(appointment({ status: "finished" }), ["agenda.cancel"]).allowed).toBe(false);
+    expect(canCancel(appointment({ status: "cancelled" }), ["schedules.cancel"]).allowed).toBe(false);
+    expect(canCancel(appointment({ status: "finished" }), ["schedules.cancel"]).allowed).toBe(false);
   });
 });
 
 describe("no-show-after-tolerance", () => {
-  const permissions = ["agenda.no_show"];
+  const permissions = ["schedules.edit"];
 
   it("bloqueia antes da tolerância, informando quantos minutos faltam", () => {
     const result = canMarkNoShow(appointment(), permissions, at("09:38"));
@@ -68,7 +68,7 @@ describe("no-show-after-tolerance", () => {
   });
 
   it("bloqueia por permissão antes de olhar o relógio", () => {
-    const result = canMarkNoShow(appointment(), ["agenda.read"], at("11:00"));
+    const result = canMarkNoShow(appointment(), ["schedules.list"], at("11:00"));
     expect(result.reason).toMatch(/não registra ausência/);
   });
 
@@ -148,17 +148,17 @@ describe("idade e menoridade", () => {
 
 describe("incomplete-registration-blocks-scheduling", () => {
   it("bloqueia nomeando os campos que faltam", () => {
-    const result = canSchedule(patient({ missingFields: ["CPF", "convênio"] }), ["agenda.create"]);
+    const result = canSchedule(patient({ missingFields: ["CPF", "convênio"] }), ["schedules.create"]);
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("Cadastro incompleto. Falta: CPF, convênio.");
   });
 
   it("permite quando o cadastro está completo", () => {
-    expect(canSchedule(patient(), ["agenda.create"]).allowed).toBe(true);
+    expect(canSchedule(patient(), ["schedules.create"]).allowed).toBe(true);
   });
 
   it("bloqueia por permissão antes de olhar o cadastro", () => {
-    expect(canSchedule(patient(), ["patients.read"]).reason).toMatch(/não cria agendamentos/);
+    expect(canSchedule(patient(), ["patients.show"]).reason).toMatch(/não cria agendamentos/);
   });
 });
 
@@ -167,7 +167,7 @@ describe("minor-requires-guardian", () => {
 
   it("bloqueia menor sem responsável, mesmo com todos os campos preenchidos", () => {
     expect(minor.missingFields).toEqual([]);
-    const result = canSchedule(minor, ["agenda.create"]);
+    const result = canSchedule(minor, ["schedules.create"]);
     expect(result.allowed).toBe(false);
     expect(result.reason).toMatch(/menor de idade sem responsável/);
   });
@@ -181,7 +181,7 @@ describe("minor-requires-guardian", () => {
       ...minor,
       guardian: { name: "Renata", relation: "mãe", cpf: "000.777.888-00", phone: "(11) 90000-0007" },
     };
-    expect(canSchedule(withGuardian, ["agenda.create"]).allowed).toBe(true);
+    expect(canSchedule(withGuardian, ["schedules.create"]).allowed).toBe(true);
     expect(missingRequiredFields(withGuardian)).toEqual([]);
   });
 });
@@ -190,20 +190,20 @@ describe("restricted-record-requires-permission", () => {
   const restricted = patient({ recordRestricted: true });
 
   it("bloqueia prontuário restrito para quem só tem leitura comum", () => {
-    const result = canReadRecord(restricted, ["patients.read", "patients.record.read"]);
+    const result = canReadRecord(restricted, ["patients.show", "patients.see_clinic_overview"]);
     expect(result.allowed).toBe(false);
     expect(result.reason).toMatch(/acesso restrito/);
   });
 
   it("libera para quem tem a permissão específica", () => {
     expect(
-      canReadRecord(restricted, ["patients.record.read", "patients.record.restricted"]).allowed,
+      canReadRecord(restricted, ["patients.see_clinic_overview", "patients.view_clinical_document"]).allowed,
     ).toBe(true);
   });
 
   it("prontuário não restrito segue a permissão comum", () => {
-    expect(canReadRecord(patient(), ["patients.record.read"]).allowed).toBe(true);
-    expect(canReadRecord(patient(), ["patients.read"]).allowed).toBe(false);
+    expect(canReadRecord(patient(), ["patients.see_clinic_overview"]).allowed).toBe(true);
+    expect(canReadRecord(patient(), ["patients.show"]).allowed).toBe(false);
   });
 });
 
@@ -228,10 +228,10 @@ function claim(overrides: Partial<Claim> = {}): Claim {
 }
 
 describe("retry-after-document-review", () => {
-  const analyst = ["claims.read", "claims.retry"];
+  const operation = ["authorizations.hub"];
 
   it("bloqueia reenvio nomeando os documentos que faltam", () => {
-    const result = canResubmit(claim(), analyst);
+    const result = canResubmit(claim(), operation);
     expect(result.allowed).toBe(false);
     expect(result.reason).toBe("Falta anexar: Relatório clínico assinado.");
   });
@@ -240,26 +240,26 @@ describe("retry-after-document-review", () => {
     const complete = claim({
       documents: claim().documents.map((d) => ({ ...d, received: true })),
     });
-    expect(canResubmit(complete, analyst).allowed).toBe(true);
+    expect(canResubmit(complete, operation).allowed).toBe(true);
   });
 
   it("vale também para pendência de documento, não só para recusa", () => {
     const pending = claim({ status: "pending_documents" });
-    expect(canResubmit(pending, analyst).reason).toMatch(/Falta anexar/);
+    expect(canResubmit(pending, operation).reason).toMatch(/Falta anexar/);
   });
 
   it("não reenvia guia em análise nem autorizada", () => {
-    expect(canResubmit(claim({ status: "under_review" }), analyst).reason).toMatch(
+    expect(canResubmit(claim({ status: "under_review" }), operation).reason).toMatch(
       /recusada ou com pendência/,
     );
-    expect(canResubmit(claim({ status: "approved" }), analyst).allowed).toBe(false);
+    expect(canResubmit(claim({ status: "approved" }), operation).allowed).toBe(false);
   });
 });
 
 describe("resubmit-requires-permission", () => {
   it("bloqueia por permissão antes de olhar a documentação", () => {
     const complete = claim({ documents: claim().documents.map((d) => ({ ...d, received: true })) });
-    expect(canResubmit(complete, ["claims.read"]).reason).toMatch(/não reenvia guias/);
+    expect(canResubmit(complete, ["patients.list"]).reason).toMatch(/não reenvia guias/);
   });
 });
 

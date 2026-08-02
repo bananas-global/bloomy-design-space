@@ -22,7 +22,7 @@ import {
  *
  * Três coisas que esta tela existe para provar:
  *
- * 1. **O motivo e o código da recusa ficam à vista.** Sem eles, a analista
+ * 1. **O motivo e o código da recusa ficam à vista.** Sem eles, a operação
  *    reenvia adivinhando e queima um ciclo de dias do convênio.
  * 2. **A recusa é anunciada, não só exibida.** Quem usa leitor de tela precisa
  *    saber que a guia foi recusada ao chegar na página, não descobrir depois de
@@ -144,7 +144,7 @@ export function ClaimDetail({ params, context }: ScreenProps) {
                 <DocumentRow
                   key={document.id}
                   document={document}
-                  canAttach={permissions.includes("claims.retry")}
+                  canAttach={permissions.includes("authorizations.hub")}
                   onAttach={() => {
                     setAttached((current) => new Set(current).add(document.id));
                     setOutcome(`${document.name} anexado.`);

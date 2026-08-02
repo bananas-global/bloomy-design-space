@@ -24,7 +24,7 @@ export function PatientList({ context }: ScreenProps) {
   if (isLoading) return wrap(context, <LoadingState label="Carregando pacientes" />);
   if (error) return wrap(context, <ErrorState message={error.message} />);
 
-  if (!can("patients.read")) {
+  if (!can("patients.list")) {
     return wrap(
       context,
       <EmptyState

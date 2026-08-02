@@ -15,7 +15,7 @@ import {
  * Fila de guias.
  *
  * Ordenada por urgência de ação, não por data: recusada primeiro, depois
- * pendência, depois análise, e autorizada por último. A analista abre esta tela
+ * pendência, depois análise, e autorizada por último. A operação abre esta tela
  * para saber o que resolver, e uma ordem cronológica esconderia a guia recusada
  * de três dias atrás embaixo das enviadas hoje.
  */
@@ -33,7 +33,7 @@ export function ClaimList({ context }: ScreenProps) {
   if (isLoading) return wrap(context, <LoadingState label="Carregando guias" />);
   if (error) return wrap(context, <ErrorState message={error.message} />);
 
-  if (!can("finance.read")) {
+  if (!can("authorizations.hub")) {
     return wrap(
       context,
       <EmptyState
