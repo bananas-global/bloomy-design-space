@@ -1171,6 +1171,38 @@ reprovou, restaurei.
 2 jornadas, 1 bloco de CSS.
 
 
+### 40. O horário mudava com o fuso de quem olha — `porte/fuso`
+
+`Intl.DateTimeFormat` sem `timeZone` formata no fuso do navegador. Medido na
+mesma URL do cenário `agenda.day`:
+
+| Fuso | Primeiros horários |
+| --- | --- |
+| America/Sao_Paulo | 08:00, 08:30, 09:00 |
+| Europe/Lisbon | 12:00, 12:30, 13:00 |
+| Asia/Tokyo | 20:00, 20:30, 21:00 |
+
+Três situações diferentes para o mesmo cenário. Isso desfaz a promessa central
+deste Design Space — *a mesma URL produz a mesma situação* —, e é a promessa que
+sustenta aprovar um cenário por link.
+
+**O teste de determinismo que já existia não pegava**, e a razão merece registro:
+ele compara a página **consigo mesma**, no mesmo navegador e no mesmo fuso. Um
+teste que roda a mesma coisa duas vezes nas mesmas condições sempre concorda.
+Quinta vez esta noite que a medição não alcançava o defeito.
+
+Antes de ser um problema do Design Space, é do produto: **horário de atendimento
+é do lugar onde o atendimento acontece.** Um coordenador viajando, ou um
+navegador com fuso errado, via horários errados. O monólito já resolve isso —
+`CalendarHelper.local_timezone/0` devolve `America/Sao_Paulo` — e o Design Space
+passou a fixar o mesmo em `CLINIC_TIMEZONE`.
+
+Provado por mutação: removi o `timeZone` de um formatador, o teste reprovou,
+restaurei.
+
+1 jornada (3 fusos × 6 cenários com horário visível), 1 constante.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
