@@ -12,6 +12,7 @@ import { closureFixtures } from "../fixtures/closures.js";
 import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
 import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
+import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -23,6 +24,7 @@ import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
 import { teamRules } from "../rules/team.js";
 import { publicPortalRules } from "../rules/publicPortal.js";
+import { guardianPortalRules } from "../rules/guardianPortal.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -34,6 +36,7 @@ import { closureScenarios } from "../scenarios/closures.js";
 import { invoiceScenarios } from "../scenarios/invoices.js";
 import { teamScenarios } from "../scenarios/team.js";
 import { publicPortalScenarios } from "../scenarios/publicPortal.js";
+import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -411,6 +414,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "guardian",
+    name: "Portal da família",
+    description:
+      "O que o responsável legal alcança: o combinado, e o consentimento com o plano terapêutico do filho.",
+    flows: [
+      {
+        id: "consent-to-the-plan",
+        title: "Consentir com o plano do filho",
+        description:
+          "Ler o plano por inteiro e assinar — com as duas situações em que assinar não é possível.",
+        steps: [
+          {
+            scenario: "guardian.plan-pending",
+            label: "Ler o plano e assinar",
+            decision: "O plano ainda vale, e é de um filho seu?",
+            branches: {
+              "Vigência encerrada": "guardian.plan-expired",
+              "De outra família": "guardian.plan-other-family",
+            },
+          },
+          { scenario: "guardian.plan-accepted", label: "Ver o registro do aceite" },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -425,6 +454,7 @@ export const scenarios: Scenario[] = [
   ...invoiceScenarios,
   ...teamScenarios,
   ...publicPortalScenarios,
+  ...guardianPortalScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -440,6 +470,7 @@ export const fixtures: Fixture[] = [
   ...teamFixtures,
   ...publicPortalFixtures,
   ...npsFixtures,
+  ...guardianPortalFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -454,6 +485,7 @@ export const rules: Rule[] = [
   ...invoiceRules,
   ...teamRules,
   ...publicPortalRules,
+  ...guardianPortalRules,
 ];
 
 export { personas };

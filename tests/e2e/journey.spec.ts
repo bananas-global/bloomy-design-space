@@ -973,6 +973,69 @@ test.describe("Portal público", () => {
   });
 });
 
+test.describe("Portal da família", () => {
+  test("o horário cancelado continua na lista, marcado", async ({ page }) => {
+    await page.goto(urlFor("guardian.home"));
+
+    await expect(page.getByText("Cancelado")).toBeVisible();
+    // Sumir com ele faria a família descobrir o cancelamento na clínica.
+    await expect(page.getByText("06 de ago. de 2026 às 10:00")).toBeVisible();
+  });
+
+  test("o plano é mostrado por inteiro antes do aceite", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-pending"));
+
+    await expect(page.getByRole("heading", { name: "O que vai ser trabalhado" })).toBeVisible();
+    await expect(page.getByText("Comunicação funcional")).toBeVisible();
+    await expect(page.getByText("Pedir itens preferidos")).toBeVisible();
+
+    // Assinatura é campo, não caixa de seleção.
+    await expect(page.getByLabel("Assine com seu nome completo")).toBeEnabled();
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Aceitar o plano" })).toBeEnabled();
+  });
+
+  test("o aceite registrado aparece para quem consentiu", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-accepted"));
+
+    await expect(page.getByText(/Assinado por Renata Andrade Lins/)).toBeVisible();
+    await expect(page.getByText(/08 de jan\. de 2026/)).toBeVisible();
+    // Não há o que assinar duas vezes.
+    await expect(page.getByLabel("Assine com seu nome completo")).toHaveCount(0);
+  });
+
+  test("plano vencido não recebe aceite, e diz a quem recorrer", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-expired"));
+
+    await expect(page.getByRole("button", { name: "Aceitar o plano" })).toBeDisabled();
+    await expect(page.getByLabel("Assine com seu nome completo")).toBeDisabled();
+    await expect(page.getByText(/Fale com a coordenação/)).toBeVisible();
+  });
+
+  test("plano de outra família não revela nada da criança", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-other-family"));
+
+    await expect(page.getByRole("heading", { name: "Este plano não é seu" })).toBeVisible();
+    // Nem o nome da criança nem as metas podem aparecer.
+    await expect(page.getByText("Laura Menendes Pinto")).toHaveCount(0);
+    await expect(page.getByText("Comunicação funcional")).toHaveCount(0);
+  });
+
+  test("os termos explicam o que é guardado, e para quê", async ({ page }) => {
+    await page.goto(urlFor("guardian.terms-missing"));
+
+    await expect(page.getByText(/instante, o endereço de rede e o aparelho usado/)).toBeVisible();
+    await expect(page.getByText(/não para acompanhar você/)).toBeVisible();
+  });
+
+  test("a família sem agenda sabe o que esperar", async ({ page }) => {
+    await page.goto(urlFor("guardian.empty"));
+
+    await expect(page.getByText(/A clínica entra em contato/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Nenhum plano montado ainda" })).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

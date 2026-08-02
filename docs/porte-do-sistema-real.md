@@ -299,6 +299,38 @@ Cinco regras, nove cenários, as telas `Kiosk` e `Nps`, e vinte e quatro testes.
 
 Verde: `pnpm check` e 295 jornadas Playwright.
 
+### 11. Portais externos, parte 2: responsável legal — `porte/portal-responsavel`
+
+Concluída.
+
+A família vê o combinado, não o registro clínico. Não há tentativa, evolução nem
+prontuário aqui — e essa ausência é decisão, não lacuna do porte.
+
+O que existe aqui e em nenhuma outra tela do produto é o **consentimento**: a
+família aceita o plano terapêutico do filho assinando com o próprio nome. Três
+decisões seguem daí:
+
+- **O plano é mostrado por inteiro antes do aceite**, com metas e objetivos na
+  linguagem da devolutiva. Consentir com um resumo não é consentir.
+- **A assinatura é um campo de texto, não uma caixa de seleção.** Digitar o
+  próprio nome é um ato; marcar uma caixa é um reflexo.
+- **A negativa de escopo vem antes do conteúdo.** Um identificador adivinhado
+  não revela nem o nome da criança nem as metas dela.
+
+O aceite grava quatro coisas juntas — aprovação, assinatura, data e qual
+responsável assinou —, e foi escrevendo a regra que apareceu um buraco no meu
+próprio contrato: eu tinha enunciado os quatro e modelado três. Um paciente pode
+ter mais de um responsável legal, e o monólito grava `legal_guardian_id`
+justamente por isso. Corrigido.
+
+O aceite dos termos guarda instante, endereço de rede e dispositivo. A tela diz
+isso antes de guardar, e diz para quê: registro do consentimento, não
+acompanhamento de navegação.
+
+Cinco regras, sete cenários, a tela `GuardianPortal` e dezenove testes.
+
+Verde: `pnpm check` e 316 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

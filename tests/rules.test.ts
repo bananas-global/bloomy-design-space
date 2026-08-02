@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  GuardianPlan,
+  GuardianPortalData,
   SupervisionLink,
   TeamMember,
   HealthcareInvoice,
@@ -128,6 +130,16 @@ import {
   stepIndex,
   validateNps,
 } from "../src/rules/publicPortal.js";
+import {
+  acceptPlan,
+  canAcceptPlan,
+  hasAcceptedTerms,
+  isExpired,
+  missingTermsContext,
+  overlappingPlans,
+  plansAwaitingAcceptance,
+  upcomingSchedules,
+} from "../src/rules/guardianPortal.js";
 
 /**
  * Testes das regras de negócio.
@@ -2351,5 +2363,243 @@ describe("envio do NPS é pergunta diferente da validade do registro", () => {
 
   it("o envio ainda recusa nota fora da escala", () => {
     expect(canSubmitNps({ code: "K7M2Q", sent: true, rating: 42 }).reason).toMatch(/entre 0 e 10/);
+  });
+});
+
+/* ============================================== portal do responsável legal */
+
+/**
+ * O consentimento é o que acontece aqui e em nenhuma outra tela do produto.
+ * Estes testes fixam o que fica registrado dele — e as duas situações em que
+ * assinar não pode acontecer.
+ */
+
+const THEO_REF = { id: "pac-theo", name: "Théo Andrade Lins", birthDate: "2019-11-04" };
+const LAURA_REF = { id: "pac-laura", name: "Laura Menendes Pinto", birthDate: "2017-12-02" };
+
+function guardianPlan(overrides: Partial<GuardianPlan> = {}): GuardianPlan {
+  return {
+    id: "pei",
+    patient: THEO_REF,
+    name: "PEI 2026-2",
+    startAt: "2026-07-01",
+    endAt: "2026-12-31",
+    expired: false,
+    guardianApproved: false,
+    goals: [{ id: "m", name: "Comunicação funcional", objectives: ["Pedir itens"] }],
+    ...overrides,
+  };
+}
+
+function guardianData(overrides: Partial<GuardianPortalData> = {}): GuardianPortalData {
+  return {
+    guardian: { id: "resp-1", name: "Renata Andrade Lins" },
+    termsAcceptance: {
+      acceptedAt: "2025-03-11T20:14:00.000-03:00",
+      ipAddress: "189.45.220.11",
+      device: "iPhone · Safari 19",
+    },
+    patients: [THEO_REF],
+    schedules: [],
+    plans: [],
+    now: "2026-07-30T09:00:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("plan-is-visible-only-to-its-guardian", () => {
+  it("recusa plano de paciente que não é dela, antes de qualquer outra checagem", () => {
+    // Mesmo vencido e já aprovado: a negativa de escopo vem primeiro, para não
+    // vazar nem a informação de que o plano existe e está em que estado.
+    const alheio = guardianPlan({ patient: LAURA_REF, expired: true, guardianApproved: true });
+    const result = canAcceptPlan(alheio, guardianData());
+    expect(result.reason).toMatch(/não é de um paciente sob sua responsabilidade/);
+  });
+
+  it("aceita plano de paciente sob responsabilidade dela", () => {
+    expect(canAcceptPlan(guardianPlan(), guardianData()).allowed).toBe(true);
+  });
+});
+
+describe("expired-plan-cannot-be-accepted", () => {
+  it("bloqueia quando a data final já passou", () => {
+    const vencido = guardianPlan({ endAt: "2026-06-30" });
+    const result = canAcceptPlan(vencido, guardianData());
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/terminou em 30\/06\/2026/);
+  });
+
+  it("bloqueia quando o sistema marcou como vencido, mesmo dentro da data", () => {
+    // As duas fontes podem discordar; considerar qualquer uma é a leitura que
+    // não deixa passar aceite em plano encerrado.
+    const marcado = guardianPlan({ expired: true, endAt: "2026-12-31" });
+    expect(isExpired(marcado, "2026-07-30T09:00:00.000-03:00")).toBe(true);
+    expect(canAcceptPlan(marcado, guardianData()).allowed).toBe(false);
+  });
+
+  it("plano dentro da vigência e não marcado não está vencido", () => {
+    expect(isExpired(guardianPlan(), "2026-07-30T09:00:00.000-03:00")).toBe(false);
+  });
+
+  it("já aceito bloqueia antes de olhar a vigência, dizendo quando foi", () => {
+    const aceito = guardianPlan({ guardianApproved: true, signedAt: "2026-07-05" });
+    expect(canAcceptPlan(aceito, guardianData()).reason).toMatch(/já aceitou este plano em 05\/07\/2026/);
+  });
+});
+
+describe("plan-acceptance-records-who-when-and-what", () => {
+  it("grava aprovação, assinatura, data e quem assinou, no mesmo ato", () => {
+    const result = acceptPlan(guardianPlan(), "resp-1", "Renata Andrade Lins", "2026-07-30");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.plan.guardianApproved).toBe(true);
+      expect(result.plan.signature).toBe("Renata Andrade Lins");
+      expect(result.plan.signedAt).toBe("2026-07-30");
+      expect(result.plan.signedByGuardianId).toBe("resp-1");
+    }
+  });
+
+  it("assinatura em branco não é assinatura", () => {
+    const result = acceptPlan(guardianPlan(), "resp-1", "   ", "2026-07-30");
+    expect(result.ok).toBe(false);
+    expect(result.ok === false && result.reason).toMatch(/Digite seu nome completo/);
+  });
+
+  it("apara o espaço em volta do nome digitado", () => {
+    const result = acceptPlan(guardianPlan(), "resp-1", "  Renata  ", "2026-07-30");
+    expect(result.ok === true && result.plan.signature).toBe("Renata");
+  });
+});
+
+describe("plans-cannot-overlap-for-a-patient", () => {
+  const existentes = [
+    guardianPlan({ id: "a", startAt: "2026-01-01", endAt: "2026-06-30" }),
+    guardianPlan({ id: "b", startAt: "2026-07-01", endAt: "2026-12-31" }),
+  ];
+
+  it("detecta sobreposição parcial", () => {
+    const conflito = overlappingPlans(existentes, {
+      patientId: "pac-theo",
+      startAt: "2026-06-15",
+      endAt: "2026-08-15",
+    });
+    expect(conflito.map((p) => p.id)).toEqual(["a", "b"]);
+  });
+
+  it("dois planos que se encostam no mesmo dia estão sobrepostos naquele dia", () => {
+    const conflito = overlappingPlans(existentes, {
+      patientId: "pac-theo",
+      startAt: "2026-06-30",
+      endAt: "2026-06-30",
+    });
+    expect(conflito.map((p) => p.id)).toEqual(["a"]);
+  });
+
+  it("período livre não conflita", () => {
+    expect(
+      overlappingPlans(existentes, {
+        patientId: "pac-theo",
+        startAt: "2027-01-01",
+        endAt: "2027-06-30",
+      }),
+    ).toEqual([]);
+  });
+
+  it("plano de outro paciente nunca conflita", () => {
+    expect(
+      overlappingPlans(existentes, {
+        patientId: "pac-laura",
+        startAt: "2026-06-15",
+        endAt: "2026-08-15",
+      }),
+    ).toEqual([]);
+  });
+
+  it("editar o próprio plano não conflita consigo mesmo", () => {
+    const conflito = overlappingPlans(existentes, {
+      patientId: "pac-theo",
+      startAt: "2026-01-01",
+      endAt: "2026-06-30",
+      excludeId: "a",
+    });
+    expect(conflito).toEqual([]);
+  });
+});
+
+describe("terms-acceptance-records-context", () => {
+  it("os três dados precisam estar presentes", () => {
+    expect(missingTermsContext(undefined)).toEqual([
+      "instante",
+      "endereço de rede",
+      "dispositivo",
+    ]);
+    expect(
+      missingTermsContext({ acceptedAt: "2025-03-11T20:14:00.000-03:00", ipAddress: "", device: "iPhone" }),
+    ).toEqual(["endereço de rede"]);
+  });
+
+  it("aceite completo não acusa nada", () => {
+    expect(missingTermsContext(guardianData().termsAcceptance)).toEqual([]);
+    expect(hasAcceptedTerms(guardianData())).toBe(true);
+    expect(hasAcceptedTerms(guardianData({ termsAcceptance: undefined }))).toBe(false);
+  });
+});
+
+describe("o que a família vê da agenda", () => {
+  const dados = guardianData({
+    schedules: [
+      {
+        id: "passado",
+        patientName: "Théo",
+        start: "2026-07-20T10:00:00.000-03:00",
+        end: "2026-07-20T11:00:00.000-03:00",
+        professionalName: "Marina",
+        serviceName: "ABA",
+        unitName: "Pinheiros",
+        cancelled: false,
+      },
+      {
+        id: "cancelado",
+        patientName: "Théo",
+        start: "2026-08-06T10:00:00.000-03:00",
+        end: "2026-08-06T11:00:00.000-03:00",
+        professionalName: "Marina",
+        serviceName: "ABA",
+        unitName: "Pinheiros",
+        cancelled: true,
+      },
+      {
+        id: "futuro",
+        patientName: "Théo",
+        start: "2026-08-04T09:00:00.000-03:00",
+        end: "2026-08-04T10:00:00.000-03:00",
+        professionalName: "Clara",
+        serviceName: "Psicologia",
+        unitName: "Pinheiros",
+        cancelled: false,
+      },
+    ],
+  });
+
+  it("mostra o que ainda vai acontecer, em ordem de horário", () => {
+    expect(upcomingSchedules(dados).map((s) => s.id)).toEqual(["futuro", "cancelado"]);
+  });
+
+  it("cancelado continua na lista — sumir faria a família descobrir na clínica", () => {
+    expect(upcomingSchedules(dados).some((s) => s.cancelled)).toBe(true);
+  });
+});
+
+describe("planos esperando aceite", () => {
+  it("conta só os próprios, vigentes e não assinados", () => {
+    const dados = guardianData({
+      plans: [
+        guardianPlan({ id: "pendente" }),
+        guardianPlan({ id: "assinado", guardianApproved: true }),
+        guardianPlan({ id: "vencido", expired: true }),
+        guardianPlan({ id: "alheio", patient: LAURA_REF }),
+      ],
+    });
+    expect(plansAwaitingAcceptance(dados).map((p) => p.id)).toEqual(["pendente"]);
   });
 });

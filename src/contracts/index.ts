@@ -978,6 +978,76 @@ export type NpsData = {
 };
 
 /* ================================================================== *
+ * Portal do responsável legal — consentimento e acompanhamento
+ * ================================================================== */
+
+/**
+ * O Plano de Ensino Individualizado, do lado de quem consente.
+ *
+ * `guardianApproved`, `signature` e `signedAt` são gravados juntos no aceite. É
+ * um consentimento formal: define o que vai ser ensinado ao filho e por quanto
+ * tempo — e é a assinatura que responde por ele depois.
+ */
+export type GuardianPlan = {
+  id: string;
+  patient: PatientRef;
+  name: string;
+  startAt: string;
+  endAt: string;
+  expired: boolean;
+  observation?: string;
+  guardianApproved: boolean;
+  /** Nome digitado como assinatura. Preenchido junto com a data. */
+  signature?: string;
+  signedAt?: string;
+  /**
+   * Qual responsável assinou.
+   *
+   * Um paciente pode ter mais de um responsável legal, e o monólito grava
+   * `legal_guardian_id` no aceite justamente por isso. Sem este campo, o
+   * consentimento diria que alguém concordou, sem dizer quem.
+   */
+  signedByGuardianId?: string;
+  /** Metas do plano, no vocabulário que a família lê. */
+  goals: { id: string; name: string; objectives: string[] }[];
+};
+
+/**
+ * Aceite dos termos de uso.
+ *
+ * Guarda IP e dispositivo além do instante. Não é telemetria: é o que sustenta
+ * o consentimento se alguém contestar depois que aceitou.
+ */
+export type TermsAcceptance = {
+  acceptedAt: string;
+  ipAddress: string;
+  device: string;
+};
+
+/** Um atendimento como a família o vê: sem registro clínico, só o combinado. */
+export type GuardianSchedule = {
+  id: string;
+  patientName: string;
+  start: string;
+  end: string;
+  professionalName: string;
+  serviceName: string;
+  unitName: string;
+  /** `true` quando o horário foi cancelado. A família precisa saber. */
+  cancelled: boolean;
+};
+
+export type GuardianPortalData = {
+  guardian: { id: string; name: string };
+  termsAcceptance?: TermsAcceptance;
+  patients: PatientRef[];
+  schedules: GuardianSchedule[];
+  plans: GuardianPlan[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 
