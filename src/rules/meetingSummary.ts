@@ -189,3 +189,71 @@ export function authorLabel(record: MeetingRecord): string | undefined {
     ? "escrito por uma pessoa"
     : "gerado pela rotina";
 }
+
+/**
+ * A linha de `appointment` que pode nunca ter existido.
+ *
+ * Na criação do atendimento:
+ *
+ * ```elixir
+ * defp create_appointment({:ok, custom_service}) do
+ *   CustomServices.add_appointment(%{custom_service_id: custom_service.id, ...})
+ *   {:ok, custom_service}
+ * end
+ * ```
+ *
+ * O resultado do insert é descartado. E na rotina das 3h:
+ *
+ * ```elixir
+ * appointment: %{id: custom_service.appointment.id, content: content}
+ * ```
+ *
+ * `custom_service.appointment` é `nil` quando a linha não existe, e `nil.id`
+ * levanta. Não há `rescue` em `regenerate/0` nem no worker.
+ */
+export const appointmentRowRules: Rule[] = [
+  {
+    id: "the-appointment-row-can-silently-fail-to-exist",
+    statement:
+      "Ao criar o atendimento, o sistema insere a linha do registro e **descarta o resultado**, devolvendo sucesso de qualquer jeito. Se o insert falhar, o atendimento existe sem o lugar onde o registro oficial seria escrito, e nada avisa.",
+    rationale:
+      "É o padrão que mais se repete neste sistema — o valor que diria o que aconteceu é calculado e jogado fora —, e aqui ele cria um estado que nenhuma outra parte do código espera encontrar. O atendimento parece normal em toda tela: só quem for gravar o registro descobre que não há onde.",
+    source: "src/rules/meetingSummary.ts",
+  },
+  {
+    id: "one-record-without-an-appointment-stops-the-night",
+    statement:
+      "A rotina das 3h lê o identificador do registro sem conferir se ele existe. Um atendimento sem essa linha levanta exceção dentro do laço, e o laço não é protegido: **tudo que vinha depois na fila daquela noite não é processado**.",
+    rationale:
+      "Não é uma reunião perdida, é a fila inteira a partir dali. A tarefa ainda tenta de novo — vinte vezes, pelo padrão do Oban —, e as vinte estouram no mesmo registro. Como falhar mantém a marca de revisão como estava, o registro problemático continua na fila na noite seguinte, e bloqueia de novo. O impedimento é permanente e não tem sintoma: ninguém pediu resumo nenhum, ele simplesmente nunca chega.",
+    source: "src/rules/meetingSummary.ts",
+  },
+];
+
+/** Os atendimentos que não têm onde gravar o registro oficial. */
+export function missingAppointmentRow(data: MeetingSummaryData): MeetingRecord[] {
+  return data.records.filter((record) => !record.hasAppointmentRow);
+}
+
+/**
+ * Implementação de `one-record-without-an-appointment-stops-the-night`.
+ *
+ * O laço percorre a fila e levanta no primeiro registro sem a linha. O que já
+ * passou foi gravado; o que vem depois não é sequer tentado.
+ */
+export function firstToRaise(data: MeetingSummaryData): MeetingRecord | undefined {
+  return willBeRewrittenTonight(data).find((record) => !record.hasAppointmentRow);
+}
+
+export function blockedByTheCrash(data: MeetingSummaryData): MeetingRecord[] {
+  const fila = willBeRewrittenTonight(data);
+  const posicao = fila.findIndex((record) => !record.hasAppointmentRow);
+  return posicao === -1 ? [] : fila.slice(posicao + 1);
+}
+
+/** O que a noite de fato conclui antes de a exceção interromper o laço. */
+export function processedBeforeTheCrash(data: MeetingSummaryData): MeetingRecord[] {
+  const fila = willBeRewrittenTonight(data);
+  const posicao = fila.findIndex((record) => !record.hasAppointmentRow);
+  return posicao === -1 ? fila : fila.slice(0, posicao);
+}

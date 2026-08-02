@@ -111,6 +111,34 @@ export const meetingSummaryScenarios: Scenario[] = [
     tags: ["regra", "risco", "exceção"],
   },
   {
+    id: "session.meeting-summary-blocked-night",
+    title: "Um atendimento sem registro trava a noite inteira",
+    intent:
+      "Mostrar que a perda não é de uma reunião, e sim de tudo que vinha depois dela na fila.",
+    route: "/sessions/meeting-summary",
+    persona: "operation",
+    fixture: "meeting-summary-blocked-night",
+    rules: [
+      "the-appointment-row-can-silently-fail-to-exist",
+      "one-record-without-an-appointment-stops-the-night",
+    ],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: [
+      "`Create.create_appointment/1` descarta o resultado do insert e devolve sucesso.",
+      "A rotina lê `custom_service.appointment.id` sem conferir nulo.",
+      "Não há `rescue` no laço nem no worker; o padrão do Oban são 20 tentativas.",
+      "O terceiro da fila nunca teve a linha de registro criada.",
+    ],
+    expected: [
+      "O atendimento que interrompe é nomeado, junto do motivo de ele estar assim.",
+      "As reuniões bloqueadas atrás dele são listadas uma a uma.",
+      "A tela separa o que foi gravado antes da interrupção do que nem foi tentado.",
+      "A tela diz que a repetição de amanhã trava no mesmo ponto.",
+    ],
+    tags: ["regra", "exceção", "risco"],
+  },
+  {
     id: "session.meeting-summary-nothing-queued",
     title: "Madrugada sem fila",
     intent: "Fixar que os três avisos calam quando não há nada para reescrever.",

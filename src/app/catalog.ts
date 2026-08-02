@@ -46,7 +46,7 @@ import {
 import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
-import { meetingSummaryRules } from "../rules/meetingSummary.js";
+import { appointmentRowRules, meetingSummaryRules } from "../rules/meetingSummary.js";
 import { tissBatchRules } from "../rules/tissBatch.js";
 import { distributionRules } from "../rules/distribution.js";
 import { sessionRules } from "../rules/session.js";
@@ -415,6 +415,8 @@ export const modules: Module[] = [
               "Um comentário virou instrução": "session.meeting-summary-comment-as-instruction",
               "O prontuário já veio de um pedido assim":
                 "session.meeting-summary-already-generated",
+              "A noite inteira travou num registro só":
+                "session.meeting-summary-blocked-night",
               "Madrugada sem fila": "session.meeting-summary-nothing-queued",
             },
           },
@@ -1095,6 +1097,7 @@ export const rules: Rule[] = [
   ...supervisorOverdueRules,
   ...coverageRules,
   ...closureGenerationRules,
+  ...appointmentRowRules,
   ...meetingSummaryRules,
   ...tissBatchRules,
   ...distributionRules,
