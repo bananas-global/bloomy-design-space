@@ -49,18 +49,18 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 
 | | |
 | --- | --- |
-| Cenários | 251 |
-| Regras declaradas | 189 |
-| Fixtures determinísticas | 313 |
-| Telas React | 47 |
-| Testes de regra | 661 |
-| Jornadas Playwright | 863 |
-| Achados sobre o sistema real | 95 |
-| Rodadas registradas | 68 |
+| Cenários | 254 |
+| Regras declaradas | 192 |
+| Fixtures determinísticas | 318 |
+| Telas React | 48 |
+| Testes de regra | 667 |
+| Jornadas Playwright | 874 |
+| Achados sobre o sistema real | 98 |
+| Rodadas registradas | 69 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
-citado, e um script confere as 98 citações a cada verificação.
+citado, e um script confere as 101 citações a cada verificação.
 
 **O que sustenta isso não são os cenários, são as varreduras.** Nove testes
 percorrem *todos* os cenários a cada execução: nenhum renderiza vazio, nenhum
@@ -113,7 +113,7 @@ operadora deu para recusar é descartado no caminho; a lista de atendimentos que
 ficaram sem guia é montada e o retorno é ignorado; a rotina da madrugada reporta
 o tamanho da fila em vez do que concluiu; a linha de registro do atendimento é
 inserida e o resultado do insert não é olhado.
-*Achados 14, 30, 48, 58, 60, 65, 68.*
+*Achados 14, 30, 48, 58, 60, 65, 68, 97 — a família mais numerosa.*
 
 **2. O nome diz o contrário do comportamento.**
 `valid_register?` devolve `true` para texto vazio; `unanswered_count` guarda as
@@ -2413,6 +2413,67 @@ e a regra sobrevive sem nunca ter sido confirmada.
 3 achados, 4 cenários, 3 regras testáveis, 5 testes de regra, 5 jornadas.
 
 
+### 69. A troca acontece nos dois ramos; o aviso, não
+
+Última rodada. `AssumeSchedule.assume/2` — um profissional assume o atendimento
+de outro. A operação inteira roda dentro de `Repo.transaction`, e no fim:
+
+```elixir
+if can_notify?(schedule.notified_at) do
+  # ... avisa o profissional anterior, e carimba notified_at
+else
+  {:error, "O profissional responsável já recebeu uma notificação no dia de hoje"}
+end
+```
+
+**Não há `Repo.rollback` em lugar nenhum do módulo.** Então o ramo do erro não
+desfaz nada: o registro da troca já foi gravado, o participante já foi trocado,
+quem assumiu já foi notificado. O `{:error, ...}` é só um valor de retorno.
+
+Fui verificar como o chamador lê isso, esperando encontrar uma mensagem de erro
+mostrada indevidamente. **Encontrei o contrário, e é melhor.** `Repo.transaction`
+devolve `{:ok, valor}` sempre que não há rollback, e a tela casa `{:ok, _result}`
+— então ela mostra “Atendimento assumido”, sempre. O ramo `{:error, message}`
+que existe na tela **nunca executa**.
+
+São duas mortes na mesma linha: a mensagem existe e não chega, e o tratamento
+existe e não roda. Registrei as duas juntas de propósito, porque consertar um
+lado só piora — fazer o erro chegar à tela avisaria que a troca falhou, e ela
+não falhou.
+
+**O efeito é o que importa, e ele cai sobre quem não está olhando a tela.** O
+profissional que perdeu o atendimento não é avisado. Ele pode estar a caminho,
+pode ter preparado material, tem o paciente na cabeça. E quem assumiu recebe a
+mesma confirmação de sempre — nada na tela distingue as duas situações. Por isso
+cada linha carrega **duas etiquetas**: “troca feita”, que vale sempre, e o aviso,
+que não.
+
+É o mesmo padrão que abriu esta noite e o que a fecha: **o sistema calcula o que
+precisaria ser dito e descarta antes de dizer.** Da anamnese que relata sucesso
+sem terminar até esta mensagem que não tem caminho, são oito ocorrências em 98
+achados. É o defeito característico deste sistema, e nenhuma delas é um erro de
+lógica — todas são um passo a menos no fim.
+
+**E a verificação final pegou um defeito meu, no próprio harness.** A varredura
+de acessibilidade falhou num cenário que eu não tinha tocado, com
+`Execution context was destroyed, most likely because of a navigation`. Isolada
+ela passava — o clássico sintoma de corrida.
+
+A causa: o teste esperava `#conteudo` aparecer, mas `#conteudo` já existe
+durante o carregamento, e o roteador ainda pode trocar a URL depois disso. O axe
+começava a analisar no meio de uma navegação e morria. **Uma falha que parece
+violação de acessibilidade e não é.**
+
+Passei a esperar a rede parar antes de analisar. Vale registrar porque a
+tentação era outra: reexecutar, ver verde, seguir. Um varredor instável é um
+varredor que as pessoas aprendem a reexecutar em vez de ler — e aí ele deixa de
+proteger qualquer coisa. Foi a última lição da noite, e é a mesma das outras: o
+sinal que não é confiável não é meio-sinal, é ruído.
+
+3 achados, 3 cenários, 3 regras testáveis, 6 testes de regra, 5 jornadas, e um
+defeito de corrida corrigido na varredura de acessibilidade.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2515,3 +2576,6 @@ bugs do Design Space; são observações sobre o produto.
 | 93 | `PatientPolicy.scope/2` casa cláusulas na ordem, e `supervisor` aparece em duas. A primeira — por unidade — é a que roda; a segunda continua listando o papel e afirma que ele veria só os pacientes das próprias agendas. Quem conferir o alcance de acesso pode ler a parte errada. Remover a cláusula morta não muda o comportamento. | `lib/bloomy/patients/patient_policy.ex:49-67` |
 | 94 | `scope("people", _)` devolve `from(p in Patient, where: is_nil(p.id))`. O resultado está certo — o papel não enxerga paciente nenhum —, mas a intenção precisa ser deduzida de uma condição impossível, e “quisemos zero” é para manter enquanto “a condição está errada” é para consertar. | `lib/bloomy/patients/patient_policy.ex:47` |
 | 95 | **Acerto, e vale protegê-lo.** Não há cláusula final em `scope/2`: um papel não previsto derruba a chamada em vez de devolver `Patient`. A correção intuitiva — um caso final permissivo — trocaria um erro barulhento por um vazamento silencioso. | `lib/bloomy/patients/patient_policy.ex:43-84` |
+| 96 | Em `AssumeSchedule.assume/2` o ramo que recusa devolve `{:error, ...}` **sem `Repo.rollback`** — e não há rollback em nenhum ponto do módulo. A transação comita: o registro foi gravado, o participante trocado, quem assumiu notificado. O erro é só um valor de retorno. | `lib/bloomy/schedules/assume_schedule.ex:81-89` |
+| 97 | `Repo.transaction` devolve `{:ok, valor}` quando não há rollback, e a tela casa `{:ok, _result}`. O ramo `{:error, message}` do chamador **nunca executa**, e a mensagem escrita para o caso nunca chega a ninguém. Duas mortes na mesma linha. | `lib/bloomy_web/backoffice/live/professional_schedule_live/components/assume_schedule_modal.ex:60-76` |
+| 98 | O efeito: quem **perdeu** o atendimento não é avisado, e quem assumiu recebe “Atendimento assumido” igual às outras trocas. O silêncio cai sobre a pessoa que não está olhando a tela — que pode estar a caminho, com o paciente na cabeça. | `lib/bloomy/schedules/assume_schedule.ex:60-89` |

@@ -1,4 +1,18 @@
 import type {
+  Handover as TrocaResp,
+  HandoverData as TrocaData,
+} from "../src/contracts/index.js";
+import {
+  UNREACHABLE_MESSAGE,
+  handoverHappens,
+  messageReachesTheScreen,
+  minutesUntilStart,
+  previousProfessionalNotTold,
+  previousProfessionalTold,
+  takesTheRefusalBranch,
+  whatTheScreenShows,
+} from "../src/rules/handover.js";
+import type {
   PatientScopeData as EscopoData,
   ScopeRule as RegraEscopo,
 } from "../src/contracts/index.js";
@@ -7262,5 +7276,70 @@ describe("escopo de pacientes — os alcances", () => {
       regraEscopo({ id: "c", shape: "raises" }),
     ]);
     expect(rolesCovered(dados)).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Trocas de responsável
+// ---------------------------------------------------------------------------
+
+function trocaResp(o: Partial<TrocaResp> & { id: string }): TrocaResp {
+  return {
+    patientName: "Helena M.",
+    serviceName: "Terapia ocupacional",
+    previousProfessional: "Renata Alencar",
+    newProfessional: "Tiago Barreto",
+    scheduleStart: "2026-07-30T10:00:00.000-03:00",
+    alreadyNotifiedToday: false,
+    ...o,
+  };
+}
+
+const trocasResp = (handovers: TrocaResp[]): TrocaData => ({ handovers });
+
+describe("trocas de responsável — o ramo que recusa e comita", () => {
+  it("a troca acontece nos dois ramos", () => {
+    // É o eixo do achado: o ramo do erro não desfaz nada.
+    expect(handoverHappens(trocaResp({ id: "a" }))).toBe(true);
+    expect(handoverHappens(trocaResp({ id: "b", alreadyNotifiedToday: true }))).toBe(true);
+  });
+
+  it("cai no ramo do erro exatamente quando o anterior já foi avisado hoje", () => {
+    expect(takesTheRefusalBranch(trocaResp({ id: "a" }))).toBe(false);
+    expect(takesTheRefusalBranch(trocaResp({ id: "a", alreadyNotifiedToday: true }))).toBe(true);
+  });
+
+  it("separa quem ficou sem aviso de quem foi avisado", () => {
+    const dados = trocasResp([
+      trocaResp({ id: "sem1", alreadyNotifiedToday: true }),
+      trocaResp({ id: "com1" }),
+      trocaResp({ id: "sem2", alreadyNotifiedToday: true }),
+    ]);
+    expect(previousProfessionalNotTold(dados).map((t) => t.id)).toEqual(["sem1", "sem2"]);
+    expect(previousProfessionalTold(dados).map((t) => t.id)).toEqual(["com1"]);
+  });
+});
+
+describe("trocas de responsável — o que a tela diz", () => {
+  it("mostra a mesma confirmação nos dois ramos", () => {
+    // Nada distingue as duas situações para quem assumiu.
+    expect(whatTheScreenShows(trocaResp({ id: "a" }))).toBe("Atendimento assumido");
+    expect(whatTheScreenShows(trocaResp({ id: "b", alreadyNotifiedToday: true }))).toBe(
+      "Atendimento assumido",
+    );
+  });
+
+  it("a mensagem escrita para o caso não tem caminho até a tela", () => {
+    expect(UNREACHABLE_MESSAGE).toBe(
+      "O profissional responsável já recebeu uma notificação no dia de hoje",
+    );
+    expect(messageReachesTheScreen()).toBe(false);
+  });
+
+  it("mede quanto falta para o atendimento que trocou de mãos", () => {
+    const troca = trocaResp({ id: "a", scheduleStart: "2026-07-30T10:00:00.000-03:00" });
+    expect(minutesUntilStart(troca, "2026-07-30T09:30:00.000-03:00")).toBe(30);
+    // Já começou: o número fica negativo, e não é zerado.
+    expect(minutesUntilStart(troca, "2026-07-30T10:20:00.000-03:00")).toBe(-20);
   });
 });
