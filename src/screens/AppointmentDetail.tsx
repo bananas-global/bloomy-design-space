@@ -148,7 +148,10 @@ export function AppointmentDetail({ params, context }: ScreenProps) {
                   value: (
                     <a
                       href={`/patients/${appointment.patient.id}`}
-                      className="text-action underline-offset-2 hover:underline"
+                      // Alvo de toque: 24px de altura mínima. O link é o valor
+                      // inteiro da linha, não está dentro de uma frase, e a
+                      // recepção opera isto num tablet.
+                      className="inline-flex min-h-6 items-center text-action underline-offset-2 hover:underline"
                       onClick={(event) => {
                         event.preventDefault();
                         context.navigate(`/patients/${appointment.patient.id}`);

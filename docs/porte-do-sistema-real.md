@@ -1059,6 +1059,38 @@ Provada por mutação: inverti visualmente a lista de notificações com
 resultado.
 
 
+### 36. Alvo de toque e viewport estreita — `porte/toque`
+
+Dois critérios AA da WCAG 2.2 que o axe não verifica: **2.5.8 Target Size**
+(24×24 px) e **1.4.10 Reflow** (sem rolagem horizontal em largura estreita).
+Medidos a 375 px nos 186 cenários.
+
+**Reflow: limpo.** Nenhum cenário produz rolagem horizontal. As tabelas densas
+— mapa da unidade, controle de horas — rolam dentro do próprio contêiner, que
+era a decisão declarada quando foram desenhadas, e ela se sustentou.
+
+**Alvo de toque: dois defeitos e onze falsos positivos.**
+
+Os falsos positivos primeiro, porque a lição é a mesma da rodada anterior: a
+varredura acusou onze alvos de 1×1 no NPS. São os rádios `sr-only` do padrão
+"rádio escondido dentro do label" — o alvo real é o label, de 47×49 px. **O alvo
+é o que a pessoa toca, não o elemento que responde ao clique.** Onze ruídos numa
+tela sozinha bastam para o relatório inteiro deixar de ser lido, então a
+varredura passou a subir até o `label` quando o controle está escondido.
+
+Os defeitos reais eram dois links de **19 px de altura**: "Abrir cadastro" no
+detalhe do atendimento e o nome do paciente na lista. Nenhum dos dois está
+dentro de uma frase, então a exceção de linha não se aplica; poderiam se
+sustentar pela exceção de espaçamento, mas o argumento que decide é outro — 19 px
+é difícil de acertar num tablet, e a recepção opera isto num tablet. Ambos
+passaram a `min-h-6`.
+
+Provada por mutação: removi o `min-h-6` da lista de pacientes, a varredura
+reprovou, restaurei.
+
+1 jornada de varredura (186 cenários), 2 telas corrigidas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

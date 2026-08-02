@@ -93,7 +93,8 @@ function PatientRow({ patient, onOpen }: { patient: Patient; onOpen: () => void 
       <th scope="row" className="px-5 py-4 text-left align-top font-normal">
         <a
           href={`/patients/${patient.id}`}
-          className="font-semibold text-action underline-offset-2 hover:underline"
+          // 24px de altura mínima: é o alvo principal da linha da lista.
+          className="inline-flex min-h-6 items-center font-semibold text-action underline-offset-2 hover:underline"
           onClick={(event) => {
             event.preventDefault();
             onOpen();
