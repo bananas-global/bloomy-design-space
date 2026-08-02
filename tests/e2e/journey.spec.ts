@@ -2571,13 +2571,6 @@ test.describe("geração mensal de fechamentos", () => {
     await expect(page.getByText(/não tenta de novo, e ninguém é avisado/)).toBeVisible();
   });
 
-  test("o deslocamento da virada é dito com a faixa exata", async ({ page }) => {
-    await page.goto(urlFor("closures.generation-with-losses"));
-
-    await expect(page.getByText("O mês fechou três horas antes")).toBeVisible();
-    await expect(page.getByText(/21:00 e 24:00 de 2026-07-31/)).toBeVisible();
-  });
-
   test("cada profissional diz se foi pulado, se falhou ou se gerou", async ({ page }) => {
     await page.goto(urlFor("closures.generation-with-losses"));
 
@@ -2589,13 +2582,12 @@ test.describe("geração mensal de fechamentos", () => {
     await expect(lista.filter({ hasText: /^\S.*fechamento gerado$/ })).toHaveCount(2);
   });
 
-  test("numa virada sem perda, os três avisos calam", async ({ page }) => {
+  test("numa virada sem perda, os dois avisos calam", async ({ page }) => {
     await page.goto(urlFor("closures.generation-clean"));
 
     await expect(page.getByText("Virada sem perda")).toBeVisible();
     await expect(page.getByText(/não recebem fechamento/)).toHaveCount(0);
     await expect(page.getByText("Falha registrada como sucesso")).toHaveCount(0);
-    await expect(page.getByText("O mês fechou três horas antes")).toHaveCount(0);
   });
 });
 

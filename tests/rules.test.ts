@@ -5444,7 +5444,6 @@ describe("no-dates-means-always-covered", () => {
 import type { ClosureCandidate, ClosureGenerationData } from "../src/contracts/index.js";
 import {
   coveredByDeactivationWorker,
-  hoursLostAtTheBoundary,
   hoursWithoutClosure,
   obanOutcome,
   processedByWorker,
@@ -5516,21 +5515,6 @@ describe("the-worker-reports-success-with-failures-inside", () => {
   });
 });
 
-describe("the-month-closes-three-hours-early", () => {
-  it("nomeia a faixa que cai no mês seguinte quando roda na virada UTC", () => {
-    const aviso = hoursLostAtTheBoundary(geracao([], "2026-08-01T00:00:00.000Z"));
-    expect(aviso).toContain("2026-07-31");
-    expect(aviso).toContain("21:00");
-  });
-
-  it("cala quando o worker roda depois do deslocamento", () => {
-    expect(hoursLostAtTheBoundary(geracao([], "2026-08-01T06:00:00.000Z"))).toBeUndefined();
-  });
-
-  it("cala quando não roda no primeiro dia do mês", () => {
-    expect(hoursLostAtTheBoundary(geracao([], "2026-08-02T00:00:00.000Z"))).toBeUndefined();
-  });
-});
 
 /* ============================================ De onde vem uma ausência */
 
@@ -5750,8 +5734,12 @@ describe("auto-checkout-has-no-date-filter", () => {
     ).toBe(2147);
   });
 
-  it("chama de absurdo o que passa de um expediente", () => {
-    expect(absurdDuration(presenca({ id: "a" }), RODA_EM)).toBe(false);
+  it("chama de absurdo o que atravessa o dia, e não o que dura muitas horas", () => {
+    // A rotina roda às 23h: um check-in das 08h fechado nela dura 15 horas e é
+    // operação normal. Acusar por duração acusaria o worker fazendo seu papel.
+    expect(absurdDuration(presenca({ id: "a", checkinAt: "2026-07-30T08:00:00.000-03:00" }), RODA_EM)).toBe(
+      false,
+    );
     expect(
       absurdDuration(presenca({ id: "b", checkinAt: "2026-07-24T14:00:00.000-03:00" }), RODA_EM),
     ).toBe(true);

@@ -19,7 +19,6 @@ export const closureGenerationScenarios: Scenario[] = [
     rules: [
       "deactivation-on-the-first-loses-the-month-worked",
       "the-worker-reports-success-with-failures-inside",
-      "the-month-closes-three-hours-early",
     ],
     a11y: {
       keyboard: "full",
@@ -38,7 +37,6 @@ export const closureGenerationScenarios: Scenario[] = [
       "As horas sem acerto aparecem somadas, e não como adjetivo.",
       "O caso que o worker de desativação cobre aparece ao lado, para a diferença ficar clara.",
       "A falha é apontada ao lado do sucesso que o Oban registrou.",
-      "O deslocamento de três horas na virada é dito com a faixa exata.",
     ],
     tags: ["regra", "exceção", "decisão"],
   },
@@ -54,7 +52,7 @@ export const closureGenerationScenarios: Scenario[] = [
     status: "proposed",
     preconditions: ["Todos ativos, nenhuma falha, worker rodando às 06h UTC."],
     expected: [
-      "Nenhum dos três avisos aparece.",
+      "Nenhum dos dois avisos aparece.",
       "A tela diz que a virada foi sem perda, em vez de ficar em branco.",
     ],
     tags: ["sucesso"],

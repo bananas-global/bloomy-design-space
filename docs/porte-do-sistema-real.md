@@ -1728,6 +1728,52 @@ vínculo, e quem desativar primeiro leva o registro embora.
 1 regra reescrita, 1 achado corrigido, 3 testes de regra.
 
 
+### 57. Retratação: o cron do Oban roda em horário de Brasília
+
+Fui revisar os achados anteriores contra o código, desconfiado depois da
+correção da rodada 56. A primeira coisa que abri foi a configuração do Oban:
+
+```elixir
+{Oban.Plugins.Cron,
+ timezone: "America/Sao_Paulo",
+ crontab: [ ... {"01 0 1 * *", GenerateMonthlyClosuresWorker} ... ]}
+```
+
+**O cron dispara em horário local.** Um worker agendado para 00:01 roda às 03:01
+UTC — mesmo dia. `Date.utc_today()` dentro dele devolve a data certa.
+
+Isso **derruba dois achados meus**:
+
+- **49** — o mês não fecha três horas antes. Retratado.
+- **55** — a guarda de último dia do mês do `AutoRenewWorker` funciona.
+  Retratado.
+
+Os outros quatro do mesmo padrão **continuam de pé**, e agora sei exatamente
+por quê: eles não estão em workers.
+
+| Achado | Onde | Por que continua |
+| --- | --- | --- |
+| 22 | `mount` da tela de Supervisão | roda quando a pessoa abre a página, a qualquer hora |
+| 24 | `mount` do Mapa da unidade | idem |
+| 33 | `has_open_checkin?`, via API | idem |
+| 38 | corte da inativação de paciente | compara data local com `start_time` em UTC |
+
+A regra `the-month-closes-three-hours-early` foi removida do código, junto do
+bloco na tela, dos testes e da jornada.
+
+**E encontrei um erro de calibragem meu no mesmo movimento.** `AutoCheckout`
+roda às 23h **todo dia**. Minha regra chamava de absurda uma presença de mais de
+12 horas — mas um check-in das 08h que ninguém fechou é encerrado às 23h com 15
+horas, que é o worker fazendo exatamente o seu papel. A regra acusaria operação
+normal. O critério passou a ser **atravessar o dia**, que é o que de fato não
+deveria acontecer.
+
+Três correções, nenhuma superfície nova. **Um achado exagerado gasta o crédito
+dos outros, e uma regra que acusa o certo ensina a ignorar o aviso.**
+
+2 achados retratados, 1 regra removida, 1 limiar corrigido.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1783,13 +1829,13 @@ bugs do Design Space; são observações sobre o produto.
 | 46 | O filtro `health_care` reconhece duas das quatro combinações de vigência: ambas as datas dentro do período, ou ambas nulas. Um plano com **só uma** das datas não casa em nenhum ramo e não cobre data nenhuma, em consulta nenhuma. É a forma mais natural de registrar cobertura em curso, e ela falha em silêncio. | `lib/bloomy/schedules/schedule_filters.ex:246-249` |
 | 47 | **Corrigido na rodada 56.** `GenerateMonthlyClosuresWorker` filtra `p.status == true`, mas `DeactivateProfessionalWorker` cobre o caso comum gerando o fechamento na desativação. O buraco real é estreito: o fechamento gerado é o do **mês da data de desativação**, então sair no dia 1º do mês seguinte — que é como se registra "trabalhou até o fim do mês" — produz um fechamento vazio do mês novo e deixa o mês trabalhado sem nenhum. | `lib/bloomy/professionals/workers/deactivate_professional_worker.ex:114-121` |
 | 48 | O mesmo worker conta `failures` e devolve `{:ok, ...}` de qualquer jeito. O Oban registra sucesso, não reprocessa, e ninguém é avisado — a contagem de falhas existe no retorno e não vira nada. Mesmo padrão dos achados 14 e 30. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:24-27` |
-| 49 | O worker usa `Date.utc_today()` para decidir a competência. Rodando à meia-noite UTC do dia 1º, em Brasília são 21h do último dia do mês que está sendo fechado — as três últimas horas caem no fechamento seguinte, na faixa em que acompanhamento terapêutico acontece. Sexta ocorrência do padrão de fuso. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:14` |
+| 49 | ~~O worker usa `Date.utc_today()` e fecha o mês três horas antes.~~ **RETRATADO na rodada 57.** O cron do Oban está configurado com `timezone: "America/Sao_Paulo"` e este worker dispara às 00:01 locais — 03:01 UTC do mesmo dia. `Date.utc_today()` devolve a data certa e não há deslocamento. | `config/config.exs:94,112` |
 | 50 | `MarkDelayedSchedulesAsMissedWorker` converte em ausência (`missing_reason: :delay`) todo agendamento parado há sete dias em atraso. É limpeza de fila apresentada como fato clínico: ninguém observou a falta, e depois da conversão não há como distinguir do caso real sem abrir o histórico. Somado ao achado 40, o número de "ausências" contém três coisas diferentes. | `lib/bloomy/schedules/mark_delayed_schedules_as_missed_worker.ex:10-27` |
 | 51 | `NotAttendedWorker` devolve para `:not_started`, via `update_all` e sem log, todo atendimento que ficou em `:ready_for_service` ou `:ongoing` no dia anterior. A sessão que alguém começou e não fechou é desfeita na virada, sem deixar evidência de que houve início. | `lib/bloomy/schedules/not_attended_worker.ex:10-21` |
 | 52 | `MissedAttendedWorker` converte na manhã seguinte todo agendamento ainda `:scheduled` com `missing_reason: :missing_patient`. Basta a recepção não ter feito o check-in: o sistema grava que o paciente faltou, sem ninguém ter olhado. O outro worker de conversão usa `:delay`, que não acusa ninguém — a diferença entre os dois motivos é a diferença entre "ninguém fechou isto" e uma afirmação sobre uma pessoa. | `lib/bloomy/schedules/missed_attended_worker.ex:9-22` |
 | 53 | `DeactivatePatientWorker` faz `Repo.delete_all` nos vínculos profissional–paciente. O caminho manual (`ChangePatientStatus`) não os toca. Mesmo objetivo, dois códigos, e o que roda sem ninguém presente apaga o registro de quem atendeu — junto do campo de observação daquela relação. Em ABA, é justamente o que se procura quando a família volta. | `lib/bloomy/patients/workers/deactivate_patient_worker.ex:41-42` |
 | 54 | `AutoCheckout` fecha **todo** check-in sem saída, sem filtro de data, carimbando a hora em que a rotina rodou. Um check-in esquecido há três meses passa a declarar uma presença de 89 dias na unidade. A intenção — limpar a lista operacional — é boa; carimbar a duração junto é o efeito colateral. | `lib/bloomy/service_records/auto_checkout.ex:7-12` |
-| 55 | `HourMaps.Workers.AutoRenewWorker` só age se `Date.utc_today() == Date.end_of_month(today)`. Em Brasília, a janela em que essa condição é verdadeira vai das 21h do penúltimo dia às 20h59 do último — se o agendamento do worker cair fora dela, a renovação silenciosamente não acontece e a continuidade da terapia fica um mês sem mapa. Sétima ocorrência do padrão de fuso. | `lib/bloomy/patients/hour_maps/workers/auto_renew_worker.ex:13-19` |
+| 55 | ~~A guarda de último dia do mês do `AutoRenewWorker` é encolhida pelo fuso.~~ **RETRATADO na rodada 57.** O cron dispara às 03:40 locais nos dias 28–31 — 06:40 UTC do mesmo dia —, então `Date.utc_today()` e o dia local coincidem e a guarda funciona. | `config/config.exs:94,111` |
 | 56 | `PatientAuthorizations.Workers.AutoRenewWorker` estende `duration_end_at` da janela e não toca nas guias. Uma janela com saldo zero é renovada por mais três meses e continua sem sessão nenhuma — "renovada" descreve o período, não o saldo, e a descoberta acontece na tentativa de marcar. | `lib/bloomy/patients/patient_authorizations/workers/auto_renew_worker.ex:37-40` |
 | 57 | `Tiss.Workers.TissBatch` roda com `max_attempts: 1` e trata qualquer exceção com `{:discard, ...}`. O lote TISS é a fatura da clínica: uma falha de rede momentânea, ou um dado inesperado, faz o faturamento do mês sumir sem retentativa e sem erro registrado para investigar. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:2-4,27-33` |
 | 58 | No mesmo worker, a recusa da operadora e a exceção no código gravam a string idêntica "Erro ao gerar o xml", e o motivo devolvido pela operadora é descartado em `{:error, _reason}`. São problemas com donos opostos — operação e engenharia — e o registro não permite distinguir. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:25-31` |
