@@ -2063,6 +2063,60 @@ passa, porque empate com o “hoje” do sistema não é anterior.
 4 achados, 4 cenários, 4 regras testáveis, 15 testes de regra, 6 jornadas.
 
 
+### 64. 205 contra 104
+
+Sabendo o formato exato do defeito da rodada anterior, varri o monólito inteiro.
+O resultado muda a natureza do achado:
+
+- **205** chamadas a `Date.utc_today()` fora de worker, em **133** arquivos.
+- **104** usos de `CalendarHelper.local_timezone/0`, que devolve
+  `"America/Sao_Paulo"` e está escrito no próprio sistema.
+
+Não é um defeito num lugar. **É o jeito padrão de perguntar que dia é hoje.** E
+das 21h à meia-noite, as 205 respostas estão um dia à frente ao mesmo tempo.
+
+O par que prova que ninguém escolheu está no chat, em linhas seguidas:
+
+```elixir
+if(@date == Date.utc_today(), do: "bg-brand-blue ...", else: "...")
+<%= Bloomy.CalendarHelper.strftime(@date, "%A, %d de %B") %>
+```
+
+Uma linha pergunta ao relógio de fora se a data é hoje; a seguinte formata essa
+mesma data no fuso certo. `Date.utc_today()` é o que se digita sem pensar; o
+ajudante é o que se usa quando o assunto é formatar.
+
+Por isso a tela dá a **escala antes do exemplo**. Cada caso isolado é pequeno
+demais para justificar a correção, e qualquer conserto isolado deixa 204 pontos
+iguais atrás — é a forma mais difícil de defeito: distribuída, pequena em cada
+ponto, e certa três quartos do dia. As consequências são ditas **por superfície,
+não por arquivo**: “133 arquivos” não diz a ninguém o que vai quebrar; “o
+seletor de data não aceita hoje” diz.
+
+E há um caso que dispensa interpretação. O campo de encerramento do mapa de
+horas tem `min={Date.utc_today()}`: **depois das 21h, o dia de hoje some do
+calendário do próprio formulário.** Não há mensagem para ler, a data
+simplesmente não é selecionável.
+
+**Um segundo erro, independente do fuso.** A idade do paciente é
+`floor(Date.diff(hoje, nascimento) / 365)`, em oito telas. O ano tem 365,2425
+dias, então a idade vira cedo — cerca de um quarto de dia por ano acumulado.
+Medi em vez de estimar: aos doze anos, três dias antes; aos vinte, quatro. E em
+terapia infantil a idade é faixa de protocolo, critério de instrumento e o que a
+operadora autoriza. Quem procurar as crianças de doze não vai achar esta.
+
+Escolhi a data de nascimento da fixture depois de duas tentativas erradas —
+as duas primeiras não produziam divergência nenhuma, e só a conta mostrou. A
+terceira erra **nos dois cenários**, o que era o ponto: prova que a divisão por
+365 erra sozinha, sem ajuda do fuso.
+
+O cenário mais importante continua sendo o que não acusa nada. Fora da janela,
+as 205 respostas estão certas. É exatamente assim que um defeito atravessa 133
+arquivos sem ninguém reclamar.
+
+4 achados, 4 cenários, 4 regras testáveis, 10 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2151,3 +2205,7 @@ bugs do Design Space; são observações sobre o produto.
 | 79 | O único lugar que produziria a string esperada é ele próprio inalcançável: no login, `if "admin" in user.roles` compara texto com lista de átomos e é sempre falso. O seletor de papel tem o mesmo problema — recebe `params["role"]` como texto e o barra em `role in user.roles`. Três caminhos, a mesma confusão. | `lib/bloomy_web/user_auth.ex:42-48,74-82`, `lib/bloomy_web/backoffice/controllers/user_session_controller.ex:63` |
 | 80 | A mesma linha mede hoje com `Date.utc_today()`. A clínica é UTC−3 o ano inteiro, então das 21h à meia-noite o sistema já conta amanhã e recusa a data de hoje como passada — com a mensagem "Não pode ser uma data passada", que nesse caso é falsa. | `lib/bloomy/patients/patient.ex:202` |
 | 81 | Os dois defeitos se cobrem. Na janela das 21h à meia-noite ninguém desativa com a data de hoje, e a saída prevista para o caso — o administrador — é exatamente a que não funciona. Corrigir só um dos dois lados não resolve. | `lib/bloomy/patients/patient.ex:194-206` |
+| 82 | `Date.utc_today()` aparece **205 vezes fora de worker, em 133 arquivos**, enquanto `CalendarHelper.local_timezone/0` — que devolve `"America/Sao_Paulo"` e está escrito no sistema — é usado 104 vezes. Das 21h à meia-noite, as 205 respostas estão um dia à frente simultaneamente. Não é um defeito num lugar: é o jeito padrão de perguntar a data. | `lib/bloomy/calendar_helper.ex:40` e 133 arquivos |
+| 83 | No chat, a linha que decide se a data é hoje pergunta a UTC e a **linha seguinte** formata a mesma data no fuso da clínica. As duas formas convivem no mesmo componente — prova de que ninguém escolheu UTC, e de que a correção precisa de alcance, não de decisão. | `lib/bloomy_web/backoffice/live/chat_live/chat_modal.ex:61,66` |
+| 84 | O campo de data de encerramento do mapa de horas usa `min={Date.utc_today()}`. Depois das 21h o dia de hoje deixa de ser selecionável no calendário do próprio formulário — sem mensagem nenhuma para interpretar. | `lib/bloomy_web/backoffice/live/patient_live/components/hour_map/finish_modal.ex:25` |
+| 85 | A idade do paciente é `floor(Date.diff(hoje, nascimento) / 365)`, em oito telas. Como o ano tem 365,2425 dias, a idade vira cedo — medido: três dias antes do aniversário aos doze anos, quatro aos vinte. A idade é faixa de protocolo e critério do que a operadora autoriza. | `lib/bloomy_web/backoffice/live/patient_live/components/card_header.ex:54` |

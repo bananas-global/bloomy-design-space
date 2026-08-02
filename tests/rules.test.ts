@@ -1,3 +1,16 @@
+import {
+  ageAsTheSystemComputes,
+  ageInFullYears,
+  ageIsWrong,
+  clinicDate,
+  datesDisagree,
+  daysAgeTurnsEarly,
+  shareUsingTheHelper,
+  surfacesOfKind,
+  systemDate,
+  windowOpensAt,
+} from "../src/rules/todayInUtc.js";
+import type { TodayData } from "../src/contracts/index.js";
 import type {
   DeactivationAttempt as TentativaDesativacao,
   DeactivationDateData as DesativacaoData,
@@ -6860,5 +6873,89 @@ describe("data de desativação — como o motivo é dito", () => {
   it("lê a hora local do envio, e não a de UTC", () => {
     expect(localHour(tentativaDesativacao({ id: "a", submittedAt: "2026-07-30T21:40:00.000-03:00" })))
       .toBe(21);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Que dia o sistema acha que é
+// ---------------------------------------------------------------------------
+
+const hojeData: TodayData = {
+  utcCalls: 205,
+  timezoneAwareCalls: 104,
+  filesAffected: 133,
+  now: "2026-07-30T21:40:00.000-03:00",
+  birthdate: "2013-08-02",
+  surfaces: [
+    { id: "a", where: "Mapa de horas", what: "seletor", breaks: "x", kind: "input", source: "s" },
+    { id: "b", where: "Agenda", what: "guarda", breaks: "x", kind: "guard", source: "s" },
+    { id: "c", where: "Documentos", what: "filtro", breaks: "x", kind: "guard", source: "s" },
+  ],
+};
+
+describe("que dia o sistema acha que é — a janela diária", () => {
+  it("abre às 21h e vai até a meia-noite", () => {
+    expect(windowOpensAt()).toBe(21);
+    expect(datesDisagree("2026-07-30T20:59:00.000-03:00")).toBe(false);
+    expect(datesDisagree("2026-07-30T21:00:00.000-03:00")).toBe(true);
+    expect(datesDisagree("2026-07-30T23:59:00.000-03:00")).toBe(true);
+    expect(datesDisagree("2026-07-31T00:00:00.000-03:00")).toBe(false);
+  });
+
+  it("dentro da janela, o sistema conta o dia seguinte", () => {
+    expect(clinicDate(hojeData.now)).toBe("2026-07-30");
+    expect(systemDate(hojeData.now)).toBe("2026-07-31");
+  });
+
+  it("mede a proporção de uso do ajudante que conhece o fuso", () => {
+    // 104 de 309 é 34%.
+    expect(shareUsingTheHelper(hojeData)).toBe(34);
+  });
+
+  it("não divide por zero quando não há chamada nenhuma", () => {
+    expect(shareUsingTheHelper({ ...hojeData, utcCalls: 0, timezoneAwareCalls: 0 })).toBe(0);
+  });
+
+  it("agrupa as superfícies por tipo", () => {
+    expect(surfacesOfKind(hojeData, "guard").map((s) => s.id)).toEqual(["b", "c"]);
+    expect(surfacesOfKind(hojeData, "age")).toEqual([]);
+  });
+});
+
+describe("que dia o sistema acha que é — a idade dividida por 365", () => {
+  it("reproduz a conta do sistema, incluindo o arredondamento para baixo", () => {
+    expect(ageAsTheSystemComputes("2013-08-02", "2026-07-30")).toBe(13);
+    expect(ageInFullYears("2013-08-02", "2026-07-30")).toBe(12);
+    expect(ageIsWrong("2013-08-02", "2026-07-30")).toBe(true);
+  });
+
+  it("acerta no dia do aniversário e depois dele", () => {
+    expect(ageAsTheSystemComputes("2013-08-02", "2026-08-02")).toBe(13);
+    expect(ageInFullYears("2013-08-02", "2026-08-02")).toBe(13);
+    expect(ageIsWrong("2013-08-02", "2026-08-02")).toBe(false);
+    expect(ageIsWrong("2013-08-02", "2026-09-15")).toBe(false);
+  });
+
+  it("erra mais quanto maior a idade, porque o desvio acumula", () => {
+    // Medido, não estimado: aos doze faltam três dias para o aniversário e a
+    // idade já virou; aos vinte, quatro.
+    expect(daysAgeTurnsEarly("2013-08-02", "2026-07-30")).toBe(3);
+    expect(daysAgeTurnsEarly("2006-08-02", "2026-07-29")).toBe(4);
+  });
+
+  it("não acusa antecipação nenhuma longe do aniversário", () => {
+    expect(daysAgeTurnsEarly("2013-08-02", "2026-03-10")).toBe(0);
+  });
+
+  it("os dois erros são independentes e se somam", () => {
+    const nascimento = "2013-08-02";
+    // Pelo calendário da clínica faltam três dias, e a idade já virou: a
+    // divisão por 365 erra sozinha, sem ajuda do fuso.
+    expect(daysAgeTurnsEarly(nascimento, clinicDate(hojeData.now))).toBe(3);
+    // Dentro da janela o sistema conta um dia a mais, e a distância encolhe:
+    // é o mesmo erro, visto de uma data que já andou.
+    expect(daysAgeTurnsEarly(nascimento, systemDate(hojeData.now))).toBe(2);
+    expect(ageAsTheSystemComputes(nascimento, systemDate(hojeData.now))).toBe(13);
+    expect(ageInFullYears(nascimento, clinicDate(hojeData.now))).toBe(12);
   });
 });

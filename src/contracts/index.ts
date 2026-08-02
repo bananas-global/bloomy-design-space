@@ -2297,3 +2297,33 @@ export interface DeactivationAttempt {
 export interface DeactivationDateData {
   attempts: DeactivationAttempt[];
 }
+
+/**
+ * Que dia o sistema acha que é.
+ *
+ * `Date.utc_today()` aparece 205 vezes fora de worker, em 133 arquivos.
+ * `Bloomy.CalendarHelper.local_timezone/0` existe e é usado 104 vezes. O
+ * sistema sabe o próprio fuso e pergunta a data para outro.
+ */
+export interface TodaySurface {
+  id: string;
+  where: string;
+  what: string;
+  /** O que acontece entre 21h e a meia-noite. */
+  breaks: string;
+  kind: "label" | "guard" | "input" | "age";
+  source: string;
+}
+
+export interface TodayData {
+  /** Chamadas a `Date.utc_today()` fora de worker. */
+  utcCalls: number;
+  /** Chamadas ao ajudante que conhece o fuso da clínica. */
+  timezoneAwareCalls: number;
+  filesAffected: number;
+  /** O instante local a partir do qual a tela é lida. */
+  now: string;
+  /** Data de nascimento usada para demonstrar o cálculo de idade. */
+  birthdate: string;
+  surfaces: TodaySurface[];
+}
