@@ -49,6 +49,13 @@ test.describe("acessibilidade por cenário", () => {
     test(`axe sem violação bloqueante em "${scenario.title}"`, async ({ page }) => {
       await page.goto(urlFor(scenario.id));
       await page.locator("#conteudo").waitFor();
+      // `#conteudo` já existe durante o carregamento, e o roteador ainda pode
+      // trocar a URL depois disso. Sem esperar a rede parar, o axe começa a
+      // analisar durante uma navegação e morre com "execution context was
+      // destroyed" — uma falha que parece violação de acessibilidade e não é.
+      // Um varredor instável é um varredor que as pessoas aprendem a reexecutar
+      // em vez de ler.
+      await page.waitForLoadState("networkidle");
 
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
@@ -3450,5 +3457,66 @@ test.describe("escopo de pacientes", () => {
     await expect(page.getByText("o código diz outra coisa em outro ponto")).toHaveCount(0);
     // A supervisão continua vendo a unidade: o comportamento não mudou.
     await expect(page.getByText("todos os pacientes da unidade", { exact: true })).toHaveCount(1);
+  });
+});
+
+test.describe("trocas de responsável", () => {
+  test("quem perdeu o atendimento é nomeado, com paciente e horário", async ({ page }) => {
+    await page.goto(urlFor("agenda.handover-silent"));
+
+    await expect(
+      page.getByText("2 profissionais perderam atendimentos e não foram avisados"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Cláudia Ferrez — Otávio L\., às 09:30, agora é de Marcos Itaparica/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Cláudia Ferrez — Bruna S\., às 09:15, agora é de Sônia Vasques/),
+    ).toBeVisible();
+  });
+
+  test("a troca é dita como fato em todas as linhas, e o aviso só em algumas", async ({ page }) => {
+    await page.goto(urlFor("agenda.handover-silent"));
+
+    await expect(page.getByText("troca feita", { exact: true })).toHaveCount(4);
+    await expect(page.getByText("o anterior não foi avisado", { exact: true })).toHaveCount(2);
+    await expect(page.getByText("o anterior foi avisado", { exact: true })).toHaveCount(2);
+  });
+
+  test("a tela diz que quem assumiu recebeu a mesma confirmação das outras", async ({ page }) => {
+    await page.goto(urlFor("agenda.handover-silent"));
+
+    await expect(page.getByText(/Nada distingue as duas situações na tela/)).toBeVisible();
+    await expect(
+      page.getByText(/A informação que faltou não é sobre o sistema/),
+    ).toBeVisible();
+  });
+
+  test("a mensagem morta aparece entre aspas, com as duas mortes ditas juntas", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("agenda.handover-message-unreachable"));
+
+    await expect(
+      page.getByText("A frase que explicaria isso existe e não tem caminho"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("“O profissional responsável já recebeu uma notificação no dia de hoje”"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/a mensagem que não chega e o tratamento que não executa/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/avisaria que a troca falhou, e ela não falhou/),
+    ).toBeVisible();
+  });
+
+  test("com todos avisados, o silêncio não aparece", async ({ page }) => {
+    await page.goto(urlFor("agenda.handover-all-notified"));
+
+    await expect(page.getByText(/não foram avisados/)).toHaveCount(0);
+    await expect(page.getByText("o anterior não foi avisado", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("o anterior foi avisado", { exact: true })).toHaveCount(4);
+    await expect(page.getByText("troca feita", { exact: true })).toHaveCount(4);
   });
 });

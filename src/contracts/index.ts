@@ -2403,3 +2403,31 @@ export interface ScopeRule {
 export interface PatientScopeData {
   rules: ScopeRule[];
 }
+
+/**
+ * Assumir um agendamento de outro profissional.
+ *
+ * A troca acontece dentro de `Repo.transaction`, e o ramo que recusa devolve
+ * `{:error, ...}` **sem** `Repo.rollback`. A transação comita, e o chamador
+ * recebe `{:ok, {:error, ...}}`.
+ */
+export interface Handover {
+  id: string;
+  patientName: string;
+  serviceName: string;
+  /** Quem estava com o atendimento. */
+  previousProfessional: string;
+  /** Quem assumiu. */
+  newProfessional: string;
+  scheduleStart: string;
+  /**
+   * O responsável anterior já foi notificado sobre este agendamento hoje.
+   *
+   * É o que faz a rotina cair no ramo que devolve erro — e comitar mesmo assim.
+   */
+  alreadyNotifiedToday: boolean;
+}
+
+export interface HandoverData {
+  handovers: Handover[];
+}

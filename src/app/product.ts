@@ -40,6 +40,7 @@ import { AuthorizationRenewal } from "../screens/AuthorizationRenewal.js";
 import { FieldOrdering } from "../screens/FieldOrdering.js";
 import { DeactivationDate } from "../screens/DeactivationDate.js";
 import { AutoCheckin } from "../screens/AutoCheckin.js";
+import { Handover } from "../screens/Handover.js";
 import { PatientScope } from "../screens/PatientScope.js";
 import { PlanSignature } from "../screens/PlanSignature.js";
 import { TodayInUtc } from "../screens/TodayInUtc.js";
@@ -103,6 +104,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/public/auto-checkin", screen: AutoCheckin },
     { path: "/guardian/plan-signature", screen: PlanSignature },
     { path: "/team/patient-scope", screen: PatientScope },
+    { path: "/agenda/handovers", screen: Handover },
     { path: "/sessions/meeting-summary", screen: MeetingSummary },
     { path: "/closures/tiss-batch", screen: TissBatch },
     { path: "/authorizations/distribution", screen: Distribution },
