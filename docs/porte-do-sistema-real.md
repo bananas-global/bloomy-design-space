@@ -55,8 +55,8 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Telas React | 48 |
 | Testes de regra | 667 |
 | Jornadas Playwright | 877 |
-| Achados sobre o sistema real | 98 |
-| Rodadas registradas | 71 |
+| Achados sobre o sistema real | 100 |
+| Rodadas registradas | 72 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
 antes de cada merge. Nenhum arquivo do monólito foi modificado — ele foi lido e
@@ -2582,6 +2582,58 @@ teriam evitado a tentativa.
 3 correções, 1 varredura nova, 45 quebras encontradas e fechadas.
 
 
+### 72. O espelho, e a primeira coisa que ele reflete
+
+O Bruno decidiu: **espelho total agora, melhorias viram tarefa depois.** Comecei
+pelo shell, lendo `backoffice.html.heex` e `BackofficeComponents.drawer/1` — os
+332 e 74 linhas que eu tinha ao alcance a noite inteira e não abri.
+
+O que estava errado era mais do que o visual:
+
+- **O drawer é azul-claro (`#58bada`), não navy.** Eu tinha escurecido a cor de
+  marca por contraste e usado o resultado como fundo do menu inteiro.
+- **Os rótulos eram invenção minha.** O produto diz “Agendamentos”, “Leads”,
+  “Profissionais”, “Unidades”, “Biblioteca”, “Colaboradores”, “Listas
+  gerenciais”. Eu tinha escrito “Agenda”, “Visitas”, “Equipe”, “Estrutura”. O
+  vocabulário é a parte do produto que mais aparece em conversa, e eu tinha
+  trocado sete palavras dele.
+- **O título da página ficava no cabeçalho**, fora do `<main>`. No sistema ele
+  vive no conteúdo — o que também resolve a observação da rodada 70: quem usa o
+  atalho de pular agora aterrissa antes do título, não depois.
+- **Faltavam os blocos de unidade e perfil** à direita do cabeçalho, que são o
+  que diz em qual clínica e sob qual papel a pessoa está.
+
+Itens que existem no sistema e ainda não foram portados — Dashboard, Biblioteca,
+Operadoras, Serviços, Bloqueios, Colaboradores — aparecem **inativos, com o
+motivo no título**. Esconder faria o Design Space parecer mais completo do que é.
+
+**E o espelho refletiu um problema do produto na primeira execução.** Copiado o
+azul verdadeiro, a varredura de acessibilidade passou a acusar contraste em
+todos os 254 cenários. Medido no navegador: branco sobre o azul do drawer dá
+**2,22:1**, e o verde do rótulo “Unidade” sobre branco dá **2,81:1**. AA pede
+4,5:1 — e o texto do drawer é 18px em negrito, que não alcança o limiar de
+“texto grande”, então os 4,5:1 valem para ele também.
+
+Não maquiei. Os elementos espelhados ganharam a marca `espelho-do-sistema`, o
+axe passa a excluí-los, **e um teste novo mede os dois números e os prende**. Se
+o sistema corrigir, o teste falha e a exclusão sai junto; se alguém “melhorar” a
+cópia sem o sistema ter mudado, o teste falha também — e aí deixou de ser
+espelho. Excluir sem medir seria esconder.
+
+Errei a conta na primeira vez: calculei 2,20 à mão e o navegador devolveu 2,22.
+O número do navegador é o que vale, e corrigi nos três lugares onde eu já tinha
+escrito o meu.
+
+Um teste meu caiu junto, e caiu com razão: ele fixava “Agenda”, “Equipe” e
+“Estrutura” — **era o teste que estava segurando a invenção no lugar.** Agora
+fixa os rótulos do produto, e mais duas coisas que antes não eram verificadas: os
+itens pendentes aparecem inativos, e os itens com permissão continuam sendo
+filtrados por ela.
+
+2 achados, 1 shell espelhado, 1 varredura nova de contraste, 19 ícones
+aproximados com o nome do original registrado.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2687,3 +2739,5 @@ bugs do Design Space; são observações sobre o produto.
 | 96 | Em `AssumeSchedule.assume/2` o ramo que recusa devolve `{:error, ...}` **sem `Repo.rollback`** — e não há rollback em nenhum ponto do módulo. A transação comita: o registro foi gravado, o participante trocado, quem assumiu notificado. O erro é só um valor de retorno. | `lib/bloomy/schedules/assume_schedule.ex:81-89` |
 | 97 | `Repo.transaction` devolve `{:ok, valor}` quando não há rollback, e a tela casa `{:ok, _result}`. O ramo `{:error, message}` do chamador **nunca executa**, e a mensagem escrita para o caso nunca chega a ninguém. Duas mortes na mesma linha. | `lib/bloomy_web/backoffice/live/professional_schedule_live/components/assume_schedule_modal.ex:60-76` |
 | 98 | O efeito: quem **perdeu** o atendimento não é avisado, e quem assumiu recebe “Atendimento assumido” igual às outras trocas. O silêncio cai sobre a pessoa que não está olhando a tela — que pode estar a caminho, com o paciente na cabeça. | `lib/bloomy/schedules/assume_schedule.ex:60-89` |
+| 99 | O menu lateral usa branco em negrito sobre `--color-brand-blue` (`#58bada`): **2,22:1**, medido no navegador. AA pede 4,5:1, e o texto de 18px em negrito não alcança o limiar de “texto grande” que permitiria 3:1. Vale para todas as telas do backoffice, o tempo inteiro. | `assets/css/app.css:84`, `lib/bloomy_web/components/backoffice_components.ex:51` |
+| 100 | No cabeçalho, o rótulo “Unidade” usa `--color-green` (`#3db03a`) sobre branco: **2,81:1**. Mesmo problema, em texto menor e permanente. O rótulo “Perfil”, em roxo, passa com 4,89:1 — então a correção é pontual, não uma revisão de paleta. | `lib/bloomy_web/components/layouts/backoffice.html.heex:141,180` |

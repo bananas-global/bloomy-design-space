@@ -74,6 +74,20 @@
      existe um token de ação separado. */
   --color-cyan-brand: #58bada;
 
+  /* ------------------------------------------------- paleta do sistema
+     Valores copiados de `assets/css/app.css` do monólito, sem ajuste. São
+     usados onde o espelho manda — o drawer, os quadrados de ícone do
+     cabeçalho — e por isso carregam os problemas de contraste do original.
+     Ver o achado 99: branco sobre `--color-brand-blue` dá 2,22:1. */
+  --color-brand-blue: #58bada;
+  --color-brand-blue-dark: #4094bb;
+  --color-brand-purple: #805ee6;
+  --color-brand-purple-dark: #2b235b;
+  --color-purple: #7459e4;
+  --color-green: #3db03a;
+
+  --shadow-main: 2px 2px 12px 0px rgba(0, 0, 0, 0.04);
+
   /* Ação: o azul do CTA e do link. Escurecido a partir do
      `--brand-blue-dark` original (#4094bb, 3.40:1) até passar AA nas duas
      direções — texto sobre branco e branco sobre preenchimento. */
