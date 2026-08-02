@@ -185,3 +185,20 @@ summary:focus-visible,
 .bloomy-drawer [tabindex]:focus-visible {
   outline-color: var(--color-cyan-brand);
 }
+
+/* Cadeia longa sem espaços — e-mail de responsável, nome de arquivo,
+   identificador de guia, URL colada num recado do chat — não tem onde quebrar.
+   Sem isto o texto simplesmente sai da caixa e é cortado: medido, 400
+   caracteres produziam 2.782 px de texto dentro de um parágrafo de 726 px, e a
+   página nem rolava para denunciar.
+
+   `break-word`, e **não** `anywhere`. Tentei `anywhere` primeiro, com o
+   argumento de que ele também deixa o item flex encolher — e o argumento estava
+   errado: é justamente isso que quebra. A 375 px, os links da agenda viraram
+   tiras verticais de uma letra, 13 px de largura por 199 px de altura, porque o
+   contêiner passou a poder encolher até o menor caractere. `break-word` quebra
+   a palavra longa quando falta espaço e não mexe no tamanho mínimo do
+   contêiner. */
+#conteudo {
+  overflow-wrap: break-word;
+}
