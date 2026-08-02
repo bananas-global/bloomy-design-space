@@ -1120,6 +1120,33 @@ foram do mesmo tipo: **medir pouco aprova muito.**
 Registrado em `docs/decisions/0005`. 1 jornada de varredura, 294 conversões.
 
 
+### 38. A cadeia longa sem espaços — `porte/texto-longo`
+
+E-mail de responsável, nome de arquivo, identificador de guia, URL colada num
+recado do chat: todos existem no produto real e nenhum tem onde quebrar.
+
+**A primeira sonda não achou nada, e o nada era o pior caso.** Ela media
+`scrollWidth` do documento: a página não rolava, logo estava tudo bem. Medido no
+elemento, 400 caracteres produziam **2.782 px de texto dentro de um parágrafo de
+726 px** — algum contêiner acima simplesmente cortava. Texto ilegível, sem sinal
+nenhum, aprovado como sucesso. Quarta vez esta noite que medir a coisa errada
+aprova o defeito.
+
+A correção foi de uma linha, e **a primeira tentativa piorou**. Escolhi
+`overflow-wrap: anywhere` com o argumento de que ele também deixa o item flex
+encolher; o argumento estava errado, é justamente isso que quebra. A varredura de
+alvo de toque reprovou na mesma rodada: a 375 px, os links da agenda viraram
+tiras verticais de uma letra — 13 px de largura por 199 px de altura. Trocado por
+`break-word`, que quebra a palavra longa e não mexe no tamanho mínimo do
+contêiner. As duas varreduras passam.
+
+Vale registrar que foi **uma varredura anterior que pegou o estrago de uma
+correção nova**. É o argumento a favor de deixá-las permanentes em vez de rodar
+uma vez e apagar.
+
+1 jornada de varredura (186 cenários), 1 linha de CSS.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
