@@ -5443,6 +5443,7 @@ describe("no-dates-means-always-covered", () => {
 
 import type { ClosureCandidate, ClosureGenerationData } from "../src/contracts/index.js";
 import {
+  coveredByDeactivationWorker,
   hoursLostAtTheBoundary,
   hoursWithoutClosure,
   obanOutcome,
@@ -5459,29 +5460,42 @@ function geracao(candidates: ClosureCandidate[], ranAt = "2026-08-01T00:00:00.00
   return { month: "2026-07", ranAt, candidates };
 }
 
-describe("deactivated-professional-gets-no-closure", () => {
+describe("deactivation-on-the-first-loses-the-month-worked", () => {
   it("o worker só processa quem está ativo agora e tem horas", () => {
     expect(processedByWorker(candidato({ id: "a" }))).toBe(true);
     expect(processedByWorker(candidato({ id: "b", activeNow: false }))).toBe(false);
     expect(processedByWorker(candidato({ id: "c", hasClinicalHours: false }))).toBe(false);
   });
 
-  it("isola quem trabalhou e não vai receber", () => {
+  it("só perde o mês quem saiu no dia 1º do mês seguinte", () => {
     const dados = geracao([
       candidato({ id: "a" }),
-      candidato({ id: "b", activeNow: false, hoursInMonth: 118 }),
+      // Saiu dentro de julho: o worker de desativação gera julho para ela.
+      candidato({ id: "b", activeNow: false, deactivatedOn: "2026-07-28", hoursInMonth: 118 }),
+      // Saiu em 1º de agosto: gera agosto, vazio, e julho fica sem.
+      candidato({ id: "c", activeNow: false, deactivatedOn: "2026-08-01", hoursInMonth: 140 }),
       // Inativo e sem horas: não trabalhou, então não é perda.
-      candidato({ id: "c", activeNow: false, hasClinicalHours: false }),
+      candidato({ id: "d", activeNow: false, hasClinicalHours: false }),
     ]);
-    expect(workedButGetsNoClosure(dados).map((e) => e.id)).toEqual(["b"]);
+    expect(workedButGetsNoClosure(dados).map((e) => e.id)).toEqual(["c"]);
+    expect(coveredByDeactivationWorker(dados).map((e) => e.id)).toEqual(["b"]);
   });
 
-  it("soma as horas sem acerto, para a perda ter tamanho", () => {
+  it("soma só as horas que de fato ficam sem acerto", () => {
     const dados = geracao([
-      candidato({ id: "b", activeNow: false, hoursInMonth: 118 }),
-      candidato({ id: "d", activeNow: false, hoursInMonth: 140 }),
+      candidato({ id: "b", activeNow: false, deactivatedOn: "2026-07-28", hoursInMonth: 118 }),
+      candidato({ id: "c", activeNow: false, deactivatedOn: "2026-08-01", hoursInMonth: 140 }),
     ]);
-    expect(hoursWithoutClosure(dados)).toBe(258);
+    expect(hoursWithoutClosure(dados)).toBe(140);
+  });
+
+  it("atravessa a virada de ano ao calcular o dia 1º seguinte", () => {
+    const dezembro: ClosureGenerationData = {
+      month: "2026-12",
+      ranAt: "2027-01-01T00:00:00.000Z",
+      candidates: [candidato({ id: "c", activeNow: false, deactivatedOn: "2027-01-01" })],
+    };
+    expect(workedButGetsNoClosure(dezembro).map((e) => e.id)).toEqual(["c"]);
   });
 });
 

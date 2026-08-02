@@ -1689,6 +1689,45 @@ está registrado como tal.
 2 cenários, 8 testes de regra, 4 jornadas.
 
 
+### 56. Uma correção: o buraco do fechamento é mais estreito do que publiquei
+
+Lendo `DeactivateProfessionalWorker` para o bloco de cadastros, encontrei
+`generate_closures_for_deactivated/1` — e ele **corrige um achado meu**.
+
+Na rodada 48 registrei que um profissional desativado antes da virada não
+recebe fechamento pelas horas que trabalhou. **Isso é falso no caso comum.** O
+worker de desativação gera o fechamento:
+
+```elixir
+date = professional.deactivation_date || Date.utc_today()
+maybe_terminate_contract(professional, date)
+GenerateClosureService.generate(professional, date.month, date.year)
+```
+
+Quem sai em 28 de julho recebe o fechamento de julho. Os dois workers quase se
+cobrem.
+
+**O buraco real é outro, e é estreito:** o fechamento gerado é o do mês da
+**data de desativação**. Uma desativação em 1º de agosto — que é exatamente como
+se registra "trabalhou até o fim de julho" — gera um fechamento de **agosto**,
+vazio, e julho fica sem nenhum.
+
+A regra, a implementação, a fixture, a tela e a jornada foram reescritas para
+essa versão. A tela passou a mostrar **o caso coberto ao lado do descoberto**,
+de propósito: sem ele, alguém lê o aviso e "conserta" um worker que funciona.
+
+O achado 47 está marcado como corrigido na tabela, com a citação apontando agora
+para o código que o corrige. **Deixar a versão errada de pé teria sido pior que
+não tê-la escrito** — um achado exagerado gasta o crédito dos outros cinquenta e
+nove.
+
+Junto, uma confirmação do achado 53 pelo outro lado: `remove_professional_patients`
+também faz `Multi.delete_all` nos vínculos. Os dois lados da relação apagam o
+vínculo, e quem desativar primeiro leva o registro embora.
+
+1 regra reescrita, 1 achado corrigido, 3 testes de regra.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1742,7 +1781,7 @@ bugs do Design Space; são observações sobre o produto.
 | 44 | Somando o achado 43 ao 21: a etapa `pending_supervisor_signature` some da lista de atraso da coordenação **e** da tela de Supervisão. É a única das quatro situações abertas que não aparece em lista nenhuma de cobrança. | `lib/bloomy/schedules/schedule_filters.ex:87` |
 | 45 | `supervisor_query` é a quarta definição de atraso do arquivo e a única com duas janelas na mesma consulta: imediata para os agendamentos do próprio supervisor, 48 horas para os dos colegas da unidade. É a única vez que o sistema aplica a alguém um prazo mais duro que aos outros — vale preservar explicitamente, porque parece erro para quem for simplificar. | `lib/bloomy/schedules/schedule_filters.ex:95-118` |
 | 46 | O filtro `health_care` reconhece duas das quatro combinações de vigência: ambas as datas dentro do período, ou ambas nulas. Um plano com **só uma** das datas não casa em nenhum ramo e não cobre data nenhuma, em consulta nenhuma. É a forma mais natural de registrar cobertura em curso, e ela falha em silêncio. | `lib/bloomy/schedules/schedule_filters.ex:246-249` |
-| 47 | `GenerateMonthlyClosuresWorker` filtra `p.status == true` — ativo **quando o worker roda**, não durante o mês fechado. Um profissional desativado antes da virada não recebe fechamento pelas horas que trabalhou, e a ausência de um fechamento não gera sinal nenhum. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:41` |
+| 47 | **Corrigido na rodada 56.** `GenerateMonthlyClosuresWorker` filtra `p.status == true`, mas `DeactivateProfessionalWorker` cobre o caso comum gerando o fechamento na desativação. O buraco real é estreito: o fechamento gerado é o do **mês da data de desativação**, então sair no dia 1º do mês seguinte — que é como se registra "trabalhou até o fim do mês" — produz um fechamento vazio do mês novo e deixa o mês trabalhado sem nenhum. | `lib/bloomy/professionals/workers/deactivate_professional_worker.ex:114-121` |
 | 48 | O mesmo worker conta `failures` e devolve `{:ok, ...}` de qualquer jeito. O Oban registra sucesso, não reprocessa, e ninguém é avisado — a contagem de falhas existe no retorno e não vira nada. Mesmo padrão dos achados 14 e 30. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:24-27` |
 | 49 | O worker usa `Date.utc_today()` para decidir a competência. Rodando à meia-noite UTC do dia 1º, em Brasília são 21h do último dia do mês que está sendo fechado — as três últimas horas caem no fechamento seguinte, na faixa em que acompanhamento terapêutico acontece. Sexta ocorrência do padrão de fuso. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:14` |
 | 50 | `MarkDelayedSchedulesAsMissedWorker` converte em ausência (`missing_reason: :delay`) todo agendamento parado há sete dias em atraso. É limpeza de fila apresentada como fato clínico: ninguém observou a falta, e depois da conversão não há como distinguir do caso real sem abrir o histórico. Somado ao achado 40, o número de "ausências" contém três coisas diferentes. | `lib/bloomy/schedules/mark_delayed_schedules_as_missed_worker.ex:10-27` |
@@ -1756,3 +1795,4 @@ bugs do Design Space; são observações sobre o produto.
 | 58 | No mesmo worker, a recusa da operadora e a exceção no código gravam a string idêntica "Erro ao gerar o xml", e o motivo devolvido pela operadora é descartado em `{:error, _reason}`. São problemas com donos opostos — operação e engenharia — e o registro não permite distinguir. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:25-31` |
 | 59 | `Distributor.distribute/2` ordena os atendimentos do dia por `start_time` e consome os pacotes nessa ordem. Com saldo menor que a demanda, quem é atendido de manhã fica com guia e quem é atendido à tarde fica sem — a ordem do relógio decide o que a clínica consegue cobrar, sem que ninguém a tenha escolhido. | `lib/bloomy/authorizations/distributor.ex:28-30` |
 | 60 | O distribuidor acumula `skipped_schedule_ids` e devolve a lista no resultado; `DistributorWorker` chama `Distributor.run()` e ignora o retorno. A lista dos atendimentos que não serão faturados existe formada no instante da decisão e é descartada. Quarta ocorrência do padrão dos achados 14, 30, 48 e 52. | `lib/bloomy/authorizations/workers/distributor_worker.ex:6-10` |
+| 61 | `DeactivateProfessionalWorker` também faz `Multi.delete_all` nos vínculos profissional–paciente. Somado ao achado 53, os dois lados da relação apagam o vínculo na desativação — quem for desativado primeiro leva o registro de quem atendeu quem. | `lib/bloomy/professionals/workers/deactivate_professional_worker.ex:77-85` |

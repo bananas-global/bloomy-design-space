@@ -10,11 +10,11 @@ import type { ClosureCandidate, ClosureGenerationData } from "../contracts/index
  */
 export const closureGenerationRules: Rule[] = [
   {
-    id: "deactivated-professional-gets-no-closure",
+    id: "deactivation-on-the-first-loses-the-month-worked",
     statement:
-      "A busca filtra `p.status == true` — ativo **na hora em que o worker roda**, e não durante o mês fechado. Quem trabalhou o mês inteiro e foi desativado antes da virada não recebe fechamento.",
+      "O worker mensal filtra `p.status == true`. O de desativação cobre esse buraco gerando o fechamento — mas do mês da **data de desativação**, não do mês trabalhado. Quando a desativação cai no dia 1º, o mês que acabou fica sem fechamento e o que começou ganha um vazio.",
     rationale:
-      "O trabalho aconteceu e as horas estão registradas; o que mudou foi o cadastro, depois. É dinheiro que deixa de ser acertado por causa de uma data em outro formulário — e ninguém percebe, porque a ausência de um fechamento não gera nada.",
+      "Os dois workers juntos resolvem o caso comum: quem sai no dia 28 recebe o fechamento daquele mês. O caso que escapa é estreito e silencioso — uma data de desativação no primeiro dia do mês seguinte, que é como se registra “trabalhou até o fim de julho”.",
     source: "src/rules/closureGeneration.ts",
   },
   {
@@ -41,14 +41,40 @@ export function processedByWorker(candidate: ClosureCandidate): boolean {
 }
 
 /**
- * Implementação de `deactivated-professional-gets-no-closure`.
+ * Implementação de `deactivation-on-the-first-loses-the-month-worked`.
  *
- * Trabalhou no mês e não vai receber fechamento porque o cadastro mudou depois.
+ * O worker de desativação gera o fechamento do mês da **data de desativação**.
+ * Quem saiu dentro do mês fechado recebe normalmente; quem saiu no dia 1º do
+ * mês seguinte recebe um fechamento do mês novo — vazio — e o mês trabalhado
+ * fica sem.
  */
 export function workedButGetsNoClosure(data: ClosureGenerationData): ClosureCandidate[] {
+  const [ano, mes] = data.month.split("-");
+  const primeiroDoSeguinte = mesSeguinte(Number(ano), Number(mes));
+
   return data.candidates.filter(
-    (candidate) => candidate.hasClinicalHours && !candidate.activeNow,
+    (candidate) =>
+      candidate.hasClinicalHours &&
+      !candidate.activeNow &&
+      candidate.deactivatedOn === primeiroDoSeguinte,
   );
+}
+
+/** Quem saiu dentro do mês fechado: o worker de desativação cobre. */
+export function coveredByDeactivationWorker(
+  data: ClosureGenerationData,
+): ClosureCandidate[] {
+  return data.candidates.filter(
+    (candidate) =>
+      candidate.hasClinicalHours &&
+      !candidate.activeNow &&
+      (candidate.deactivatedOn ?? "").startsWith(data.month),
+  );
+}
+
+function mesSeguinte(ano: number, mes: number): string {
+  const proximo = mes === 12 ? { ano: ano + 1, mes: 1 } : { ano, mes: mes + 1 };
+  return `${proximo.ano}-${String(proximo.mes).padStart(2, "0")}-01`;
 }
 
 /** As horas que ficam sem acerto — a perda com tamanho, e não como adjetivo. */

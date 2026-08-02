@@ -10,14 +10,14 @@ import type { Scenario } from "@brucesantos/design-space";
 export const closureGenerationScenarios: Scenario[] = [
   {
     id: "closures.generation-with-losses",
-    title: "Quem trabalhou e não recebe fechamento",
+    title: "Sair no dia 1º faz o mês trabalhado ficar sem fechamento",
     intent:
-      "Tornar visível que a rotina filtra por quem está ativo agora, e não por quem estava ativo durante o mês fechado.",
+      "Delimitar com precisão o buraco entre dois workers que quase se cobrem — e mostrar o caso coberto ao lado, para ninguém consertar o que funciona.",
     route: "/closures/generation",
     persona: "clinic_admin",
     fixture: "closure-generation-with-losses",
     rules: [
-      "deactivated-professional-gets-no-closure",
+      "deactivation-on-the-first-loses-the-month-worked",
       "the-worker-reports-success-with-failures-inside",
       "the-month-closes-three-hours-early",
     ],
@@ -30,11 +30,13 @@ export const closureGenerationScenarios: Scenario[] = [
     status: "in-review",
     preconditions: [
       "`GenerateMonthlyClosuresWorker` filtra `p.status == true` na hora em que roda.",
-      "Dois profissionais com horas em julho foram desativados em 28/07 e 31/07.",
+      "`DeactivateProfessionalWorker` gera o fechamento do mês da data de desativação.",
+      "Uma profissional saiu em 28/07 (coberta) e outro em 1º/08 (julho fica sem).",
       "Uma geração falhou, e o worker devolveu `{:ok, ...}` assim mesmo.",
     ],
     expected: [
       "As horas sem acerto aparecem somadas, e não como adjetivo.",
+      "O caso que o worker de desativação cobre aparece ao lado, para a diferença ficar clara.",
       "A falha é apontada ao lado do sucesso que o Oban registrou.",
       "O deslocamento de três horas na virada é dito com a faixa exata.",
     ],
