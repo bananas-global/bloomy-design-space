@@ -86,6 +86,49 @@
   --color-purple: #7459e4;
   --color-green: #3db03a;
 
+  --color-pink: #b23c76;
+  --color-pink-dark: #852d58;
+  --color-pink-light: #fae4ef;
+  --color-purple-dark: #463589;
+  --color-purple-light: #eae6fb;
+  --color-green-dark: #256a23;
+  --color-green-light: #e2f3e1;
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-warning: #ffc402;
+  --color-warning-dark: #dba301;
+  --color-orange: #f58d37;
+  --color-orange-dark: #cd7445;
+  --color-orange-light: #fdeee1;
+  --color-red: #f04646;
+  --color-red-dark: #902a2a;
+  --color-red-light: #fde3e3;
+  --color-cyan: #38bcb0;
+  --color-cyan-dark: #22716a;
+  --color-cyan-light: #e1f5f3;
+  --color-blue: #0eb2e5;
+  --color-blue-dark: #086b89;
+  --color-blue-light: #dbf3fb;
+  --color-yellow: #ffc402;
+  --color-yellow-dark: #dba301;
+  --color-background: #f0f6f8;
+  --color-background-auth: #efeff8;
+  --color-background-public: #eef6f9;
+  --color-brand-purple-light: #8474b4;
+  --color-brand-red: #ff445d;
+  --color-brand-red-dark: #db3158;
+  --color-brand-green: #87c619;
+  --color-brand-green-dark: #6daa12;
+  --color-brand-orange: #ef995f;
+  --color-brand-orange-dark: #e17c38;
+  --color-brand-accent-dark: #6144c5;
+  --color-brand-accent: #805ee6;
+  --color-brand-info-dark: #546ad8;
+  --color-brand-info: #748dfc;
+  --color-brand-neutral: #6f9dac;
+  --color-fuchsia: #c62d9a;
+
   --shadow-main: 2px 2px 12px 0px rgba(0, 0, 0, 0.04);
 
   /* Ação: o azul do CTA e do link. Escurecido a partir do

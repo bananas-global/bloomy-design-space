@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 /**
- * Confere as citações ao monólito em `docs/`.
+ * Confere as citações ao monólito em `docs/` e na galeria de componentes.
+ *
+ * A galeria entrou no escopo porque ela é um índice de 47 arquivos e linhas do
+ * sistema: sem conferência, envelhece em silêncio e passa a apontar para o
+ * lugar errado — que é pior que não apontar.
  *
  * A tabela de achados aponta para arquivo e linha do sistema real. Uma citação
  * uma linha fora manda o leitor para o lugar errado e derruba a confiança na
@@ -34,11 +38,42 @@ const docs = readdirSync("docs", { recursive: true })
   .filter((name) => typeof name === "string" && name.endsWith(".md"))
   .map((name) => join("docs", name));
 
+// A galeria cita `core_components.ex` uma vez por componente. As citações lá
+// vivem em atributos de string, não em crases, então o padrão é outro.
+const fontes = ["src/gallery/entries.tsx"].filter((caminho) => existsSync(caminho));
+
 /** `caminho.ex` ou `caminho.ex:12` ou `caminho.ex:12-40` ou `caminho.ex:12,37,64` */
 const CITATION = /`(lib\/[^`\s]+?\.exs?)(?::([\d,\-]+))?`/g;
 
 const problems = [];
 let checked = 0;
+
+const CITACAO_SOLTA = /["'](lib\/[^"'\s]+?\.exs?):(\d+)["']/g;
+
+for (const fonte of fontes) {
+  const linhas = readFileSync(fonte, "utf8").split("\n");
+
+  for (const [index, linha] of linhas.entries()) {
+    for (const match of linha.matchAll(CITACAO_SOLTA)) {
+      const [, arquivo, numero] = match;
+      const alvo = join(monolith, arquivo);
+
+      if (!existsSync(alvo)) {
+        problems.push(`${fonte}:${index + 1} — ${arquivo} não existe no monólito`);
+        continue;
+      }
+
+      checked += 1;
+
+      const total = readFileSync(alvo, "utf8").split("\n").length;
+      if (Number(numero) > total) {
+        problems.push(
+          `${fonte}:${index + 1} — ${arquivo}:${numero} passa do fim do arquivo (${total} linhas)`,
+        );
+      }
+    }
+  }
+}
 
 for (const doc of docs) {
   const text = readFileSync(doc, "utf8");

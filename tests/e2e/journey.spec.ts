@@ -1202,6 +1202,11 @@ test.describe("superfícies", () => {
 
     const nav = page.getByLabel("Navegação principal");
 
+    // O drawer nasce recolhido, como no sistema: sem expandir, os rótulos não
+    // estão na tela. O nome continua alcançável pelo `aria-label`, e é por isso
+    // que as buscas por papel abaixo funcionam nos dois estados.
+    await page.getByRole("button", { name: /a navegação/ }).click();
+
     // Os rótulos do **sistema**, não os meus. Este teste antes fixava "Agenda",
     // "Equipe" e "Estrutura", que eu tinha inventado; o produto diz
     // "Agendamentos", "Profissionais" e "Unidades". Um espelho que renomeia

@@ -55,7 +55,7 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Telas React | 48 |
 | Testes de regra | 667 |
 | Jornadas Playwright | 877 |
-| Achados sobre o sistema real | 100 |
+| Achados sobre o sistema real | 102 |
 | Rodadas registradas | 72 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
@@ -2741,3 +2741,5 @@ bugs do Design Space; são observações sobre o produto.
 | 98 | O efeito: quem **perdeu** o atendimento não é avisado, e quem assumiu recebe “Atendimento assumido” igual às outras trocas. O silêncio cai sobre a pessoa que não está olhando a tela — que pode estar a caminho, com o paciente na cabeça. | `lib/bloomy/schedules/assume_schedule.ex:60-89` |
 | 99 | O menu lateral usa branco em negrito sobre `--color-brand-blue` (`#58bada`): **2,22:1**, medido no navegador. AA pede 4,5:1, e o texto de 18px em negrito não alcança o limiar de “texto grande” que permitiria 3:1. Vale para todas as telas do backoffice, o tempo inteiro. | `assets/css/app.css:84`, `lib/bloomy_web/components/backoffice_components.ex:51` |
 | 100 | No cabeçalho, o rótulo “Unidade” usa `--color-green` (`#3db03a`) sobre branco: **2,81:1**. Mesmo problema, em texto menor e permanente. O rótulo “Perfil”, em roxo, passa com 4,89:1 — então a correção é pontual, não uma revisão de paleta. | `lib/bloomy_web/components/layouts/backoffice.html.heex:141,180` |
+| 101 | O botão de ação principal — `variant="default" color="blue"` — é `bg-brand-blue text-white`: **2,22:1**, o mesmo par do menu lateral. É o botão primário do sistema inteiro, então o problema do achado 99 não está confinado à navegação. | `lib/bloomy_web/components/core_components.ex:470` |
+| 102 | `variant="outline" color="yellow"` usa `#ffc402` como texto sobre fundo claro: **1,46:1** — praticamente invisível. O `tint` amarelo, que usa o tom escuro sobre o claro, passa com 9,24:1; a correção é pontual, não uma revisão do amarelo. | `lib/bloomy_web/components/core_components.ex:483` |

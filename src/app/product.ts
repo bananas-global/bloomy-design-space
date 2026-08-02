@@ -41,6 +41,7 @@ import { AuthorizationRenewal } from "../screens/AuthorizationRenewal.js";
 import { FieldOrdering } from "../screens/FieldOrdering.js";
 import { DeactivationDate } from "../screens/DeactivationDate.js";
 import { AutoCheckin } from "../screens/AutoCheckin.js";
+import { Gallery } from "../screens/Gallery.js";
 import { Handover } from "../screens/Handover.js";
 import { PatientScope } from "../screens/PatientScope.js";
 import { PlanSignature } from "../screens/PlanSignature.js";
@@ -106,6 +107,8 @@ export const productDefinition: ProductDefinition = {
     { path: "/guardian/plan-signature", screen: guard(PlanSignature) },
     { path: "/team/patient-scope", screen: guard(PatientScope) },
     { path: "/agenda/handovers", screen: guard(Handover) },
+    // A galeria não é uma situação do produto: é a referência de componentes.
+    { path: "/componentes", screen: guard(Gallery) },
     { path: "/sessions/meeting-summary", screen: guard(MeetingSummary) },
     { path: "/closures/tiss-batch", screen: guard(TissBatch) },
     { path: "/authorizations/distribution", screen: guard(Distribution) },
