@@ -2095,3 +2095,32 @@ export interface AuthorizationRenewalData {
   windows: AuthorizationWindow[];
   today: string;
 }
+
+/* ============================================== Envio do lote TISS */
+
+/**
+ * O que aconteceu com uma tentativa de enviar o lote.
+ *
+ * `sent` e `refused` são respostas da operadora. `crashed` é exceção no
+ * próprio código. **No sistema real, `refused` e `crashed` gravam a mesma
+ * string** — a distinção existe aqui e não lá.
+ */
+export type BatchOutcome = "sent" | "refused" | "crashed" | "pending";
+
+export interface BatchAttempt {
+  id: string;
+  invoiceCode: string;
+  insurerName: string;
+  authorizationCount: number;
+  amountCents: number;
+  attemptedAt: string;
+  outcome: BatchOutcome;
+  /** O que a operadora respondeu, quando respondeu. O código real descarta. */
+  insurerMessage?: string;
+  /** O que o job registrou. Igual para recusa e para exceção. */
+  loggedMessage?: string;
+}
+
+export interface TissBatchData {
+  attempts: BatchAttempt[];
+}

@@ -1620,6 +1620,43 @@ lados** — quem ainda pode ligar e quem não pode.
 2 cenários, 5 testes de regra, 4 jornadas.
 
 
+### 54. A fatura que some sem erro — `porte/lote-tiss`
+
+O lote TISS é a fatura da clínica para a operadora. `Tiss.Workers.TissBatch` o
+gera e envia, e três decisões desse worker fazem uma fatura sumir sem produzir
+erro:
+
+```elixir
+use Oban.Worker, max_attempts: 1
+...
+{:error, _reason} -> {:error, "Erro ao gerar o xml"}
+rescue
+  _exception -> {:discard, "Erro ao gerar o xml"}
+```
+
+- **Nenhuma retentativa.** Uma indisponibilidade momentânea da operadora, que se
+  resolveria sozinha em minutos, vira faturamento perdido.
+- **Exceção vira `:discard`** — o veredito mais definitivo do Oban: nem erro
+  para investigar, nem nova tentativa. Um lote que estourou desaparece com a
+  mesma discrição de um que deu certo.
+- **A recusa da operadora e a exceção gravam a mesma string**, e o motivo que a
+  operadora deu é descartado no `{:error, _reason}`.
+
+São dois problemas com **donos opostos**: um se resolve conversando com a
+operadora, o outro corrigindo código. Pelo registro, ninguém distingue — e a
+resposta da operadora, que diria qual é qual, foi jogada fora.
+
+A tela separa os dois desfechos, mostra a resposta da operadora com a ressalva
+de que o código a descarta, e dá tamanho em dinheiro ao que se perdeu: na
+fixture, R$ 23.900,00 que ninguém vai reenviar.
+
+**A varredura de jargão pegou outra regressão minha** — escrevi `max_attempts`
+no texto da tela. Terceira vez que uma verificação permanente reprova trabalho
+novo meu; o nome do parâmetro foi para a regra e as pré-condições.
+
+3 cenários, 8 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1683,3 +1720,5 @@ bugs do Design Space; são observações sobre o produto.
 | 54 | `AutoCheckout` fecha **todo** check-in sem saída, sem filtro de data, carimbando a hora em que a rotina rodou. Um check-in esquecido há três meses passa a declarar uma presença de 89 dias na unidade. A intenção — limpar a lista operacional — é boa; carimbar a duração junto é o efeito colateral. | `lib/bloomy/service_records/auto_checkout.ex:7-12` |
 | 55 | `HourMaps.Workers.AutoRenewWorker` só age se `Date.utc_today() == Date.end_of_month(today)`. Em Brasília, a janela em que essa condição é verdadeira vai das 21h do penúltimo dia às 20h59 do último — se o agendamento do worker cair fora dela, a renovação silenciosamente não acontece e a continuidade da terapia fica um mês sem mapa. Sétima ocorrência do padrão de fuso. | `lib/bloomy/patients/hour_maps/workers/auto_renew_worker.ex:13-19` |
 | 56 | `PatientAuthorizations.Workers.AutoRenewWorker` estende `duration_end_at` da janela e não toca nas guias. Uma janela com saldo zero é renovada por mais três meses e continua sem sessão nenhuma — "renovada" descreve o período, não o saldo, e a descoberta acontece na tentativa de marcar. | `lib/bloomy/patients/patient_authorizations/workers/auto_renew_worker.ex:37-40` |
+| 57 | `Tiss.Workers.TissBatch` roda com `max_attempts: 1` e trata qualquer exceção com `{:discard, ...}`. O lote TISS é a fatura da clínica: uma falha de rede momentânea, ou um dado inesperado, faz o faturamento do mês sumir sem retentativa e sem erro registrado para investigar. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:2-4,27-33` |
+| 58 | No mesmo worker, a recusa da operadora e a exceção no código gravam a string idêntica "Erro ao gerar o xml", e o motivo devolvido pela operadora é descartado em `{:error, _reason}`. São problemas com donos opostos — operação e engenharia — e o registro não permite distinguir. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:25-31` |
