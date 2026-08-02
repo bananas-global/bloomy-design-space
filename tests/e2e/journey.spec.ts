@@ -1259,6 +1259,71 @@ test.describe("Prontuário", () => {
   });
 });
 
+test.describe("Gerência", () => {
+  test("cada frente diz de quem é", async ({ page }) => {
+    await page.goto(urlFor("management.monday"));
+
+    // Nove listas numa tela viram ruído se não estiver dito de quem é cada uma.
+    await expect(page.getByText("Relatórios atrasados")).toBeVisible();
+    await expect(page.getByText("Coordenação, com quem escreve")).toBeVisible();
+    await expect(page.getByText("Cadastros de profissional incompletos").first()).toBeVisible();
+    // "People" aparece como dono da frente e como responsável da seção: as duas
+    // são a mesma afirmação, dita onde cada uma é útil.
+    await expect(page.getByText("People", { exact: true })).toBeVisible();
+  });
+
+  test("o mais antigo não é o mais urgente, e a tela diz por quê", async ({ page }) => {
+    await page.goto(urlFor("management.reports-by-consequence"));
+
+    // O da operadora (9 dias) vem antes do da família (14 dias).
+    const primeiro = page.getByRole("listitem").filter({ hasText: "Atrasado 9 dias" });
+    await expect(primeiro).toBeVisible();
+    await expect(page.getByText(/segura a próxima autorização e o faturamento/)).toBeVisible();
+    await expect(page.getByText(/faz uma família procurar outra clínica/)).toBeVisible();
+  });
+
+  test("quem pediu aparece em cada relatório", async ({ page }) => {
+    await page.goto(urlFor("management.reports-by-consequence"));
+
+    await expect(page.getByText("Pedido por: Operadora").first()).toBeVisible();
+    await expect(page.getByText("Pedido por: Família").first()).toBeVisible();
+  });
+
+  test("só a lacuna que trava sessão é alarmada", async ({ page }) => {
+    await page.goto(urlFor("management.mentorship-gap"));
+
+    await expect(page.getByText("Trava fechamento de sessão")).toHaveCount(1);
+    await expect(page.getByText(/não terão quem as assine/)).toBeVisible();
+    await expect(page.getByText(/Não é um problema por si/)).toBeVisible();
+  });
+
+  test("o paciente sem responsável é enquadrado como deriva, não como bloqueio", async ({ page }) => {
+    await page.goto(urlFor("management.monday"));
+
+    await expect(
+      page.getByRole("heading", { name: "O atendimento continua sem ninguém respondendo pelo caso" }),
+    ).toBeVisible();
+    await expect(page.getByText(/há 46 dias/)).toBeVisible();
+  });
+
+  test("sem pendência, o vazio é uma frase e não quatro zeros", async ({ page }) => {
+    await page.goto(urlFor("management.clear"));
+
+    await expect(
+      page.getByRole("heading", { name: "Nenhuma pendência nas frentes acompanhadas" }),
+    ).toBeVisible();
+    await expect(page.getByText(/dá para fechar esta tela/)).toBeVisible();
+  });
+
+  test("quem atende não alcança a gerência", async ({ page }) => {
+    await page.goto(urlFor("management.no-access"));
+
+    await expect(
+      page.getByRole("heading", { name: "Você não tem acesso à gerência" }),
+    ).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

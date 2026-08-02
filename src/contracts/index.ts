@@ -1245,6 +1245,64 @@ export type PatientRecord = {
 };
 
 /* ================================================================== *
+ * Gerência — as filas de trabalho da coordenação
+ * ================================================================== */
+
+/**
+ * Controle de relatório.
+ *
+ * `requester` é o campo que muda tudo: um relatório pedido pela operadora tem
+ * consequência de faturamento se atrasar; um pedido pela família não tem — tem
+ * consequência de confiança, que é pior de recuperar e não aparece em nenhum
+ * indicador.
+ */
+export type ReportControl = {
+  id: string;
+  patientName: string;
+  professionalName: string;
+  reportType: "evolution_month" | "hospital_discharge";
+  status: "not_started" | "in_progress" | "completed" | "cancelled";
+  requester: "operator" | "family";
+  dueDate: string;
+  observations?: string;
+};
+
+/** Vínculo de supervisão visto pela gerência: quem cobre quem. */
+export type MentorshipGap = {
+  professionalId: string;
+  professionalName: string;
+  specialty: string;
+  /** `applicator` sem supervisor, ou `supervisor` sem nenhum supervisionado. */
+  kind: "applicator_without_supervisor" | "supervisor_without_applicators";
+};
+
+/** Profissional com cadastro incompleto, e o que falta nele. */
+export type IncompleteProfessional = {
+  id: string;
+  name: string;
+  specialty: string;
+  missing: string[];
+};
+
+/** Paciente sem responsável clínico definido na unidade. */
+export type PatientWithoutOwner = {
+  id: string;
+  name: string;
+  unitName: string;
+  sinceDate: string;
+};
+
+export type ManagementData = {
+  unit: Unit;
+  reports: ReportControl[];
+  mentorshipGaps: MentorshipGap[];
+  incompleteProfessionals: IncompleteProfessional[];
+  patientsWithoutOwner: PatientWithoutOwner[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

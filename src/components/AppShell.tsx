@@ -33,6 +33,7 @@ const NAV: NavItem[] = [
   { label: "Estrutura", path: "/structure", permission: "services.list" },
   { label: "Autorizações", path: "/authorizations", permission: "authorizations.hub" },
   { label: "Fechamentos", path: "/closures", permission: "closures.list" },
+  { label: "Gerência", path: "/management", permission: "management.list" },
 ];
 
 /**

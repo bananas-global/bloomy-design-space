@@ -16,6 +16,7 @@ import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
 import { structureFixtures } from "../fixtures/structure.js";
 import { recordFixtures } from "../fixtures/record.js";
+import { managementFixtures } from "../fixtures/management.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -31,6 +32,7 @@ import { guardianPortalRules } from "../rules/guardianPortal.js";
 import { insurerPortalRules } from "../rules/insurerPortal.js";
 import { structureRules } from "../rules/structure.js";
 import { recordRules } from "../rules/record.js";
+import { managementRules } from "../rules/management.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -46,6 +48,7 @@ import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
 import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
 import { structureScenarios } from "../scenarios/structure.js";
 import { recordScenarios } from "../scenarios/record.js";
+import { managementScenarios } from "../scenarios/management.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -526,6 +529,31 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "management",
+    name: "Gerência",
+    description:
+      "As filas de trabalho da coordenação — cada uma com um dono e uma consequência para o que fica parado.",
+    flows: [
+      {
+        id: "work-the-queues",
+        title: "Trabalhar as pendências da semana",
+        description:
+          "Da visão das frentes até as duas que custam mais caro paradas.",
+        steps: [
+          {
+            scenario: "management.monday",
+            label: "Ver o que está pendente",
+            decision: "Qual frente custa mais cara parada?",
+            branches: {
+              "Relatório da operadora": "management.reports-by-consequence",
+              "Aplicador sem supervisor": "management.mentorship-gap",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -544,6 +572,7 @@ export const scenarios: Scenario[] = [
   ...insurerPortalScenarios,
   ...structureScenarios,
   ...recordScenarios,
+  ...managementScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -563,6 +592,7 @@ export const fixtures: Fixture[] = [
   ...insurerPortalFixtures,
   ...structureFixtures,
   ...recordFixtures,
+  ...managementFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -581,6 +611,7 @@ export const rules: Rule[] = [
   ...insurerPortalRules,
   ...structureRules,
   ...recordRules,
+  ...managementRules,
 ];
 
 export { personas };

@@ -431,6 +431,35 @@ Quatro regras, sete cenários, a tela `PatientRecord` e dezoito testes.
 
 Verde: `pnpm check` e 377 jornadas Playwright.
 
+### 16. Cadastros: gerência — `porte/gerencia`
+
+Concluída.
+
+A tela de gerência do Bloomy tem nove abas e é fácil lê-la como painel de
+indicadores. Ela não é: cada aba é uma **fila de trabalho**, com dono e com
+consequência para o que fica parado. A diferença entre as duas leituras é a
+diferença entre uma tela que alguém abre toda segunda e uma que ninguém abre.
+
+- **A fila de relatórios é ordenada por consequência, não por data.**
+  `report_controls.requester` distingue operadora de família, e o mesmo atraso
+  custa coisas diferentes: um segura a próxima autorização e o faturamento; o
+  outro não trava nada no sistema e faz uma família procurar outra clínica. Um
+  atraso de nove dias da operadora vem antes de um de catorze da família.
+- **Aplicador sem supervisor é uma lacuna silenciosa.** Aparece semanas depois,
+  como uma pilha de atendimentos pendentes de uma assinatura que ninguém pode
+  dar. A gerência é o único lugar em que ela é visível antes disso.
+- **Cada frente diz de quem é.** Nove listas numa tela viram ruído sem isso: o
+  que decide se alguém age não é o número, é saber que o número é seu.
+
+Uma correção de acessibilidade no caminho, pega pelo axe: eu havia usado
+`opacity-60` nas frentes zeradas, e opacidade em texto derruba o contraste
+abaixo de AA. Frente em dia agora é dita com palavra, não com opacidade — que é
+exatamente o que o `AGENTS.md` proíbe e o que o guarda-corpo existe para pegar.
+
+Quatro regras, cinco cenários, a tela `Management` e treze testes.
+
+Verde: `pnpm check` e 394 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

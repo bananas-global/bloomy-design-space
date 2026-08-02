@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  ManagementData,
+  MentorshipGap,
+  ReportControl,
   PatientDocument,
   PatientRecord as PatientRecordType,
   Room,
@@ -175,6 +178,17 @@ import {
   hasCriteria,
   missingBehaviors,
 } from "../src/rules/record.js";
+import {
+  canOpenManagement,
+  daysLate,
+  daysWithoutOwner,
+  fronts,
+  isBlocking,
+  isOverdue,
+  mentorshipConsequence,
+  overdueConsequence,
+  reportQueue,
+} from "../src/rules/management.js";
 
 /**
  * Testes das regras de negócio.
@@ -3175,5 +3189,169 @@ describe("absence-alerts-are-per-patient", () => {
     });
     expect(absenceAlerts(semCriterio)).toEqual([]);
     expect(hasCriteria(semCriterio)).toBe(false);
+  });
+});
+
+/* ============================================================== gerência */
+
+/**
+ * A gerência é fácil de ler como painel de indicadores. Estes testes fixam a
+ * outra leitura: fila de trabalho, com dono e com consequência para o que fica
+ * parado.
+ */
+
+function reportControl(overrides: Partial<ReportControl> & { id: string }): ReportControl {
+  return {
+    patientName: "Théo",
+    professionalName: "Marina",
+    reportType: "evolution_month",
+    status: "not_started",
+    requester: "operator",
+    dueDate: "2026-07-31",
+    ...overrides,
+  };
+}
+
+function managementData(overrides: Partial<ManagementData> = {}): ManagementData {
+  return {
+    unit: { id: "u", name: "Pinheiros" },
+    now: "2026-08-03T09:00:00.000-03:00",
+    reports: [],
+    mentorshipGaps: [],
+    incompleteProfessionals: [],
+    patientsWithoutOwner: [],
+    ...overrides,
+  };
+}
+
+describe("report-urgency-depends-on-requester", () => {
+  const daOperadora = reportControl({ id: "op", requester: "operator", dueDate: "2026-07-25" });
+  const daFamilia = reportControl({ id: "fam", requester: "family", dueDate: "2026-07-20" });
+
+  it("o mais antigo não é o mais urgente", () => {
+    // 14 dias de atraso da família vêm depois de 9 dias da operadora.
+    expect(daysLate(daFamilia, managementData().now)).toBe(14);
+    expect(daysLate(daOperadora, managementData().now)).toBe(9);
+
+    const fila = reportQueue(managementData({ reports: [daFamilia, daOperadora] }));
+    expect(fila.map((r) => r.id)).toEqual(["op", "fam"]);
+  });
+
+  it("a consequência é concreta, e diferente entre as duas origens", () => {
+    expect(overdueConsequence(daOperadora)).toMatch(/segura a próxima autorização e o faturamento/);
+    expect(overdueConsequence(daFamilia)).toMatch(/não trava nada no sistema/);
+    expect(overdueConsequence(daFamilia)).toMatch(/procurar outra clínica/);
+  });
+
+  it("o que ainda não venceu fica depois de todo atraso", () => {
+    const futuro = reportControl({ id: "futuro", dueDate: "2026-08-14" });
+    const fila = reportQueue(managementData({ reports: [futuro, daFamilia, daOperadora] }));
+    expect(fila.map((r) => r.id)).toEqual(["op", "fam", "futuro"]);
+  });
+
+  it("concluído e cancelado saem da fila", () => {
+    const fila = reportQueue(
+      managementData({
+        reports: [
+          reportControl({ id: "feito", status: "completed", dueDate: "2026-07-10" }),
+          reportControl({ id: "cancelado", status: "cancelled", dueDate: "2026-07-10" }),
+          daOperadora,
+        ],
+      }),
+    );
+    expect(fila.map((r) => r.id)).toEqual(["op"]);
+  });
+
+  it("concluído não conta como atrasado, mesmo vencido", () => {
+    expect(
+      isOverdue(reportControl({ id: "x", status: "completed", dueDate: "2026-01-01" }), managementData().now),
+    ).toBe(false);
+  });
+});
+
+describe("applicator-without-supervisor-cannot-close", () => {
+  const semSupervisor: MentorshipGap = {
+    professionalId: "p1",
+    professionalName: "Otávio",
+    specialty: "Aplicador ABA",
+    kind: "applicator_without_supervisor",
+  };
+  const semSupervisionados: MentorshipGap = {
+    professionalId: "p2",
+    professionalName: "Clara",
+    specialty: "Psicologia",
+    kind: "supervisor_without_applicators",
+  };
+
+  it("só a lacuna do aplicador trava alguma coisa", () => {
+    expect(isBlocking(semSupervisor)).toBe(true);
+    expect(isBlocking(semSupervisionados)).toBe(false);
+  });
+
+  it("a consequência do aplicador é sobre sessão que não fecha", () => {
+    expect(mentorshipConsequence(semSupervisor)).toMatch(/não terão quem as assine/);
+    expect(mentorshipConsequence(semSupervisionados)).toMatch(/Não é um problema por si/);
+  });
+});
+
+describe("management-fronts-have-owners", () => {
+  const dados = managementData({
+    reports: [reportControl({ id: "op", dueDate: "2026-07-25" })],
+    mentorshipGaps: [
+      {
+        professionalId: "p1",
+        professionalName: "Otávio",
+        specialty: "Aplicador ABA",
+        kind: "applicator_without_supervisor",
+      },
+    ],
+    incompleteProfessionals: [
+      { id: "p2", name: "Helena", specialty: "TO", missing: ["CPF"] },
+    ],
+    patientsWithoutOwner: [
+      { id: "pac", name: "Noah", unitName: "Pinheiros", sinceDate: "2026-06-18" },
+    ],
+  });
+
+  it("toda frente tem dono nomeado", () => {
+    for (const front of fronts(dados)) {
+      expect(front.owner.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("marca como travante só o que de fato trava", () => {
+    const porId = Object.fromEntries(fronts(dados).map((f) => [f.id, f]));
+    expect(porId.reports!.blocking).toBe(true); // relatório da operadora atrasado
+    expect(porId.mentorship!.blocking).toBe(true);
+    expect(porId.professionals!.blocking).toBe(false);
+    expect(porId.patients!.blocking).toBe(false);
+  });
+
+  it("relatório atrasado só da família não marca a frente como travante", () => {
+    const soFamilia = managementData({
+      reports: [reportControl({ id: "fam", requester: "family", dueDate: "2026-07-20" })],
+    });
+    const frente = fronts(soFamilia).find((f) => f.id === "reports")!;
+    expect(frente.count).toBe(1);
+    expect(frente.blocking).toBe(false);
+  });
+
+  it("sem pendência, as contagens zeram", () => {
+    expect(fronts(managementData()).every((front) => front.count === 0)).toBe(true);
+  });
+});
+
+describe("patient-without-clinical-owner-drifts", () => {
+  it("conta há quantos dias o paciente está sem responsável", () => {
+    expect(daysWithoutOwner("2026-06-18", "2026-08-03T09:00:00.000-03:00")).toBe(46);
+  });
+});
+
+describe("acesso à gerência", () => {
+  it("é de admin, admin de clínica e coordenação", () => {
+    expect(canOpenManagement(["management.list"]).allowed).toBe(true);
+    expect(canOpenManagement(["patients.list"]).reason).toMatch(
+      /admin, admin de clínica e coordenação/,
+    );
   });
 });
