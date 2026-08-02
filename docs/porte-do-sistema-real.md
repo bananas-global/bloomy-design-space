@@ -935,6 +935,35 @@ O que apareceu foram quatro coisas que regra automática nenhuma pega:
 3 jornadas novas.
 
 
+### 32. Varredura de tela, e uma varredura que media o nada — `porte/varredura`
+
+Em vez de olhar mais dez telas, transformar em varredura o que a revisão visual
+tinha achado à mão: crase de markdown renderizada literalmente, jargão de código
+no texto, hierarquia de títulos.
+
+**A primeira versão passou anunciando que estava tudo certo — e media a página
+antes de o React renderizar.** `innerText` vinha vazio, nenhum título existia,
+nenhum salto era encontrado. Só notei porque a varredura de identificadores de
+permissão também voltou vazia, e eu sabia que `patients.edit` aparecia numa
+tela. Com a espera correta, os números se confirmaram: 186 cenários, **zero
+páginas vazias, zero saltos de nível, zero crases**.
+
+O registro importa mais que o resultado: eu tinha afirmado, na entrada anterior,
+que não havia salto de nível em nenhum cenário. A afirmação estava certa e a
+medição que a sustentava, não. **Uma varredura que mede o nada aprova tudo**, e é
+pior que não existir, porque produz confiança. A varredura permanente
+(`tests/e2e/varredura.spec.ts`) conta as páginas vazias e falha se houver
+alguma — a asserção vem antes das outras duas de propósito, porque sem ela as
+outras passam de graça.
+
+O achado real: **`patients.edit` aparecia na frase que a pessoa lê.** "Ela exige
+`patients.edit`" não ajuda ninguém a agir. O identificador ficou na regra e nas
+pré-condições do cenário, onde quem implementa o lê, e a frase passou a dizer o
+que a tela de destino é: o cadastro do paciente.
+
+1 jornada de varredura (186 cenários), 5 cenários com o texto corrigido.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

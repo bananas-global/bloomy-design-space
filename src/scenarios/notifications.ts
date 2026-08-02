@@ -74,7 +74,8 @@ export const notificationScenarios: Scenario[] = [
       "Ela abre o cadastro do paciente, e não o chat de onde a menção saiu.",
     ],
     expected: [
-      "“Abrir” fica desabilitado com o motivo: a tela de destino exige `patients.edit`.",
+      "“Abrir” fica indisponível com o motivo dito em português — a tela de destino é o cadastro do paciente.",
+      "O identificador da permissão (`patients.edit`) fica aqui e na regra, e não na frase que a pessoa lê.",
       "O aviso é o mesmo que o chat dá antes do envio, agora do lado de quem recebeu.",
     ],
     tags: ["permissão", "exceção"],
