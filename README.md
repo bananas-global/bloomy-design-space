@@ -23,7 +23,7 @@ própria.
 
 ## O que existe hoje
 
-110 cenários em treze módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+116 cenários em catorze módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
@@ -33,6 +33,7 @@ própria.
 | **Na Clínica** | manhã na unidade, presente sem atendimento pronto, unidade vazia, visto por quem atende, visto pelo People |
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
+| **Estrutura** | estrutura da unidade, serviço sem sala, serviço impossível de agendar, três origens de bloqueio, não cobrável dispensa check-in, unidade sem estrutura |
 | **Portal da operadora** | lista de presença, atendimentos sem fechar, agendamentos omitidos pelo escopo, o que a operadora não vê, competência sem movimento |
 | **Portal da família** | portal, plano esperando aceite, plano aceito, plano vencido, plano de outra família, termos não aceitos, sem atendimentos |
 | **Portal público** | totem esperando CPF, CPF errado, CPF sem cadastro, escolher quem chegou, nenhum atendimento hoje, chegada registrada, QR Code inválido, pesquisa de satisfação, nota baixa |
@@ -100,6 +101,11 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `incomplete-schedules-are-hidden-from-the-insurer` | O escopo omite agendamentos incompletos, e o faz em silêncio. |
 | `insurer-sees-attendance-not-clinical-record` | A operadora vê a prestação, não o conteúdo clínico. |
 | `attendance-list-counts-only-what-happened` | Só Finalizado conta como prestado. |
+| `service-decides-which-rooms-serve` | O serviço declara os tipos de sala que servem para ele. |
+| `room-capacity-limits-the-session` | Capacidade limita o atendimento; sala inativa não conta. |
+| `three-scopes-of-blocking` | Unidade, profissional e calendário — três origens, três saídas. |
+| `service-without-room-type-is-a-contradiction` | Exigir sala sem declarar tipo torna o serviço inagendável. |
+| `not-chargeable-service-skips-checkin` | O cadastro do serviço é que dispensa o check-in. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

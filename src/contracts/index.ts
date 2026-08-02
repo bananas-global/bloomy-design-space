@@ -1109,6 +1109,77 @@ export type InsurerPortalData = {
 };
 
 /* ================================================================== *
+ * Estrutura — salas, serviços e bloqueios: o que a agenda esbarra
+ * ================================================================== */
+
+/** Tipo de sala. O serviço declara quais tipos servem para ele. */
+export type RoomType = "individual" | "collective" | "motricity";
+
+export type Room = {
+  id: string;
+  name: string;
+  number?: number;
+  roomType: RoomType;
+  capacity: number;
+  active: boolean;
+  deactivationDate?: string;
+  areaName?: string;
+};
+
+/**
+ * Serviço prestado pela clínica.
+ *
+ * `roomTypes` é um campo bitwise: um serviço aceita mais de um tipo de sala. E
+ * `notChargeable` é o mesmo campo que o módulo de Atendimento consome para
+ * dispensar o check-in — outra decisão que parece do atendimento e mora no
+ * cadastro.
+ */
+export type Service = {
+  id: string;
+  name: string;
+  tussCode?: string;
+  durationInMinutes: number;
+  needsRoom: boolean;
+  /** Tipos de sala que servem. Vazio com `needsRoom` verdadeiro é contradição. */
+  roomTypes: RoomType[];
+  notChargeable: boolean;
+  specialty?: string;
+};
+
+/**
+ * Bloqueio de agenda.
+ *
+ * O produto tem três origens de bloqueio, com o mesmo formato e escopos
+ * diferentes: da unidade inteira, de um profissional, e o geral — que é onde
+ * moram os feriados.
+ *
+ * `slot` bloqueia um horário; `time_period` bloqueia um intervalo contínuo. A
+ * diferença importa na hora de explicar: "esta janela está bloqueada" e "a
+ * unidade fecha das 12h às 14h" são frases diferentes.
+ */
+export type Blocking = {
+  id: string;
+  scope: "unit" | "professional" | "general";
+  blockingType: "slot" | "time_period";
+  start: string;
+  end: string;
+  observation?: string;
+  isHoliday: boolean;
+  holidayName?: string;
+  /** Nome do profissional, quando o escopo é dele. */
+  professionalName?: string;
+};
+
+export type StructureData = {
+  unit: Unit;
+  rooms: Room[];
+  services: Service[];
+  blockings: Blocking[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

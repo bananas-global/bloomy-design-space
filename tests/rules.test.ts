@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  Room,
+  Service,
+  StructureData,
   AttendanceRow,
   InsurerPortalData,
   GuardianPlan,
@@ -150,6 +153,16 @@ import {
   notDeliveredReason,
   wasDelivered,
 } from "../src/rules/insurerPortal.js";
+import {
+  blockingMessage,
+  blockingsAt,
+  canUseRoom,
+  isImpossibleToSchedule,
+  roomServes,
+  roomsFor,
+  serviceEffects,
+  skipsCheckin,
+} from "../src/rules/structure.js";
 
 /**
  * Testes das regras de negócio.
@@ -2737,5 +2750,199 @@ describe("insurer-sees-attendance-not-clinical-record", () => {
     expect(NOT_SHARED_WITH_INSURER).toContain("a evolução escrita da sessão");
     expect(NOT_SHARED_WITH_INSURER).toContain("as tentativas registradas nos programas");
     expect(NOT_SHARED_WITH_INSURER).toHaveLength(4);
+  });
+});
+
+/* ============================================================= estrutura */
+
+/**
+ * A camada física que a agenda esbarra. Nenhuma dessas restrições aparece numa
+ * tela de agendamento — e é justamente por isso que elas precisam ter teste.
+ */
+
+function room(overrides: Partial<Room> & { id: string }): Room {
+  return {
+    name: overrides.id,
+    roomType: "individual",
+    capacity: 2,
+    active: true,
+    ...overrides,
+  };
+}
+
+function service(overrides: Partial<Service> & { id: string }): Service {
+  return {
+    name: overrides.id,
+    durationInMinutes: 60,
+    needsRoom: true,
+    roomTypes: ["individual"],
+    notChargeable: false,
+    ...overrides,
+  };
+}
+
+function structureData(overrides: Partial<StructureData> = {}): StructureData {
+  return {
+    unit: { id: "u", name: "Pinheiros" },
+    rooms: [],
+    services: [],
+    blockings: [],
+    now: "2026-07-30T09:00:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("service-decides-which-rooms-serve", () => {
+  it("sala de tipo diferente não serve, mesmo livre", () => {
+    const coletiva = room({ id: "grupo", roomType: "collective", capacity: 6 });
+    const individual = service({ id: "aba" });
+    expect(roomServes(coletiva, individual)).toBe(false);
+    expect(canUseRoom(coletiva, individual).reason).toMatch(
+      /precisa de sala individual, e grupo é coletiva/,
+    );
+  });
+
+  it("serviço que não exige sala aceita qualquer uma", () => {
+    const semSala = service({ id: "devolutiva", needsRoom: false, roomTypes: [] });
+    expect(roomServes(room({ id: "qualquer", roomType: "motricity" }), semSala)).toBe(true);
+  });
+
+  it("serviço com mais de um tipo aceito serve nos dois", () => {
+    const flexivel = service({ id: "flex", roomTypes: ["individual", "collective"] });
+    expect(roomServes(room({ id: "a" }), flexivel)).toBe(true);
+    expect(roomServes(room({ id: "b", roomType: "collective" }), flexivel)).toBe(true);
+    expect(roomServes(room({ id: "c", roomType: "motricity" }), flexivel)).toBe(false);
+  });
+});
+
+describe("room-capacity-limits-the-session", () => {
+  it("sala inativa é descartada antes de qualquer outra checagem", () => {
+    // Capacidade de uma sala em reforma não é informação útil.
+    const inativa = room({ id: "sala-4", active: false, deactivationDate: "2026-07-14", capacity: 10 });
+    const result = canUseRoom(inativa, service({ id: "aba" }), 1);
+    expect(result.reason).toMatch(/está inativa desde 14\/07\/2026/);
+  });
+
+  it("capacidade insuficiente bloqueia, dizendo os dois números", () => {
+    const pequena = room({ id: "sala-1", capacity: 2 });
+    expect(canUseRoom(pequena, service({ id: "aba" }), 4).reason).toMatch(
+      /comporta 2 pessoas, e o atendimento tem 4/,
+    );
+  });
+
+  it("lista só salas ativas, do tipo certo e com capacidade", () => {
+    const dados = structureData({
+      rooms: [
+        room({ id: "ok" }),
+        room({ id: "inativa", active: false }),
+        room({ id: "coletiva", roomType: "collective", capacity: 6 }),
+        room({ id: "pequena", capacity: 1 }),
+      ],
+    });
+    expect(roomsFor(dados, service({ id: "aba" }), 2).map((r) => r.id)).toEqual(["ok"]);
+  });
+});
+
+describe("service-without-room-type-is-a-contradiction", () => {
+  it("exigir sala sem declarar tipo torna o serviço inagendável", () => {
+    expect(isImpossibleToSchedule(service({ id: "x", needsRoom: true, roomTypes: [] }))).toBe(true);
+  });
+
+  it("não exigir sala não é contradição", () => {
+    expect(isImpossibleToSchedule(service({ id: "x", needsRoom: false, roomTypes: [] }))).toBe(
+      false,
+    );
+  });
+
+  it("o efeito distingue contradição de falta de sala", () => {
+    const dados = structureData({ rooms: [] });
+    const contraditorio = serviceEffects(
+      service({ id: "x", needsRoom: true, roomTypes: [] }),
+      dados,
+    );
+    const semSala = serviceEffects(service({ id: "y", roomTypes: ["motricity"] }), dados);
+
+    expect(contraditorio.join(" ")).toMatch(/contradição de cadastro, não falta de sala/);
+    expect(semSala.join(" ")).toMatch(/nenhuma sala ativa desta unidade atende/);
+  });
+});
+
+describe("three-scopes-of-blocking", () => {
+  const dados = structureData({
+    blockings: [
+      {
+        id: "feriado",
+        scope: "general",
+        blockingType: "slot",
+        start: "2026-07-09T00:00:00.000-03:00",
+        end: "2026-07-10T00:00:00.000-03:00",
+        isHoliday: true,
+        holidayName: "Revolução Constitucionalista",
+      },
+      {
+        id: "almoco",
+        scope: "unit",
+        blockingType: "time_period",
+        start: "2026-07-30T12:00:00.000-03:00",
+        end: "2026-07-30T14:00:00.000-03:00",
+        observation: "Unidade fechada para almoço",
+        isHoliday: false,
+      },
+      {
+        id: "ferias",
+        scope: "professional",
+        blockingType: "time_period",
+        start: "2026-07-27T00:00:00.000-03:00",
+        end: "2026-08-04T00:00:00.000-03:00",
+        observation: "Marina Okabe em férias",
+        isHoliday: false,
+        professionalName: "Marina Okabe",
+      },
+    ],
+  });
+
+  it("bloqueio de profissional só vale para ele", () => {
+    const paraMarina = blockingsAt(dados, "2026-07-30T13:00:00.000-03:00", "Marina Okabe");
+    const paraClara = blockingsAt(dados, "2026-07-30T13:00:00.000-03:00", "Clara Vidigal");
+    expect(paraMarina.map((b) => b.id)).toEqual(["almoco", "ferias"]);
+    expect(paraClara.map((b) => b.id)).toEqual(["almoco"]);
+  });
+
+  it("devolve todos os bloqueios que cobrem o instante, não só o primeiro", () => {
+    // Resolver um não libera o outro: são restrições independentes.
+    expect(blockingsAt(dados, "2026-07-30T13:00:00.000-03:00", "Marina Okabe")).toHaveLength(2);
+  });
+
+  it("o fim do intervalo é exclusivo", () => {
+    expect(blockingsAt(dados, "2026-07-30T14:00:00.000-03:00")).toHaveLength(0);
+    expect(blockingsAt(dados, "2026-07-30T12:00:00.000-03:00")).toHaveLength(1);
+  });
+
+  it("cada origem oferece uma saída diferente", () => {
+    expect(blockingMessage(dados.blockings[0]!).exit).toMatch(/outro dia/);
+    expect(blockingMessage(dados.blockings[1]!).exit).toMatch(/outro horário ou outra unidade/);
+    expect(blockingMessage(dados.blockings[2]!).exit).toMatch(/outro profissional/);
+  });
+
+  it("o feriado é nomeado no título, quando tem nome", () => {
+    expect(blockingMessage(dados.blockings[0]!).title).toMatch(
+      /Revolução Constitucionalista — a clínica não abre/,
+    );
+  });
+});
+
+describe("not-chargeable-service-skips-checkin", () => {
+  it("é o cadastro do serviço que desliga a guarda de check-in", () => {
+    expect(skipsCheckin(service({ id: "x", notChargeable: true }))).toBe(true);
+    expect(skipsCheckin(service({ id: "y" }))).toBe(false);
+  });
+
+  it("o efeito é declarado em texto, ligando cadastro e atendimento", () => {
+    const efeitos = serviceEffects(
+      service({ id: "devolutiva", needsRoom: false, roomTypes: [], notChargeable: true }),
+      structureData(),
+    );
+    expect(efeitos.join(" ")).toMatch(/dispensa o check-in/);
+    expect(efeitos.join(" ")).toMatch(/guarda de início do atendimento não se aplica/);
   });
 });

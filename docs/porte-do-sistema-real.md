@@ -353,6 +353,34 @@ Quatro regras, cinco cenários, a tela `InsurerPortal` e oito testes.
 
 Verde: `pnpm check` e 332 jornadas Playwright.
 
+### 13. Cadastros: estrutura — `porte/cadastros-estrutura`
+
+Concluída.
+
+A camada física que a agenda esbarra: sala do tipo certo, com capacidade, numa
+unidade e num horário não bloqueados. Nenhuma dessas restrições aparece em tela
+de agendamento nenhuma — nem no sistema real, nem neste Design Space até aqui —
+e é por isso que elas precisavam estar escritas.
+
+- **O serviço declara quais tipos de sala servem.** Motricidade precisa de
+  espaço e equipamento; grupo precisa de mesa grande. Sala do tipo errado não
+  atende, mesmo livre.
+- **Três origens de bloqueio, três saídas.** Unidade, profissional e calendário
+  exigem ações diferentes de quem tenta marcar: outra unidade, outro
+  profissional, outro dia. Uma mensagem única de "horário indisponível" não
+  distingue nenhuma.
+- **Contradição de cadastro não é falta de sala.** Um serviço que exige sala e
+  não declara tipo aceito é inagendável em qualquer unidade — e o cadastro
+  aceita a combinação. Quem descobre é a recepção, tentando marcar.
+
+Como o módulo de Equipe, este cadastro decide coisas em outro lugar:
+`not_chargeable` do serviço é o mesmo campo que a guarda de início do
+atendimento consulta para dispensar o check-in.
+
+Cinco regras, seis cenários, a tela `Structure` e dezesseis testes.
+
+Verde: `pnpm check` e 350 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

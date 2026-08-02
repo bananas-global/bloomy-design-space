@@ -14,6 +14,7 @@ import { teamFixtures } from "../fixtures/team.js";
 import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
+import { structureFixtures } from "../fixtures/structure.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -27,6 +28,7 @@ import { teamRules } from "../rules/team.js";
 import { publicPortalRules } from "../rules/publicPortal.js";
 import { guardianPortalRules } from "../rules/guardianPortal.js";
 import { insurerPortalRules } from "../rules/insurerPortal.js";
+import { structureRules } from "../rules/structure.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -40,6 +42,7 @@ import { teamScenarios } from "../scenarios/team.js";
 import { publicPortalScenarios } from "../scenarios/publicPortal.js";
 import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
 import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
+import { structureScenarios } from "../scenarios/structure.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -468,6 +471,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "structure",
+    name: "Estrutura",
+    description:
+      "Salas, serviços e bloqueios: a camada física que a agenda esbarra e que nenhuma tela de agendamento mostra.",
+    flows: [
+      {
+        id: "why-cannot-schedule",
+        title: "Descobrir por que um horário não pode ser marcado",
+        description:
+          "As três razões estruturais, que pedem ações diferentes: falta de sala, erro de cadastro e bloqueio.",
+        steps: [
+          {
+            scenario: "structure.unit",
+            label: "Ver a estrutura da unidade",
+            decision: "O que impede marcar este serviço?",
+            branches: {
+              "Nenhuma sala do tipo": "structure.no-room-for-service",
+              "Cadastro contraditório": "structure.impossible-service",
+              "Horário bloqueado": "structure.blockings",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -484,6 +513,7 @@ export const scenarios: Scenario[] = [
   ...publicPortalScenarios,
   ...guardianPortalScenarios,
   ...insurerPortalScenarios,
+  ...structureScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -501,6 +531,7 @@ export const fixtures: Fixture[] = [
   ...npsFixtures,
   ...guardianPortalFixtures,
   ...insurerPortalFixtures,
+  ...structureFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -517,6 +548,7 @@ export const rules: Rule[] = [
   ...publicPortalRules,
   ...guardianPortalRules,
   ...insurerPortalRules,
+  ...structureRules,
 ];
 
 export { personas };

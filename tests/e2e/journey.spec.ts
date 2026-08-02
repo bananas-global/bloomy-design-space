@@ -1093,6 +1093,68 @@ test.describe("Portal da operadora", () => {
   });
 });
 
+test.describe("Estrutura", () => {
+  test("cada serviço diz de que sala precisa e quantas atendem", async ({ page }) => {
+    await page.goto(urlFor("structure.unit"));
+
+    await expect(page.getByText("Precisa de sala individual.")).toBeVisible();
+    await expect(page.getByText("2 salas atendem a este serviço nesta unidade.")).toBeVisible();
+  });
+
+  test("falta de sala e erro de cadastro são avisos separados", async ({ page }) => {
+    await page.goto(urlFor("structure.unit"));
+
+    await expect(
+      page.getByRole("heading", { name: /não pode ser agendado em lugar nenhum/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /serviço sem sala disponível nesta unidade/ }),
+    ).toBeVisible();
+    // A distinção é o ponto: uma pede sala, a outra pede corrigir o cadastro.
+    await expect(page.getByText(/É falta de sala, não erro de cadastro/)).toBeVisible();
+  });
+
+  test("a sala inativa fica na lista, marcada e datada", async ({ page }) => {
+    await page.goto(urlFor("structure.no-room-for-service"));
+
+    await expect(page.getByText("Inativa desde 14/07/2026")).toBeVisible();
+    await expect(page.getByText("Sala de motricidade").first()).toBeVisible();
+  });
+
+  test("cada bloqueio traz a saída, não só o motivo", async ({ page }) => {
+    await page.goto(urlFor("structure.blockings"));
+
+    await expect(page.getByText("Escolha outro dia.")).toBeVisible();
+    await expect(page.getByText("Escolha outro horário ou outra unidade.")).toBeVisible();
+    await expect(page.getByText("Escolha outro profissional ou outro horário.").first()).toBeVisible();
+
+    // Feriado nomeado, e janela distinguida de período.
+    await expect(
+      page.getByText("Revolução Constitucionalista — a clínica não abre"),
+    ).toBeVisible();
+    await expect(page.getByText("Janela").first()).toBeVisible();
+    await expect(page.getByText("Período").first()).toBeVisible();
+  });
+
+  test("o serviço não cobrável declara que dispensa o check-in", async ({ page }) => {
+    await page.goto(urlFor("structure.not-chargeable-skips-checkin"));
+
+    await expect(page.getByText("Não cobrável")).toBeVisible();
+    await expect(
+      page.getByText(/dispensa o check-in do paciente — a guarda de início do atendimento não se aplica/),
+    ).toBeVisible();
+  });
+
+  test("a unidade sem estrutura explica o que falta para abrir horário", async ({ page }) => {
+    await page.goto(urlFor("structure.empty"));
+
+    await expect(
+      page.getByRole("heading", { name: "Unidade sem estrutura cadastrada" }),
+    ).toBeVisible();
+    await expect(page.getByText(/Sala e serviço são o que a agenda precisa/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));
