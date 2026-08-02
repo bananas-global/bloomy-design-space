@@ -17,6 +17,7 @@ import {
   attributionOf,
   canEditHours,
   expectedMinutes,
+  hiddenByPaging,
   expectedWithoutEnd,
   formatMinutes,
   minutesLostToTruncation,
@@ -77,6 +78,14 @@ export function ClinicalHours({ context }: ScreenProps) {
   return wrap(
     context,
     <div className="space-y-4">
+      {/* A paginação do sistema real é dita quando ela muda a leitura — e aqui
+          muda: o erro que esta tela existe para revelar só é visível somado. */}
+      {hours.page && hiddenByPaging(hours.page) && (
+        <Notice tone="warn" title="O mês não cabe numa página">
+          {hiddenByPaging(hours.page)}
+        </Notice>
+      )}
+
       <Card as="section">
         <CardHeader title="O que esta tela decide" hint={`${hours.records.length} ${hours.records.length === 1 ? "dia" : "dias"}`} />
         <div className="space-y-3 px-5 py-5">

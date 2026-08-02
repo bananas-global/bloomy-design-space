@@ -1755,6 +1755,8 @@ export interface ClinicalHourRecord {
 
 export interface ClinicalHoursData {
   records: ClinicalHourRecord[];
+  /** O recorte de paginação do sistema real, quando ele muda a leitura. */
+  page?: PageWindow;
 }
 
 /* =================================================== Marcar atendimento */
@@ -1858,4 +1860,18 @@ export interface DeactivationImpact {
   hourMapsToClose: { id: string; durationEnd: string }[];
   /** Mapas que perdem a renovação automática — todos, sem filtro de data. */
   hourMapsLosingAutoRenew: number;
+}
+
+/**
+ * Recorte de paginação do sistema real.
+ *
+ * O monólito pagina com Flop em 50 schemas, com limites de 5, 8, 10 e 15. O
+ * Design Space mostra listas inteiras — e essa diferença não é cosmética
+ * quando o limite é menor que a unidade de trabalho da tela.
+ */
+export interface PageWindow {
+  /** Itens por página no sistema real. */
+  limit: number;
+  /** Total de itens que existem no período ou filtro em vigor. */
+  total: number;
 }

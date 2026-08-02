@@ -215,3 +215,43 @@ export function formatMinutes(minutes: number): string {
   if (hours === 0) return `${sign}${rest}min`;
   return `${sign}${hours}h${String(rest).padStart(2, "0")}`;
 }
+
+/* =========================================================== paginação */
+
+import type { PageWindow } from "../contracts/index.js";
+
+/**
+ * Regras de paginação do controle de horas.
+ *
+ * `ClinicalHourRecord` declara `default_limit: 5`. A tela existe para conferir
+ * um mês — e um mês não cabe em cinco linhas.
+ */
+export const clinicalHourPaginationRules: Rule[] = [
+  {
+    id: "page-size-decides-what-can-be-compared",
+    statement:
+      "O controle de horas pagina de cinco em cinco. Conferir vinte e dois dias úteis exige cinco páginas, e nenhum total do mês aparece em nenhuma delas.",
+    rationale:
+      "O erro que esta tela precisa revelar — meia hora truncada por dia — só é visível somado. Cinco linhas por vez escondem exatamente a soma, e quem confere passa a confiar no número que o sistema oferece porque não consegue montar o próprio.",
+    source: "src/rules/clinicalHours.ts",
+  },
+];
+
+/** Quantas páginas o período em vigor ocupa no sistema real. */
+export function pageCount(window: PageWindow): number {
+  if (window.limit <= 0) return 1;
+  return Math.max(1, Math.ceil(window.total / window.limit));
+}
+
+/**
+ * O que a página em vigor **não** deixa comparar.
+ *
+ * Devolve `undefined` quando tudo cabe numa página: aí a paginação não muda
+ * nada e avisar seria ruído.
+ */
+export function hiddenByPaging(window: PageWindow): string | undefined {
+  const paginas = pageCount(window);
+  if (paginas <= 1) return undefined;
+
+  return `São ${window.total} dias no período e a tela mostra ${window.limit} por vez — ${paginas} páginas. O truncamento de cada dia é pequeno; o do mês não é, e ele só aparece somado.`;
+}

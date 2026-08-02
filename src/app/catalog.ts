@@ -50,7 +50,7 @@ import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
 import { supervisionRules } from "../rules/supervision.js";
 import { unitMapRules } from "../rules/unitMap.js";
-import { clinicalHourRules } from "../rules/clinicalHours.js";
+import { clinicalHourRules, clinicalHourPaginationRules } from "../rules/clinicalHours.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -932,6 +932,7 @@ export const rules: Rule[] = [
   ...supervisionRules,
   ...unitMapRules,
   ...clinicalHourRules,
+  ...clinicalHourPaginationRules,
 ];
 
 export { personas };
