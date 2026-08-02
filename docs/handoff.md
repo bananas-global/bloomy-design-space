@@ -39,52 +39,53 @@ assumir que deve reescrever os componentes React em Phoenix.
 
 ```markdown
 ## Cenário
-`finance.insurance-denied` — Convênio recusado
+`session.pending-supervisor` — Aguardando o supervisor
 
 ## Referência aprovada
-https://bloomy-design-space-<hash>-<escopo>.vercel.app/finance/claims/GUI-4042?scenario=finance.insurance-denied
+https://bloomy-design-space-<hash>-<escopo>.vercel.app/sessions/atd-8801?scenario=session.pending-supervisor
 
 Commit: <sha completo>
-Status do cenário: aprovado
+Status do cenário: em revisão
 
 ## Persona e permissões
-Analista financeiro · `finance.read`, `claims.read`, `claims.retry`, `patients.read`
+Supervisor · papel por unidade, `custom_services.edit`, `professionals.list`
 
 ## Pré-condições
-- Guia recusada pela SulAmérica com código TUSS-3001.
-- Dois de quatro documentos exigidos ainda não anexados.
+- A Marina assinou às 15:12.
+- O atendimento exige segunda assinatura, da Clara.
+- A exigência **não** mora no atendimento: vem do vínculo de estágio entre as
+  duas, em `src/rules/team.ts`.
 
 ## Regras
-- `retry-after-document-review` — guia recusada só pode ser reenviada depois que
-  todos os documentos exigidos estiverem anexados.
-  Implementação de referência: `src/rules/finance.ts` → `canResubmit`.
-  Testes: `tests/rules.test.ts` → "retry-after-document-review" (4 casos).
-- `denial-reason-always-visible` — motivo e código da recusa ficam visíveis na
-  tela da guia, não em um histórico que precise ser aberto.
+- `owner-signs-before-supervisor` — a assinatura do supervisor só entra depois da
+  assinatura de quem atendeu; a ordem não é negociável.
+  Implementação de referência: `src/rules/session.ts` → `canSign`.
+  Testes: `tests/rules.test.ts` → "owner-signs-before-supervisor".
+- `supervision-link-defines-second-signature` — quem precisa de segunda
+  assinatura é decidido pelo vínculo de supervisão, não pelo tipo do serviço.
+  Implementação de referência: `src/rules/team.ts` → `requiresSupervisorSignature`.
 
 ## Comportamento esperado
-- O motivo e o código da recusa aparecem na tela, acima dos dados da guia.
-- Reenviar aparece desabilitado, nomeando os documentos que faltam:
-  "Falta anexar: Relatório clínico assinado, Laudo do exame anterior."
-- Anexar os dois documentos libera o reenvio na mesma tela, sem recarregar.
-- A ação de anexar respeita `claims.retry`.
+- A assinatura já feita aparece com autoria e horário.
+- Assinar como a responsável fica **visível e desabilitado**: a etapa dela já
+  passou, e o motivo é dito por extenso.
+- A assinatura do supervisor encerra o atendimento em Finalizado.
 
 ## Estados alcançáveis
 | Estado | Como abrir |
 | --- | --- |
-| Recusa com pendência | `?scenario=finance.insurance-denied` |
-| Documentação completa | `?scenario=finance.resubmit-allowed` |
-| Pendência, não recusa | `?scenario=finance.pending-documents` |
-| Em análise | `?scenario=finance.invoice-under-review` |
-| Sem permissão | `?scenario=finance.resubmit-no-permission` |
-| Carregando | `?scenario=finance.insurance-denied&network=loading` |
-| Erro | `?scenario=finance.insurance-denied&network=error` |
+| Aguardando o supervisor | `?scenario=session.pending-supervisor` |
+| Aguardando quem atendeu | `?scenario=session.pending-signature` |
+| Registro ainda não feito | `?scenario=session.pending-register` |
+| Finalizado | `?scenario=session.finished` |
+| Sem permissão de registrar | `?scenario=session.applicator-cannot-register` |
+| Carregando | `?scenario=session.pending-supervisor&network=loading` |
+| Erro | `?scenario=session.pending-supervisor&network=error` |
 
 ## Acessibilidade
 - Jornada completável só por teclado.
 - Contraste WCAG 2.2 AA nos tokens em uso (ver aviso sobre divergência de tokens).
-- Anunciar: `claim.status` na chegada (região `role="alert"`), `retry.result`
-  após o reenvio (região `role="status"`).
+- Anunciar: `session.signed` após a assinatura (região `role="status"`).
 
 ## Observação
 Especificação executável. Stack real: Elixir/Phoenix. Traduzir comportamento e

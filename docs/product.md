@@ -2,94 +2,140 @@
 
 ## Visão
 
-Sistema de gestão para clínicas. O recorte deste Design Space cobre os três
-módulos onde a experiência tem mais ramificação e mais regra: **Agenda**,
-**Pacientes** e **Financeiro**.
+O Bloomy é um sistema de **terapia ABA para autismo**. Não é um sistema de
+clínica genérico com pacientes autistas dentro: a estrutura do produto é a
+estrutura do método. Programas com fases de aquisição, protocolos ABLLS-R,
+tentativas com dica verbal e motora, aplicadores atuando sob supervisão formal,
+planos de intervenção comportamental.
 
-O Bloomy real é um monólito Elixir/Phoenix que renderiza páginas e executa regras
-internamente, sem expor REST ou GraphQL público. Isso não impede o Design Space:
-os contratos em `src/contracts/` foram modelados a partir de fluxo, regra e
-exemplo, não derivados de uma API.
+Essa frase é a mais importante deste documento, e a mais fácil de perder. Um
+recorte que trate o Bloomy como agenda + prontuário + faturamento produz um
+produto plausível, navegável e errado — porque a unidade de trabalho da clínica
+não é a consulta, é o **passo de um programa aplicado ao longo de meses**.
+
+O Bloomy real é um monólito Elixir/Phoenix que renderiza páginas e executa
+regras internamente, sem expor REST nem GraphQL. Os contratos em
+`src/contracts/` foram derivados dos schemas, das políticas e do `enums.po` do
+sistema real, e não modelados por conta própria — a diferença aparece nos
+detalhes que ninguém inventaria, como as doze situações de agendamento ou a
+distinção entre critério consecutivo e cumulativo.
 
 ## Vocabulário
 
-O vocabulário é a interface com PO, negócio e cliente. Um nome errado aqui aparece
-na navegação e na busca, e o time passa a traduzir mentalmente.
+O vocabulário é a interface com PO, negócio e cliente. Um nome errado aqui
+aparece na navegação e na busca, e o time passa a traduzir mentalmente. Os
+termos abaixo vêm do produto real — vários deles não existem fora de ABA.
 
 | Termo | Significado |
 | --- | --- |
-| Atendimento | Um horário marcado com paciente, profissional e procedimento. |
-| Encaixe | Atendimento inserido fora da grade, geralmente por urgência. |
-| Conflito de horário | Dois atendimentos sobrepostos do mesmo profissional. |
-| Ausência | Paciente não compareceu, registrado depois da tolerância. |
-| Tolerância | 15 minutos após o horário marcado, antes de poder registrar ausência. |
-| Cadastro incompleto | Falta campo obrigatório. Bloqueia agendamento. |
-| Responsável legal | Adulto responsável por paciente menor de 18 anos. |
-| Prontuário restrito | Acesso limitado por decisão clínica ou pedido do paciente. |
-| Guia | Solicitação de autorização e pagamento enviada ao convênio. |
-| Recusa | Convênio negou a guia, com código e motivo. |
-| Pendência de documento | Convênio pediu documento adicional. Não é recusa. |
-| Reenvio | Nova submissão da guia ao convênio, após completar a documentação. |
+| Programa | O plano de ensino de uma habilidade, dividido em passos, aplicado ao longo de meses. |
+| Passo | A unidade que se ensina e se mede. Tem critério de domínio próprio. |
+| Fase de aquisição | Em que ponto do ensino o passo está: linha de base, aquisição, manutenção, generalização. |
+| Critério de domínio | Desempenho e número de sessões que declaram um passo aprendido. **Consecutivo** exige sequência; **cumulativo**, só o total. |
+| Tentativa | Uma apresentação do estímulo, com a resposta e a dica que foi necessária. |
+| Dica | O apoio dado para a resposta acontecer — verbal, motora, gestual. O objetivo é retirá-la. |
+| Protocolo | Instrumento de avaliação padronizado, como o ABLLS-R. Perguntas com pontuação, não texto livre. |
+| Aplicador | Quem aplica o programa na sessão, sob supervisão formal de um profissional habilitado. |
+| Supervisão | O vínculo formal entre quem aplica e quem responde clinicamente. Decide quem assina. |
+| Plano de intervenção | O documento que reúne os programas ativos do paciente e é aceito pelo responsável. |
+| Mapa de horas | A semana pretendida do paciente, que o sistema materializa em agendamentos. |
+| Fechamento | O acerto periódico entre a clínica e o profissional pelas horas atendidas. |
+| Autorização | A liberação da operadora para um número de sessões num período. |
+| Guia | A cobrança enviada à operadora, no padrão TISS. |
+| Encaixe | Atendimento inserido fora da grade. |
+| Check-in | O registro de que o paciente chegou à unidade. Alguns serviços dispensam. |
 
-A distinção entre **recusa** e **pendência** é a que mais gera confusão e é a que
-o módulo financeiro existe para tornar visível: uma é decisão negativa, a outra é
-espera.
+## Papéis
+
+Dez papéis, não cinco. E eles não formam uma escada: **dois papéis clínicos com
+autoridade parecida alcançam telas diferentes**, porque as políticas do sistema
+real foram escritas uma a uma, por lista, ao longo de anos.
+
+Os papéis se dividem em dois escopos, e a diferença é estrutural:
+
+| Escopo | Papéis | Como funcionam |
+| --- | --- | --- |
+| Global | `admin`, `clinic_admin`, `attendant`, `operation`, `people` | Valem para a clínica inteira. |
+| Por unidade | `coordinator`, `supervisor`, `specialist`, `therapeutic_companion`, `applicator` | A mesma pessoa pode ter papéis diferentes em unidades diferentes. |
+
+| Papel | Rótulo em pt-BR | O que faz |
+| --- | --- | --- |
+| `admin` | Admin | Tudo, incluindo estrutura e faturamento. |
+| `clinic_admin` | Admin de Clínica | O mesmo, dentro da clínica. |
+| `attendant` | Recepção | Opera a agenda o dia inteiro. Cancela, remarca, faz check-in. |
+| `operation` | Operação | Autorizações, guias, relação com as operadoras. |
+| `people` | People | Cadastro de profissionais, contratos, agenda padrão. |
+| `coordinator` | Coordenador | Distribui a grade da unidade e monta mapa de horas. |
+| `supervisor` | Supervisor | Responde clinicamente pelos casos que supervisiona. Assina em segundo. |
+| `specialist` | Especialista | Avalia, aplica protocolo, escreve plano de intervenção. |
+| `therapeutic_companion` | Terapeuta | Atende, registra sessão, executa programa. |
+| `applicator` | Aplicador | Aplica o programa sob supervisão. **Não alcança programa, protocolo nem prontuário.** |
+
+As permissões não são escritas à mão: `scripts/gen-permissions.mjs` deriva 104
+permissões × 10 papéis diretamente das 26 políticas Elixir e emite
+`src/personas/permissions.ts`. **Esse arquivo nunca é editado à mão** —
+transcrever mil combinações falha em silêncio, e o silêncio é o problema.
+
+O aplicador merece um parágrafo. Ele é quem passa mais tempo com a criança, e
+`ProgramPolicy` o exclui das oito ações de programa. Quem aplica não pode ver o
+que aplica. O Design Space não corrige isso: reproduz, testa e registra — a
+decisão de mudar é da engenharia, e ela só é possível se estiver visível.
 
 ## Módulos
 
-### Agenda
+Vinte e um módulos, 156 cenários. Na ordem em que foram portados:
 
-O dia da clínica. A recepção trabalha sob interrupção constante, com o paciente na
-frente ou no telefone, então cada tela precisa dar resposta imediata e erro
-reversível.
+| # | Módulo | Cenários | O que só existe aqui |
+| --- | --- | --- | --- |
+| 1 | Agenda | 9 | As doze situações de agendamento, e a tolerância antes da ausência. |
+| 2 | Atendimento | 14 | A ordem dos impedimentos para começar, e a segunda assinatura. |
+| 3 | Programas | 9 | Critério consecutivo × cumulativo, e a cascata de aquisição. |
+| 4 | Protocolos | 7 | Pontuação por pergunta, e o contador que conta o oposto do nome. |
+| 5 | Na clínica | 5 | O painel do dia, e as abas que mudam por papel. |
+| 6 | Pacientes | 8 | A pendência nomeada, e o menor sem responsável. |
+| 7 | Autorizações | 10 | O saldo de sessões, e a central que gateia a tela e não as ações. |
+| 8 | Fechamentos | 10 | As etapas que dependem do contrato do profissional. |
+| 9 | Guias | 7 | O lote TISS, e os campos opcionais no cadastro e obrigatórios no envio. |
+| 10 | Equipe | 10 | O vínculo de supervisão, que decide quem assina em segundo. |
+| 11 | Portal público | 9 | Auto check-in, anamnese e NPS — sem menu, sem sessão. |
+| 12 | Portal do responsável | 7 | O aceite do plano, e o que fica registrado dele. |
+| 13 | Portal da operadora | 5 | A lista de presença, e o que o escopo esconde em silêncio. |
+| 14 | Estrutura | 6 | Serviços, salas e a dispensa de check-in que mora no serviço. |
+| 15 | Prontuário | 7 | A anamnese que relata sucesso e não finaliza. |
+| 16 | Gerência | 5 | As frentes em aberto, sem inventar valor monetário. |
+| 17 | Mapa de horas | 6 | A grade que nasce com buracos em vez de erro. |
+| 18 | Chat do caso | 5 | O único canal escrito do aplicador. |
+| 19 | Visitas | 5 | O funil, e a conversão que pede o que a visita não coleta. |
+| 20 | Relatórios | 6 | Sete tipos, e o destinatário que decide o cuidado. |
+| 21 | Notificações | 6 | Quatro avisos no produto inteiro, três sem destino. |
 
-Quatro regras: cancelamento exige justificativa, cancelamento exige permissão,
-sobreposição de horário é bloqueada, ausência tem tolerância de 15 minutos.
+## Ligações entre módulos
 
-### Pacientes
+O que mais surpreende quem lê módulo a módulo: **várias regras não moram no
+módulo onde aparecem**. Vale conhecer antes de mexer em qualquer um deles.
 
-Cadastro, responsável legal e acesso a prontuário. A decisão de conteúdo mais
-importante aqui: **a pendência é nomeada**. "Cadastro incompleto" sem dizer o que
-falta obriga a recepção a caçar campo por campo com o paciente esperando.
-
-Duas pendências que parecem uma: campo obrigatório em falta e responsável legal
-ausente. O cenário `patients.minor-without-guardian` existe justamente porque o
-cadastro está completo pela lista de campos e ainda assim não permite agendar.
-
-### Financeiro
-
-Guias e recusas de convênio. A analista trabalha em lote, por convênio, e precisa
-saber exatamente o que falta em cada guia — porque reenvio sem documento é
-recusado de novo e cada recusa consome um ciclo do prazo do convênio.
-
-A fila é ordenada por **urgência de ação**, não por data: ordem cronológica
-esconderia a guia recusada de três dias atrás embaixo das enviadas hoje.
-
-## Personas
-
-| Persona | Objetivo | Permissões |
+| O que parece ser de… | mora em… | e é lido por… |
 | --- | --- | --- |
-| Recepcionista | Manter a agenda do dia funcionando. | `agenda.read/create/reschedule`, `patients.read/create`, `finance.read` |
-| Recepcionista líder | O mesmo, mais cancelar e registrar ausência. | acima + `agenda.cancel`, `agenda.no_show` |
-| Profissional de saúde | Ver os atendimentos e acessar prontuário. | `agenda.read`, `patients.read`, `patients.record.read`, `patients.record.restricted` |
-| Analista financeiro | Resolver guias recusadas antes que virem perda. | `finance.read`, `claims.read`, `claims.retry`, `patients.read` |
-| Gestora da unidade | Acompanhar sem operar. | leitura em tudo |
+| Atendimento (segunda assinatura) | vínculo de estágio, `src/rules/team.ts` | `session.needsSupervisorSignature` |
+| Fechamento (etapas de nota fiscal) | contrato do profissional, `src/rules/team.ts` | `closure.issuesInvoice` |
+| Atendimento (dispensa de check-in) | cadastro do serviço, `src/rules/structure.ts` | `service.chargeable` |
 
-A **recepcionista líder** existe como persona separada por um motivo específico: a
-permissão de cancelar é o que muda o comportamento da tela de atendimento. Sem as
-duas personas, o cenário "sem permissão para cancelar" não teria como existir.
+## Cobertura
 
-## Cobertura de cenários
+Cada situação do produto vira um cenário, e cada cenário carrega cinco coisas:
+fixture sintética determinística, regra com implementação testável, tela React,
+jornada Playwright e nota de acessibilidade.
 
-| Módulo | Sucesso | Vazio | Regra | Permissão | Exceção |
-| --- | --- | --- | --- | --- | --- |
-| Agenda | `agenda.day` | `agenda.empty` | `double-booking`, `reschedule-conflict`, `cancel-requires-reason`, `no-show-too-early` | `cancel-no-permission` | `cancelled`, `no-show` |
-| Pacientes | `complete`, `minor-with-guardian` | `empty` | `incomplete`, `minor-without-guardian` | `restricted-record`, `restricted-record-professional` | `incomplete`, `minor-without-guardian` |
-| Financeiro | `queue`, `invoice-under-review`, `resubmit-allowed` | `queue-empty` | `insurance-denied`, `pending-documents` | `resubmit-no-permission` | `insurance-denied`, `pending-documents` |
+| Camada | Quantidade |
+| --- | --- |
+| Cenários | 156 |
+| Regras declaradas | 99 |
+| Testes de regra | 392 |
+| Jornadas Playwright | 486 (axe incluso, um por cenário) |
 
-Erro e carregamento não têm cenário próprio: são alcançáveis pelo controle de rede
-em qualquer cenário (`?network=error`, `?network=loading`). Um cenário dedicado só
-se justifica quando a tela de erro tiver conteúdo específico daquela situação.
+Erro e carregamento não têm cenário próprio: são alcançáveis pelo controle de
+rede em qualquer cenário. Um cenário dedicado só se justifica quando a tela de
+erro tiver conteúdo específico daquela situação.
 
 ## Estados de dados
 
@@ -103,12 +149,40 @@ Toda tela responde cinco estados, e os testes de jornada verificam isso:
 | Erro | `?network=error` |
 | Sem permissão | trocar a persona pelo controle |
 
+## Ação bloqueada continua visível
+
+Nenhuma ação some por falta de permissão ou por estado. Ela fica visível,
+desabilitada, e diz o motivo — `unavailableReason` associa a explicação ao
+botão por `aria-describedby`.
+
+Esconder é mais limpo de desenhar e pior de usar: quem não vê o botão não
+descobre que a ação existe, não sabe a quem pedir, e volta a perguntar no
+WhatsApp da equipe. O motivo é a informação; o botão é só onde ela cabe.
+
 ## Determinismo
 
-A data de referência é `TODAY = "2026-07-30"` em `src/contracts/index.ts`. A
-agenda carrega um `now` declarado por fixture, o que torna a tolerância de
-ausência verificável sem esperar 15 minutos.
+A data de referência é `TODAY = "2026-07-30"` em `src/contracts/index.ts`.
+`new Date()`, `Date.now()` e `Math.random()` não aparecem em fixture, regra nem
+tela.
 
 Idade é calculada contra `TODAY`, não contra o relógio. Sem isso, o cenário
-"menor sem responsável" deixaria de existir no aniversário de 18 anos da fixture,
-meses depois de alguém tê-lo aprovado.
+"menor sem responsável" deixaria de existir no aniversário de 18 anos da
+fixture, meses depois de alguém tê-lo aprovado — e ninguém perceberia, porque
+os testes continuariam verdes.
+
+## Dados
+
+Nenhum dado real de paciente entra aqui. Todas as fixtures são sintéticas: os
+nomes são inventados e os CPFs têm dígito verificador deliberadamente inválido,
+para que não possam coincidir com pessoas reais nem serem usados por engano.
+
+## Achados
+
+O porte encontrou 19 divergências no sistema real — políticas que se
+contradizem, contadores que contam o oposto do nome, uma anamnese que relata
+sucesso sem finalizar. Elas estão em `docs/porte-do-sistema-real.md`, com o
+arquivo e a linha de cada uma.
+
+O monólito **não foi modificado**. Um Design Space que corrigisse o produto por
+conta própria deixaria de descrevê-lo, e a divergência voltaria na próxima
+leitura de alguém que não estava aqui.
