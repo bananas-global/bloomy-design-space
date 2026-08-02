@@ -1774,6 +1774,45 @@ dos outros, e uma regra que acusa o certo ensina a ignorar o aviso.**
 2 achados retratados, 1 regra removida, 1 limiar corrigido.
 
 
+### 58. Auditoria dos achados restantes
+
+Terminei de revisar contra o código os achados que dependiam de eu ter lido uma
+função isolada. Seis verificados, um corrigido, um fortalecido.
+
+**Confirmados como já estavam escritos:**
+
+- **5** e **9** — `valid_register?/1` devolve `true` para conteúdo vazio, e a
+  variável `unanswered_count` guarda as respondidas. Fui conferir os pontos de
+  chamada temendo ter exagerado, e os dois achados já diziam a coisa certa: *o
+  comportamento está correto, o nome mente*. Nada a mudar.
+- **27** — o `"? horas livres"` é alcançável de verdade. Ele está no botão
+  seletor, onde `@count` vem de `@count_by_specialty[specialty]` e é `nil`
+  quando a especialidade não tem entrada.
+- **30** — nenhum outro lugar do sistema grava geolocalização de controle de
+  horas. `VerificationLog` só é escrito em check-in e check-out.
+
+**Corrigido — 26.** Eu havia escrito que o `{inspect(@count)}` do mapa de calor
+faz o usuário ver a representação Elixir do valor, "incluindo `nil`". Fui
+verificar se o componente era sequer alcançável e descobri o contrário do que
+esperava: ele é alcançável, **e a chamada tem `:if={count > 0}`**. `@count` é
+sempre inteiro positivo, e `inspect(3)` imprime `3`. **Não há lixo visível
+hoje.** Continua sendo depuração esquecida na marcação, e vira defeito no dia em
+que a guarda ou o tipo mudarem — mas era exagero como publiquei.
+
+**Fortalecido — 57.** Procurando um mecanismo que compensasse o worker que
+devolve `:ok` com falhas dentro, encontrei **Sentry instalado**, com
+`Sentry.LoggerHandler`. Ele não compensa o achado 48 — aquele worker não levanta
+exceção nenhuma, então não há o que capturar. Mas ele muda o 57: o `rescue` do
+lote TISS engole a exceção **antes** de ela chegar ao handler. O único mecanismo
+que avisaria é exatamente o que fica cego.
+
+Nenhuma superfície nova. Depois de duas rodadas de retratação, valia percorrer o
+resto — e a taxa de erro que encontrei (um exagero em seis) é a que eu esperava
+depois de saber que existia pelo menos um.
+
+1 achado corrigido, 1 fortalecido, 4 confirmados.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1806,7 +1845,7 @@ bugs do Design Space; são observações sobre o produto.
 | 23 | `calculate_occupancy(_items, [])` devolve `0`. Um profissional **sem agenda padrão** no dia aparece com 0% de ocupação, idêntico a quem tem o dia todo definido e nenhum atendimento. As duas leituras pedem ações opostas — marcar alguém, ou cadastrar a agenda — e a segunda nunca acontece enquanto forem o mesmo número. | `lib/bloomy/unit_maps/list_with_defined_agenda_hours_week.ex:199` |
 | 24 | `unit_hours = start_at.hour..(end_at.hour - 1)`. Uma unidade que fecha às 18h30 mostra o mapa até as 17h, e tudo o que acontece às 18h some da única tela que serve para ver ocupação — na faixa mais disputada do dia. | `lib/bloomy_web/backoffice/live/unit_map_live/show.ex:89-90` |
 | 25 | `UnitMapPolicy.can?(role, :show)` não inclui `people`. Quem define a agenda padrão dos profissionais não alcança o mapa, que é onde a ausência dessa definição aparece. Par exato do achado 23. | `lib/bloomy/unit_maps/unit_map_policy.ex:2` |
-| 26 | O mapa de calor renderiza `{inspect(@count)}` direto no HTML. É uma chamada de depuração deixada na marcação: o usuário vê a representação Elixir do valor, incluindo `nil` quando não há dado. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:179` |
+| 26 | **Reduzido na rodada 58.** O mapa de calor renderiza `{inspect(@count)}` direto na marcação — chamada de depuração esquecida. **Sem efeito visível hoje**: o `:if={count > 0}` na chamada garante inteiro positivo, e `inspect(3)` imprime `3`. Vira lixo na tela no dia em que a guarda ou o tipo mudarem. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:159-179` |
 | 27 | A célula de especialidade cai em `"?"` quando a contagem não foi calculada — o usuário lê literalmente "? horas livres". Desconhecido é um estado legítimo e merece uma frase, não um caractere. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:103` |
 | 28 | `render_table/2` resolve a granularidade de forma oposta nos dois eixos: em `professional`, tudo que não é `"day"` vira semana; em `room`, tudo que não é `"week"` vira dia. Um valor inesperado — `nil`, lixo de formulário — cai em visões diferentes conforme o eixo. | `lib/bloomy_web/backoffice/live/unit_map_live/show.ex:28-40` |
 | 29 | `RecalculateExpectedHours` soma os segundos previstos e faz `div(3600)`, que trunca — e `expected_hours` é coluna `:integer`. Um dia previsto de 7h30 é gravado como 7. O arredondamento vai sempre contra o profissional, e num mês de 22 dias úteis são 11 horas. | `lib/bloomy/professionals/clinical_hours/recalculate_professional_expected_hour.ex:11` |
@@ -1837,7 +1876,7 @@ bugs do Design Space; são observações sobre o produto.
 | 54 | `AutoCheckout` fecha **todo** check-in sem saída, sem filtro de data, carimbando a hora em que a rotina rodou. Um check-in esquecido há três meses passa a declarar uma presença de 89 dias na unidade. A intenção — limpar a lista operacional — é boa; carimbar a duração junto é o efeito colateral. | `lib/bloomy/service_records/auto_checkout.ex:7-12` |
 | 55 | ~~A guarda de último dia do mês do `AutoRenewWorker` é encolhida pelo fuso.~~ **RETRATADO na rodada 57.** O cron dispara às 03:40 locais nos dias 28–31 — 06:40 UTC do mesmo dia —, então `Date.utc_today()` e o dia local coincidem e a guarda funciona. | `config/config.exs:94,111` |
 | 56 | `PatientAuthorizations.Workers.AutoRenewWorker` estende `duration_end_at` da janela e não toca nas guias. Uma janela com saldo zero é renovada por mais três meses e continua sem sessão nenhuma — "renovada" descreve o período, não o saldo, e a descoberta acontece na tentativa de marcar. | `lib/bloomy/patients/patient_authorizations/workers/auto_renew_worker.ex:37-40` |
-| 57 | `Tiss.Workers.TissBatch` roda com `max_attempts: 1` e trata qualquer exceção com `{:discard, ...}`. O lote TISS é a fatura da clínica: uma falha de rede momentânea, ou um dado inesperado, faz o faturamento do mês sumir sem retentativa e sem erro registrado para investigar. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:2-4,27-33` |
+| 57 | `Tiss.Workers.TissBatch` roda com `max_attempts: 1` e trata qualquer exceção com `{:discard, ...}`. O lote TISS é a fatura da clínica: uma falha de rede momentânea, ou um dado inesperado, faz o faturamento do mês sumir sem retentativa. **E o projeto tem Sentry instalado** — o `rescue` engole a exceção antes de ela chegar ao handler, então o único mecanismo que avisaria é justamente o que fica cego. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:2-4,27-33` |
 | 58 | No mesmo worker, a recusa da operadora e a exceção no código gravam a string idêntica "Erro ao gerar o xml", e o motivo devolvido pela operadora é descartado em `{:error, _reason}`. São problemas com donos opostos — operação e engenharia — e o registro não permite distinguir. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:25-31` |
 | 59 | `Distributor.distribute/2` ordena os atendimentos do dia por `start_time` e consome os pacotes nessa ordem. Com saldo menor que a demanda, quem é atendido de manhã fica com guia e quem é atendido à tarde fica sem — a ordem do relógio decide o que a clínica consegue cobrar, sem que ninguém a tenha escolhido. | `lib/bloomy/authorizations/distributor.ex:28-30` |
 | 60 | O distribuidor acumula `skipped_schedule_ids` e devolve a lista no resultado; `DistributorWorker` chama `Distributor.run()` e ignora o retorno. A lista dos atendimentos que não serão faturados existe formada no instante da decisão e é descartada. Quarta ocorrência do padrão dos achados 14, 30, 48 e 52. | `lib/bloomy/authorizations/workers/distributor_worker.ex:6-10` |
