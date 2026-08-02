@@ -761,6 +761,48 @@ mostrar ocupação contra capacidade evita recusar um horário que caberia.
 5 cenários, 14 testes de regra, 8 jornadas.
 
 
+### 26. Pacientes, revisitado — `porte/pacientes-revisitado`
+
+O módulo de pacientes também foi escrito cedo e ficou com três regras de
+cadastro. Faltavam as duas coisas que tornam este cadastro diferente de um
+cadastro de clínica qualquer.
+
+**A fase terapêutica é por especialidade.** `TherapyPhase` pertence ao par
+paciente + especialidade, com seis etapas: ambientação, avaliação inicial,
+pré-intervenção, terapia, reavaliação, preparação para alta. A mesma criança
+pode estar em terapia na fonoaudiologia e em ambientação na psicologia, porque
+cada especialidade entra no caso em momento diferente. **Um campo único de "fase
+do paciente" obrigaria a escolher qual das especialidades mente** — é o erro
+mais fácil de cometer aqui, e a tela existe para torná-lo impossível.
+
+Duas coisas incomodam no schema:
+
+- `step` tem `default: :ambiance` e o changeset **não valida nada**. "Está
+  começando" e "ninguém preencheu" são o mesmo dado. A tela não resolve isso —
+  declara, em cada fase em ambientação.
+- Uma fase pode ser gravada **sem especialidade**. Ela não pertence a percurso
+  nenhum e nenhuma tela sabe onde mostrá-la: não some do banco, some da leitura.
+
+**Inativar um paciente apaga a agenda futura.** `ChangePatientStatus` cancela
+num `update_all` todos os agendamentos a partir do corte, encerra os mapas de
+horas em vigor e desliga a renovação automática de todos eles — atrás de um
+seletor de status. A tela põe os números antes da confirmação, porque nada disso
+volta ao trocar o status de volta para ativo.
+
+Duas descobertas aí, e as duas são de tempo:
+
+- `set_status/2` mantém `active? = true` quando a data é futura, mas
+  `deactivate_patient_callbacks/3` roda sempre que há data. **Agendar a
+  inativação para o mês que vem cancela hoje a agenda daquele mês em diante.**
+  O status espera; a parte irreversível não.
+- O corte é `DateTime.new!(deactivation_date, ~T[00:00:00], "Etc/UTC")`, que em
+  Brasília são 21h da véspera. O atendimento das 21h30 do dia anterior é
+  cancelado com motivo "paciente inativado" num dia em que o paciente ainda
+  estava ativo.
+
+6 cenários, 10 testes de regra, 9 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -802,3 +844,8 @@ bugs do Design Space; são observações sobre o produto.
 | 32 | Nada compara `end_at` com `start_at` em `ClinicHour`. Uma saída anterior à entrada é aceita e `Time.diff` devolve negativo, subtraindo horas do total do dia — que pode ficar menor que uma de suas parcelas. | `lib/bloomy/professionals/clinical_hours/clinic_hour.ex:20-31` |
 | 33 | `Checkin.has_open_checkin?/1` ancora a busca em `Date.utc_today()`. Depois das 21h em Brasília, a pergunta "esta pessoa tem check-in aberto hoje?" é feita sobre o dia seguinte. Terceira ocorrência do mesmo padrão, junto dos achados 22 e o período do mapa. | `lib/bloomy/professionals/clinical_hours/checkin.ex:60` |
 | 34 | `ScheduleVerification.verify/2` usa `Enum.find_value` sobre sete verificadores: para no primeiro que falha. Um horário com quatro impedimentos exige quatro tentativas de salvar para que todos apareçam, e a ordem em que eles surgem é a ordem do array — a lotação da sala, a mais fácil de contornar, é a última. | `lib/bloomy/schedules/schedule_verification.ex:10-24` |
+| 35 | `TherapyPhase.changeset/2` faz `cast` de paciente, especialidade e etapa e **não chama `validate_required` para nenhum**. Uma fase sem especialidade é gravável, não pertence a percurso nenhum e nenhuma tela sabe onde mostrá-la. | `lib/bloomy/patients/therapy_phase.ex:36` |
+| 36 | `step` tem `default: :ambiance` sem validação. Uma fase gravada sem etapa lê-se como "ambientação" — o começo do percurso — mesmo para quem está em terapia há um ano. Valor omitido e valor escolhido ficam idênticos. | `lib/bloomy/patients/therapy_phase.ex:9-18` |
+| 37 | `set_status/2` mantém o paciente **ativo** quando a data de inativação é futura, mas `deactivate_patient_callbacks/3` roda sempre que há data. Agendar a inativação para o mês que vem cancela **hoje** todos os agendamentos daquele mês em diante. O status adia; a destruição não. | `lib/bloomy/patients/change_status.ex:37-39,99-108` |
+| 38 | O corte da inativação é `DateTime.new!(deactivation_date, ~T[00:00:00], "Etc/UTC")` — 21h da véspera em Brasília. Atendimentos das últimas três horas do dia anterior são cancelados com motivo "paciente inativado" num dia em que o paciente ainda estava ativo. Quarta ocorrência do padrão de fuso. | `lib/bloomy/patients/change_status.ex:62` |
+| 39 | `disable_auto_renew_hour_maps/2` não filtra por data: desliga a renovação automática de **todos** os mapas do paciente, inclusive os que já terminaram. | `lib/bloomy/patients/change_status.ex:76-83` |

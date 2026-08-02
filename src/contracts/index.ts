@@ -1783,3 +1783,62 @@ export interface ScheduleAttempt {
 export interface NewAppointmentData {
   attempt: ScheduleAttempt;
 }
+
+/* ====================================================== Fase terapêutica */
+
+/** As seis etapas do percurso, na ordem em que o enum as numera. */
+export type TherapyStep =
+  | "ambiance"
+  | "initial_assessment"
+  | "pre_intervention"
+  | "therapy"
+  | "reassessment"
+  | "discharge_preparation";
+
+export type TherapySpecialty =
+  | "phonoaudiology"
+  | "psychology"
+  | "occupational_therapy"
+  | "physiotherapy"
+  | "music_therapy"
+  | "aba_practitioner"
+  | "nutritionist";
+
+/**
+ * A fase de um paciente **numa especialidade**.
+ *
+ * `specialty` é opcional porque o changeset do sistema real não a exige — e uma
+ * fase sem especialidade é exatamente o registro que a tela não sabe onde pôr.
+ */
+export interface TherapyPhase {
+  id: string;
+  specialty?: TherapySpecialty;
+  step: TherapyStep;
+  updatedAt: string;
+}
+
+export interface TherapyPhasesData {
+  patient: PatientRef;
+  phases: TherapyPhase[];
+  /** Especialidades em que o paciente tem atendimento e nenhuma fase registrada. */
+  specialtiesWithoutPhase: TherapySpecialty[];
+}
+
+/* ==================================================== Inativar paciente */
+
+export interface DeactivationImpact {
+  patient: PatientRef;
+  /** A data escolhida. Pode ser futura — e a cascata roda assim mesmo. */
+  deactivationDate: string;
+  /** Agendamentos que serão cancelados, do corte em diante. */
+  schedulesToCancel: {
+    id: string;
+    start: string;
+    serviceName: string;
+    professionalName: string;
+  }[];
+  /** Mapas de horas em vigor no corte, que serão encerrados. */
+  hourMapsToClose: { id: string; durationEnd: string }[];
+  /** Mapas que perdem a renovação automática — todos, sem filtro de data. */
+  hourMapsLosingAutoRenew: number;
+}

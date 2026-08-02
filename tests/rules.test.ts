@@ -4817,3 +4817,124 @@ describe("room-is-not-verified-outside-the-clinic", () => {
     expect(roomVerificationSkipped(scheduleAttempt())).toBeUndefined();
   });
 });
+
+/* ====================================================== Fase terapêutica */
+
+import type { DeactivationImpact, TherapyPhasesData } from "../src/contracts/index.js";
+import {
+  THERAPY_STEPS,
+  ambianceIsAmbiguous,
+  caughtOnTheEve,
+  deactivationSummary,
+  phasesAreUneven,
+  phasesWithoutSpecialty,
+  placedPhases,
+  realCutoff,
+  stepPosition as therapyStepPosition,
+  stillActiveAfterScheduling,
+} from "../src/rules/patients.js";
+
+function phasesData(phases: TherapyPhasesData["phases"]): TherapyPhasesData {
+  return {
+    patient: { id: "pac-theo", name: "Théo Andrade Lins", birthDate: "2019-11-04" },
+    phases,
+    specialtiesWithoutPhase: [],
+  };
+}
+
+describe("therapy-phase-is-per-specialty", () => {
+  it("fixa as seis etapas na ordem do enum", () => {
+    expect(THERAPY_STEPS).toEqual([
+      "ambiance",
+      "initial_assessment",
+      "pre_intervention",
+      "therapy",
+      "reassessment",
+      "discharge_preparation",
+    ]);
+    expect(therapyStepPosition("therapy")).toBe(4);
+  });
+
+  it("reconhece que o percurso não caminha junto — o caso normal", () => {
+    const dados = phasesData([
+      { id: "a", specialty: "phonoaudiology", step: "therapy", updatedAt: "2026-06-15T10:00:00.000-03:00" },
+      { id: "b", specialty: "psychology", step: "ambiance", updatedAt: "2026-07-28T10:00:00.000-03:00" },
+    ]);
+    expect(phasesAreUneven(dados)).toBe(true);
+  });
+
+  it("não chama de desigual um percurso em que todas estão na mesma etapa", () => {
+    const dados = phasesData([
+      { id: "a", specialty: "phonoaudiology", step: "ambiance", updatedAt: "2026-07-28T10:00:00.000-03:00" },
+      { id: "b", specialty: "psychology", step: "ambiance", updatedAt: "2026-07-28T10:00:00.000-03:00" },
+    ]);
+    expect(phasesAreUneven(dados)).toBe(false);
+  });
+});
+
+describe("therapy-phase-requires-nothing", () => {
+  it("separa as fases que a tela consegue posicionar das que não", () => {
+    const dados = phasesData([
+      { id: "a", specialty: "phonoaudiology", step: "therapy", updatedAt: "2026-06-15T10:00:00.000-03:00" },
+      { id: "b", step: "therapy", updatedAt: "2026-05-02T10:00:00.000-03:00" },
+    ]);
+
+    expect(placedPhases(dados).map((phase) => phase.id)).toEqual(["a"]);
+    expect(phasesWithoutSpecialty(dados).map((phase) => phase.id)).toEqual(["b"]);
+  });
+
+  it("a fase sem especialidade não conta para a desigualdade do percurso", () => {
+    // Ela não pertence a percurso nenhum: incluí-la inventaria uma diferença.
+    const dados = phasesData([
+      { id: "a", specialty: "phonoaudiology", step: "ambiance", updatedAt: "2026-07-28T10:00:00.000-03:00" },
+      { id: "b", step: "therapy", updatedAt: "2026-05-02T10:00:00.000-03:00" },
+    ]);
+    expect(phasesAreUneven(dados)).toBe(false);
+  });
+});
+
+describe("phase-defaults-to-the-beginning", () => {
+  it("marca ambientação como ambígua, e só ela", () => {
+    expect(
+      ambianceIsAmbiguous({ id: "a", step: "ambiance", updatedAt: "2026-07-28T10:00:00.000-03:00" }),
+    ).toContain("valor padrão");
+    expect(
+      ambianceIsAmbiguous({ id: "b", step: "therapy", updatedAt: "2026-07-28T10:00:00.000-03:00" }),
+    ).toBeUndefined();
+  });
+});
+
+describe("deactivation", () => {
+  const impacto: DeactivationImpact = {
+    patient: { id: "pac-theo", name: "Théo Andrade Lins", birthDate: "2019-11-04" },
+    deactivationDate: "2026-07-30",
+    schedulesToCancel: [
+      { id: "s0", start: "2026-07-29T21:30:00.000-03:00", serviceName: "AT", professionalName: "Otávio" },
+      { id: "s1", start: "2026-07-30T14:00:00.000-03:00", serviceName: "ABA", professionalName: "Marina" },
+    ],
+    hourMapsToClose: [{ id: "hm-1", durationEnd: "2026-12-20" }],
+    hourMapsLosingAutoRenew: 4,
+  };
+
+  it("o corte real é 21h da véspera, e não a data escolhida", () => {
+    expect(realCutoff("2026-07-30")).toBe("2026-07-29T21:00");
+  });
+
+  it("isola os atendimentos apanhados antes da data escolhida", () => {
+    expect(caughtOnTheEve(impacto).map((entry) => entry.id)).toEqual(["s0"]);
+  });
+
+  it("o resumo traz números, e não “pode afetar agendamentos”", () => {
+    const linhas = deactivationSummary(impacto);
+    expect(linhas[0]).toContain("2 agendamentos serão cancelados");
+    expect(linhas[1]).toContain("1 mapa de horas em vigor será encerrado");
+    expect(linhas[2]).toContain("inclusive os que já terminaram");
+  });
+
+  it("data futura mantém o paciente ativo — e a cascata roda assim mesmo", () => {
+    expect(stillActiveAfterScheduling(impacto, "2026-07-30")).toBe(false);
+    expect(
+      stillActiveAfterScheduling({ ...impacto, deactivationDate: "2026-09-01" }, "2026-07-30"),
+    ).toBe(true);
+  });
+});

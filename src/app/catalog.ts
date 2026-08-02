@@ -26,12 +26,13 @@ import { supervisionFixtures } from "../fixtures/supervision.js";
 import { unitMapFixtures } from "../fixtures/unitMap.js";
 import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
 import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
+import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyPhases.js";
 import { agendaRules, schedulingRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
 import { inClinicRules } from "../rules/inClinic.js";
-import { patientRules } from "../rules/patients.js";
+import { patientRules, therapyPhaseRules } from "../rules/patients.js";
 import { authorizationRules } from "../rules/authorizations.js";
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
@@ -75,6 +76,7 @@ import { supervisionScenarios } from "../scenarios/supervision.js";
 import { unitMapScenarios } from "../scenarios/unitMap.js";
 import { clinicalHourScenarios } from "../scenarios/clinicalHours.js";
 import { newAppointmentScenarios } from "../scenarios/newAppointment.js";
+import { therapyPhaseScenarios } from "../scenarios/therapyPhases.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -155,8 +157,43 @@ export const modules: Module[] = [
   {
     id: "patients",
     name: "Pacientes",
-    description: "Cadastro, responsável legal e acesso a prontuário.",
+    description:
+      "Cadastro, responsável legal, prontuário — e o percurso terapêutico, que é por especialidade.",
     flows: [
+      {
+        id: "follow-the-course",
+        title: "Acompanhar o percurso terapêutico",
+        description:
+          "A fase é do par paciente + especialidade. Um campo único obrigaria a escolher qual delas mente.",
+        steps: [
+          {
+            scenario: "patients.phases-uneven",
+            label: "Ver as quatro especialidades lado a lado",
+            decision: "Este percurso está registrado ou só parece estar?",
+            branches: {
+              "Tudo em ambientação": "patients.phases-all-beginning",
+              "Nenhuma fase registrada": "patients.phases-empty",
+            },
+          },
+        ],
+      },
+      {
+        id: "deactivate-a-patient",
+        title: "Inativar um paciente",
+        description:
+          "A ação mais destrutiva do produto, com os números antes da confirmação.",
+        steps: [
+          {
+            scenario: "patients.deactivation-impact",
+            label: "Ver o que a inativação vai apagar",
+            decision: "O que mais acontece que não está na data escolhida?",
+            branches: {
+              "O corte pega a véspera": "patients.deactivation-eve",
+              "A data futura não adia": "patients.deactivation-scheduled",
+            },
+          },
+        ],
+      },
       {
         id: "schedule-eligibility",
         title: "Verificar se o paciente pode ser agendado",
@@ -834,6 +871,7 @@ export const scenarios: Scenario[] = [
   ...unitMapScenarios,
   ...clinicalHourScenarios,
   ...newAppointmentScenarios,
+  ...therapyPhaseScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -863,6 +901,8 @@ export const fixtures: Fixture[] = [
   ...unitMapFixtures,
   ...clinicalHourFixtures,
   ...newAppointmentFixtures,
+  ...therapyPhaseFixtures,
+  ...deactivationFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -873,6 +913,7 @@ export const rules: Rule[] = [
   ...protocolRules,
   ...inClinicRules,
   ...patientRules,
+  ...therapyPhaseRules,
   ...authorizationRules,
   ...closureRules,
   ...invoiceRules,
