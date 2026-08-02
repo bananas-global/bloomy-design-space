@@ -65,12 +65,12 @@ export function AgendaDay({ context }: ScreenProps) {
       )}
 
       <Card className="overflow-hidden p-0">
-        <table className="w-full border-collapse text-[15px]">
+        <table className="w-full border-collapse text-[0.9375rem]">
           <caption className="sr-only">
             Atendimentos de {formatDate(agenda!.date, locale)}, em ordem de horário
           </caption>
           <thead>
-            <tr className="border-b border-[var(--border-soft)] text-left text-[12px] font-black uppercase tracking-wide text-[var(--fg-2)]">
+            <tr className="border-b border-[var(--border-soft)] text-left text-[0.75rem] font-black uppercase tracking-wide text-[var(--fg-2)]">
               <th scope="col" className="px-5 py-3">
                 Horário
               </th>
@@ -127,7 +127,7 @@ function AppointmentRow({
     >
       <td className="px-5 py-4 align-top tabular-nums font-semibold text-navy">
         {formatTime(appointment.start, locale)}
-        <span className="block text-[13px] font-normal text-[var(--fg-2)]">
+        <span className="block text-[0.8125rem] font-normal text-[var(--fg-2)]">
           até {formatTime(appointment.end, locale)}
         </span>
       </td>
@@ -147,7 +147,7 @@ function AppointmentRow({
           {appointment.patient.name}
         </a>
         {hasConflict && (
-          <span className="mt-0.5 block text-[13px] font-semibold text-danger-fg">
+          <span className="mt-0.5 block text-[0.8125rem] font-semibold text-danger-fg">
             Conflito de horário
           </span>
         )}
@@ -156,7 +156,7 @@ function AppointmentRow({
       <td className="px-5 py-4 align-top">
         {appointment.procedure}
         {appointment.room && (
-          <span className="block text-[13px] text-[var(--fg-2)]">{appointment.room}</span>
+          <span className="block text-[0.8125rem] text-[var(--fg-2)]">{appointment.room}</span>
         )}
       </td>
 
@@ -165,7 +165,7 @@ function AppointmentRow({
           <>
             {appointment.insurance.name}
             {!appointment.insurance.authorized && (
-              <span className="block text-[13px] font-semibold text-pending-fg">
+              <span className="block text-[0.8125rem] font-semibold text-pending-fg">
                 sem autorização
               </span>
             )}

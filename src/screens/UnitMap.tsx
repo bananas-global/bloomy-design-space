@@ -86,7 +86,7 @@ export function UnitMap({ context }: ScreenProps) {
       <Card as="section">
         <CardHeader title={axisLabel(map.axis)} hint={askedQuestion(map.axis)} />
         <div className="space-y-3 px-5 py-5">
-          <p className="m-0 text-[14px] text-navy">
+          <p className="m-0 text-[0.875rem] text-navy">
             Semana de {formatDate(`${map.week.start}T12:00:00.000-03:00`, locale)} a{" "}
             {formatDate(`${map.week.end}T12:00:00.000-03:00`, locale)} ·{" "}
             {map.unit.name}, das {map.unit.opensAt} às {map.unit.closesAt}
@@ -114,7 +114,7 @@ export function UnitMap({ context }: ScreenProps) {
           )}
 
           {granularityOf(map.axis) === "both" && (
-            <p className="m-0 text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 text-[0.8125rem] text-[var(--fg-2)]">
               Este eixo aceita as duas granularidades. Você está vendo a{" "}
               {map.granularity === "week" ? "semana" : "visão de um dia"}.
             </p>
@@ -215,12 +215,12 @@ function RowCard({
       />
       <div className="space-y-3 px-5 py-5">
         {row.subtitle && (
-          <p className="m-0 text-[13px] text-[var(--fg-2)]">{row.subtitle}</p>
+          <p className="m-0 text-[0.8125rem] text-[var(--fg-2)]">{row.subtitle}</p>
         )}
 
         {/* A grade rola dentro de si, e nunca a página. */}
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[13px]">
+          <table className="w-full border-collapse text-[0.8125rem]">
             <caption className="sr-only">
               Ocupação de {row.name} por dia e hora, de{" "}
               {formatDate(`${row.days[0]?.date}T12:00:00.000-03:00`, locale)} em diante
@@ -312,7 +312,7 @@ function RowCard({
         </div>
 
         {/* O que a ocupação mede, dito onde ela é lida. */}
-        <p className="m-0 max-w-[72ch] text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 max-w-[72ch] text-[0.8125rem] text-[var(--fg-2)]">
           A ocupação conta <span className="font-semibold">horas com pelo menos um atendimento</span>,
           e não atendimentos. Uma hora com três em três salas conta igual a uma hora com um — serve
           para saber onde cabe mais alguém, e não para medir aproveitamento de capacidade.

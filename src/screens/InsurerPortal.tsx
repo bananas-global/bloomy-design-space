@@ -79,7 +79,7 @@ export function InsurerPortal({ context }: ScreenProps) {
           </dl>
 
           {summary.pendingClosure > 0 && (
-            <p className="m-0 mt-4 max-w-[72ch] text-[14px] text-navy">
+            <p className="m-0 mt-4 max-w-[72ch] text-[0.875rem] text-navy">
               Os {summary.pendingClosure} atendimentos aguardando fechamento{" "}
               <strong>aconteceram</strong> e ainda não têm assinatura completa. Não entram no total
               prestado hoje, e entram assim que fecharem — é a diferença mais comum entre o que a
@@ -97,12 +97,12 @@ export function InsurerPortal({ context }: ScreenProps) {
         />
         <div className="px-5 py-5">
           {portal.attendance.length === 0 ? (
-            <p className="m-0 text-[15px] text-navy">
+            <p className="m-0 text-[0.9375rem] text-navy">
               Nenhum atendimento de beneficiário desta operadora no período.
             </p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-[14px]">
+              <table className="w-full border-collapse text-[0.875rem]">
                 <caption className="sr-only">
                   Atendimentos de beneficiários da {portal.healthCare.name} entre{" "}
                   {br(portal.period.start)} e {br(portal.period.end)}
@@ -134,11 +134,11 @@ export function InsurerPortal({ context }: ScreenProps) {
           hint="Decisão de privacidade, não lacuna do sistema"
         />
         <div className="px-5 py-5">
-          <p className="m-0 max-w-[72ch] text-[15px] text-navy">
+          <p className="m-0 max-w-[72ch] text-[0.9375rem] text-navy">
             A operadora confere a prestação do serviço: que o atendimento aconteceu, quem conduziu e
             quando. O conteúdo clínico é do paciente e da clínica, e não acompanha a cobrança.
           </p>
-          <ul className="m-0 mt-3 list-disc space-y-1 pl-5 text-[15px] text-navy">
+          <ul className="m-0 mt-3 list-disc space-y-1 pl-5 text-[0.9375rem] text-navy">
             {NOT_SHARED_WITH_INSURER.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -168,8 +168,8 @@ function Metric({
 
   return (
     <div>
-      <dt className="text-[13px] text-[var(--fg-2)]">{label}</dt>
-      <dd className={`m-0 text-[24px] font-bold ${color}`}>{value}</dd>
+      <dt className="text-[0.8125rem] text-[var(--fg-2)]">{label}</dt>
+      <dd className={`m-0 text-[1.5rem] font-bold ${color}`}>{value}</dd>
     </div>
   );
 }
@@ -182,7 +182,7 @@ function Row({ row, locale }: { row: AttendanceRow; locale: string | undefined }
     <tr className="border-b border-[var(--border-soft)] align-top">
       <td className="py-2.5 pr-4 text-navy">
         {formatDate(row.start, locale)}
-        <span className="block text-[13px] text-[var(--fg-2)]">
+        <span className="block text-[0.8125rem] text-[var(--fg-2)]">
           {formatTime(row.start, locale)} às {formatTime(row.end, locale)}
         </span>
       </td>
@@ -190,13 +190,13 @@ function Row({ row, locale }: { row: AttendanceRow; locale: string | undefined }
       <td className="py-2.5 pr-4 text-navy">
         {row.professionalName}
         {row.professionalRegister && (
-          <span className="block text-[13px] text-[var(--fg-2)]">{row.professionalRegister}</span>
+          <span className="block text-[0.8125rem] text-[var(--fg-2)]">{row.professionalRegister}</span>
         )}
       </td>
       <td className="py-2.5 pr-4">
         <ScheduleStatusChip status={row.status} />
         {!delivered && reason && (
-          <span className="mt-1 block text-[13px] text-[var(--fg-2)]">{reason}</span>
+          <span className="mt-1 block text-[0.8125rem] text-[var(--fg-2)]">{reason}</span>
         )}
       </td>
       <td className="py-2.5">
@@ -204,7 +204,7 @@ function Row({ row, locale }: { row: AttendanceRow; locale: string | undefined }
           <span className="text-navy">
             {row.signedBy}
             {row.signedAt && (
-              <span className="block text-[13px] text-[var(--fg-2)]">
+              <span className="block text-[0.8125rem] text-[var(--fg-2)]">
                 {formatDate(row.signedAt, locale)}
               </span>
             )}

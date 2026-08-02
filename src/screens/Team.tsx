@@ -142,24 +142,24 @@ function MemberCard({
         {/* ------------------------------------------------- supervisão */}
         {member.supervisedBy.length > 0 && (
           <div>
-            <h3 className="m-0 text-[14px] font-bold text-navy">Supervisão</h3>
+            <h3 className="m-0 text-[0.875rem] font-bold text-navy">Supervisão</h3>
             <ul className="m-0 mt-1.5 list-none space-y-1 p-0">
               {member.supervisedBy.map((link) => (
-                <li key={link.id} className="text-[14px] text-navy">
+                <li key={link.id} className="text-[0.875rem] text-navy">
                   {link.supervisorName}
                   {link.needsSupervisorSignature ? (
-                    <span className="text-[13px] font-semibold text-pending-fg">
+                    <span className="text-[0.8125rem] font-semibold text-pending-fg">
                       {" "}
                       — exige assinatura nas sessões
                     </span>
                   ) : (
-                    <span className="text-[13px] text-[var(--fg-2)]">
+                    <span className="text-[0.8125rem] text-[var(--fg-2)]">
                       {" "}
                       — sem exigência de assinatura
                     </span>
                   )}
                   {link.observation && (
-                    <span className="block text-[13px] text-[var(--fg-2)]">{link.observation}</span>
+                    <span className="block text-[0.8125rem] text-[var(--fg-2)]">{link.observation}</span>
                   )}
                 </li>
               ))}
@@ -168,7 +168,7 @@ function MemberCard({
         )}
 
         {member.supervises.length > 0 && (
-          <p className="m-0 text-[14px] text-navy">
+          <p className="m-0 text-[0.875rem] text-navy">
             Supervisiona {member.supervises.length}{" "}
             {member.supervises.length === 1 ? "profissional" : "profissionais"}.
           </p>
@@ -177,7 +177,7 @@ function MemberCard({
         {/* --------------------------------------------------- contrato */}
         {contract && (
           <div>
-            <h3 className="m-0 text-[14px] font-bold text-navy">
+            <h3 className="m-0 text-[0.875rem] font-bold text-navy">
               Contrato · {contractTypeLabel(contract.type)}
             </h3>
 
@@ -213,7 +213,7 @@ function MemberCard({
                             contract.administrativeHourlyRateCents === 0 ? (
                               <span>
                                 {formatMoney(0, locale)}{" "}
-                                <span className="text-[13px] text-[var(--fg-2)]">
+                                <span className="text-[0.8125rem] text-[var(--fg-2)]">
                                   — zero é válido aqui: quem tem mensalidade não cobra hora
                                   administrativa à parte
                                 </span>
@@ -246,8 +246,8 @@ function MemberCard({
         {/* ------------------------------- o que este cadastro decide */}
         {effects.length > 0 && (
           <div className="rounded-field bg-ink-50 px-4 py-3">
-            <h3 className="m-0 text-[14px] font-bold text-navy">O que este cadastro decide</h3>
-            <ul className="m-0 mt-1.5 list-disc space-y-1 pl-5 text-[14px] text-navy">
+            <h3 className="m-0 text-[0.875rem] font-bold text-navy">O que este cadastro decide</h3>
+            <ul className="m-0 mt-1.5 list-disc space-y-1 pl-5 text-[0.875rem] text-navy">
               {effects.map((effect) => (
                 <li key={effect}>{effect}</li>
               ))}

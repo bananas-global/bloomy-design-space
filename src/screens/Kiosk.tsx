@@ -53,7 +53,7 @@ export function Kiosk({ context }: ScreenProps) {
             <li key={step} className="flex-1">
               <span
                 {...(position === index ? { "aria-current": "step" as const } : {})}
-                className={`block rounded-field px-3 py-2 text-center text-[15px] ${
+                className={`block rounded-field px-3 py-2 text-center text-[0.9375rem] ${
                   position === index
                     ? "bg-action font-semibold text-white"
                     : position < index
@@ -89,13 +89,13 @@ export function Kiosk({ context }: ScreenProps) {
 function Identification() {
   return (
     <Card className="px-8 py-8">
-      <h2 className="m-0 text-[26px] font-bold text-navy">Bem-vindo</h2>
-      <p className="m-0 mt-2 max-w-[40ch] text-[19px] text-navy">
+      <h2 className="m-0 text-[1.625rem] font-bold text-navy">Bem-vindo</h2>
+      <p className="m-0 mt-2 max-w-[40ch] text-[1.1875rem] text-navy">
         Digite o CPF do responsável para registrar a chegada.
       </p>
 
       <div className="mt-6">
-        <label htmlFor="cpf" className="block text-[17px] font-semibold text-navy">
+        <label htmlFor="cpf" className="block text-[1.0625rem] font-semibold text-navy">
           CPF do responsável
         </label>
         <input
@@ -105,12 +105,12 @@ function Identification() {
           placeholder="000.000.000-00"
           // Campo grande de propósito: quem digita está de pé, muitas vezes com
           // uma criança no colo.
-          className="mt-2 w-full max-w-[22rem] rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[22px] tracking-wide text-navy"
+          className="mt-2 w-full max-w-[22rem] rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[1.375rem] tracking-wide text-navy"
         />
       </div>
 
       <div className="mt-6">
-        <Button id="continuar" variant="primary" className="px-8 py-3 text-[18px]">
+        <Button id="continuar" variant="primary" className="px-8 py-3 text-[1.125rem]">
           Continuar
         </Button>
       </div>
@@ -121,10 +121,10 @@ function Identification() {
 function SelectPatient({ kiosk }: { kiosk: KioskData }) {
   return (
     <Card className="px-8 py-8">
-      <h2 className="m-0 text-[26px] font-bold text-navy">
+      <h2 className="m-0 text-[1.625rem] font-bold text-navy">
         Olá, {kiosk.guardian?.name.split(" ")[0]}
       </h2>
-      <p className="m-0 mt-2 text-[19px] text-navy">Quem está chegando agora?</p>
+      <p className="m-0 mt-2 text-[1.1875rem] text-navy">Quem está chegando agora?</p>
 
       <ul className="m-0 mt-6 list-none space-y-3 p-0">
         {kiosk.patients.map((patient) => {
@@ -136,15 +136,15 @@ function SelectPatient({ kiosk }: { kiosk: KioskData }) {
                 className="flex w-full items-center justify-between gap-4 rounded-card border border-[var(--border-strong)] bg-surface px-5 py-4 text-left hover:bg-ink-50"
               >
                 <span>
-                  <span className="block text-[20px] font-semibold text-navy">{patient.name}</span>
-                  <span className="block text-[16px] text-[var(--fg-2)]">
+                  <span className="block text-[1.25rem] font-semibold text-navy">{patient.name}</span>
+                  <span className="block text-[1rem] text-[var(--fg-2)]">
                     {patient.times.length === 1
                       ? `Atendimento às ${patient.times[0]}`
                       : `Atendimentos às ${patient.times.join(" e ")}`}
                   </span>
                 </span>
                 <span
-                  className={`shrink-0 rounded-field px-4 py-2 text-[16px] font-semibold ${
+                  className={`shrink-0 rounded-field px-4 py-2 text-[1rem] font-semibold ${
                     action === "checkin" ? "bg-action text-white" : "bg-ink-50 text-navy"
                   }`}
                 >
@@ -168,10 +168,10 @@ function Complete({ kiosk }: { kiosk: KioskData }) {
       {/* `role="status"` e não `alert`: é a confirmação de algo que a pessoa
           acabou de fazer, não uma interrupção. */}
       <div role="status">
-        <h2 className="m-0 text-[26px] font-bold text-navy">
+        <h2 className="m-0 text-[1.625rem] font-bold text-navy">
           {entering ? "Chegada registrada" : "Saída registrada"}
         </h2>
-        <p className="m-0 mt-2 max-w-[44ch] text-[19px] text-navy">
+        <p className="m-0 mt-2 max-w-[44ch] text-[1.1875rem] text-navy">
           {entering ? (
             <>
               A equipe já sabe que {patient?.name ?? "o paciente"} chegou. Podem aguardar aqui na
@@ -184,7 +184,7 @@ function Complete({ kiosk }: { kiosk: KioskData }) {
       </div>
 
       <div className="mt-6">
-        <Button id="recomecar" className="px-8 py-3 text-[18px]">
+        <Button id="recomecar" className="px-8 py-3 text-[1.125rem]">
           Registrar outra pessoa
         </Button>
       </div>
@@ -211,14 +211,14 @@ function Failure({ error }: { error: KioskData["error"] | "unit_not_found" }) {
         title={message.title}
         live={segueUmaAcao}
       >
-        <p className="m-0 max-w-[46ch] text-[18px]">{message.body}</p>
+        <p className="m-0 max-w-[46ch] text-[1.125rem]">{message.body}</p>
       </Notice>
 
       <div className="mt-6">
         <Button
           id="saida"
           variant={error === "invalid_cpf" ? "primary" : "secondary"}
-          className="px-8 py-3 text-[18px]"
+          className="px-8 py-3 text-[1.125rem]"
         >
           {message.exit}
         </Button>

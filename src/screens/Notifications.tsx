@@ -86,7 +86,7 @@ export function Notifications({ context }: ScreenProps) {
         <div className="space-y-3 px-5 py-5">
           {/* Lido é do vínculo, não da notificação: marcar todas age sobre as
               suas, e a frase diz isso para não parecer ação global. */}
-          <p className="m-0 max-w-[64ch] text-[14px] text-navy">
+          <p className="m-0 max-w-[64ch] text-[0.875rem] text-navy">
             Lida é uma marca sua, não da notificação. A mesma mensagem continua não lida para as
             outras pessoas que a receberam.
           </p>
@@ -142,24 +142,24 @@ function NotificationCard({
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="m-0 text-[15px] font-bold text-navy">{item.title}</h2>
+        <h2 className="m-0 text-[0.9375rem] font-bold text-navy">{item.title}</h2>
         {/* Rótulo textual, e não só a cor de fundo: não lida é informação. */}
         <Chip tone={unread ? "pending" : "neutral"}>{unread ? "Não lida" : "Lida"}</Chip>
       </div>
 
       {/* A data fica junto do texto porque o texto é cópia congelada no envio.
           Sem ela ao lado, ele se lê como estado atual. */}
-      <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">
+      <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">
         Recebida em {formatDateTime(item.at, locale)}
         {item.readAt && <> · lida por você em {formatDateTime(item.readAt, locale)}</>}
       </p>
 
-      <p className="m-0 mt-2 max-w-[64ch] whitespace-pre-line text-[15px] leading-relaxed text-navy">
+      <p className="m-0 mt-2 max-w-[64ch] whitespace-pre-line text-[0.9375rem] leading-relaxed text-navy">
         {item.content}
       </p>
 
       {patient && (
-        <p className="m-0 mt-2 max-w-[64ch] text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-2 max-w-[64ch] text-[0.8125rem] text-[var(--fg-2)]">
           Este texto nomeia {patient} e a especialidade do atendimento. A leitura de uma notificação
           não passa por política nenhuma — o que a tela do paciente checaria, o sino entrega direto.
         </p>
@@ -180,7 +180,7 @@ function NotificationCard({
           Abrir
         </Button>
         {target.kind === "empty" && (
-          <p className="m-0 mt-2 max-w-[64ch] text-[13px] text-[var(--fg-2)]">
+          <p className="m-0 mt-2 max-w-[64ch] text-[0.8125rem] text-[var(--fg-2)]">
             O destino foi gravado como texto vazio, e não como ausência. Renderizado sem cuidado,
             vira um link clicável que não vai a lugar nenhum — que é pior do que não ter link.
           </p>

@@ -95,14 +95,14 @@ export function Prospects({ context }: ScreenProps) {
             <ul className="m-0 list-none space-y-2 p-0">
               {losses.map((loss) => (
                 <li key={loss.step} className="flex flex-wrap items-baseline gap-x-3">
-                  <span className="text-[15px] font-semibold text-navy">
+                  <span className="text-[0.9375rem] font-semibold text-navy">
                     {loss.count} {loss.count === 1 ? "perdido" : "perdidos"}
                   </span>
-                  <span className="text-[15px] text-navy">em {stepLabel(loss.step)}</span>
+                  <span className="text-[0.9375rem] text-navy">em {stepLabel(loss.step)}</span>
                 </li>
               ))}
             </ul>
-            <p className="m-0 mt-3 max-w-[68ch] text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 mt-3 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">
               Agrupar as perdas pelo passo em que aconteceram é o que um funil de oito estágios em
               linha esconde — e é a única leitura que diz onde o processo perde gente.
             </p>
@@ -132,9 +132,9 @@ export function Prospects({ context }: ScreenProps) {
           <CardHeader title="Perdidos" hint="Continuam registrados: o motivo é o que ensina" />
           <ul className="m-0 list-none space-y-2 p-5">
             {perdidos.map((prospect) => (
-              <li key={prospect.id} className="text-[15px] text-navy">
+              <li key={prospect.id} className="text-[0.9375rem] text-navy">
                 <span className="font-semibold">{prospect.childName}</span>{" "}
-                <span className="text-[13px] text-[var(--fg-2)]">
+                <span className="text-[0.8125rem] text-[var(--fg-2)]">
                   {prospect.observation ?? "sem motivo registrado"}
                 </span>
               </li>
@@ -166,24 +166,24 @@ function ProspectCard({
   return (
     <article className="rounded-card border border-[var(--border-soft)] px-4 py-3.5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="m-0 text-[15px] font-bold text-navy">{prospect.childName}</h3>
+        <h3 className="m-0 text-[0.9375rem] font-bold text-navy">{prospect.childName}</h3>
         <Chip tone="info">{stepLabel(prospect.step)}</Chip>
         {position !== undefined && (
-          <span className="text-[13px] text-[var(--fg-2)]">
+          <span className="text-[0.8125rem] text-[var(--fg-2)]">
             passo {position + 1} de {FUNNEL_LINE.length}
           </span>
         )}
         {/* O tempo parado vem junto do passo, e não numa coluna separada. */}
         {days !== undefined && (
           <span
-            className={`text-[13px] ${days >= 30 ? "font-semibold text-warn-fg" : "text-[var(--fg-2)]"}`}
+            className={`text-[0.8125rem] ${days >= 30 ? "font-semibold text-warn-fg" : "text-[var(--fg-2)]"}`}
           >
             há {days} {days === 1 ? "dia" : "dias"} neste passo
           </span>
         )}
       </div>
 
-      <p className="m-0 mt-0.5 text-[14px] text-navy">
+      <p className="m-0 mt-0.5 text-[0.875rem] text-navy">
         {prospect.guardianName}
         {prospect.guardianPhone && ` · ${prospect.guardianPhone}`}
         {" · "}
@@ -193,7 +193,7 @@ function ProspectCard({
       </p>
 
       {prospect.observation && (
-        <p className="m-0 mt-1 max-w-[68ch] text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">
           {prospect.observation}
         </p>
       )}
@@ -201,7 +201,7 @@ function ProspectCard({
       {/* ------------------------------------------------ disponibilidade */}
       <div className="mt-2">
         {prospect.availability.length > 0 ? (
-          <p className="m-0 text-[14px] text-navy">
+          <p className="m-0 text-[0.875rem] text-navy">
             Disponível{" "}
             {prospect.availability
               .map((slot) => `${weekdayName(slot.weekday)} das ${slot.startAt} às ${slot.endAt}`)
@@ -209,14 +209,14 @@ function ProspectCard({
             .
           </p>
         ) : (
-          <p className="m-0 text-[14px] font-semibold text-warn-fg">
+          <p className="m-0 text-[0.875rem] font-semibold text-warn-fg">
             Nenhuma janela de disponibilidade declarada.
           </p>
         )}
       </div>
 
       {prospect.visits.length > 0 && (
-        <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">
           Visitou em{" "}
           {prospect.visits
             .map((visit) => formatDate(`${visit.date}T12:00:00.000-03:00`, locale))

@@ -48,7 +48,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-field px-4 py-2 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55";
+    "inline-flex items-center justify-center gap-2 rounded-field px-4 py-2 text-[0.9375rem] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-55";
 
   const variants = {
     primary: "bg-action text-white hover:bg-action-hover",
@@ -96,7 +96,7 @@ export function Button({
         {children}
       </button>
       {unavailableReason && (
-        <span id={reasonId} className="max-w-[46ch] text-[13px] text-[var(--fg-2)]">
+        <span id={reasonId} className="max-w-[46ch] text-[0.8125rem] text-[var(--fg-2)]">
           {unavailableReason}
         </span>
       )}
@@ -122,7 +122,7 @@ export function Chip({ tone = "neutral", children }: { tone?: Tone; children: Re
   // 1.4.1 e falha qualquer pessoa lendo uma captura de tela em preto e branco.
   return (
     <span
-      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[13px] font-semibold ${TONE_CLASS[tone]}`}
+      className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[0.8125rem] font-semibold ${TONE_CLASS[tone]}`}
     >
       {children}
     </span>
@@ -230,8 +230,8 @@ export function Card({
 export function CardHeader({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="border-b border-[var(--border-soft)] px-5 py-4">
-      <h2 className="m-0 text-[15px] font-bold text-navy">{title}</h2>
-      {hint && <p className="m-0 mt-0.5 text-[13px] text-[var(--fg-2)]">{hint}</p>}
+      <h2 className="m-0 text-[0.9375rem] font-bold text-navy">{title}</h2>
+      {hint && <p className="m-0 mt-0.5 text-[0.8125rem] text-[var(--fg-2)]">{hint}</p>}
     </div>
   );
 }
@@ -240,7 +240,7 @@ export function CardHeader({ title, hint }: { title: string; hint?: string }) {
 
 export function DetailList({ items }: { items: { label: string; value: ReactNode }[] }) {
   return (
-    <dl className="m-0 grid grid-cols-[minmax(120px,auto)_1fr] gap-x-6 gap-y-2.5 text-[15px]">
+    <dl className="m-0 grid grid-cols-[minmax(120px,auto)_1fr] gap-x-6 gap-y-2.5 text-[0.9375rem]">
       {items.map((item) => (
         <div key={item.label} className="contents">
           <dt className="text-[var(--fg-2)]">{item.label}</dt>
@@ -291,8 +291,8 @@ export function Notice({
     >
       {/* Heading de verdade, não um parágrafo em negrito: o aviso é uma região da
           página, e quem navega por headings precisa alcançá-lo. */}
-      <Heading className="m-0 text-[15px] font-bold text-navy">{title}</Heading>
-      {children && <div className="mt-1.5 text-[14px] text-navy/85">{children}</div>}
+      <Heading className="m-0 text-[0.9375rem] font-bold text-navy">{title}</Heading>
+      {children && <div className="mt-1.5 text-[0.875rem] text-navy/85">{children}</div>}
     </div>
   );
 }
@@ -300,8 +300,8 @@ export function Notice({
 export function EmptyState({ title, description }: { title: string; description: string }) {
   return (
     <Card className="px-6 py-12 text-center">
-      <h2 className="m-0 text-[17px] font-bold text-navy">{title}</h2>
-      <p className="mx-auto mt-2 max-w-[48ch] text-[15px] text-[var(--fg-2)]">{description}</p>
+      <h2 className="m-0 text-[1.0625rem] font-bold text-navy">{title}</h2>
+      <p className="mx-auto mt-2 max-w-[48ch] text-[0.9375rem] text-[var(--fg-2)]">{description}</p>
     </Card>
   );
 }
@@ -310,9 +310,9 @@ export function ErrorState({ message }: { message: string }) {
   return (
     <Card className="border-danger-fg/25 bg-danger-bg px-6 py-8">
       <div role="alert">
-        <h2 className="m-0 text-[17px] font-bold text-danger-fg">Não foi possível carregar</h2>
-        <p className="mt-2 text-[15px] text-navy">{message}</p>
-        <p className="mt-1 text-[13px] text-[var(--fg-2)]">
+        <h2 className="m-0 text-[1.0625rem] font-bold text-danger-fg">Não foi possível carregar</h2>
+        <p className="mt-2 text-[0.9375rem] text-navy">{message}</p>
+        <p className="mt-1 text-[0.8125rem] text-[var(--fg-2)]">
           Nada foi perdido. Recarregue a página ou tente de novo em instantes.
         </p>
       </div>
@@ -323,7 +323,7 @@ export function ErrorState({ message }: { message: string }) {
 export function LoadingState({ label }: { label: string }) {
   return (
     <Card className="px-5 py-5">
-      <p className="m-0 text-[15px] text-[var(--fg-2)]" role="status">
+      <p className="m-0 text-[0.9375rem] text-[var(--fg-2)]" role="status">
         {label}…
       </p>
       <div className="mt-4 space-y-2.5" aria-hidden="true">
@@ -353,8 +353,8 @@ export function Timeline({
             }`}
           />
           <div className="min-w-0">
-            <p className="m-0 text-[14px] font-semibold text-navy">{event.label}</p>
-            <p className="m-0 text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 text-[0.875rem] font-semibold text-navy">{event.label}</p>
+            <p className="m-0 text-[0.8125rem] text-[var(--fg-2)]">
               {event.at.slice(8, 10)}/{event.at.slice(5, 7)} às {event.at.slice(11, 16)} ·{" "}
               {event.by === "insurer" ? "convênio" : "clínica"}
             </p>

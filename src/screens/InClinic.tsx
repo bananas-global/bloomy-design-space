@@ -130,7 +130,7 @@ export function InClinic({ context }: ScreenProps) {
           />
           <div className="px-5 py-5">
             {staff.length === 0 ? (
-              <p className="m-0 text-[15px] text-[var(--fg-2)]">
+              <p className="m-0 text-[0.9375rem] text-[var(--fg-2)]">
                 Nenhum profissional com entrada registrada agora.
               </p>
             ) : (
@@ -171,13 +171,13 @@ function PatientRow({
   return (
     <li className="rounded-card border border-[var(--border-soft)] px-4 py-3.5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="m-0 text-[15px] font-bold text-navy">{presence.patient.name}</h3>
+        <h3 className="m-0 text-[0.9375rem] font-bold text-navy">{presence.patient.name}</h3>
         {here ? (
           <Chip tone="ok">Na unidade</Chip>
         ) : (
           <Chip tone="neutral">Saiu às {formatTime(presence.checkoutAt!, locale)}</Chip>
         )}
-        <span className="text-[13px] text-[var(--fg-2)]">
+        <span className="text-[0.8125rem] text-[var(--fg-2)]">
           Entrada às {formatTime(presence.checkinAt, locale)} ·{" "}
           {sourceLabel(presence.checkinBy)}
           {here && ` · há ${minutes} min na unidade`}
@@ -193,24 +193,24 @@ function PatientRow({
       )}
 
       {presence.observation && (
-        <p className="m-0 mt-2 max-w-[68ch] rounded-field bg-ink-50 px-3 py-2 text-[13px] text-navy">
+        <p className="m-0 mt-2 max-w-[68ch] rounded-field bg-ink-50 px-3 py-2 text-[0.8125rem] text-navy">
           <span className="font-semibold">Observação da recepção:</span> {presence.observation}
         </p>
       )}
 
       {presence.schedules.length === 0 ? (
-        <p className="m-0 mt-2 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-2 text-[0.8125rem] text-[var(--fg-2)]">
           Nenhum atendimento marcado para hoje.
         </p>
       ) : (
         <ul className="m-0 mt-2.5 list-none space-y-1.5 p-0">
           {presence.schedules.map((item) => (
             <li key={item.id} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-              <span className="text-[14px] font-semibold text-navy">
+              <span className="text-[0.875rem] font-semibold text-navy">
                 {formatTime(item.start, locale)}
               </span>
-              <span className="text-[14px] text-navy">{item.serviceName}</span>
-              <span className="text-[13px] text-[var(--fg-2)]">{item.professionalName}</span>
+              <span className="text-[0.875rem] text-navy">{item.serviceName}</span>
+              <span className="text-[0.8125rem] text-[var(--fg-2)]">{item.professionalName}</span>
               <ScheduleStatusChip status={item.status} />
             </li>
           ))}
@@ -231,9 +231,9 @@ function ProfessionalRow({
 }) {
   return (
     <li className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-      <span className="text-[15px] font-semibold text-navy">{presence.professional.name}</span>
-      <span className="text-[13px] text-[var(--fg-2)]">{presence.professional.specialty}</span>
-      <span className="text-[13px] text-[var(--fg-2)]">
+      <span className="text-[0.9375rem] font-semibold text-navy">{presence.professional.name}</span>
+      <span className="text-[0.8125rem] text-[var(--fg-2)]">{presence.professional.specialty}</span>
+      <span className="text-[0.8125rem] text-[var(--fg-2)]">
         Entrada às {formatTime(presence.checkinAt, locale)} · há{" "}
         {minutesInClinic(presence, now)} min
       </span>

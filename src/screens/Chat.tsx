@@ -93,7 +93,7 @@ export function Chat({ context }: ScreenProps) {
         />
         <div className="px-5 py-5">
           {messages.length === 0 ? (
-            <p className="m-0 max-w-[60ch] text-[15px] text-navy">
+            <p className="m-0 max-w-[60ch] text-[0.9375rem] text-navy">
               Nenhuma mensagem ainda. É aqui que a equipe registra o que observa e combina conduta —
               e é consultável meses depois, quando alguém pergunta por que algo mudou.
             </p>
@@ -116,7 +116,7 @@ export function Chat({ context }: ScreenProps) {
       <Card as="section">
         <CardHeader title="Escrever" />
         <div className="px-5 py-5">
-          <label htmlFor="mensagem" className="block text-[15px] font-semibold text-navy">
+          <label htmlFor="mensagem" className="block text-[0.9375rem] font-semibold text-navy">
             Nova mensagem
           </label>
           <textarea
@@ -125,12 +125,12 @@ export function Chat({ context }: ScreenProps) {
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             aria-describedby="mensagem-permanencia"
-            className="mt-2 w-full rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[15px] text-navy"
+            className="mt-2 w-full rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[0.9375rem] text-navy"
           />
 
           {/* Antes do envio, não depois: descobrir que não dá para corrigir
               quando já não dá é a pior hora de descobrir. */}
-          <p id="mensagem-permanencia" className="m-0 mt-1.5 max-w-[60ch] text-[13px] text-[var(--fg-2)]">
+          <p id="mensagem-permanencia" className="m-0 mt-1.5 max-w-[60ch] text-[0.8125rem] text-[var(--fg-2)]">
             O que for enviado não pode ser editado nem apagado. É registro de coordenação clínica, e
             alguém vai consultá-lo meses depois.
           </p>
@@ -184,16 +184,16 @@ function MessageRow({
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[15px] font-bold text-navy">{message.authorName}</span>
+        <span className="text-[0.9375rem] font-bold text-navy">{message.authorName}</span>
         {/* O papel do autor aparece porque a mesma frase pesa diferente vinda
             de quem supervisiona e de quem aplica. */}
         <Chip tone="neutral">{message.authorRole}</Chip>
-        <span className="text-[13px] text-[var(--fg-2)]">
+        <span className="text-[0.8125rem] text-[var(--fg-2)]">
           {formatDateTime(message.at, locale)}
         </span>
         {mentionsMe && <Chip tone="pending">Mencionou você</Chip>}
       </div>
-      <p className="m-0 mt-1.5 max-w-[64ch] text-[15px] leading-relaxed text-navy">
+      <p className="m-0 mt-1.5 max-w-[64ch] text-[0.9375rem] leading-relaxed text-navy">
         {message.content}
       </p>
     </li>

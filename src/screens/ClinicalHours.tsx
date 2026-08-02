@@ -80,7 +80,7 @@ export function ClinicalHours({ context }: ScreenProps) {
       <Card as="section">
         <CardHeader title="O que esta tela decide" hint={`${hours.records.length} ${hours.records.length === 1 ? "dia" : "dias"}`} />
         <div className="space-y-3 px-5 py-5">
-          <p className="m-0 max-w-[68ch] text-[15px] text-navy">
+          <p className="m-0 max-w-[68ch] text-[0.9375rem] text-navy">
             É a tela em que um erro vira dinheiro. Cada linha compara o que estava previsto com o
             que foi marcado, e o valor diário sai daí.
           </p>
@@ -125,7 +125,7 @@ function RecordCard({
       />
       <div className="space-y-4 px-5 py-5">
         {/* --------------------------------------------------- os números */}
-        <dl className="m-0 grid grid-cols-[minmax(160px,auto)_1fr] gap-x-6 gap-y-1.5 text-[15px]">
+        <dl className="m-0 grid grid-cols-[minmax(160px,auto)_1fr] gap-x-6 gap-y-1.5 text-[0.9375rem]">
           <dt className="text-[var(--fg-2)]">Previsto</dt>
           <dd className="m-0 text-navy">
             {formatMinutes(previstoReal)}
@@ -203,7 +203,7 @@ function RecordCard({
 
         {/* ------------------------------------------------------- faixas */}
         <div>
-          <h3 className="m-0 text-[13px] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+          <h3 className="m-0 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
             Faixas marcadas
           </h3>
           <ul className="m-0 mt-2 list-none space-y-2 p-0">
@@ -227,7 +227,7 @@ function RecordCard({
         </div>
 
         {verificacao !== "verified" && (
-          <p className="m-0 max-w-[68ch] text-[13px] text-[var(--fg-2)]">
+          <p className="m-0 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">
             A localização só é gravada quando o aparelho manda as coordenadas, e o resultado da
             gravação é descartado. GPS desligado, permissão negada ou falha na inserção: o check-in
             dá certo e nada é dito. Sem esta frase, o registro teria a mesma aparência de um
@@ -236,7 +236,7 @@ function RecordCard({
         )}
 
         {record.observation && (
-          <p className="m-0 max-w-[68ch] text-[14px] text-navy">{record.observation}</p>
+          <p className="m-0 max-w-[68ch] text-[0.875rem] text-navy">{record.observation}</p>
         )}
       </div>
     </Card>
@@ -249,11 +249,11 @@ function HourRow({ hour }: { hour: ClinicHour }) {
 
   return (
     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-field border border-[var(--border-soft)] px-4 py-2.5">
-      <span className="text-[15px] font-semibold text-navy">
+      <span className="text-[0.9375rem] font-semibold text-navy">
         {hour.startAt} às {hour.endAt ?? "—"}
       </span>
       {span !== undefined && (
-        <span className={`text-[14px] ${span < 0 ? "font-semibold text-danger-fg" : "text-navy"}`}>
+        <span className={`text-[0.875rem] ${span < 0 ? "font-semibold text-danger-fg" : "text-navy"}`}>
           {formatMinutes(span)}
         </span>
       )}

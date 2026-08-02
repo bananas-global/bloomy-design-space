@@ -118,11 +118,11 @@ export function PatientDeactivation({ context }: ScreenProps) {
             {impact.schedulesToCancel.map((entry) => (
               <li
                 key={entry.id}
-                className="flex flex-wrap items-baseline gap-x-3 text-[15px] text-navy"
+                className="flex flex-wrap items-baseline gap-x-3 text-[0.9375rem] text-navy"
               >
                 <span className="font-semibold">{formatDateTime(entry.start, locale)}</span>
                 <span>{entry.serviceName}</span>
-                <span className="text-[13px] text-[var(--fg-2)]">{entry.professionalName}</span>
+                <span className="text-[0.8125rem] text-[var(--fg-2)]">{entry.professionalName}</span>
               </li>
             ))}
           </ul>
@@ -134,13 +134,13 @@ export function PatientDeactivation({ context }: ScreenProps) {
         <div className="space-y-2 px-5 py-5">
           <ul className="m-0 list-none space-y-1 p-0">
             {impact.hourMapsToClose.map((entry) => (
-              <li key={entry.id} className="text-[15px] text-navy">
+              <li key={entry.id} className="text-[0.9375rem] text-navy">
                 Encerrado no corte — a vigência ia até{" "}
                 {formatDate(`${entry.durationEnd}T12:00:00.000-03:00`, locale)}.
               </li>
             ))}
           </ul>
-          <p className="m-0 text-[13px] text-[var(--fg-2)]">
+          <p className="m-0 text-[0.8125rem] text-[var(--fg-2)]">
             A renovação automática é desligada em {impact.hourMapsLosingAutoRenew} mapas — a
             consulta não filtra por data, então inclui os que já terminaram.
           </p>

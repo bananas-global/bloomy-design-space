@@ -128,7 +128,7 @@ function AuthorizationCard({
 
         {/* A frase que torna a situação acionável. Sem ela, quatro situações
             diferentes viram "pendente" e a fila deixa de servir. */}
-        <p className="m-0 max-w-[72ch] text-[15px] text-navy">
+        <p className="m-0 max-w-[72ch] text-[0.9375rem] text-navy">
           {nextActionFor(authorization.status)}
         </p>
 
@@ -151,12 +151,12 @@ function AuthorizationCard({
         )}
 
         {authorization.observation && (
-          <p className="m-0 max-w-[72ch] rounded-field bg-ink-50 px-3 py-2 text-[14px] text-navy">
+          <p className="m-0 max-w-[72ch] rounded-field bg-ink-50 px-3 py-2 text-[0.875rem] text-navy">
             <span className="font-semibold">Do convênio:</span> {authorization.observation}
           </p>
         )}
 
-        <dl className="m-0 grid grid-cols-[minmax(120px,auto)_1fr] gap-x-6 gap-y-2 text-[14px]">
+        <dl className="m-0 grid grid-cols-[minmax(120px,auto)_1fr] gap-x-6 gap-y-2 text-[0.875rem]">
           <dt className="text-[var(--fg-2)]">Validade</dt>
           <dd className="m-0 text-navy">
             {br(authorization.validFrom)} a {br(authorization.validUntil)}
@@ -184,15 +184,15 @@ function AuthorizationCard({
 
         {authorization.packages.length > 0 && (
           <div>
-            <h3 className="m-0 text-[14px] font-bold text-navy">Saldo por pacote</h3>
+            <h3 className="m-0 text-[0.875rem] font-bold text-navy">Saldo por pacote</h3>
             <ul className="m-0 mt-2 list-none space-y-2 p-0">
               {authorization.packages.map((pkg) => {
                 const max = maxAllowed(pkg);
                 const left = remaining(pkg);
                 return (
                   <li key={pkg.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-[14px] text-navy">{pkg.name}</span>
-                    <span className="text-[14px] font-semibold text-navy">
+                    <span className="text-[0.875rem] text-navy">{pkg.name}</span>
+                    <span className="text-[0.875rem] font-semibold text-navy">
                       {pkg.executions} de {max} usadas
                     </span>
                     {left === 0 ? (
@@ -203,7 +203,7 @@ function AuthorizationCard({
                       </Chip>
                     )}
                     {pkg.packageType === "capitation" && (
-                      <span className="text-[13px] text-[var(--fg-2)]">
+                      <span className="text-[0.8125rem] text-[var(--fg-2)]">
                         capitation: o teto é o máximo mensal, sem multiplicar pela quantidade de{" "}
                         {pkg.quantity}
                       </span>
@@ -220,7 +220,7 @@ function AuthorizationCard({
             logo acima já disse tudo — e repeti-la faria o leitor de tela
             anunciar a mesma coisa duas vezes na mesma região. */}
         <div
-          className={`rounded-field px-3 py-2 text-[14px] ${
+          className={`rounded-field px-3 py-2 text-[0.875rem] ${
             availability.allowed ? "bg-ok-bg text-ok-fg" : "bg-warn-bg text-navy"
           }`}
         >

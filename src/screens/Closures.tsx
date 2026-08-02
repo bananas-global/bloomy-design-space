@@ -120,9 +120,9 @@ function ClosureCard({
           <Chip tone="neutral">{closureStatusLabel(closure.status)}</Chip>
         </div>
 
-        <p className="m-0 max-w-[72ch] text-[15px] text-navy">{nextStep(closure)}</p>
+        <p className="m-0 max-w-[72ch] text-[0.9375rem] text-navy">{nextStep(closure)}</p>
 
-        <p className="m-0 text-[22px] font-bold text-navy">
+        <p className="m-0 text-[1.375rem] font-bold text-navy">
           {formatMoney(closure.amountCents, locale)}
         </p>
 
@@ -185,10 +185,10 @@ function ClosureCard({
 
         {closure.logs.length > 0 && (
           <div>
-            <h3 className="m-0 text-[14px] font-bold text-navy">Histórico</h3>
+            <h3 className="m-0 text-[0.875rem] font-bold text-navy">Histórico</h3>
             <ol className="m-0 mt-2 list-none space-y-2 p-0">
               {closure.logs.map((log, index) => (
-                <li key={`${log.at}-${index}`} className="text-[13px]">
+                <li key={`${log.at}-${index}`} className="text-[0.8125rem]">
                   <span className="text-navy">{log.observation}</span>
                   <span className="text-[var(--fg-2)]">
                     {" "}
@@ -233,7 +233,7 @@ function Trail({
           <li key={status}>
             <span
               {...(here ? { "aria-current": "step" as const } : {})}
-              className={`inline-flex items-center rounded-field px-2.5 py-1 text-[13px] ${
+              className={`inline-flex items-center rounded-field px-2.5 py-1 text-[0.8125rem] ${
                 here
                   ? "bg-action font-semibold text-white"
                   : done
@@ -273,16 +273,16 @@ function Attachment({
 }) {
   return (
     <div className="rounded-field border border-[var(--border-soft)] px-4 py-3">
-      <h3 className="m-0 text-[14px] font-bold text-navy">{title}</h3>
+      <h3 className="m-0 text-[0.875rem] font-bold text-navy">{title}</h3>
       {file ? (
-        <p className="m-0 mt-1 text-[14px] text-navy">
+        <p className="m-0 mt-1 text-[0.875rem] text-navy">
           <span className="font-mono">{file.name}</span>{" "}
-          <span className="text-[13px] text-[var(--fg-2)]">
+          <span className="text-[0.8125rem] text-[var(--fg-2)]">
             — anexado em {formatDateTime(file.at, locale)}
           </span>
         </p>
       ) : (
-        <p className="m-0 mt-1 text-[14px] text-[var(--fg-2)]">Não anexado.</p>
+        <p className="m-0 mt-1 text-[0.875rem] text-[var(--fg-2)]">Não anexado.</p>
       )}
       <div className="mt-2">
         <Button id={actionId} unavailableReason={decision.allowed ? undefined : decision.reason}>

@@ -172,7 +172,7 @@ export function HealthcareInvoiceScreen({ context }: ScreenProps) {
             /* A lista responde "o que entra"; o motivo do botão responde "por
                que não fecha". Mesma causa, perguntas diferentes — e repetir a
                frase faria o leitor de tela anunciá-la duas vezes. */
-            <p className="m-0 text-[15px] text-navy">
+            <p className="m-0 text-[0.9375rem] text-navy">
               Nenhuma linha entrou no lote: todas as autorizações do período estão sem atendimento
               realizado.
             </p>
@@ -185,7 +185,7 @@ export function HealthcareInvoiceScreen({ context }: ScreenProps) {
           )}
 
           {billable.length > 0 && (
-            <p className="m-0 mt-4 border-t border-[var(--border-soft)] pt-4 text-[17px] font-bold text-navy">
+            <p className="m-0 mt-4 border-t border-[var(--border-soft)] pt-4 text-[1.0625rem] font-bold text-navy">
               Total do lote: {formatMoney(total, locale)}
             </p>
           )}
@@ -200,7 +200,7 @@ export function HealthcareInvoiceScreen({ context }: ScreenProps) {
           />
           <ul className="m-0 list-none space-y-2 p-5">
             {excluded.map((item) => (
-              <li key={item.authorizationId} className="text-[14px]">
+              <li key={item.authorizationId} className="text-[0.875rem]">
                 <span className="font-mono text-navy">{item.guideNumber}</span>{" "}
                 <span className="text-navy">{item.patientName}</span>{" "}
                 <span className="text-[var(--fg-2)]">
@@ -217,7 +217,7 @@ export function HealthcareInvoiceScreen({ context }: ScreenProps) {
         <CardHeader title="Fechar a fatura" hint="Gera o lote TISS e envia à operadora" />
         <div className="px-5 py-5">
           {missing.length > 0 && (
-            <p className="m-0 mb-3 max-w-[68ch] text-[14px] text-navy">
+            <p className="m-0 mb-3 max-w-[68ch] text-[0.875rem] text-navy">
               São os identificadores com que a operadora reconhece o lote. Sem eles, o envio existe
               e ninguém consegue rastreá-lo depois — nem a clínica, nem a operadora.
             </p>
@@ -246,11 +246,11 @@ function LineRow({ line, locale }: { line: InvoiceLine; locale: string | undefin
       }`}
     >
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-mono text-[13px] font-bold text-navy">{line.guideNumber}</span>
-        <span className="text-[15px] text-navy">{line.patientName}</span>
-        <span className="text-[13px] text-[var(--fg-2)]">{line.packageName}</span>
+        <span className="font-mono text-[0.8125rem] font-bold text-navy">{line.guideNumber}</span>
+        <span className="text-[0.9375rem] text-navy">{line.patientName}</span>
+        <span className="text-[0.8125rem] text-[var(--fg-2)]">{line.packageName}</span>
       </div>
-      <p className="m-0 mt-1 text-[14px] text-navy">
+      <p className="m-0 mt-1 text-[0.875rem] text-navy">
         {line.executedSessions} de {line.quantity}{" "}
         {line.quantity === 1 ? "sessão realizada" : "sessões realizadas"} ·{" "}
         {zero ? (

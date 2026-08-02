@@ -73,7 +73,7 @@ export function NewAppointment({ context }: ScreenProps) {
           hint={`${formatDate(attempt.start, locale)}, ${formatTime(attempt.start, locale)} às ${formatTime(attempt.end, locale)}`}
         />
         <div className="px-5 py-5">
-          <dl className="m-0 grid grid-cols-[minmax(130px,auto)_1fr] gap-x-6 gap-y-1.5 text-[15px]">
+          <dl className="m-0 grid grid-cols-[minmax(130px,auto)_1fr] gap-x-6 gap-y-1.5 text-[0.9375rem]">
             {attempt.patientName && (
               <>
                 <dt className="text-[var(--fg-2)]">Paciente</dt>
@@ -90,7 +90,7 @@ export function NewAppointment({ context }: ScreenProps) {
               {folga !== undefined && (
                 <>
                   {" "}
-                  <span className="text-[13px] text-[var(--fg-2)]">
+                  <span className="text-[0.8125rem] text-[var(--fg-2)]">
                     · {attempt.roomOccupancy} de {attempt.roomCapacity} lugares ocupados
                   </span>
                 </>
@@ -101,7 +101,7 @@ export function NewAppointment({ context }: ScreenProps) {
           {/* "Ocupada" só quer dizer cheia. Sem isso, alguém recusa um horário
               que caberia. */}
           {folga !== undefined && folga > 0 && attempt.roomOccupancy! > 0 && (
-            <p className="m-0 mt-3 max-w-[64ch] text-[13px] text-[var(--fg-2)]">
+            <p className="m-0 mt-3 max-w-[64ch] text-[0.8125rem] text-[var(--fg-2)]">
               A sala já tem atendimento e ainda cabe {folga}{" "}
               {folga === 1 ? "atendimento" : "atendimentos"}. A verificação compara ocupação com
               capacidade — uma sala com gente dentro não está indisponível, está usada.
@@ -161,17 +161,17 @@ export function NewAppointment({ context }: ScreenProps) {
                       {impedimentLabel(impediment.kind)}
                     </Chip>
                     {index === 0 && todos.length > 1 && (
-                      <span className="text-[13px] text-[var(--fg-2)]">
+                      <span className="text-[0.8125rem] text-[var(--fg-2)]">
                         a única que o sistema atual mostraria
                       </span>
                     )}
                   </div>
                   {/* A frase do sistema real, com os nomes e horários dentro. */}
-                  <p className="m-0 mt-1.5 max-w-[64ch] text-[15px] text-navy">
+                  <p className="m-0 mt-1.5 max-w-[64ch] text-[0.9375rem] text-navy">
                     {impediment.message}
                   </p>
                   {/* Uma lista que só informa devolve o problema a quem não age. */}
-                  <p className="m-0 mt-1 text-[13px] text-[var(--fg-2)]">
+                  <p className="m-0 mt-1 text-[0.8125rem] text-[var(--fg-2)]">
                     Resolver: {impedimentOwner(impediment.kind)}.
                   </p>
                 </li>

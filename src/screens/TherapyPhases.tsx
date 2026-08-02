@@ -123,13 +123,13 @@ function PhaseRow({ phase, locale }: { phase: TherapyPhase; locale: string | und
   return (
     <article className="rounded-card border border-[var(--border-soft)] px-4 py-3.5">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h3 className="m-0 text-[15px] font-bold text-navy">
+        <h3 className="m-0 text-[0.9375rem] font-bold text-navy">
           {phase.specialty ? specialtyLabel(phase.specialty) : "Sem especialidade"}
         </h3>
         <Chip tone={phase.step === "discharge_preparation" ? "ok" : "info"}>
           {stepLabel(phase.step)}
         </Chip>
-        <span className="text-[13px] text-[var(--fg-2)]">
+        <span className="text-[0.8125rem] text-[var(--fg-2)]">
           etapa {position} de {THERAPY_STEPS.length}
         </span>
       </div>
@@ -142,7 +142,7 @@ function PhaseRow({ phase, locale }: { phase: TherapyPhase; locale: string | und
           return (
             <li
               key={step}
-              className={`text-[13px] ${
+              className={`text-[0.8125rem] ${
                 current
                   ? "font-bold text-navy"
                   : done
@@ -164,10 +164,10 @@ function PhaseRow({ phase, locale }: { phase: TherapyPhase; locale: string | und
       </ol>
 
       {ambiguous && (
-        <p className="m-0 mt-2 max-w-[68ch] text-[13px] text-[var(--fg-2)]">{ambiguous}</p>
+        <p className="m-0 mt-2 max-w-[68ch] text-[0.8125rem] text-[var(--fg-2)]">{ambiguous}</p>
       )}
 
-      <p className="m-0 mt-1.5 text-[13px] text-[var(--fg-2)]">
+      <p className="m-0 mt-1.5 text-[0.8125rem] text-[var(--fg-2)]">
         Atualizado em {formatDate(phase.updatedAt, locale)}
       </p>
     </article>

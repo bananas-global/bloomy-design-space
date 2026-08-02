@@ -231,7 +231,7 @@ export function SessionDetail({ context }: ScreenProps) {
               </Notice>
             ) : (
               <div
-                className="max-w-[68ch] space-y-3 text-[15px] leading-relaxed text-navy [&_p]:m-0"
+                className="max-w-[68ch] space-y-3 text-[0.9375rem] leading-relaxed text-navy [&_p]:m-0"
                 // A evolução é texto rico no produto real. A fixture é sintética
                 // e escrita à mão neste repositório — não há entrada de usuário
                 // atravessando aqui.
@@ -259,10 +259,10 @@ export function SessionDetail({ context }: ScreenProps) {
                 {session.signatures.map((signature) => (
                   <li key={signature.professionalId} className="flex flex-wrap items-baseline gap-2">
                     <Chip tone="ok">Assinado</Chip>
-                    <span className="text-[15px] font-semibold text-navy">
+                    <span className="text-[0.9375rem] font-semibold text-navy">
                       {signature.professionalName}
                     </span>
-                    <span className="text-[13px] text-[var(--fg-2)]">
+                    <span className="text-[0.8125rem] text-[var(--fg-2)]">
                       {signature.role === "owner" ? "responsável pelo atendimento" : "supervisor"} ·{" "}
                       {formatDateTime(signature.at, locale)}
                     </span>
@@ -315,7 +315,7 @@ export function SessionDetail({ context }: ScreenProps) {
             hint="Apaga o atendimento e devolve o agendamento à situação anterior"
           />
           <div className="space-y-3 px-5 py-5">
-            <p className="m-0 max-w-[68ch] text-[15px] text-navy">
+            <p className="m-0 max-w-[68ch] text-[0.9375rem] text-navy">
               Reverter devolve o agendamento para{" "}
               <strong>{scheduleStatusLabel(statusAfterRevert(session))}</strong>
               {session.scheduleType === "patient" && (
@@ -355,7 +355,7 @@ function ProgramBlock({ execution }: { execution: ProgramExecution }) {
   return (
     <section className="rounded-card border border-[var(--border-soft)] px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="m-0 text-[15px] font-bold text-navy">{execution.programName}</h3>
+        <h3 className="m-0 text-[0.9375rem] font-bold text-navy">{execution.programName}</h3>
         <Chip tone={execution.programType === "structured" ? "info" : "neutral"}>
           {execution.programType === "structured" ? "Estruturado" : "Incidental"}
         </Chip>
@@ -365,9 +365,9 @@ function ProgramBlock({ execution }: { execution: ProgramExecution }) {
         {execution.steps.map((step) => (
           <li key={step.id}>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-[15px] text-navy">{step.name}</span>
-              <span className="text-[13px] text-[var(--fg-2)]">{phaseLabel(step.phase)}</span>
-              <span className="text-[13px] font-semibold text-navy">
+              <span className="text-[0.9375rem] text-navy">{step.name}</span>
+              <span className="text-[0.8125rem] text-[var(--fg-2)]">{phaseLabel(step.phase)}</span>
+              <span className="text-[0.8125rem] font-semibold text-navy">
                 {step.trials.length} de {step.targetTrials}
               </span>
             </div>
@@ -377,7 +377,7 @@ function ProgramBlock({ execution }: { execution: ProgramExecution }) {
       </ul>
 
       {total === 0 && (
-        <p className="m-0 mt-3 text-[13px] text-[var(--fg-2)]">
+        <p className="m-0 mt-3 text-[0.8125rem] text-[var(--fg-2)]">
           Nenhuma tentativa registrada ainda.
         </p>
       )}
@@ -398,7 +398,7 @@ function TrialRow({ trials }: { trials: Trial[] }) {
       {trials.map((trial, index) => (
         <li key={trial.id}>
           <span
-            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-field px-1.5 text-[13px] font-semibold ${
+            className={`inline-flex h-7 min-w-7 items-center justify-center rounded-field px-1.5 text-[0.8125rem] font-semibold ${
               trial.result === "success" ? "bg-ok-bg text-ok-fg" : "bg-danger-bg text-danger-fg"
             }`}
           >

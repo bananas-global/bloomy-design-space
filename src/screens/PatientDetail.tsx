@@ -110,7 +110,7 @@ export function PatientDetail({ params, context }: ScreenProps) {
                   value: patient.insurance ? (
                     <>
                       {patient.insurance.name} — {patient.insurance.plan}
-                      <span className="block text-[13px] text-[var(--fg-2)]">
+                      <span className="block text-[0.8125rem] text-[var(--fg-2)]">
                         carteirinha {patient.insurance.cardNumber}
                       </span>
                     </>
@@ -140,7 +140,7 @@ export function PatientDetail({ params, context }: ScreenProps) {
                   ]}
                 />
               ) : (
-                <p className="m-0 text-[15px] text-[var(--fg-2)]">
+                <p className="m-0 text-[0.9375rem] text-[var(--fg-2)]">
                   Nenhum responsável cadastrado. Cadastre antes de agendar.
                 </p>
               )}
@@ -152,7 +152,7 @@ export function PatientDetail({ params, context }: ScreenProps) {
           <CardHeader title="Prontuário" />
           <div className="px-5 py-5">
             {patient.recordRestricted && (
-              <p className="m-0 mb-3 text-[15px] text-navy">
+              <p className="m-0 mb-3 text-[0.9375rem] text-navy">
                 {patient.restrictionNote ??
                   "Este prontuário tem acesso restrito por decisão clínica."}
               </p>
@@ -160,7 +160,7 @@ export function PatientDetail({ params, context }: ScreenProps) {
 
             {record.allowed ? (
               <div className="rounded-field bg-ink-50 px-4 py-4">
-                <p className="m-0 text-[15px] text-navy">
+                <p className="m-0 text-[0.9375rem] text-navy">
                   Conteúdo clínico disponível para este perfil. No Design Space o prontuário é
                   representado, não reproduzido: o que importa aqui é <em>quem</em> alcança a
                   informação, não a informação em si.
@@ -179,7 +179,7 @@ export function PatientDetail({ params, context }: ScreenProps) {
         <Card as="section">
           <CardHeader title="Ações" />
           <div className="px-5 py-5">
-            <p role="status" aria-live="polite" className="m-0 min-h-6 text-[15px] text-navy">
+            <p role="status" aria-live="polite" className="m-0 min-h-6 text-[0.9375rem] text-navy">
               {outcome}
             </p>
 
