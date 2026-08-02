@@ -2069,3 +2069,29 @@ export interface AutoCheckoutData {
   runsAt: string;
   records: OpenPresence[];
 }
+
+/* ============================================== Renovação da janela */
+
+/**
+ * A janela de autorização de um paciente.
+ *
+ * `PatientAuthorization` é o **período**, não a guia: tem `has_many
+ * :authorizations` e nenhuma quantidade. Renovar move a data de fim; o saldo
+ * de sessões vive nas guias dentro dela.
+ */
+export interface AuthorizationWindow {
+  id: string;
+  patientName: string;
+  durationStart: string;
+  durationEnd: string;
+  autoRenew: boolean;
+  /** Sessões que ainda restam nas guias dentro da janela. */
+  remainingSessions: number;
+  /** Nova data de fim, quando a renovação já aconteceu. */
+  renewedTo?: string;
+}
+
+export interface AuthorizationRenewalData {
+  windows: AuthorizationWindow[];
+  today: string;
+}

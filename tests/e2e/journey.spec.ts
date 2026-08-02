@@ -2740,3 +2740,48 @@ test.describe("saída automática", () => {
     await expect(page.getByText(/pareceria erro de quem estava no balcão/)).toBeVisible();
   });
 });
+
+test.describe("renovação da janela de autorização", () => {
+  test("a janela que vai renovar vazia é apontada antes de renovar", async ({ page }) => {
+    await page.goto(urlFor("authorizations.renewal-into-empty"));
+
+    await expect(page.getByText("1 janela vai renovar sem sessão nenhuma")).toBeVisible();
+    await expect(page.getByText(/não cria guia nova nem devolve sessão/)).toBeVisible();
+  });
+
+  test("cada linha diz o que a renovação muda e o que não muda", async ({ page }) => {
+    await page.goto(urlFor("authorizations.renewal-into-empty"));
+
+    await expect(page.getByText(/A renovação não acrescenta nenhuma/)).toBeVisible();
+    await expect(page.getByText(/quem repõe saldo é uma guia nova/)).toBeVisible();
+  });
+
+  test("ligar a renovação numa segunda janela do mesmo paciente fica indisponível", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("authorizations.renewal-into-empty"));
+
+    // O índice único só se manifestaria ao salvar. Aqui aparece antes — e os
+    // dois lados importam: a Nina ainda pode ligar, o Théo não.
+    const linhaDaNina = page.getByRole("article").filter({ hasText: "Nina Corrêa Bastos" });
+    await expect(
+      linhaDaNina.getByRole("button", { name: "Ligar a renovação automática" }),
+    ).toBeEnabled();
+
+    const segundaDoTheo = page
+      .getByRole("article")
+      .filter({ hasText: "Théo Andrade Lins" })
+      .filter({ hasText: "não renova sozinha" });
+    await expect(
+      segundaDoTheo.getByRole("button", { name: "Ligar a renovação automática" }),
+    ).toBeDisabled();
+    await expect(page.getByText(/períodos sobrepostos/)).toBeVisible();
+  });
+
+  test("com todas com saldo, o aviso cala", async ({ page }) => {
+    await page.goto(urlFor("authorizations.renewal-with-balance"));
+
+    await expect(page.getByText(/vai renovar sem sessão nenhuma/)).toHaveCount(0);
+    await expect(page.getByText(/A renovação não acrescenta nenhuma/).first()).toBeVisible();
+  });
+});

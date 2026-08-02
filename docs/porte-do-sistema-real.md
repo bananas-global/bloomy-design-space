@@ -1591,6 +1591,35 @@ de ajustar o número até passar.
 3 cenários, 7 testes de regra, 5 jornadas.
 
 
+### 53. Renovar move a data, não o saldo — `porte/renovacao-da-janela`
+
+`PatientAuthorizations.Workers.AutoRenewWorker` é quase idêntico ao do mapa de
+horas: mesma guarda de último dia do mês, mesmo horizonte de três meses, mesma
+fragilidade de fuso (achado 55).
+
+Minha primeira leitura foi que ele estendia uma autorização da operadora por
+conta própria. **Fui ler o schema antes de escrever, e estava errado.**
+`PatientAuthorization` é o **período**: tem `has_many :authorizations` e nenhuma
+quantidade. As guias — e o saldo de sessões — vivem dentro dela.
+
+O achado real é outro, e mais silencioso: **renovar move `duration_end_at` e
+nada mais.** Não cria guia, não devolve sessão. Uma janela com saldo zero é
+estendida três meses e continua com saldo zero.
+
+"Autorização renovada" é lido como "o paciente tem sessões de novo". Prolongar
+um recipiente vazio não produz erro nenhum — alguém descobre ao tentar marcar,
+com a família no telefone. Por isso a tela aponta a janela que vai renovar vazia
+**antes** de renovar, e cada linha diz o que a renovação muda e o que não muda.
+
+Junto veio uma decisão boa do sistema que valia preservar: um índice único
+impede mais de uma janela renovando por paciente — duas produziriam períodos
+sobrepostos e ninguém saberia qual vale. Ela só se manifesta ao salvar a
+segunda; a tela a mostra antes, com o motivo, e a jornada afirma **os dois
+lados** — quem ainda pode ligar e quem não pode.
+
+2 cenários, 5 testes de regra, 4 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1653,3 +1682,4 @@ bugs do Design Space; são observações sobre o produto.
 | 53 | `DeactivatePatientWorker` faz `Repo.delete_all` nos vínculos profissional–paciente. O caminho manual (`ChangePatientStatus`) não os toca. Mesmo objetivo, dois códigos, e o que roda sem ninguém presente apaga o registro de quem atendeu — junto do campo de observação daquela relação. Em ABA, é justamente o que se procura quando a família volta. | `lib/bloomy/patients/workers/deactivate_patient_worker.ex:41-42` |
 | 54 | `AutoCheckout` fecha **todo** check-in sem saída, sem filtro de data, carimbando a hora em que a rotina rodou. Um check-in esquecido há três meses passa a declarar uma presença de 89 dias na unidade. A intenção — limpar a lista operacional — é boa; carimbar a duração junto é o efeito colateral. | `lib/bloomy/service_records/auto_checkout.ex:7-12` |
 | 55 | `HourMaps.Workers.AutoRenewWorker` só age se `Date.utc_today() == Date.end_of_month(today)`. Em Brasília, a janela em que essa condição é verdadeira vai das 21h do penúltimo dia às 20h59 do último — se o agendamento do worker cair fora dela, a renovação silenciosamente não acontece e a continuidade da terapia fica um mês sem mapa. Sétima ocorrência do padrão de fuso. | `lib/bloomy/patients/hour_maps/workers/auto_renew_worker.ex:13-19` |
+| 56 | `PatientAuthorizations.Workers.AutoRenewWorker` estende `duration_end_at` da janela e não toca nas guias. Uma janela com saldo zero é renovada por mais três meses e continua sem sessão nenhuma — "renovada" descreve o período, não o saldo, e a descoberta acontece na tentativa de marcar. | `lib/bloomy/patients/patient_authorizations/workers/auto_renew_worker.ex:37-40` |

@@ -33,6 +33,7 @@ import { coverageFixtures } from "../fixtures/coverage.js";
 import { closureGenerationFixtures } from "../fixtures/closureGeneration.js";
 import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
 import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
+import { authorizationRenewalFixtures } from "../fixtures/authorizationRenewal.js";
 import {
   agendaRules,
   schedulingRules,
@@ -53,7 +54,7 @@ import {
   patientGapRules,
   deactivationPathRules,
 } from "../rules/patients.js";
-import { authorizationRules } from "../rules/authorizations.js";
+import { authorizationRules, authorizationRenewalRules } from "../rules/authorizations.js";
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
 import { teamRules } from "../rules/team.js";
@@ -103,6 +104,7 @@ import { coverageScenarios } from "../scenarios/coverage.js";
 import { closureGenerationScenarios } from "../scenarios/closureGeneration.js";
 import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
 import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
+import { authorizationRenewalScenarios } from "../scenarios/authorizationRenewal.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -311,6 +313,7 @@ export const modules: Module[] = [
             decision: "Há o que corrigir?",
             branches: {
               "Todas estão completas": "authorizations.coverage-well-formed",
+              "A janela vai renovar vazia": "authorizations.renewal-into-empty",
             },
           },
         ],
@@ -1005,6 +1008,7 @@ export const scenarios: Scenario[] = [
   ...closureGenerationScenarios,
   ...absenceOriginScenarios,
   ...autoCheckoutScenarios,
+  ...authorizationRenewalScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -1041,6 +1045,7 @@ export const fixtures: Fixture[] = [
   ...closureGenerationFixtures,
   ...absenceOriginFixtures,
   ...autoCheckoutFixtures,
+  ...authorizationRenewalFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -1063,6 +1068,7 @@ export const rules: Rule[] = [
   ...patientGapRules,
   ...deactivationPathRules,
   ...authorizationRules,
+  ...authorizationRenewalRules,
   ...closureRules,
   ...invoiceRules,
   ...teamRules,

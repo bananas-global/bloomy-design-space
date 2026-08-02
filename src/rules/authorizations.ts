@@ -269,3 +269,72 @@ export function queueOrder(authorizations: Authorization[]): Authorization[] {
     return a.requestDate.localeCompare(b.requestDate);
   });
 }
+
+/* ============================================== Renovação da janela */
+
+import type {
+  AuthorizationRenewalData,
+  AuthorizationWindow,
+} from "../contracts/index.js";
+
+/**
+ * Regras da renovação automática da janela.
+ *
+ * `PatientAuthorizations.Workers.AutoRenewWorker` estende `duration_end_at`
+ * três meses à frente. `PatientAuthorization` é o **período** — tem
+ * `has_many :authorizations` e nenhuma quantidade.
+ */
+export const authorizationRenewalRules: Rule[] = [
+  {
+    id: "renewing-the-window-does-not-restore-sessions",
+    statement:
+      "A renovação move a data de fim da janela. Não cria guia nova nem devolve sessão: o saldo continua sendo o das guias que já estavam lá.",
+    rationale:
+      "“Autorização renovada” é lido como “o paciente tem sessões de novo”. Quando o saldo estava em zero, a renovação prolonga um recipiente vazio — e alguém só descobre ao tentar marcar.",
+    source: "src/rules/authorizations.ts",
+  },
+  {
+    id: "only-one-window-renews-per-patient",
+    statement:
+      "Um índice único impede mais de uma janela com renovação automática por paciente: “Paciente já possui um padrão de autorização com renovação automática”.",
+    rationale:
+      "É a decisão certa — duas janelas renovando sozinhas produziriam períodos sobrepostos e ninguém saberia qual vale. Vale registrar porque a mensagem só aparece na hora de salvar a segunda.",
+    source: "src/rules/authorizations.ts",
+  },
+];
+
+/** Implementação de `renewing-the-window-does-not-restore-sessions`. */
+export function renewalRestoresSessions(): boolean {
+  return false;
+}
+
+/** Janelas que vão renovar e chegar na data nova sem saldo nenhum. */
+export function renewsIntoEmpty(data: AuthorizationRenewalData): AuthorizationWindow[] {
+  return data.windows.filter(
+    (window) => window.autoRenew && window.remainingSessions === 0,
+  );
+}
+
+/** O que a renovação de fato muda, em uma frase — e o que ela não muda. */
+export function whatRenewalChanges(window: AuthorizationWindow): string {
+  if (window.remainingSessions === 0) {
+    return "A janela vai até mais longe e continua sem sessão nenhuma. Renovar move a data; quem repõe saldo é uma guia nova.";
+  }
+  return `A janela vai até mais longe, com as ${window.remainingSessions} ${window.remainingSessions === 1 ? "sessão que resta" : "sessões que restam"} nas guias atuais. A renovação não acrescenta nenhuma.`;
+}
+
+/** Implementação de `only-one-window-renews-per-patient`. */
+export function canEnableAutoRenew(
+  data: AuthorizationRenewalData,
+  patientName: string,
+): { allowed: boolean; reason?: string } {
+  const jaTem = data.windows.some(
+    (window) => window.patientName === patientName && window.autoRenew,
+  );
+  if (!jaTem) return { allowed: true };
+  return {
+    allowed: false,
+    reason:
+      "Este paciente já tem uma janela com renovação automática. Duas renovando sozinhas produziriam períodos sobrepostos, e ninguém saberia qual vale.",
+  };
+}
