@@ -148,13 +148,36 @@ body {
    modo teclado, mas quem garante que ele existe em condição normal é este
    bloco — e removê-lo para resolver um pedido de layout é violação de
    guardrail declarada no AGENTS.md. */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+/* Sem `:where()`, de propósito.
+   `:where()` tem especificidade zero, e o anel roxo estava chegando ao
+   navegador com `outline-color` resolvido para `currentColor` — branco, num
+   botão de texto branco, sobre um cartão branco. Ou seja: foco invisível em
+   toda ação primária do produto, exatamente o que este bloco existe para
+   impedir. A cor vai declarada à parte da abreviação porque era só ela que
+   estava sendo perdida. Ver `docs/decisions/0004`. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
   outline: 2px solid var(--color-accent);
+  outline-color: var(--color-accent);
   outline-offset: 2px;
   border-radius: 4px;
+
+  /* O `transition-colors` do Tailwind v4 inclui `outline-color`. Com ele, o
+     anel **nasce em `currentColor`** — branco num botão primário — e só chega
+     ao roxo no fim da transição. Quem tabula rápido nunca vê o anel completo,
+     que é justamente quem depende dele. A lista abaixo é a do utilitário sem
+     `outline-color`: o resto continua transicionando. */
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
 }
 
 /* Superfície escura do drawer: o foco roxo desapareceria contra o navy. */
-.bloomy-drawer :where(a, button, [tabindex]):focus-visible {
+.bloomy-drawer a:focus-visible,
+.bloomy-drawer button:focus-visible,
+.bloomy-drawer [tabindex]:focus-visible {
   outline-color: var(--color-cyan-brand);
 }

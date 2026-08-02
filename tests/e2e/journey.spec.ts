@@ -2190,3 +2190,43 @@ test.describe("ação indisponível alcança o teclado", () => {
     expect(estilo.fundo).toBe("rgb(244, 246, 247)");
   });
 });
+
+test.describe("anel de foco", () => {
+  test("o foco por teclado é visível, e não branco sobre branco", async ({ page }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    // O anel chegou ao navegador em branco por muito tempo: `:where()` tem
+    // especificidade zero e `outline-color` caía em `currentColor`, que num
+    // botão de texto branco é branco — sobre um cartão branco.
+    // Um Tab antes: no Chromium, `:focus-visible` só vale se a última
+    // modalidade de entrada foi o teclado, e `.focus()` sozinho não a define.
+    await page.keyboard.press("Tab");
+    const botao = page.getByRole("button", { name: "Marcar todas como lidas" });
+    await botao.focus();
+
+    // Medido sem espera nenhuma, de propósito: o `transition-colors` do
+    // Tailwind v4 inclui `outline-color`, e o anel nascia branco e só chegava
+    // ao roxo no fim da transição. Quem tabula rápido nunca via o anel
+    // completo — e é quem mais depende dele.
+    const anel = await botao.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return { estilo: cs.outlineStyle, largura: cs.outlineWidth, cor: cs.outlineColor, offset: cs.outlineOffset };
+    });
+
+    expect(anel.estilo).toBe("solid");
+    expect(anel.largura).toBe("2px");
+    expect(anel.cor).toBe("rgb(97, 68, 197)");
+    expect(anel.offset).toBe("2px");
+  });
+
+  test("no drawer o anel muda de cor, porque o roxo sumiria no navy", async ({ page }) => {
+    await page.goto(urlFor("agenda.day"));
+
+    await page.keyboard.press("Tab");
+    const link = page.getByLabel("Navegação principal").getByRole("link", { name: "Pacientes" });
+    await link.focus();
+
+    const cor = await link.evaluate((el) => getComputedStyle(el).outlineColor);
+    expect(cor).toBe("rgb(88, 186, 218)");
+  });
+});
