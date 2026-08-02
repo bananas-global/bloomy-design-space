@@ -29,8 +29,10 @@ import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
 import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyPhases.js";
 import { patientGapFixtures } from "../fixtures/patientGaps.js";
 import { overdueFixtures } from "../fixtures/overdue.js";
+import { coverageFixtures } from "../fixtures/coverage.js";
 import { agendaRules, schedulingRules, absenceRules } from "../rules/agenda.js";
 import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
+import { coverageRules } from "../rules/coverage.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -82,6 +84,7 @@ import { newAppointmentScenarios } from "../scenarios/newAppointment.js";
 import { therapyPhaseScenarios } from "../scenarios/therapyPhases.js";
 import { patientGapScenarios } from "../scenarios/patientGaps.js";
 import { overdueScenarios } from "../scenarios/overdue.js";
+import { coverageScenarios } from "../scenarios/coverage.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -261,6 +264,22 @@ export const modules: Module[] = [
     description:
       "O TISS: o que o convênio liberou, por quanto tempo vale, quantas sessões sobram e de quem é a próxima ação.",
     flows: [
+      {
+        id: "check-coverage",
+        title: "Conferir a vigência dos planos",
+        description:
+          "O filtro por operadora reconhece duas das quatro combinações de datas.",
+        steps: [
+          {
+            scenario: "authorizations.coverage-half-filled",
+            label: "Ver as quatro combinações lado a lado",
+            decision: "Há o que corrigir?",
+            branches: {
+              "Todas estão completas": "authorizations.coverage-well-formed",
+            },
+          },
+        ],
+      },
       {
         id: "work-the-queue",
         title: "Trabalhar a fila da central",
@@ -914,6 +933,7 @@ export const scenarios: Scenario[] = [
   ...therapyPhaseScenarios,
   ...patientGapScenarios,
   ...overdueScenarios,
+  ...coverageScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -946,6 +966,7 @@ export const fixtures: Fixture[] = [
   ...therapyPhaseFixtures,
   ...patientGapFixtures,
   ...overdueFixtures,
+  ...coverageFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -955,6 +976,7 @@ export const rules: Rule[] = [
   ...absenceRules,
   ...overdueRules,
   ...supervisorOverdueRules,
+  ...coverageRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,

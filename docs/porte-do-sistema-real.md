@@ -1396,6 +1396,39 @@ serem seus**". Concordância no plural aplicada ao singular.
 1 cenário, 5 testes de regra, 4 jornadas.
 
 
+### 47. Meia vigência não cobre data nenhuma — `porte/vigencia`
+
+O filtro `health_care` decide cobertura com uma expressão de dois ramos:
+
+```elixir
+(pp.start_of_coverage <= ^today and pp.end_of_coverage >= ^today) or
+  (is_nil(pp.start_of_coverage) and is_nil(pp.end_of_coverage))
+```
+
+São **quatro** combinações possíveis de datas e ele reconhece duas. A que fica
+de fora é a mais natural de todas: **preencher o início e deixar o fim vazio**,
+que é como se registra "a cobertura começou em março e continua".
+
+Esse plano não casa em nenhum ramo. Não cobre data nenhuma, nunca — e não
+depende da data consultada. O paciente simplesmente some das consultas por
+operadora, sem erro, sem aviso. **A entrada de dado mais provável produz o pior
+resultado.**
+
+Duas decisões:
+
+- **O estado quebrado ganhou nome.** `never-matches` é o que o monólito produz
+  sem nomear; nomear é o que permite alguém decidir se quer mantê-lo.
+- **Só ele sugere ação.** Os outros três são legítimos — inclusive "fora da
+  vigência", que é um plano vencido de verdade. Sugerir correção neles seria
+  ruído, e há uma jornada fixando que o aviso cala.
+
+A outra ponta da assimetria também ficou declarada, mesmo não sendo defeito:
+**nenhuma data cobre tudo, uma data cobre nada**, e as duas coisas convivem sem
+que ninguém tenha decidido.
+
+2 cenários, 6 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1448,3 +1481,4 @@ bugs do Design Space; são observações sobre o produto.
 | 43 | `overdued` e `overdued_for_coordinator` definem atraso de formas diferentes no mesmo arquivo: 48 horas contra imediato, e a segunda exclui `pending_supervisor_signature`. Duas pessoas veem listas diferentes sob a mesma palavra, e nenhuma sabe da outra definição. | `lib/bloomy/schedules/schedule_filters.ex:67,84` |
 | 44 | Somando o achado 43 ao 21: a etapa `pending_supervisor_signature` some da lista de atraso da coordenação **e** da tela de Supervisão. É a única das quatro situações abertas que não aparece em lista nenhuma de cobrança. | `lib/bloomy/schedules/schedule_filters.ex:87` |
 | 45 | `supervisor_query` é a quarta definição de atraso do arquivo e a única com duas janelas na mesma consulta: imediata para os agendamentos do próprio supervisor, 48 horas para os dos colegas da unidade. É a única vez que o sistema aplica a alguém um prazo mais duro que aos outros — vale preservar explicitamente, porque parece erro para quem for simplificar. | `lib/bloomy/schedules/schedule_filters.ex:95-118` |
+| 46 | O filtro `health_care` reconhece duas das quatro combinações de vigência: ambas as datas dentro do período, ou ambas nulas. Um plano com **só uma** das datas não casa em nenhum ramo e não cobre data nenhuma, em consulta nenhuma. É a forma mais natural de registrar cobertura em curso, e ela falha em silêncio. | `lib/bloomy/schedules/schedule_filters.ex:246-249` |

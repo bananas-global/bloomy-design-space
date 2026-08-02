@@ -5365,3 +5365,74 @@ describe("the-supervisor-list-is-about-a-different-thing", () => {
     ).toBe(false);
   });
 });
+
+/* ============================================== Vigência de plano */
+
+import type { PlanCoverage, PlanCoverageData } from "../src/contracts/index.js";
+import {
+  coverageFix,
+  coverageState,
+  coveredByOmission,
+  invisibleToInsurerQueries,
+} from "../src/rules/coverage.js";
+
+function planoDe(overrides: Partial<PlanCoverage> & { id: string }): PlanCoverage {
+  return { patientName: "Théo", healthCareName: "Unimed", ...overrides };
+}
+
+describe("half-filled-coverage-covers-nothing", () => {
+  const HOJE = "2026-07-30";
+
+  it("reconhece as duas combinações que o filtro do sistema aceita", () => {
+    expect(
+      coverageState(planoDe({ id: "a", startOfCoverage: "2026-01-01", endOfCoverage: "2026-12-31" }), HOJE),
+    ).toBe("covered");
+    expect(coverageState(planoDe({ id: "b" }), HOJE)).toBe("always");
+  });
+
+  it("nomeia o estado que o sistema produz e não nomeia", () => {
+    expect(coverageState(planoDe({ id: "c", startOfCoverage: "2026-03-01" }), HOJE)).toBe(
+      "never-matches",
+    );
+    expect(coverageState(planoDe({ id: "d", endOfCoverage: "2027-02-28" }), HOJE)).toBe(
+      "never-matches",
+    );
+  });
+
+  it("o estado quebrado não depende da data — nunca casa, em data nenhuma", () => {
+    const meio = planoDe({ id: "c", startOfCoverage: "2026-03-01" });
+    for (const dia of ["2020-01-01", "2026-07-30", "2099-12-31"]) {
+      expect(coverageState(meio, dia)).toBe("never-matches");
+    }
+  });
+
+  it("vigência vencida é outra coisa, e é legítima", () => {
+    expect(
+      coverageState(planoDe({ id: "e", startOfCoverage: "2024-01-01", endOfCoverage: "2025-12-31" }), HOJE),
+    ).toBe("outside");
+  });
+
+  it("só o estado quebrado sugere correção", () => {
+    expect(coverageFix(planoDe({ id: "c", startOfCoverage: "2026-03-01" }))).toContain("fim da vigência");
+    expect(coverageFix(planoDe({ id: "d", endOfCoverage: "2027-02-28" }))).toContain("início da vigência");
+    expect(coverageFix(planoDe({ id: "b" }))).toBeUndefined();
+    expect(
+      coverageFix(planoDe({ id: "e", startOfCoverage: "2024-01-01", endOfCoverage: "2025-12-31" })),
+    ).toBeUndefined();
+  });
+});
+
+describe("no-dates-means-always-covered", () => {
+  it("separa as duas pontas da assimetria", () => {
+    const dados: PlanCoverageData = {
+      today: "2026-07-30",
+      plans: [
+        planoDe({ id: "a", startOfCoverage: "2026-03-01" }),
+        planoDe({ id: "b" }),
+        planoDe({ id: "c", startOfCoverage: "2026-01-01", endOfCoverage: "2026-12-31" }),
+      ],
+    };
+    expect(invisibleToInsurerQueries(dados).map((p) => p.id)).toEqual(["a"]);
+    expect(coveredByOmission(dados).map((p) => p.id)).toEqual(["b"]);
+  });
+});
