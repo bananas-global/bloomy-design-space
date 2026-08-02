@@ -1363,6 +1363,39 @@ Duas decisões além dessa:
 3 cenários, 9 testes de regra, 6 jornadas.
 
 
+### 46. O supervisor se cobra antes de cobrar os outros — `porte/conta-do-supervisor`
+
+`supervisor_query` é a **quarta** definição de atraso do mesmo arquivo, e a
+única com **duas janelas na mesma consulta**:
+
+```elixir
+# a do próprio supervisor
+where: ... p.id == ^value["supervisor_id"] and s.start_time < ^now
+# a dos colegas da unidade
+where: ... s.start_time < ^two_days_ago and p.id != ^value["supervisor_id"]
+```
+
+O atraso dele aparece na hora; o dos colegas, só depois de 48 horas.
+
+**Isto não é inconsistência — é a única vez no sistema em que alguém aplica a si
+um prazo mais duro que aos outros.** É uma escolha boa demais para se perder
+numa reescrita, e sem estar nomeada é exatamente o tipo de coisa que a primeira
+pessoa a "simplificar" apaga por parecer erro. Por isso virou regra com nome
+próprio.
+
+E há um segundo ponto que o nome comum esconde: as três definições anteriores
+olham **atendimentos abertos** (`pending_*`); esta olha **agendamentos que nem
+começaram** (`scheduled`, `incomplete`), e só os que não têm atendimento
+associado. Chamar as duas listas de "atrasados" faz parecer que uma contém a
+outra. Não contém: uma pergunta o que não foi fechado, a outra o que não foi nem
+começado — dois problemas, dois donos.
+
+Um erro meu que a jornada pegou: o título dizia "1 agendamento seu aparece **por
+serem seus**". Concordância no plural aplicada ao singular.
+
+1 cenário, 5 testes de regra, 4 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1414,3 +1447,4 @@ bugs do Design Space; são observações sobre o produto.
 | 42 | Três filtros perguntam pelo mesmo fato por vias diferentes: `missed` pela coluna `missed_at`, `cancelled` por `cancelled_at`, `absence` pelo campo `status`. Concordam até o dia em que a situação muda depois do carimbo — e aí duas telas do mesmo sistema mostram números diferentes sem que nenhuma esteja errada. | `lib/bloomy/schedules/schedule_filters.ex:210-226` |
 | 43 | `overdued` e `overdued_for_coordinator` definem atraso de formas diferentes no mesmo arquivo: 48 horas contra imediato, e a segunda exclui `pending_supervisor_signature`. Duas pessoas veem listas diferentes sob a mesma palavra, e nenhuma sabe da outra definição. | `lib/bloomy/schedules/schedule_filters.ex:67,84` |
 | 44 | Somando o achado 43 ao 21: a etapa `pending_supervisor_signature` some da lista de atraso da coordenação **e** da tela de Supervisão. É a única das quatro situações abertas que não aparece em lista nenhuma de cobrança. | `lib/bloomy/schedules/schedule_filters.ex:87` |
+| 45 | `supervisor_query` é a quarta definição de atraso do arquivo e a única com duas janelas na mesma consulta: imediata para os agendamentos do próprio supervisor, 48 horas para os dos colegas da unidade. É a única vez que o sistema aplica a alguém um prazo mais duro que aos outros — vale preservar explicitamente, porque parece erro para quem for simplificar. | `lib/bloomy/schedules/schedule_filters.ex:95-118` |
