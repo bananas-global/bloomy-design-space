@@ -1330,6 +1330,39 @@ especificação: virou achado sobre o monólito, que é o lugar dela.
 1 cenário, 5 testes de regra, 3 jornadas.
 
 
+### 45. "Atrasado" são duas coisas — `porte/atraso`
+
+`ScheduleFilters` define pendente ou atrasado **três vezes**, com respostas
+diferentes:
+
+| Filtro | Situações incluídas | Janela |
+| --- | --- | --- |
+| `pending` | as quatro | nenhuma |
+| `overdued` | as quatro | 48 horas |
+| `overdued_for_coordinator` | três — **sem a do supervisor** | imediata |
+
+Duas pessoas olhando "atrasados" no mesmo sistema veem listas diferentes, e
+nenhuma sabe que existe outra definição. Um atendimento de três horas atrás está
+atrasado para quem coordena e no prazo para todo o resto.
+
+**As duas contas se defendem sozinhas.** Quem distribui a grade precisa ver na
+hora; um relatório de pendência precisa de folga para não acusar o que ainda
+está sendo escrito. O que não se defende é chamar as duas de "atrasado" em
+silêncio — e a correção mais barata possível é a tela dizer qual está em vigor.
+
+Duas decisões além dessa:
+
+- **A faixa de divergência aparece separada.** Enquanto as definições concordam
+  a ambiguidade não custa nada; o que interessa é o intervalo entre zero e 48
+  horas, em que a coordenação já cobra e o relatório ainda não conta.
+- **O ponto cego é nomeado.** `overdued_for_coordinator` exclui
+  `pending_supervisor_signature` — coerente, não é a coordenação que assina. Mas
+  a tela de Supervisão também não mostra pendência de assinatura (achado 21).
+  **É a única etapa que some das duas listas.**
+
+3 cenários, 9 testes de regra, 6 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1379,3 +1412,5 @@ bugs do Design Space; são observações sobre o produto.
 | 40 | O filtro `absence` de `ScheduleFilters` seleciona `status in [:missed, :cancelled]` — cancelamento entra na contagem de ausência. São comportamentos opostos: cancelar é comunicar. O número resultante não mede adesão, e é ele que embasa a conversa com a família. | `lib/bloomy/schedules/schedule_filters.ex:216` |
 | 41 | `status` e `schedule_status` são dois filtros com a mesma cláusula (`where: s.status == ^value`). Dobra o que precisa ser mantido e faz a próxima pessoa procurar qual dos dois é o certo. | `lib/bloomy/schedules/schedule_filters.ex:63,124` |
 | 42 | Três filtros perguntam pelo mesmo fato por vias diferentes: `missed` pela coluna `missed_at`, `cancelled` por `cancelled_at`, `absence` pelo campo `status`. Concordam até o dia em que a situação muda depois do carimbo — e aí duas telas do mesmo sistema mostram números diferentes sem que nenhuma esteja errada. | `lib/bloomy/schedules/schedule_filters.ex:210-226` |
+| 43 | `overdued` e `overdued_for_coordinator` definem atraso de formas diferentes no mesmo arquivo: 48 horas contra imediato, e a segunda exclui `pending_supervisor_signature`. Duas pessoas veem listas diferentes sob a mesma palavra, e nenhuma sabe da outra definição. | `lib/bloomy/schedules/schedule_filters.ex:67,84` |
+| 44 | Somando o achado 43 ao 21: a etapa `pending_supervisor_signature` some da lista de atraso da coordenação **e** da tela de Supervisão. É a única das quatro situações abertas que não aparece em lista nenhuma de cobrança. | `lib/bloomy/schedules/schedule_filters.ex:87` |
