@@ -3,6 +3,7 @@ import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
 import { Table } from "../components/bloomy/Table.js";
+import { Checkbox, FieldError, Input, Label, Switch, Textarea } from "../components/bloomy/Input.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -104,7 +105,44 @@ export const GALLERY: GalleryEntry[] = [
   { name: "simple_form", origem: "lib/bloomy_web/components/core_components.ex:416", descricao: "Formulário com espaçamento e ações padronizados." },
   { name: "link_button", origem: "lib/bloomy_web/components/core_components.ex:523", descricao: "Link com aparência de botão, para navegação." },
   { name: "copy_button", origem: "lib/bloomy_web/components/core_components.ex:570", descricao: "Botão que copia um valor para a área de transferência." },
-  { name: "input", origem: "lib/bloomy_web/components/core_components.ex:1148", descricao: "O campo de formulário, com vinte tipos num componente só." },
+  {
+    name: "input",
+    origem: "lib/bloomy_web/components/core_components.ex:1148",
+    descricao: "O campo de formulário, com treze cláusulas por tipo mais a nativa.",
+    demos: [
+      {
+        titulo: "Texto, com rótulo, ícone e apêndice",
+        nota: "O `hint` cola à direita, com o canto reto — é como o sistema mostra unidade sem um segundo campo.",
+        render: () => (
+          <div className="grid max-w-xl gap-4 md:grid-cols-2">
+            <Input id="g-nome" label="Nome do paciente" placeholder="Nome completo" />
+            <Input id="g-busca" label="Buscar" leftIcon="fa-magnifying-glass" placeholder="Paciente" />
+            <Input id="g-horas" label="Carga semanal" hint="horas" defaultValue="20" />
+            <Input id="g-desab" label="Somente leitura" defaultValue="Não editável" disabled />
+          </div>
+        ),
+      },
+      {
+        titulo: "Com erro",
+        nota: "O erro é posicionado por fora do fluxo: o campo não muda de altura, e a página não pula.",
+        render: () => (
+          <div className="max-w-sm pb-6">
+            <Input id="g-cep" label="CEP" defaultValue="04567" errors={["CEP inválido"]} />
+          </div>
+        ),
+      },
+      {
+        titulo: "Área de texto, caixa de seleção e chave",
+        render: () => (
+          <div className="max-w-xl space-y-3">
+            <Textarea id="g-obs" label="Observação" placeholder="Como foi o atendimento" />
+            <Checkbox id="g-check" label="Exige supervisão" defaultChecked />
+            <Switch id="g-switch" label="Renovação automática" checked onChange={() => {}} />
+          </div>
+        ),
+      },
+    ],
+  },
   { name: "input_with_select", origem: "lib/bloomy_web/components/core_components.ex:1217", descricao: "Campo com seletor acoplado, para valor com unidade." },
   { name: "checkgroup", origem: "lib/bloomy_web/components/core_components.ex:1253", descricao: "Grupo de caixas de seleção com rótulo comum." },
   { name: "fake_input", origem: "lib/bloomy_web/components/core_components.ex:1269", descricao: "Campo somente-leitura com aparência de campo." },
@@ -113,8 +151,40 @@ export const GALLERY: GalleryEntry[] = [
   { name: "radio_group", origem: "lib/bloomy_web/components/core_components.ex:1379", descricao: "Escolha única entre opções, navegável por setas." },
   { name: "radio_selector", origem: "lib/bloomy_web/components/core_components.ex:1429", descricao: "Escolha única em formato de cartões clicáveis." },
   { name: "checkbox_group", origem: "lib/bloomy_web/components/core_components.ex:1493", descricao: "Escolha múltipla em grupo." },
-  { name: "label", origem: "lib/bloomy_web/components/core_components.ex:1536", descricao: "Rótulo de campo." },
-  { name: "error", origem: "lib/bloomy_web/components/core_components.ex:1559", descricao: "Mensagem de erro de campo." },
+  {
+    name: "label",
+    origem: "lib/bloomy_web/components/core_components.ex:1536",
+    descricao: "Rótulo de campo.",
+    demos: [
+      {
+        titulo: "As duas cores",
+        nota: "Azul de marca por padrão, em negrito — cor de marca fazendo trabalho de hierarquia.",
+        render: () => (
+          <div className="space-y-2">
+            <Label>Nome do paciente</Label>
+            <Label color="purple">Perfil de acesso</Label>
+          </div>
+        ),
+      },
+    ],
+  },
+  {
+    name: "error",
+    origem: "lib/bloomy_web/components/core_components.ex:1559",
+    descricao: "Mensagem de erro de campo.",
+    demos: [
+      {
+        titulo: "Com ícone, e cortada em duas linhas",
+        nota: "`line-clamp-2` com o texto inteiro no `title`: mensagem longa não empurra o formulário.",
+        render: () => (
+          <div className="max-w-sm space-y-2">
+            <FieldError message="CEP inválido" />
+            <FieldError message="O profissional já tem um atendimento em aberto neste horário, e a agenda não permite dois ao mesmo tempo para a mesma pessoa." />
+          </div>
+        ),
+      },
+    ],
+  },
   { name: "header", origem: "lib/bloomy_web/components/core_components.ex:1583", descricao: "Cabeçalho de seção, com título e ações." },
   {
     name: "table",
