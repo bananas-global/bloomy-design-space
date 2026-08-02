@@ -23,6 +23,7 @@ import { PatientRecordScreen } from "../screens/PatientRecord.js";
 import { Management } from "../screens/Management.js";
 import { HourMapScreen } from "../screens/HourMap.js";
 import { Chat } from "../screens/Chat.js";
+import { Notifications } from "../screens/Notifications.js";
 import { Prospects } from "../screens/Prospects.js";
 import { Reports } from "../screens/Reports.js";
 
@@ -57,6 +58,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients/:id/record", screen: PatientRecordScreen },
     { path: "/patients/:id/hour-map", screen: HourMapScreen },
     { path: "/patients/:id/chat", screen: Chat },
+    { path: "/notifications", screen: Notifications },
     { path: "/patients/:id/reports", screen: Reports },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },

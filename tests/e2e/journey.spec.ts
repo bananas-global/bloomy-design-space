@@ -1664,3 +1664,86 @@ test.describe("navegação por permissão", () => {
     await expect(page.getByRole("link", { name: "Autorizações" })).toBeVisible();
   });
 });
+
+test.describe("notificações", () => {
+  test("a lista diz quantas estão não lidas e que a marca é de quem lê", async ({ page }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    await expect(page.getByText("3 não lidas")).toBeVisible();
+    await expect(page.getByText("4 no total")).toBeVisible();
+    // Lido mora no vínculo, não na notificação. Sem essa frase, o contador se
+    // lê como estado do sistema, e não da pessoa.
+    await expect(
+      page.getByText(/continua não lida para as outras pessoas que a receberam/),
+    ).toBeVisible();
+  });
+
+  test("não lida tem rótulo textual, e não só cor de fundo", async ({ page }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    await expect(page.getByText("Não lida", { exact: true })).toHaveCount(3);
+    await expect(page.getByText("Lida", { exact: true })).toHaveCount(1);
+  });
+
+  test("a data de recebimento fica junto do texto, porque o texto é cópia congelada", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("notifications.unread-list"));
+
+    await expect(page.getByText(/Recebida em/).first()).toBeVisible();
+    await expect(page.getByText(/lida por você em/)).toBeVisible();
+  });
+
+  test("o destino vazio é distinguido da ausência de destino", async ({ page }) => {
+    await page.goto(urlFor("notifications.leads-nowhere"));
+
+    // Três dos quatro remetentes gravam `""`. Em Elixir a string vazia é
+    // truthy: renderizada sem cuidado, vira um link clicável para lugar nenhum.
+    const abrir = page.getByRole("button", { name: "Abrir" }).first();
+    await expect(abrir).toBeVisible();
+    await expect(abrir).toBeDisabled();
+    await expect(page.getByText(/foi gravado como texto vazio, e não como ausência/).first()).toBeVisible();
+  });
+
+  test("a notificação de transferência é apontada como não identificada", async ({ page }) => {
+    await page.goto(urlFor("notifications.leads-nowhere"));
+
+    await expect(page.getByText("Esta notificação não diz sobre o que é")).toBeVisible();
+    await expect(
+      page.getByText(/comunica a perda de algo, e a menos identificada/),
+    ).toBeVisible();
+  });
+
+  test("a menção chega para quem não abre a tela de destino", async ({ page }) => {
+    await page.goto(urlFor("notifications.target-does-not-open"));
+
+    // Notificar não é dar acesso — é o mesmo aviso que o chat dá antes do
+    // envio, visto agora do lado de quem recebeu.
+    const abrir = page.getByRole("button", { name: "Abrir" });
+    await expect(abrir).toBeDisabled();
+    await expect(page.getByText(/exige patients\.edit/)).toBeVisible();
+  });
+
+  test("o texto que nomeia o paciente é apontado na própria notificação", async ({ page }) => {
+    await page.goto(urlFor("notifications.clinical-text-without-check"));
+
+    await expect(page.getByText(/nomeia Théo Andrade Lins e a especialidade/)).toBeVisible();
+    await expect(page.getByText(/o sino entrega direto/).first()).toBeVisible();
+  });
+
+  test("com tudo lido, marcar todas fica visível e desabilitada, com o motivo", async ({ page }) => {
+    await page.goto(urlFor("notifications.all-read"));
+
+    await expect(page.getByText("Tudo lido")).toBeVisible();
+    const marcar = page.getByRole("button", { name: "Marcar todas como lidas" });
+    await expect(marcar).toBeVisible();
+    await expect(marcar).toBeDisabled();
+  });
+
+  test("o vazio explica o alcance do recurso", async ({ page }) => {
+    await page.goto(urlFor("notifications.empty"));
+
+    await expect(page.getByText("Nenhuma notificação")).toBeVisible();
+    await expect(page.getByText(/o resto do produto ainda não avisa nada/)).toBeVisible();
+  });
+});

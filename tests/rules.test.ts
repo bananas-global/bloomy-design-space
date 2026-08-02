@@ -4074,3 +4074,154 @@ describe("generated-report-is-frozen", () => {
     expect(canEditReport(reportFixture({ id: "e" })).allowed).toBe(true);
   });
 });
+
+/* ========================================================== Notificações */
+import type { NotificationItem, NotificationsData } from "../src/contracts/index.js";
+import {
+  canMarkAllRead,
+  canOpen,
+  identifiesSubject,
+  inOrder as notificationsInOrder,
+  isUnread,
+  linkTarget,
+  namesPatient,
+  unidentified,
+  unreadCount,
+} from "../src/rules/notifications.js";
+
+function notificationItem(overrides: Partial<NotificationItem> & { id: string }): NotificationItem {
+  return { title: "Aviso", content: "Algo aconteceu.", at: "2026-07-29T10:00:00.000-03:00", ...overrides };
+}
+
+function notificationData(items: NotificationItem[]): NotificationsData {
+  return { currentUser: { id: "u", name: "Marina", role: "therapeutic_companion" }, items };
+}
+
+describe("read-state-belongs-to-the-person", () => {
+  it("trata a ausência de readAt como não lida", () => {
+    expect(isUnread(notificationItem({ id: "a" }))).toBe(true);
+    expect(isUnread(notificationItem({ id: "b", readAt: "2026-07-29T11:00:00.000-03:00" }))).toBe(false);
+  });
+
+  it("conta só as não lidas de quem está olhando", () => {
+    expect(unreadCount(notificationData([notificationItem({ id: "a" }), notificationItem({ id: "b", readAt: "x" })]))).toBe(1);
+  });
+
+  it("desabilita marcar todas quando não há nada não lido, e diz por quê", () => {
+    const decision = canMarkAllRead(notificationData([notificationItem({ id: "a", readAt: "x" })]));
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("não lidas");
+  });
+
+  it("permite marcar todas quando há ao menos uma", () => {
+    expect(canMarkAllRead(notificationData([notificationItem({ id: "a" })])).allowed).toBe(true);
+  });
+});
+
+describe("notification-may-lead-nowhere", () => {
+  it("separa destino ausente de destino gravado vazio", () => {
+    expect(linkTarget(notificationItem({ id: "a" }))).toEqual({ kind: "none" });
+    expect(linkTarget(notificationItem({ id: "b", onClickUrl: "" }))).toEqual({ kind: "empty" });
+    expect(linkTarget(notificationItem({ id: "c", onClickUrl: "   " }))).toEqual({ kind: "empty" });
+  });
+
+  it("dá motivos diferentes para os dois — só um deles é defeito", () => {
+    const sem = canOpen(notificationItem({ id: "a" }), []);
+    const vazio = canOpen(notificationItem({ id: "b", onClickUrl: "" }), []);
+
+    expect(sem.allowed).toBe(false);
+    expect(vazio.allowed).toBe(false);
+    expect(sem.reason).not.toBe(vazio.reason);
+    expect(vazio.reason).toContain("vazio");
+  });
+
+  it("reconhece a permissão exigida pela única URL real do sistema", () => {
+    const mencao = notificationItem({
+      id: "m",
+      onClickUrl: "/backoffice/pacientes/pac-theo/editar?message=m2",
+    });
+
+    expect(linkTarget(mencao)).toEqual({
+      kind: "url",
+      href: "/backoffice/pacientes/pac-theo/editar?message=m2",
+      requiredPermission: "patients.edit",
+    });
+
+    expect(canOpen(mencao, ["patients.edit"]).allowed).toBe(true);
+
+    const bloqueado = canOpen(mencao, []);
+    expect(bloqueado.allowed).toBe(false);
+    expect(bloqueado.reason).toContain("patients.edit");
+  });
+
+  it("não exige permissão para uma URL fora da tabela — declarar o que se sabe, não adivinhar", () => {
+    const outra = notificationItem({ id: "o", onClickUrl: "/backoffice/qualquer-coisa" });
+    expect(linkTarget(outra)).toEqual({ kind: "url", href: "/backoffice/qualquer-coisa" });
+    expect(canOpen(outra, []).allowed).toBe(true);
+  });
+});
+
+describe("notification-carries-what-the-screen-would-check", () => {
+  const assumido = notificationItem({
+    id: "a",
+    content: ["Você assumiu um agendamento pendente.", "Paciente: Théo Andrade Lins", "Data: 29/07"].join("\n"),
+  });
+
+  it("encontra o nome do paciente que o template interpola no texto", () => {
+    expect(namesPatient(assumido)).toBe("Théo Andrade Lins");
+  });
+
+  it("não inventa nome quando a linha não existe ou está vazia", () => {
+    expect(namesPatient(notificationItem({ id: "b", content: "Um agendamento seu foi assumido." }))).toBeUndefined();
+    expect(namesPatient(notificationItem({ id: "c", content: "Paciente:   " }))).toBeUndefined();
+  });
+});
+
+describe("transferred-without-saying-which", () => {
+  const transferido = notificationItem({
+    id: "t",
+    title: "Agendamento transferido",
+    content: "Um agendamento seu foi assumido por um supervisor.",
+    onClickUrl: "",
+  });
+
+  it("marca como não identificada a notificação que não nomeia nem leva", () => {
+    expect(identifiesSubject(transferido)).toBe(false);
+  });
+
+  it("aceita como identificada quem nomeia o paciente, mesmo sem link", () => {
+    expect(
+      identifiesSubject(notificationItem({ id: "a", content: "Paciente: Théo Andrade Lins", onClickUrl: "" })),
+    ).toBe(true);
+  });
+
+  it("aceita como identificada quem leva a uma tela, mesmo sem nomear", () => {
+    expect(
+      identifiesSubject(notificationItem({ id: "m", content: "Alguém te mencionou.", onClickUrl: "/backoffice/pacientes/p/editar" })),
+    ).toBe(true);
+  });
+
+  it("isola só as não identificadas da lista", () => {
+    const lista = notificationData([transferido, notificationItem({ id: "a", content: "Paciente: Helena Vasconcelos Prado" })]);
+    expect(unidentified(lista).map((entry) => entry.id)).toEqual(["t"]);
+  });
+});
+
+describe("ordem da lista", () => {
+  it("ordena pelo vínculo mais recente, e não pela ordem em que vieram", () => {
+    const lista = notificationData([
+      notificationItem({ id: "velha", at: "2026-07-20T10:00:00.000-03:00" }),
+      notificationItem({ id: "nova", at: "2026-07-29T10:00:00.000-03:00" }),
+    ]);
+    expect(notificationsInOrder(lista).map((entry) => entry.id)).toEqual(["nova", "velha"]);
+  });
+
+  it("não altera a lista original", () => {
+    const lista = notificationData([
+      notificationItem({ id: "velha", at: "2026-07-20T10:00:00.000-03:00" }),
+      notificationItem({ id: "nova", at: "2026-07-29T10:00:00.000-03:00" }),
+    ]);
+    notificationsInOrder(lista);
+    expect(lista.items.map((entry) => entry.id)).toEqual(["velha", "nova"]);
+  });
+});

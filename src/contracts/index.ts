@@ -1567,3 +1567,31 @@ export function ageInYears(birthDate: string, reference = TODAY): number {
 export function isMinor(patient: PatientRef, reference = TODAY): boolean {
   return ageInYears(patient.birthDate, reference) < 18;
 }
+
+/* ========================================================== Notificações */
+
+/**
+ * Uma notificação como o sistema real a guarda.
+ *
+ * O que o schema **não** tem é o que decide a tela: não há tipo, não há
+ * categoria, não há prioridade e não há entidade referenciada. Há um título,
+ * um texto e uma URL opcional — e o texto é uma cópia congelada no momento do
+ * envio, não uma leitura do dado.
+ */
+export interface NotificationItem {
+  id: string;
+  title: string;
+  /** Texto gravado no envio. Não acompanha o dado se ele mudar depois. */
+  content: string;
+  /** Para onde a notificação leva. Opcional: pode não levar a lugar nenhum. */
+  onClickUrl?: string;
+  /** Quando esta pessoa leu. Ausente é não lida. Mora no vínculo, não na notificação. */
+  readAt?: string;
+  /** Quando o vínculo foi criado — é por ele que a lista ordena. */
+  at: string;
+}
+
+export interface NotificationsData {
+  currentUser: { id: string; name: string; role: string };
+  items: NotificationItem[];
+}
