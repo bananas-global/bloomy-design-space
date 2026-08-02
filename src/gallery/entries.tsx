@@ -4,6 +4,10 @@ import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
 import { Table } from "../components/bloomy/Table.js";
 import { Checkbox, FieldError, Input, Label, Switch, Textarea } from "../components/bloomy/Input.js";
+import {
+  Avatar, Back, DescriptionList, EmptyStateCard, InsideCard,
+  LoadingCard, MetaInfo, Progress, SectionHeader,
+} from "../components/bloomy/Layout.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -185,7 +189,22 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "header", origem: "lib/bloomy_web/components/core_components.ex:1583", descricao: "Cabeçalho de seção, com título e ações." },
+  { name: "header", origem: "lib/bloomy_web/components/core_components.ex:1583", descricao: "Cabeçalho de seção, com título e ações.",
+    demos: [
+      {
+        titulo: "Os três tamanhos, com subtítulo e ações",
+        render: () => (
+          <div className="space-y-6">
+            <SectionHeader variant="small">Título pequeno</SectionHeader>
+            <SectionHeader variant="default" subtitle="Com subtítulo abaixo">Título padrão</SectionHeader>
+            <SectionHeader variant="large" actions={<Button size="medium">Nova</Button>}>
+              Título grande
+            </SectionHeader>
+          </div>
+        ),
+      },
+    ],
+  },
   {
     name: "table",
     origem: "lib/bloomy_web/components/core_components.ex:1638",
@@ -226,8 +245,25 @@ export const GALLERY: GalleryEntry[] = [
     ],
   },
   { name: "simple_table", origem: "lib/bloomy_web/components/core_components.ex:1703", descricao: "Tabela sem ações, para leitura." },
-  { name: "list", origem: "lib/bloomy_web/components/core_components.ex:1740", descricao: "Lista de descrição, termo e valor." },
-  { name: "back", origem: "lib/bloomy_web/components/core_components.ex:1763", descricao: "Link de voltar." },
+  { name: "list", origem: "lib/bloomy_web/components/core_components.ex:1740", descricao: "Lista de descrição, termo e valor.",
+    demos: [
+      {
+        titulo: "Termo à esquerda, em um quarto da largura",
+        render: () => (
+          <DescriptionList
+            items={[
+              { title: "Paciente", content: "Helena M." },
+              { title: "Convênio", content: "Unimed" },
+              { title: "Responsável", content: "Renata Alencar" },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+  { name: "back", origem: "lib/bloomy_web/components/core_components.ex:1763", descricao: "Link de voltar.",
+    demos: [{ titulo: "Link de voltar", render: () => <Back href="/patients">Voltar para pacientes</Back> }],
+  },
   {
     name: "card",
     origem: "lib/bloomy_web/components/core_components.ex:1792",
@@ -273,13 +309,70 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "inside_card", origem: "lib/bloomy_web/components/core_components.ex:1870", descricao: "Cartão aninhado, sem sombra própria." },
+  { name: "inside_card", origem: "lib/bloomy_web/components/core_components.ex:1870", descricao: "Cartão aninhado, sem sombra própria.",
+    demos: [
+      {
+        titulo: "Ícone, título, subtítulo e valor",
+        render: () => (
+          <div className="max-w-md space-y-2">
+            <InsideCard icon="fa-clock" title="Horas previstas" subtitle="No mês" value="128h" />
+            <InsideCard icon="fa-user-md" title="Profissionais" subtitle="Ativos na unidade" value="14" />
+          </div>
+        ),
+      },
+    ],
+  },
   { name: "dropdown", origem: "lib/bloomy_web/components/core_components.ex:2030", descricao: "Menu suspenso ancorado num gatilho." },
   { name: "dropdown_menu", origem: "lib/bloomy_web/components/core_components.ex:2054", descricao: "A lista de itens do menu suspenso." },
-  { name: "meta_info", origem: "lib/bloomy_web/components/core_components.ex:2090", descricao: "Par de rótulo e valor, para metadados." },
+  { name: "meta_info", origem: "lib/bloomy_web/components/core_components.ex:2090", descricao: "Par de rótulo e valor, para metadados.",
+    demos: [
+      {
+        titulo: "Com registros e sem",
+        nota: "O início é `offset + 1`, exceto quando o total é zero — sem isso a lista vazia diria “1 até 0 de 0”.",
+        render: () => (
+          <div className="space-y-1">
+            <MetaInfo currentOffset={0} pageSize={20} totalCount={128} />
+            <MetaInfo currentOffset={40} pageSize={20} totalCount={128} />
+            <MetaInfo currentOffset={0} pageSize={20} totalCount={0} />
+          </div>
+        ),
+      },
+    ],
+  },
   { name: "image_upload", origem: "lib/bloomy_web/components/core_components.ex:2114", descricao: "Envio de imagem com pré-visualização." },
-  { name: "avatar", origem: "lib/bloomy_web/components/core_components.ex:2163", descricao: "Foto ou iniciais de uma pessoa." },
-  { name: "progress", origem: "lib/bloomy_web/components/core_components.ex:2201", descricao: "Barra de progresso." },
+  { name: "avatar", origem: "lib/bloomy_web/components/core_components.ex:2163", descricao: "Foto ou iniciais de uma pessoa.",
+    demos: [
+      {
+        titulo: "Dois formatos, seis tamanhos",
+        nota: "Sem foto, fica o quadrado azul — o original não gera iniciais.",
+        render: () => (
+          <div className="flex flex-wrap items-end gap-3">
+            {(["extra_small", "small", "medium", "extra_medium", "large", "extra_large"] as const).map((size) => (
+              <Avatar key={size} size={size} title={size} />
+            ))}
+            <Avatar shape="square" size="large" title="quadrado" />
+          </div>
+        ),
+      },
+    ],
+  },
+  { name: "progress", origem: "lib/bloomy_web/components/core_components.ex:2201", descricao: "Barra de progresso.",
+    demos: [
+      {
+        titulo: "As quatro variantes",
+        nota: "`purple` não tem cor de trilho própria no original: fica com o azul da classe base — achado 105.",
+        render: () => (
+          <div className="max-w-md space-y-3">
+            <Progress value={72} />
+            <Progress value={45} variant="accent" />
+            <Progress value={18} variant="error" />
+            <Progress value={90} variant="purple" />
+            <Progress value={60} showPercentage={false} />
+          </div>
+        ),
+      },
+    ],
+  },
   {
     name: "tag",
     origem: "lib/bloomy_web/components/core_components.ex:2237",
@@ -342,14 +435,27 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "empty_state_card", origem: "lib/bloomy_web/components/core_components.ex:2322", descricao: "Cartão de lista vazia." },
+  { name: "empty_state_card", origem: "lib/bloomy_web/components/core_components.ex:2322", descricao: "Cartão de lista vazia.",
+    demos: [
+      {
+        titulo: "Ícone em círculo e frase forte",
+        render: () => (
+          <EmptyStateCard icon="fa-calendar-day" text="Nenhum atendimento para hoje">
+            Os agendamentos criados na recepção aparecem aqui.
+          </EmptyStateCard>
+        ),
+      },
+    ],
+  },
   { name: "range_datepicker", origem: "lib/bloomy_web/components/core_components.ex:2348", descricao: "Seleção de intervalo de datas." },
   { name: "range_monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2394", descricao: "Seleção de intervalo de meses." },
   { name: "monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2420", descricao: "Seleção de um mês." },
   { name: "week_selector", origem: "lib/bloomy_web/components/core_components.ex:2450", descricao: "Navegação por semana." },
   { name: "tooltip", origem: "lib/bloomy_web/components/core_components.ex:2498", descricao: "Dica de contexto ancorada num elemento." },
   { name: "timeline_list", origem: "lib/bloomy_web/components/core_components.ex:2528", descricao: "Linha do tempo de eventos." },
-  { name: "loading_card", origem: "lib/bloomy_web/components/core_components.ex:2550", descricao: "Cartão de carregamento." },
+  { name: "loading_card", origem: "lib/bloomy_web/components/core_components.ex:2550", descricao: "Cartão de carregamento.",
+    demos: [{ titulo: "Mensagem e roda", render: () => <LoadingCard message="Carregando os fechamentos" /> }],
+  },
   { name: "switch_card", origem: "lib/bloomy_web/components/core_components.ex:2570", descricao: "Cartão com chave liga-desliga." },
   { name: "date_navigator", origem: "lib/bloomy_web/components/core_components.ex:2603", descricao: "Navegação por dia, com setas e calendário." },
 ];

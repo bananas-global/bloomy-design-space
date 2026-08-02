@@ -55,7 +55,7 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Telas React | 48 |
 | Testes de regra | 667 |
 | Jornadas Playwright | 877 |
-| Achados sobre o sistema real | 103 |
+| Achados sobre o sistema real | 105 |
 | Rodadas registradas | 73 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
@@ -2793,3 +2793,5 @@ bugs do Design Space; são observações sobre o produto.
 | 101 | O botão de ação principal — `variant="default" color="blue"` — é `bg-brand-blue text-white`: **2,22:1**, o mesmo par do menu lateral. É o botão primário do sistema inteiro, então o problema do achado 99 não está confinado à navegação. | `lib/bloomy_web/components/core_components.ex:470` |
 | 102 | `variant="outline" color="yellow"` usa `#ffc402` como texto sobre fundo claro: **1,46:1** — praticamente invisível. O `tint` amarelo, que usa o tom escuro sobre o claro, passa com 9,24:1; a correção é pontual, não uma revisão do amarelo. | `lib/bloomy_web/components/core_components.ex:483` |
 | 103 | `status_tag/1` é **só um ponto colorido** de 10px, verde ou vermelho, sem texto. O `title` é opcional, e onde ele não é passado a situação existe apenas na cor — quem não distingue verde de vermelho não recebe a informação, e quem usa leitor de tela não recebe nada. | `lib/bloomy_web/components/core_components.ex:2302-2314` |
+| 104 | `tag/1` declara `light-red` entre os valores válidos de `variant` e **não tem ramo para ele**. Quem usar recebe uma etiqueta sem fundo e sem cor de texto, com a validação de atributo dizendo que está tudo certo. Hoje ninguém usa — é armadilha latente, e o primeiro a cair nela vai procurar o erro no lugar errado. | `lib/bloomy_web/components/core_components.ex:2231,2237-2255` |
+| 105 | `progress/1` define cor de trilho para `default`, `accent` e `error`, e **não para `purple`** — essa variante fica com o trilho azul da classe base e a barra roxa por cima. Não quebra, mas é a única das quatro em que trilho e barra não combinam. | `lib/bloomy_web/components/core_components.ex:2201-2235` |
