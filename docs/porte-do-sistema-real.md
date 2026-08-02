@@ -891,6 +891,28 @@ leitura que reprovava antes.
 Registrado em `docs/decisions/0004`. 2 jornadas, 2 pares de contraste.
 
 
+### 30. Verificação visual das telas novas — `porte/verificacao-visual`
+
+Abrir as telas no navegador, em vez de confiar nas jornadas. Três coisas que
+nenhum teste pegaria, porque todas são sobre **ênfase**, e ênfase não se afirma
+em asserção.
+
+- **A célula "sem agenda padrão" usava o ponto médio (`·`)** — o glifo mais
+  apagado disponível — para o estado que o módulo inteiro existe para separar de
+  "livre". A ênfase estava invertida: o achado mais importante do mapa era o
+  mais fácil de não ver. Virou travessão sobre banda `ink-50`, o que faz a
+  faixa sem agenda ler como um bloco contínuo — que é como ela acontece de fato,
+  o dia inteiro. O par de contraste foi declarado (5,38:1).
+- **Os chips de eixo pareciam controles e não são.** Quatro chips lado a lado,
+  um deles em cor diferente, convidam ao clique. O eixo em uso passou a dizer
+  "· em uso" em palavra, e a distinção deixou de depender só da cor.
+- **"1 dias".** Erro pequeno com efeito grande: uma especificação que erra a
+  concordância perde a autoridade para exigir precisão de quem a implementa.
+  Corrigido em duas telas e fixado numa jornada.
+
+3 jornadas novas, 1 par de contraste.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

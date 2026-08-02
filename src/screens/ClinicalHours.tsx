@@ -78,7 +78,7 @@ export function ClinicalHours({ context }: ScreenProps) {
     context,
     <div className="space-y-4">
       <Card as="section">
-        <CardHeader title="O que esta tela decide" hint={`${hours.records.length} dias`} />
+        <CardHeader title="O que esta tela decide" hint={`${hours.records.length} ${hours.records.length === 1 ? "dia" : "dias"}`} />
         <div className="space-y-3 px-5 py-5">
           <p className="m-0 max-w-[68ch] text-[15px] text-navy">
             É a tela em que um erro vira dinheiro. Cada linha compara o que estava previsto com o

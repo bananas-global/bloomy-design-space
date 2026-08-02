@@ -93,7 +93,7 @@ export function ProtocolApplication({ context }: ScreenProps) {
           tone={daysToReassessment < 0 ? "danger" : "info"}
           title={
             daysToReassessment < 0
-              ? `Reavaliação atrasada em ${Math.abs(daysToReassessment)} dias`
+              ? `Reavaliação atrasada em ${Math.abs(daysToReassessment)} ${Math.abs(daysToReassessment) === 1 ? "dia" : "dias"}`
               : "Próxima reavaliação"
           }
         >
