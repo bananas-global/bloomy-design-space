@@ -32,6 +32,7 @@ import { overdueFixtures } from "../fixtures/overdue.js";
 import { coverageFixtures } from "../fixtures/coverage.js";
 import { closureGenerationFixtures } from "../fixtures/closureGeneration.js";
 import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
+import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
 import {
   agendaRules,
   schedulingRules,
@@ -45,6 +46,7 @@ import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
 import { inClinicRules } from "../rules/inClinic.js";
+import { autoCheckoutRules } from "../rules/autoCheckout.js";
 import {
   patientRules,
   therapyPhaseRules,
@@ -100,6 +102,7 @@ import { overdueScenarios } from "../scenarios/overdue.js";
 import { coverageScenarios } from "../scenarios/coverage.js";
 import { closureGenerationScenarios } from "../scenarios/closureGeneration.js";
 import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
+import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -461,6 +464,23 @@ export const modules: Module[] = [
     description:
       "O quadro da unidade: quem está presente agora, desde quando, e o que o check-in fez com a agenda do dia.",
     flows: [
+      {
+        id: "close-the-list",
+        title: "Fechar a lista de presenças",
+        description:
+          "A rotina limpa a lista de quem está na clínica — e carimba a duração junto.",
+        steps: [
+          {
+            scenario: "in-clinic.auto-checkout-absurd",
+            label: "Ver o que a rotina vai declarar",
+            decision: "E quando ela faz só o que promete?",
+            branches: {
+              "Só check-ins de hoje": "in-clinic.auto-checkout-clean",
+              "Depois de rodar, quem fechou o quê": "in-clinic.auto-checkout-signed",
+            },
+          },
+        ],
+      },
       {
         id: "watch-the-floor",
         title: "Acompanhar o salão da unidade",
@@ -984,6 +1004,7 @@ export const scenarios: Scenario[] = [
   ...coverageScenarios,
   ...closureGenerationScenarios,
   ...absenceOriginScenarios,
+  ...autoCheckoutScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -1019,6 +1040,7 @@ export const fixtures: Fixture[] = [
   ...coverageFixtures,
   ...closureGenerationFixtures,
   ...absenceOriginFixtures,
+  ...autoCheckoutFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -1035,6 +1057,7 @@ export const rules: Rule[] = [
   ...programRules,
   ...protocolRules,
   ...inClinicRules,
+  ...autoCheckoutRules,
   ...patientRules,
   ...therapyPhaseRules,
   ...patientGapRules,

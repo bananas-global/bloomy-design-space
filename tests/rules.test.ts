@@ -5704,3 +5704,85 @@ describe("the-bond-carries-clinical-context", () => {
     expect(bondsWithNotes(impacto)).toEqual([]);
   });
 });
+
+/* ============================================== Saída automática */
+
+import type { AutoCheckoutData, OpenPresence } from "../src/contracts/index.js";
+import {
+  absurdDuration,
+  closedByTheSystem,
+  closedCleanly,
+  statedDurationHours,
+  statedDurationLabel,
+  willBecomeAbsurd,
+} from "../src/rules/autoCheckout.js";
+
+const RODA_EM = "2026-07-30T21:00:00.000-03:00";
+
+function presenca(overrides: Partial<OpenPresence> & { id: string }): OpenPresence {
+  return {
+    patientName: "Théo",
+    unitName: "Pinheiros",
+    checkinAt: "2026-07-30T13:50:00.000-03:00",
+    ...overrides,
+  };
+}
+
+describe("auto-checkout-has-no-date-filter", () => {
+  it("mede a duração que o registro vai declarar, e não a real", () => {
+    expect(statedDurationHours(presenca({ id: "a" }), RODA_EM)).toBe(7);
+    expect(
+      statedDurationHours(presenca({ id: "b", checkinAt: "2026-05-02T10:15:00.000-03:00" }), RODA_EM),
+    ).toBe(2147);
+  });
+
+  it("chama de absurdo o que passa de um expediente", () => {
+    expect(absurdDuration(presenca({ id: "a" }), RODA_EM)).toBe(false);
+    expect(
+      absurdDuration(presenca({ id: "b", checkinAt: "2026-07-24T14:00:00.000-03:00" }), RODA_EM),
+    ).toBe(true);
+  });
+
+  it("separa os dois grupos — é a comparação que denuncia", () => {
+    const dados: AutoCheckoutData = {
+      runsAt: RODA_EM,
+      records: [
+        presenca({ id: "hoje" }),
+        presenca({ id: "antigo", checkinAt: "2026-06-11T08:30:00.000-03:00" }),
+      ],
+    };
+    expect(willBecomeAbsurd(dados).map((r) => r.id)).toEqual(["antigo"]);
+    expect(closedCleanly(dados).map((r) => r.id)).toEqual(["hoje"]);
+  });
+
+  it("registro já fechado não entra em nenhum dos dois grupos", () => {
+    const dados: AutoCheckoutData = {
+      runsAt: RODA_EM,
+      records: [
+        presenca({
+          id: "fechado",
+          checkinAt: "2026-06-11T08:30:00.000-03:00",
+          checkoutAt: "2026-06-11T10:00:00.000-03:00",
+          checkoutDoneBy: "Bianca",
+        }),
+      ],
+    };
+    expect(willBecomeAbsurd(dados)).toEqual([]);
+    expect(closedCleanly(dados)).toEqual([]);
+  });
+
+  it("diz em dias quando passa de um, para não obrigar a dividir de cabeça", () => {
+    expect(statedDurationLabel(presenca({ id: "a" }), RODA_EM)).toBe("7 horas");
+    expect(
+      statedDurationLabel(presenca({ id: "b", checkinAt: "2026-05-02T10:15:00.000-03:00" }), RODA_EM),
+    ).toBe("89 dias");
+  });
+});
+
+describe("the-system-signs-its-own-checkout", () => {
+  it("distingue o que a rotina fechou do que uma pessoa fechou", () => {
+    expect(closedByTheSystem(presenca({ id: "a", checkoutDoneBy: "system" }))).toBe(true);
+    expect(closedByTheSystem(presenca({ id: "b", checkoutDoneBy: "Recepção — Bianca" }))).toBe(false);
+    expect(closedByTheSystem(presenca({ id: "c" }))).toBe(false);
+  });
+});

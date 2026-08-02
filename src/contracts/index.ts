@@ -2050,3 +2050,22 @@ export interface AbsenceOriginData {
   month: string;
   records: AbsenceRecord[];
 }
+
+/* ============================================== Saída automática */
+
+/** Um check-in de paciente que ficou sem saída. */
+export interface OpenPresence {
+  id: string;
+  patientName: string;
+  unitName: string;
+  checkinAt: string;
+  /** Quem fechou, quando fechou. `"system"` é a rotina. */
+  checkoutDoneBy?: string;
+  checkoutAt?: string;
+}
+
+export interface AutoCheckoutData {
+  /** Instante em que a rotina rodaria. */
+  runsAt: string;
+  records: OpenPresence[];
+}
