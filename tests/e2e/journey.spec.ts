@@ -2830,3 +2830,37 @@ test.describe("envio do lote TISS", () => {
     await expect(page.getByText("Não vai ser reenviado por conta própria.")).toHaveCount(0);
   });
 });
+
+test.describe("distribuição de guias", () => {
+  test("os atendimentos sem guia são nomeados, com o valor somado", async ({ page }) => {
+    await page.goto(urlFor("authorizations.distribution-short"));
+
+    await expect(page.getByText(/2 atendimentos ficaram sem guia/)).toBeVisible();
+    await expect(page.getByText(/360,00/)).toBeVisible();
+    // O nome aparece no aviso e na lista do dia — as duas ocorrências são
+    // certas, e a asserção precisa dizer isso em vez de escolher uma.
+    await expect(page.getByText(/Rafael Toledo Marinho/)).toHaveCount(2);
+  });
+
+  test("a tela diz que essa lista já existe no sistema e é descartada", async ({ page }) => {
+    await page.goto(urlFor("authorizations.distribution-short"));
+
+    await expect(page.getByText(/o distribuidor a monta enquanto decide/)).toBeVisible();
+    await expect(page.getByText(/quando já não dá para pedir autorização/)).toBeVisible();
+  });
+
+  test("o horário do corte é dito, e a arbitrariedade declarada", async ({ page }) => {
+    await page.goto(urlFor("authorizations.distribution-short"));
+
+    await expect(page.getByText("Foi o relógio que decidiu")).toBeVisible();
+    await expect(page.getByText(/o corte caiu às 15:00/)).toBeVisible();
+    await expect(page.getByText(/Não é critério clínico nem de urgência/)).toBeVisible();
+  });
+
+  test("com saldo suficiente, os dois avisos calam", async ({ page }) => {
+    await page.goto(urlFor("authorizations.distribution-enough"));
+
+    await expect(page.getByText(/ficaram sem guia/)).toHaveCount(0);
+    await expect(page.getByText("Foi o relógio que decidiu")).toHaveCount(0);
+  });
+});

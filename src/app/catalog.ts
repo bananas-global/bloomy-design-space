@@ -35,6 +35,7 @@ import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
 import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
 import { authorizationRenewalFixtures } from "../fixtures/authorizationRenewal.js";
 import { tissBatchFixtures } from "../fixtures/tissBatch.js";
+import { distributionFixtures } from "../fixtures/distribution.js";
 import {
   agendaRules,
   schedulingRules,
@@ -45,6 +46,7 @@ import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
 import { tissBatchRules } from "../rules/tissBatch.js";
+import { distributionRules } from "../rules/distribution.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -108,6 +110,7 @@ import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
 import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
 import { authorizationRenewalScenarios } from "../scenarios/authorizationRenewal.js";
 import { tissBatchScenarios } from "../scenarios/tissBatch.js";
+import { distributionScenarios } from "../scenarios/distribution.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -317,6 +320,7 @@ export const modules: Module[] = [
             branches: {
               "Todas estão completas": "authorizations.coverage-well-formed",
               "A janela vai renovar vazia": "authorizations.renewal-into-empty",
+              "Faltou guia para o dia": "authorizations.distribution-short",
             },
           },
         ],
@@ -1014,6 +1018,7 @@ export const scenarios: Scenario[] = [
   ...autoCheckoutScenarios,
   ...authorizationRenewalScenarios,
   ...tissBatchScenarios,
+  ...distributionScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -1052,6 +1057,7 @@ export const fixtures: Fixture[] = [
   ...autoCheckoutFixtures,
   ...authorizationRenewalFixtures,
   ...tissBatchFixtures,
+  ...distributionFixtures,
   ...deactivationFixtures,
 ] as Fixture[];
 
@@ -1065,6 +1071,7 @@ export const rules: Rule[] = [
   ...coverageRules,
   ...closureGenerationRules,
   ...tissBatchRules,
+  ...distributionRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,

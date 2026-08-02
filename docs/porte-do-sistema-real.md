@@ -1657,6 +1657,38 @@ novo meu; o nome do parâmetro foi para a regra e as pré-condições.
 3 cenários, 8 testes de regra, 5 jornadas.
 
 
+### 55. O relógio decide quem a clínica consegue cobrar — `porte/distribuicao`
+
+`Authorizations.Distributor` é a peça que decide **qual guia paga qual
+atendimento**. Ele percorre os atendimentos do dia em ordem de horário e vai
+consumindo os pacotes até acabar:
+
+```elixir
+schedules
+|> Enum.sort_by(& &1.start_time, DateTime)
+|> Enum.reduce(initial_state, &distribute_schedule/2)
+```
+
+Quando o saldo é menor que a demanda do dia, **quem é atendido de manhã fica com
+guia e quem é atendido à tarde fica sem**. Não é critério clínico nem de
+urgência: é a ordem do relógio. Pode até ser a regra certa — é previsível e não
+exige julgamento —, mas ninguém a escolheu; ela veio junto com a ordenação que a
+rotina já usava para percorrer o dia.
+
+E há o segundo achado, que é o mesmo padrão pela **quarta vez**: o distribuidor
+acumula `skipped_schedule_ids` enquanto decide, devolve a lista no resultado, e
+o worker chama `Distributor.run()` **ignorando o retorno**. O sistema sabe
+exatamente quais atendimentos do dia não têm guia — a informação está formada no
+instante da decisão — e a joga fora. A perda só aparece no fechamento do mês,
+quando já não dá para pedir autorização.
+
+Junto dos achados 14, 30, 48 e 52, isso deixa de ser coincidência: **o monólito
+calcula o que precisaria ser dito e descarta antes de dizer.** É um padrão, e
+está registrado como tal.
+
+2 cenários, 8 testes de regra, 4 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1722,3 +1754,5 @@ bugs do Design Space; são observações sobre o produto.
 | 56 | `PatientAuthorizations.Workers.AutoRenewWorker` estende `duration_end_at` da janela e não toca nas guias. Uma janela com saldo zero é renovada por mais três meses e continua sem sessão nenhuma — "renovada" descreve o período, não o saldo, e a descoberta acontece na tentativa de marcar. | `lib/bloomy/patients/patient_authorizations/workers/auto_renew_worker.ex:37-40` |
 | 57 | `Tiss.Workers.TissBatch` roda com `max_attempts: 1` e trata qualquer exceção com `{:discard, ...}`. O lote TISS é a fatura da clínica: uma falha de rede momentânea, ou um dado inesperado, faz o faturamento do mês sumir sem retentativa e sem erro registrado para investigar. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:2-4,27-33` |
 | 58 | No mesmo worker, a recusa da operadora e a exceção no código gravam a string idêntica "Erro ao gerar o xml", e o motivo devolvido pela operadora é descartado em `{:error, _reason}`. São problemas com donos opostos — operação e engenharia — e o registro não permite distinguir. | `lib/bloomy/authorizations/tiss/workers/tiss_batch.ex:25-31` |
+| 59 | `Distributor.distribute/2` ordena os atendimentos do dia por `start_time` e consome os pacotes nessa ordem. Com saldo menor que a demanda, quem é atendido de manhã fica com guia e quem é atendido à tarde fica sem — a ordem do relógio decide o que a clínica consegue cobrar, sem que ninguém a tenha escolhido. | `lib/bloomy/authorizations/distributor.ex:28-30` |
+| 60 | O distribuidor acumula `skipped_schedule_ids` e devolve a lista no resultado; `DistributorWorker` chama `Distributor.run()` e ignora o retorno. A lista dos atendimentos que não serão faturados existe formada no instante da decisão e é descartada. Quarta ocorrência do padrão dos achados 14, 30, 48 e 52. | `lib/bloomy/authorizations/workers/distributor_worker.ex:6-10` |
