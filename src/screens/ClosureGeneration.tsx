@@ -13,7 +13,6 @@ import {
 } from "../components/primitives.js";
 import {
   coveredByDeactivationWorker,
-  hoursLostAtTheBoundary,
   hoursWithoutClosure,
   obanOutcome,
   processedByWorker,
@@ -25,7 +24,7 @@ import {
  * Geração mensal de fechamentos.
  *
  * O worker roda na virada, procura quem tem horas registradas no mês anterior e
- * gera um fechamento para cada. Três decisões dessa rotina custam dinheiro, e
+ * gera um fechamento para cada. Duas decisões dessa rotina custam dinheiro, e
  * nenhuma delas produz erro:
  *
  * 1. **A busca filtra por quem está ativo agora**, e não por quem estava ativo
@@ -36,11 +35,12 @@ import {
  *    existe, está no retorno, e não vira erro, nem alerta, nem
  *    reprocessamento. O Oban registra sucesso e não tenta de novo.
  *
- * 3. **O mês fecha três horas antes.** `Date.utc_today()` na virada UTC é 21h
- *    do último dia em Brasília — e é a faixa em que acompanhamento terapêutico
- *    costuma acontecer.
+ * Esta tela existe porque nenhuma das duas aparece em lugar nenhum do produto.
  *
- * Esta tela existe porque nenhuma das três aparece em lugar nenhum do produto.
+ * Uma terceira regra viveu aqui por engano — a de que o mês fechava três horas
+ * antes por causa de `Date.utc_today()`. O cron do Oban roda em
+ * `America/Sao_Paulo`, então o worker dispara às 00:01 locais e a data está
+ * certa. Retratada na rodada 57 do log.
  */
 export function ClosureGeneration({ context }: ScreenProps) {
   const { data, isLoading, error, locale } = context;
@@ -56,10 +56,8 @@ export function ClosureGeneration({ context }: ScreenProps) {
   const horasPerdidas = hoursWithoutClosure(generation);
   const falhas = silentFailures(generation);
   const oban = obanOutcome(generation);
-  const faixa = hoursLostAtTheBoundary(generation);
 
-  const semNadaAReportar =
-    semFechamento.length === 0 && falhas.length === 0 && faixa === undefined;
+  const semNadaAReportar = semFechamento.length === 0 && falhas.length === 0;
 
   return wrap(
     context,
@@ -94,7 +92,7 @@ export function ClosureGeneration({ context }: ScreenProps) {
       {semNadaAReportar && (
         <EmptyState
           title="Virada sem perda"
-          description="Todos os profissionais com horas no mês estavam ativos, nenhuma geração falhou, e o worker rodou fora da faixa que desloca o fim do mês."
+          description="Todos os profissionais com horas no mês estavam ativos ou cobertos pelo worker de desativação, e nenhuma geração falhou."
         />
       )}
 
@@ -153,12 +151,6 @@ export function ClosureGeneration({ context }: ScreenProps) {
         </Notice>
       )}
 
-      {faixa && (
-        <Notice tone="warn" title="O mês fechou três horas antes">
-          {faixa} O worker usa a data em UTC, e a virada lá é 21h do último dia aqui — que é
-          justamente a faixa em que acompanhamento terapêutico acontece.
-        </Notice>
-      )}
 
       <Card as="section">
         <CardHeader

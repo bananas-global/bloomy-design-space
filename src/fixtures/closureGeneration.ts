@@ -27,7 +27,7 @@ export const closureGenerationFixtures: Fixture[] = [
       "Cinco profissionais com horas em julho. Uma saiu em 28/07 e é coberta pelo worker de desativação; o outro saiu em 1º/08 e julho fica sem. E uma geração falhou com o worker devolvendo sucesso.",
     data: {
       month: "2026-07",
-      ranAt: "2026-08-01T00:00:00.000Z",
+      ranAt: "2026-08-01T03:01:00.000Z",
       candidates: [
         candidate({ id: "p1" }),
         candidate({ id: "p2", name: "Otávio Ferrandini", hoursInMonth: 96 }),
@@ -63,10 +63,10 @@ export const closureGenerationFixtures: Fixture[] = [
     id: "closure-generation-clean",
     label: "Virada sem perda",
     description:
-      "Todos ativos, nenhuma falha, e o worker rodou às 06h UTC — depois do deslocamento.",
+      "Todos ativos, nenhuma falha. O worker dispara às 00:01 locais, que é 03:01 UTC do mesmo dia.",
     data: {
       month: "2026-07",
-      ranAt: "2026-08-01T06:00:00.000Z",
+      ranAt: "2026-08-01T03:01:00.000Z",
       candidates: [
         candidate({ id: "p1" }),
         candidate({ id: "p2", name: "Otávio Ferrandini", hoursInMonth: 96 }),

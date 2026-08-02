@@ -5,8 +5,12 @@ import type { ClosureCandidate, ClosureGenerationData } from "../contracts/index
  * Regras da geração mensal de fechamentos.
  *
  * `GenerateMonthlyClosuresWorker` roda na virada do mês, procura quem tem
- * registro de horas no mês anterior e gera um fechamento para cada. Três
- * decisões dessa rotina têm consequência em dinheiro.
+ * registro de horas no mês anterior e gera um fechamento para cada.
+ *
+ * **Não há regra de fuso aqui**, e houve uma por engano: o cron do Oban está
+ * configurado com `timezone: "America/Sao_Paulo"`, então o worker dispara às
+ * 00:01 locais — 03:01 UTC do mesmo dia — e `Date.utc_today()` devolve a data
+ * certa. Ver a retratação na rodada 57 do log.
  */
 export const closureGenerationRules: Rule[] = [
   {
@@ -23,14 +27,6 @@ export const closureGenerationRules: Rule[] = [
       "O worker conta sucessos e falhas e devolve `{:ok, ...}` de qualquer jeito. O Oban registra sucesso, não tenta de novo, e ninguém é avisado.",
     rationale:
       "Um fechamento que falhou some sem deixar rastro acionável. A contagem existe — está ali, no retorno — e não vira nem erro, nem alerta, nem reprocessamento.",
-    source: "src/rules/closureGeneration.ts",
-  },
-  {
-    id: "the-month-closes-three-hours-early",
-    statement:
-      "O worker usa `Date.utc_today()`. Rodando à meia-noite UTC do dia 1º, em Brasília ainda são 21h do último dia do mês que está sendo fechado.",
-    rationale:
-      "As últimas três horas do mês entram no fechamento seguinte. É pouco em qualquer mês e é sempre o mesmo pouco, na mesma direção — e cai justamente no fim do dia, faixa em que acompanhamento terapêutico costuma acontecer.",
     source: "src/rules/closureGeneration.ts",
   },
 ];
@@ -108,20 +104,4 @@ export function obanOutcome(data: ClosureGenerationData): {
   return { status: "ok", successes: processados.length - falhas, failures: falhas };
 }
 
-/**
- * Implementação de `the-month-closes-three-hours-early`.
- *
- * Devolve a faixa local que ficou de fora, quando o worker rodou na virada em
- * UTC. `undefined` quando ele rodou em hora que não produz o deslocamento.
- */
-export function hoursLostAtTheBoundary(data: ClosureGenerationData): string | undefined {
-  const utc = new Date(data.ranAt);
-  const diaUtc = utc.getUTCDate();
-  const horaUtc = utc.getUTCHours();
 
-  if (diaUtc !== 1 || horaUtc >= 3) return undefined;
-
-  const local = new Date(utc.getTime() - 3 * 3_600_000);
-  const ultimoDia = local.toISOString().slice(0, 10);
-  return `As horas entre ${String(local.getUTCHours()).padStart(2, "0")}:00 e 24:00 de ${ultimoDia} caem no fechamento seguinte.`;
-}

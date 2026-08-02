@@ -19,7 +19,7 @@ export const autoCheckoutRules: Rule[] = [
     statement:
       "A rotina fecha todo check-in sem saída, de qualquer dia da história, carimbando a hora em que ela rodou. Um check-in de três meses atrás ganha uma saída de hoje.",
     rationale:
-      "A intenção — limpar a lista de quem está na clínica — é boa. O efeito é que a duração da presença vira absurdo para tudo que não é de hoje: o registro passa a dizer que a criança ficou noventa dias na unidade.",
+      "A intenção — limpar a lista de quem está na clínica — é boa, e a rotina das 23h dá conta do dia corrente. O efeito é que a duração da presença vira absurdo para tudo que sobrou de trás: uma noite em que o worker falhou, uma importação, um ambiente novo. O registro passa a dizer que a criança ficou noventa dias na unidade.",
     source: "src/rules/autoCheckout.ts",
   },
   {
@@ -44,12 +44,17 @@ export function statedDurationHours(record: OpenPresence, runsAt: string): numbe
 /**
  * Implementação de `auto-checkout-has-no-date-filter`.
  *
- * Um registro é absurdo quando a duração declarada passa do expediente de um
- * dia. Doze horas é folgado de propósito: o objetivo é pegar o que vira
- * história, não discutir meia hora a mais.
+ * O critério é **atravessar o dia**, e não um número de horas.
+ *
+ * A primeira versão usava “mais de 12 horas” e teria acusado operação normal: a
+ * rotina roda às 23h todo dia, então um check-in das 08h que ninguém fechou é
+ * encerrado com 15 horas — o worker fazendo exatamente o que deve. O que não é
+ * normal é a saída cair num dia diferente da entrada.
  */
 export function absurdDuration(record: OpenPresence, runsAt: string): boolean {
-  return statedDurationHours(record, runsAt) > 12;
+  const entrada = record.checkinAt.slice(0, 10);
+  const saida = (record.checkoutAt ?? runsAt).slice(0, 10);
+  return saida !== entrada;
 }
 
 export function willBecomeAbsurd(data: AutoCheckoutData): OpenPresence[] {
