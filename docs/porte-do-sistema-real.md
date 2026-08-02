@@ -89,6 +89,32 @@ quatro módulos do monólito — `CustomServices.Create`, `Finish`,
 
 Verde: `pnpm check` e 115 jornadas Playwright, com axe em todos os cenários.
 
+### 3. Clínico, parte 2: o plano de intervenção — `porte/clinico-programas`
+
+Concluída.
+
+Como o Bloomy decide que o paciente aprendeu. A resposta está espalhada por
+quatro lugares do monólito — `Programs.PhaseConfiguration`,
+`MoveProgramToAcquired`, `MoveObjectiveToAcquired` e as consultas
+`has_unaquired_step?` e `has_unacquired_program?` — e não é enunciada em
+português em lugar nenhum, nem na interface.
+
+- **A hierarquia de quatro níveis** entrou no contrato: meta, objetivo, programa,
+  passo. A aquisição sobe por ela em cascata, e é assim que o plano avança sem
+  ninguém marcar nada à mão.
+- **Seis regras novas.** A que mais muda desenho é
+  `consecutive-differs-from-cumulative`: o mesmo histórico fecha um critério e
+  não fecha o outro, e uma barra de progresso apaga a diferença.
+- **Nove cenários** e a tela `InterventionPlan`, que mostra o critério por
+  extenso — "80% de acerto em 3 sessões consecutivas, 2 feitas" — em vez de só
+  "2 de 3". Prever a próxima sessão é o trabalho de quem coordena.
+- Uma correção do bloco anterior: as fases do passo são `baseline`,
+  `intervention`, `generalization`, `maintenance` e `acquired`, do schema
+  `Programs.Step`. Eu havia modelado a lista que aparece no `enums.po` sob
+  `Programs.Program`, que inclui "Transição" e não inclui linha de base.
+
+Verde: `pnpm check` e 142 jornadas Playwright, com axe em todos os cenários.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -101,3 +127,5 @@ bugs do Design Space; são observações sobre o produto.
 | 3 | `patients.see_behavior_intervention_plan` exclui `therapeutic_companion` e `specialist`, e não exclui `applicator`. Quem conduz a intervenção não vê o plano; quem aplica, vê. | `lib/bloomy/patients/patient_policy.ex:29` |
 | 4 | A Central de Autorizações verifica permissão na entrada da tela; nenhuma ação interna — adicionar autorização, editar agendamento, abrir token — tem verificação própria. | `lib/bloomy_web/backoffice/live/authorization_hub/` |
 | 5 | `Appointment.valid_register?/1` retorna `true` quando o texto está **vazio**. O comportamento em `Finish` está correto; o nome diz o oposto do que a função faz. | `lib/bloomy/custom_services/appointment.ex:89` |
+| 6 | `ProgramPolicy` não inclui `applicator` em nenhuma das oito ações, nem em `list`. Quem aplica o programa não tem permissão de vê-lo. | `lib/bloomy/programs/program_policy.ex` |
+| 7 | A cascata de aquisição pergunta pela negativa (`has_unaquired_step?`), então um nível **sem filhos** conta como adquirido. Um objetivo sem programas fecha sozinho. | `lib/bloomy/programs/context.ex:119` |

@@ -279,6 +279,93 @@ test.describe("Atendimento", () => {
   });
 });
 
+/* =============================================================== programas */
+
+test.describe("Programas", () => {
+  test("o critério aparece por extenso, e não só como contagem", async ({ page }) => {
+    await page.goto(urlFor("programs.mastery-criteria"));
+
+    // "2 de 3" não permite prever a próxima sessão; o critério escrito, sim.
+    await expect(page.getByText("80% de acerto em 3 sessões consecutivas").first()).toBeVisible();
+    await expect(page.getByText(/2 de 3 — falta 1 sessão/).first()).toBeVisible();
+    await expect(
+      page.getByText("Consecutivas: uma sessão abaixo do alvo zera a contagem.").first(),
+    ).toBeVisible();
+  });
+
+  test("cada sessão do histórico é legível sem depender de cor", async ({ page }) => {
+    await page.goto(urlFor("programs.mastery-criteria"));
+
+    await expect(
+      page.getByText("Sessão de 03/06: 50 por cento, abaixo do alvo do critério.").first(),
+    ).toBeAttached();
+    await expect(
+      page.getByText("Sessão de 17/07: 85 por cento, no alvo do critério.").first(),
+    ).toBeAttached();
+  });
+
+  test("a linha de base é dita sem percentual", async ({ page }) => {
+    await page.goto(urlFor("programs.baseline"));
+
+    await expect(page.getByText("3 sessões registradas, sem meta de acerto").first()).toBeVisible();
+    // O que não pode aparecer: um alvo de zero por cento lido como meta. O
+    // olhar-para-trás evita casar com o "80%" dos outros programas na página.
+    await expect(page.getByText(/(?<!\d)0% de acerto/)).toHaveCount(0);
+  });
+
+  test("a cascata é avisada no passo, antes de marcar", async ({ page }) => {
+    await page.goto(urlFor("programs.cascade"));
+
+    await expect(
+      page.getByRole("heading", { name: "Marcar este passo fecha mais que o passo" }),
+    ).toBeVisible();
+    await expect(page.getByText(/encerra o programa, o objetivo, a meta inteira/)).toBeVisible();
+  });
+
+  test("a regressão nomeia a fase de destino e o critério atingido", async ({ page }) => {
+    await page.goto(urlFor("programs.regression"));
+
+    await expect(
+      page.getByRole("heading", { name: "Regressão para Generalização" }),
+    ).toBeVisible();
+    await expect(page.getByText(/caiu abaixo de 70% em 2 sessões consecutivas/)).toBeVisible();
+  });
+
+  test("o incidental diz que é contagem, não aquisição", async ({ page }) => {
+    await page.goto(urlFor("programs.incidental"));
+
+    await expect(page.getByText(/É contagem, não aquisição/)).toBeVisible();
+    // Sem critério, a tela não pode fingir um progresso de "0 de 0".
+    await expect(page.getByText("Sem critério de domínio.").first()).toBeVisible();
+  });
+
+  test("a versão substituída é explicada, não escondida", async ({ page }) => {
+    await page.goto(urlFor("programs.superseded"));
+
+    await expect(page.getByText("Versão substituída")).toBeVisible();
+    await expect(page.getByText(/tentativas já registradas pertencem a ela/)).toBeVisible();
+    // As duas versões mostram critérios diferentes: é o motivo de existirem duas.
+    await expect(page.getByText("70% de acerto em 3 sessões consecutivas").first()).toBeVisible();
+    await expect(page.getByText("80% de acerto em 3 sessões consecutivas").first()).toBeVisible();
+  });
+
+  test("o aplicador não alcança o plano, e a tela explica quem alcança", async ({ page }) => {
+    await page.goto(urlFor("programs.applicator-blocked"));
+
+    await expect(
+      page.getByRole("heading", { name: "Você não tem acesso aos programas" }),
+    ).toBeVisible();
+    await expect(page.getByText(/coordenação, supervisão e quem atende/)).toBeVisible();
+  });
+
+  test("o plano vazio explica de onde nasce um plano", async ({ page }) => {
+    await page.goto(urlFor("programs.empty"));
+
+    await expect(page.getByRole("heading", { name: "Nenhuma meta montada ainda" })).toBeVisible();
+    await expect(page.getByText(/O plano nasce de uma avaliação/)).toBeVisible();
+  });
+});
+
 /* =============================================================== pacientes */
 
 test.describe("Pacientes", () => {

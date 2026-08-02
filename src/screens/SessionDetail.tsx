@@ -1,6 +1,11 @@
 import { useState } from "react";
 import type { ScreenProps } from "@brucesantos/design-space";
-import type { ClinicalSessionData, ProgramExecution, Trial } from "../contracts/index.js";
+import type {
+  ClinicalSessionData,
+  ProgramExecution,
+  StepPhase,
+  Trial,
+} from "../contracts/index.js";
 import { formatDateTime, formatTime } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
 import {
@@ -430,12 +435,13 @@ function situationTitle(status: ClinicalSessionData["session"]["status"]): strin
   }
 }
 
-function phaseLabel(phase: "intervention" | "generalization" | "maintenance" | "transition"): string {
+function phaseLabel(phase: StepPhase): string {
   return {
+    baseline: "Linha de base",
     intervention: "Intervenção",
     generalization: "Generalização",
     maintenance: "Manutenção",
-    transition: "Transição",
+    acquired: "Adquirido",
   }[phase];
 }
 

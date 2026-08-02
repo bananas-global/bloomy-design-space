@@ -23,12 +23,13 @@ própria.
 
 ## O que existe hoje
 
-38 cenários em quatro módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+47 cenários em cinco módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
 | **Agenda** | dia normal, vazia, conflito de horário, reagendamento com conflito, consulta cancelada, cancelamento exige justificativa, sem permissão para cancelar, ausência antes da tolerância, paciente ausente |
 | **Atendimento** | pronto para atendimento, sem check-in, serviço não cobrável, profissional com atendimento em aberto, em andamento, pendente de registro, aguardando quem atendeu, aguardando o supervisor, finalizado, reverter permitido, reverter bloqueado, sem permissão para reverter, aplicador só lê, supervisão entre profissionais |
+| **Programas** | plano de intervenção, sem plano, critério de domínio, linha de base, cascata de aquisição, regressão, programa incidental, versão substituída, aplicador sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Financeiro** | fila de guias, vazia, fatura em análise, convênio recusado, documentos pendentes, reenvio permitido, sem permissão para reenviar |
 
@@ -64,6 +65,12 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `owner-signs-before-supervisor` | Quem atendeu assina antes do supervisor. |
 | `revert-requires-clean-session` | Reverter só enquanto não há tentativa nem resposta de protocolo. |
 | `revert-requires-permission` | Só perfis com `custom_services.revert` revertem. |
+| `mastery-closes-phase` | Passo fecha a fase ao atingir o percentual no número de sessões do critério. |
+| `consecutive-differs-from-cumulative` | Consecutivo zera na primeira sessão abaixo do alvo; cumulativo não. |
+| `baseline-has-no-performance-target` | Linha de base encerra por número de sessões, sem meta de acerto. |
+| `regression-returns-to-previous-phase` | Queda abaixo do critério de regressão devolve o passo à fase anterior. |
+| `acquisition-cascades-upward` | Passo fecha programa, que fecha objetivo, que fecha meta. |
+| `superseded-version-keeps-its-history` | Versão substituída não é apagada nem editada: as tentativas são dela. |
 
 ## Tokens: divergência deliberada com o produto real
 

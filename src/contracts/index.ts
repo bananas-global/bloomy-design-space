@@ -102,8 +102,24 @@ export type CancellationReason =
   | "unavailable_professionals"
   | "duplicity";
 
-/** Fase do programa no momento da tentativa. */
-export type ProgramPhase = "intervention" | "generalization" | "maintenance" | "transition";
+/**
+ * Fase do passo — o eixo em que a evolução do paciente é medida.
+ *
+ * São os cinco valores de `Bloomy.Programs.Step`. Não confundir com a lista de
+ * fases que aparece no `enums.po` sob `Programs.Program`, que inclui "Transição"
+ * e não inclui linha de base: o que o passo carrega, e o que a tentativa
+ * classifica, é este enum.
+ *
+ * A ordem é a da progressão clínica, e a última é um estado final: linha de base
+ * mede antes de ensinar, intervenção ensina, generalização confirma fora do
+ * contexto de ensino, manutenção confirma ao longo do tempo, adquirido encerra.
+ */
+export type StepPhase =
+  | "baseline"
+  | "intervention"
+  | "generalization"
+  | "maintenance"
+  | "acquired";
 
 /** Ajuda dada na tentativa, quando houve. */
 export type Prompt = "verbal" | "motor" | "other";
@@ -127,7 +143,7 @@ export type ProgramStepExecution = {
   id: string;
   /** Nome do passo no vocabulário do programa. */
   name: string;
-  phase: ProgramPhase;
+  phase: StepPhase;
   trials: Trial[];
   /** Quantas tentativas o passo exige antes de fechar. */
   targetTrials: number;
@@ -207,6 +223,141 @@ export type ClinicalSessionData = {
    * consegue explicar o bloqueio se souber qual é o outro.
    */
   openSessionsForProfessional: { id: string; patientName: string; start: string }[];
+};
+
+/* ================================================================== *
+ * Plano de intervenção — o que é ensinado, e quando está aprendido
+ * ================================================================== */
+
+/**
+ * Critério de domínio ou de regressão de uma fase.
+ *
+ * Espelha `Bloomy.Programs.PhaseConfiguration.Criteria`. Três campos definem a
+ * frase inteira que a clínica usa em voz alta: "oitenta por cento em três
+ * sessões consecutivas". `performance` é o percentual de acerto, `frequency` é
+ * quantas sessões, e `criteria` decide se elas precisam ser seguidas.
+ *
+ * A diferença entre consecutivo e cumulativo não é detalhe: um passo que oscila
+ * atinge o critério cumulativo e nunca atinge o consecutivo, e é exatamente essa
+ * oscilação que a decisão clínica quer enxergar.
+ */
+export type Criteria = {
+  criteria: "consecutive" | "cumulative";
+  /** Quantas sessões. */
+  frequency: number;
+  /** Percentual de acerto exigido, de 0 a 100. */
+  performance: number;
+};
+
+/**
+ * Configuração das fases de um programa estruturado.
+ *
+ * Obrigatória para `structured` e ausente em `incidental` — o monólito valida
+ * isso no changeset. A linha de base é a única fase sem meta de acerto: seu
+ * `mastery_performance` é forçado a zero, porque medir antes de ensinar não tem
+ * critério de aprovação, só de encerramento.
+ *
+ * `regression` ausente significa que a fase não regride. Na intervenção isso
+ * acompanha `hasPromptFading`: quando a retirada de ajuda está ativa, o passo
+ * não volta de fase — ele volta de nível de ajuda.
+ */
+export type PhaseConfiguration = {
+  baseline: { mastery: Criteria; regression?: Criteria };
+  intervention: { mastery: Criteria; regression?: Criteria };
+  generalization: { mastery: Criteria; regression?: Criteria };
+  maintenance: { mastery: Criteria; regression?: Criteria };
+  autoControl: boolean;
+  hasPromptFading: boolean;
+};
+
+/**
+ * Uma sessão já registrada para um passo, resumida ao que o critério pergunta.
+ *
+ * O critério só olha data e percentual de acerto — não olha tentativa a
+ * tentativa. Guardar aqui apenas o que a regra consome mantém honesto o que a
+ * tela pode prometer.
+ */
+export type StepSessionResult = {
+  /** ISO `YYYY-MM-DD`. */
+  date: string;
+  /** Percentual de acerto na sessão, de 0 a 100. */
+  performance: number;
+};
+
+/** Passo do programa, do lado do plano — não da execução dentro da sessão. */
+export type PlanStep = {
+  id: string;
+  name: string;
+  /** Ordem dentro do programa. O monólito ordena por ela em toda listagem. */
+  position: number;
+  /** Estímulo discriminativo: o que é apresentado ao paciente. */
+  sd?: string;
+  status: "active" | "acquired";
+  phase: StepPhase;
+  phaseStartedAt?: string;
+  acquiredAt?: string;
+  /** Sessões já registradas, da mais antiga para a mais recente. */
+  history: StepSessionResult[];
+};
+
+export type PlanProgram = {
+  id: string;
+  name: string;
+  shortDescription?: string;
+  programType: "structured" | "incidental";
+  answerType: "task_training" | "frequency" | "duration" | "interval";
+  status: "active" | "acquired" | "interrupted" | "hidden";
+  acquiredAt?: string;
+  steps: PlanStep[];
+  /** Ausente em programa incidental. */
+  phaseConfiguration?: PhaseConfiguration;
+  /**
+   * Id da versão que substituiu este programa.
+   *
+   * Programas são versionados no Bloomy: editar um programa em uso cria uma
+   * versão nova e aponta a antiga para ela. A antiga continua existindo porque
+   * as tentativas já registradas pertencem a ela — apagá-la apagaria a
+   * evolução medida sob as regras antigas.
+   */
+  nextVersionId?: string;
+  specialties: string[];
+};
+
+export type Objective = {
+  id: string;
+  name: string;
+  status: "active" | "acquired" | "hidden";
+  acquiredAt?: string;
+  programs: PlanProgram[];
+};
+
+export type Goal = {
+  id: string;
+  name: string;
+  status: "active" | "acquired" | "hidden";
+  acquiredAt?: string;
+  /** Protocolo de origem, quando a meta veio de uma avaliação. */
+  protocolName?: string;
+  objectives: Objective[];
+};
+
+/**
+ * O Plano de Ensino Individualizado do paciente.
+ *
+ * Quatro níveis: meta, objetivo, programa, passo. A aquisição sobe por eles —
+ * passo adquirido pode fechar o programa, que pode fechar o objetivo, que pode
+ * fechar a meta — e é essa cascata que faz o plano avançar sem ninguém marcar
+ * nada à mão.
+ */
+export type InterventionPlan = {
+  patient: PatientRef;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+  goals: Goal[];
+};
+
+export type InterventionPlanData = {
+  plan: InterventionPlan;
 };
 
 /* ================================================================== *

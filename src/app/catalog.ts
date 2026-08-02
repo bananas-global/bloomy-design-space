@@ -3,14 +3,17 @@ import type { Fixture, Module, Persona, Rule, Scenario } from "@brucesantos/desi
 import { personas } from "../personas/index.js";
 import { agendaFixtures } from "../fixtures/agenda.js";
 import { sessionFixtures } from "../fixtures/session.js";
+import { programFixtures } from "../fixtures/programs.js";
 import { patientFixtures } from "../fixtures/patients.js";
 import { financeFixtures } from "../fixtures/finance.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
+import { programRules } from "../rules/programs.js";
 import { patientRules } from "../rules/patients.js";
 import { financeRules } from "../rules/finance.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
+import { programScenarios } from "../scenarios/programs.js";
 import { patientScenarios } from "../scenarios/patients.js";
 import { financeScenarios } from "../scenarios/finance.js";
 
@@ -177,11 +180,38 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "programs",
+    name: "Programas",
+    description:
+      "O plano de intervenção: metas, objetivos, programas e passos — e como o Bloomy decide que o paciente aprendeu.",
+    flows: [
+      {
+        id: "follow-acquisition",
+        title: "Acompanhar a aquisição de um objetivo",
+        description:
+          "Do critério combinado até a cascata que fecha meta, objetivo e programa de uma vez.",
+        steps: [
+          { scenario: "programs.plan", label: "Ver o plano inteiro" },
+          {
+            scenario: "programs.mastery-criteria",
+            label: "Ler o critério do passo em intervenção",
+            decision: "O desempenho sustentou o critério ou caiu abaixo dele?",
+            branches: {
+              "Fecha o último passo": "programs.cascade",
+              "Caiu abaixo do alvo": "programs.regression",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
   ...agendaScenarios,
   ...sessionScenarios,
+  ...programScenarios,
   ...patientScenarios,
   ...financeScenarios,
 ];
@@ -189,11 +219,18 @@ export const scenarios: Scenario[] = [
 export const fixtures: Fixture[] = [
   ...agendaFixtures,
   ...sessionFixtures,
+  ...programFixtures,
   ...patientFixtures,
   ...financeFixtures,
 ] as Fixture[];
 
-export const rules: Rule[] = [...agendaRules, ...sessionRules, ...patientRules, ...financeRules];
+export const rules: Rule[] = [
+  ...agendaRules,
+  ...sessionRules,
+  ...programRules,
+  ...patientRules,
+  ...financeRules,
+];
 
 export { personas };
 export type { Persona };

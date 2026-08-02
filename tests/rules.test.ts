@@ -4,7 +4,12 @@ import type {
   ClinicalSession,
   ClinicalSessionData,
   Claim,
+  Criteria,
+  InterventionPlan,
   Patient,
+  PlanProgram,
+  PlanStep,
+  StepSessionResult,
 } from "../src/contracts/index.js";
 import { ageInYears, isMinor, TODAY } from "../src/contracts/index.js";
 import {
@@ -29,6 +34,18 @@ import {
   statusAfterRevert,
   statusAfterSign,
 } from "../src/rules/session.js";
+import {
+  canEditProgram,
+  cascadeFrom,
+  criteriaSentence,
+  isSuperseded,
+  meetsMastery,
+  objectiveWouldBeAcquired,
+  programWouldBeAcquired,
+  regressionTarget,
+  sessionsRemaining,
+  sessionsTowardMastery,
+} from "../src/rules/programs.js";
 
 /**
  * Testes das regras de negócio.
@@ -598,5 +615,290 @@ describe("o que ainda falta acontecer", () => {
   it("não inventa pendência para o que está fechado", () => {
     expect(pendingWork(clinicalSession({ status: "finished" }))).toBeUndefined();
     expect(pendingWork(clinicalSession({ status: "cancelled" }))).toBeUndefined();
+  });
+});
+
+/* ============================================================== programas */
+
+/**
+ * As regras de aquisição são as que mais custam quando erram, porque erram em
+ * silêncio: um passo muda de fase sem ninguém apertar nada, e a diferença entre
+ * consecutivo e cumulativo só aparece meses depois, num relatório.
+ */
+
+const criterio = (
+  performance: number,
+  frequency: number,
+  criteria: "consecutive" | "cumulative" = "consecutive",
+): Criteria => ({ criteria, frequency, performance });
+
+const historico = (...performances: number[]): StepSessionResult[] =>
+  performances.map((performance, index) => ({
+    date: `2026-07-${String(2 + index * 7).padStart(2, "0")}`,
+    performance,
+  }));
+
+describe("consecutive-differs-from-cumulative", () => {
+  const alvo80 = historico(90, 50, 85, 90);
+
+  it("consecutivo conta de trás para frente e para na primeira abaixo do alvo", () => {
+    expect(sessionsTowardMastery(alvo80, criterio(80, 3, "consecutive"))).toBe(2);
+  });
+
+  it("cumulativo conta todas que atingiram, em qualquer ordem", () => {
+    expect(sessionsTowardMastery(alvo80, criterio(80, 3, "cumulative"))).toBe(3);
+  });
+
+  it("o mesmo histórico fecha o cumulativo e não fecha o consecutivo", () => {
+    // É o caso do passo que oscila — e é exatamente ele que a decisão clínica
+    // quer enxergar antes de avançar de fase.
+    expect(meetsMastery(alvo80, criterio(80, 3, "cumulative"))).toBe(true);
+    expect(meetsMastery(alvo80, criterio(80, 3, "consecutive"))).toBe(false);
+  });
+
+  it("uma recaída zera semanas de progresso no consecutivo", () => {
+    const recaida = historico(90, 90, 90, 40);
+    expect(sessionsTowardMastery(recaida, criterio(80, 3, "consecutive"))).toBe(0);
+    expect(sessionsTowardMastery(recaida, criterio(80, 3, "cumulative"))).toBe(3);
+  });
+});
+
+describe("mastery-closes-phase", () => {
+  it("fecha quando a contagem alcança a frequência exigida", () => {
+    expect(meetsMastery(historico(85, 90, 95), criterio(80, 3))).toBe(true);
+    expect(meetsMastery(historico(85, 90), criterio(80, 3))).toBe(false);
+  });
+
+  it("conta o que falta sem cair para negativo", () => {
+    expect(sessionsRemaining(historico(85, 90), criterio(80, 3))).toBe(1);
+    expect(sessionsRemaining(historico(85, 90, 95, 100), criterio(80, 3))).toBe(0);
+  });
+
+  it("o desempenho exatamente no alvo conta", () => {
+    // Fronteira: `>=`, não `>`. Combinar 80% e reprovar quem fez 80% seria
+    // desmentir o critério que a clínica acertou com a família.
+    expect(sessionsTowardMastery(historico(80, 80, 80), criterio(80, 3))).toBe(3);
+  });
+});
+
+describe("baseline-has-no-performance-target", () => {
+  it("com alvo zero, toda sessão conta e o critério vira contagem pura", () => {
+    expect(sessionsTowardMastery(historico(20, 10, 0), criterio(0, 3))).toBe(3);
+    expect(meetsMastery(historico(20, 10, 0), criterio(0, 3))).toBe(true);
+  });
+
+  it("a frase da linha de base não menciona percentual", () => {
+    expect(criteriaSentence(criterio(0, 3), "baseline")).toBe(
+      "3 sessões registradas, sem meta de acerto",
+    );
+  });
+
+  it("as demais fases dizem o percentual e o tipo de contagem", () => {
+    expect(criteriaSentence(criterio(80, 3), "intervention")).toBe(
+      "80% de acerto em 3 sessões consecutivas",
+    );
+    expect(criteriaSentence(criterio(90, 2, "cumulative"), "maintenance")).toBe(
+      "90% de acerto em 2 sessões no total",
+    );
+  });
+
+  it("concorda em número quando a frequência é um", () => {
+    expect(criteriaSentence(criterio(80, 1), "intervention")).toBe(
+      "80% de acerto em 1 sessão consecutiva",
+    );
+  });
+});
+
+describe("regression-returns-to-previous-phase", () => {
+  const regride = criterio(70, 2);
+
+  it("devolve a fase anterior quando o critério de regressão é atingido", () => {
+    expect(regressionTarget("maintenance", historico(95, 90, 60, 55), regride)).toBe(
+      "generalization",
+    );
+    expect(regressionTarget("generalization", historico(50, 40), regride)).toBe("intervention");
+  });
+
+  it("não dispara quando as quedas não são seguidas o bastante", () => {
+    expect(regressionTarget("maintenance", historico(60, 90, 55), regride)).toBeUndefined();
+  });
+
+  it("não dispara quando a fase não tem critério de regressão", () => {
+    expect(regressionTarget("maintenance", historico(10, 10, 10), undefined)).toBeUndefined();
+  });
+
+  it("a linha de base não tem para onde voltar", () => {
+    expect(regressionTarget("baseline", historico(10, 10), regride)).toBeUndefined();
+  });
+});
+
+describe("acquisition-cascades-upward", () => {
+  const passoAdquirido = (id: string): PlanStep => ({
+    id,
+    name: id,
+    position: 1,
+    status: "acquired",
+    phase: "acquired",
+    history: [],
+  });
+
+  const passoAtivo = (id: string): PlanStep => ({
+    id,
+    name: id,
+    position: 2,
+    status: "active",
+    phase: "maintenance",
+    history: [],
+  });
+
+  const programa = (id: string, steps: PlanStep[], status: PlanProgram["status"] = "active"): PlanProgram => ({
+    id,
+    name: id,
+    programType: "structured",
+    answerType: "task_training",
+    status,
+    specialties: [],
+    steps,
+  });
+
+  it("o programa fecha quando não sobra passo por adquirir", () => {
+    expect(programWouldBeAcquired(programa("p", [passoAdquirido("s1")]))).toBe(true);
+    expect(programWouldBeAcquired(programa("p", [passoAdquirido("s1"), passoAtivo("s2")]))).toBe(
+      false,
+    );
+  });
+
+  it("o passo em questão pode ser ignorado na conta, como o monólito faz", () => {
+    const p = programa("p", [passoAdquirido("s1"), passoAtivo("s2")]);
+    expect(programWouldBeAcquired(p, ["s2"])).toBe(true);
+  });
+
+  it("nível sem filhos conta como adquirido — consequência do modelo", () => {
+    // O monólito pergunta pela negativa: "sobrou algum filho não adquirido?".
+    // Uma lista vazia responde não, e o nível fecha.
+    expect(programWouldBeAcquired(programa("p", []))).toBe(true);
+    expect(objectiveWouldBeAcquired({ id: "o", name: "o", status: "active", programs: [] })).toBe(
+      true,
+    );
+  });
+
+  it("a cascata sobe até onde não sobrar irmão pendente", () => {
+    const plan: InterventionPlan = {
+      patient: { id: "x", name: "x", birthDate: "2019-01-01" },
+      now: "2026-07-30T09:00:00.000-03:00",
+      goals: [
+        {
+          id: "meta",
+          name: "meta",
+          status: "active",
+          objectives: [
+            {
+              id: "obj",
+              name: "obj",
+              status: "active",
+              programs: [programa("prog", [passoAdquirido("s1"), passoAtivo("s2")])],
+            },
+          ],
+        },
+      ],
+    };
+
+    // Marcar `s2` fecha programa, objetivo e meta de uma vez.
+    const cascade = cascadeFrom(plan, "s2");
+    expect(cascade.program?.id).toBe("prog");
+    expect(cascade.objective?.id).toBe("obj");
+    expect(cascade.goal?.id).toBe("meta");
+  });
+
+  it("para no nível em que ainda há irmão pendente", () => {
+    const plan: InterventionPlan = {
+      patient: { id: "x", name: "x", birthDate: "2019-01-01" },
+      now: "2026-07-30T09:00:00.000-03:00",
+      goals: [
+        {
+          id: "meta",
+          name: "meta",
+          status: "active",
+          objectives: [
+            {
+              id: "obj",
+              name: "obj",
+              status: "active",
+              programs: [
+                programa("prog", [passoAdquirido("s1"), passoAtivo("s2")]),
+                programa("outro", [passoAtivo("s3")]),
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const cascade = cascadeFrom(plan, "s2");
+    expect(cascade.program?.id).toBe("prog");
+    expect(cascade.objective).toBeUndefined();
+    expect(cascade.goal).toBeUndefined();
+  });
+
+  it("não sobe nada quando o programa ainda tem outro passo pendente", () => {
+    const plan: InterventionPlan = {
+      patient: { id: "x", name: "x", birthDate: "2019-01-01" },
+      now: "2026-07-30T09:00:00.000-03:00",
+      goals: [
+        {
+          id: "meta",
+          name: "meta",
+          status: "active",
+          objectives: [
+            {
+              id: "obj",
+              name: "obj",
+              status: "active",
+              programs: [
+                programa("prog", [passoAtivo("s2"), { ...passoAtivo("s4"), position: 3 }]),
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(cascadeFrom(plan, "s2")).toEqual({});
+  });
+});
+
+describe("superseded-version-keeps-its-history", () => {
+  const base: PlanProgram = {
+    id: "prog",
+    name: "Imitação motora grossa",
+    programType: "structured",
+    answerType: "task_training",
+    status: "active",
+    specialties: [],
+    steps: [],
+  };
+
+  it("versão substituída não é editável, e a negativa diz por quê", () => {
+    const antiga = { ...base, nextVersionId: "prog-v2" };
+    expect(isSuperseded(antiga)).toBe(true);
+    expect(canEditProgram(antiga, ["programs.edit"]).reason).toMatch(
+      /tentativas registradas pertencem a ela/,
+    );
+  });
+
+  it("programa adquirido também não é editado", () => {
+    expect(canEditProgram({ ...base, status: "acquired" }, ["programs.edit"]).reason).toMatch(
+      /Crie uma versão nova/,
+    );
+  });
+
+  it("a versão vigente e ativa é editável por quem tem permissão", () => {
+    expect(canEditProgram(base, ["programs.edit"]).allowed).toBe(true);
+  });
+
+  it("bloqueia por permissão antes de olhar a versão", () => {
+    expect(canEditProgram({ ...base, nextVersionId: "v2" }, []).reason).toMatch(
+      /não edita programas/,
+    );
   });
 });
