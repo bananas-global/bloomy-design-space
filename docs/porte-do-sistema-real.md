@@ -803,6 +803,35 @@ Duas descobertas aí, e as duas são de tempo:
 6 cenários, 10 testes de regra, 9 jornadas.
 
 
+### 27. Varredura de coerência — `porte/coerencia`
+
+Uma passagem sobre o que já estava escrito, procurando decadência em vez de
+superfície nova. Três coisas apareceram.
+
+**Sete citações ao monólito estavam uma ou duas linhas fora.** A tabela de
+achados aponta para arquivo e linha do sistema real, e uma citação que erra por
+uma linha manda o leitor para uma linha em branco ou para um `end`. O efeito não
+é local: quem confere uma citação e não encontra nada para de conferir as
+outras. Corrigidas contra o token real de cada achado.
+
+Para não decair de novo, `scripts/check-citations.mjs` confere todas as citações
+`lib/**.ex:linha` de `docs/` contra o monólito e entrou no `pnpm check`. Ele
+**não falha** quando o monólito não está clonado — avisa e sai com zero. Um
+verificador que quebra o `check` de quem não tem o outro repositório é abandonado
+na primeira semana.
+
+**Dez regras não eram citadas por cenário nenhum.** Uma regra que nenhum cenário
+aponta não é verificável por jornada: ela vira texto mantido por educação. Todas
+as dez já eram exercitadas por cenários existentes — faltava a ligação, e ela foi
+feita. Dois testes novos em `tests/product.test.ts` mantêm isso: um confere que o
+`source` de cada regra existe, outro que nenhuma regra fica órfã.
+
+**As permissões continuam em sincronia.** `scripts/gen-permissions.mjs` foi
+rodado contra as 26 policies e o resultado é idêntico ao arquivo em uso.
+
+Sem cenário novo: 2 testes de contrato, 1 script.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -810,7 +839,7 @@ bugs do Design Space; são observações sobre o produto.
 
 | # | Achado | Onde |
 | --- | --- | --- |
-| 1 | `UnitPolicy.can?(role, :list)` compara com `"admin_clinic"`; o papel se chama `clinic_admin`. O admin de clínica não lista unidades. | `lib/bloomy/units/unit_policy.ex:6` |
+| 1 | `UnitPolicy.can?(role, :list)` compara com `"admin_clinic"`; o papel se chama `clinic_admin`. O admin de clínica não lista unidades. | `lib/bloomy/units/unit_policy.ex:5` |
 | 2 | Metade das policies concede por lista negativa (`role not in`), liberando por omissão para papéis não considerados. `people` aparece com permissões de paciente que outra policy bloqueia antes. | várias |
 | 3 | `patients.see_behavior_intervention_plan` exclui `therapeutic_companion` e `specialist`, e não exclui `applicator`. Quem conduz a intervenção não vê o plano; quem aplica, vê. | `lib/bloomy/patients/patient_policy.ex:29` |
 | 4 | A Central de Autorizações verifica permissão na entrada da tela; nenhuma ação interna — adicionar autorização, editar agendamento, abrir token — tem verificação própria. | `lib/bloomy_web/backoffice/live/authorization_hub/` |
@@ -818,14 +847,14 @@ bugs do Design Space; são observações sobre o produto.
 | 6 | `ProgramPolicy` não inclui `applicator` em nenhuma das oito ações, nem em `list`. Quem aplica o programa não tem permissão de vê-lo. | `lib/bloomy/programs/program_policy.ex` |
 | 7 | A cascata de aquisição pergunta pela negativa (`has_unaquired_step?`), então um nível **sem filhos** conta como adquirido. Um objetivo sem programas fecha sozinho. | `lib/bloomy/programs/context.ex:119` |
 | 8 | `ProtocolPolicy.can?(role, :list)` não inclui `supervisor`. Quem supervisiona o caso não alcança a avaliação que o originou — nem para leitura. | `lib/bloomy/protocols/protocol_policy.ex` |
-| 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |
+| 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:5` |
 | 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |
 | 12 | `provider_code` e `requester_code` de `HealthCare` são opcionais no changeset e obrigatórios na geração do lote TISS. O cadastro passa e o envio falha. | `lib/bloomy/health_cares/health_care.ex` |
 | 14 | Finalizar uma anamnese incompleta **relata sucesso e não finaliza**. `keep_pending_until_required_fields/1` devolve o status para `pending` dentro do changeset, sem erro — quem clicou vê a anamnese ainda aberta, sem explicação. O cenário `record.anamnese-incomplete` mostra o atual e o proposto lado a lado. | `lib/bloomy/anamneses/anamnese.ex:31` |
 | 15 | A permissão de **emitir** relatório não verifica a de **ler** o prontuário. `generate_report` inclui `attendant`; `see_clinic_overview` o exclui. Quem não pode abrir a evolução do paciente pode produzir um documento de evolução sobre ele, e o formulário não filtra o tipo por papel. | `lib/bloomy/patients/patient_policy.ex:22` |
 | 13 | `SchedulePolicy.scope/2` esconde agendamentos `:incomplete` do usuário de operadora sem sinalizar. A lista de presença fica impossível de conciliar com a fatura quando os números não batem. | `lib/bloomy/schedules/schedule_policy.ex` |
 | 11 | `ClosurePolicy` se contradiz sobre o especialista: `can_interact?` diz que ele age na etapa de aceite, mas `scope/2` não o lista e ele cai no `where: false`. O especialista não vê fechamento nenhum, nem o próprio. | `lib/bloomy/professionals/closures/closure_policy.ex` |
-| 16 | `NotificationUser.changeset/2` exige `read_at` no `validate_required`. Uma notificação **não lida** é impossível de criar por ele. O remetente contorna usando `build_assoc` direto, então a validação nunca roda — é código morto que documenta o oposto do comportamento. | `lib/bloomy/backoffice/notification_user.ex:26` |
+| 16 | `NotificationUser.changeset/2` exige `read_at` no `validate_required`. Uma notificação **não lida** é impossível de criar por ele. O remetente contorna usando `build_assoc` direto, então a validação nunca roda — é código morto que documenta o oposto do comportamento. | `lib/bloomy/backoffice/notification_user.ex:31` |
 | 17 | Três dos quatro remetentes passam `""` como `on_click_url`. Em Elixir a string vazia é *truthy*: um template que faça `if notification.on_click_url` renderiza um link clicável para lugar nenhum. As notificações que mais precisariam levar a algum lugar — as três de agendamento — são justamente as que não levam. | `lib/bloomy/schedules/assume_schedule.ex:21,37,64` |
 | 18 | `mark_all_notifications_read_for/1` grava `DateTime.utc_now()` sem truncar numa coluna `:utc_datetime`, enquanto `mark_notifications_read/1` trunca para segundo. Ecto rejeita microssegundos não vazios ao serializar `:utc_datetime` — há risco de “marcar todas como lidas” falhar onde “marcar uma” funciona. **Não reproduzido**: não rodamos o monólito. Vale um teste antes de qualquer conclusão. | `lib/bloomy/backoffice.ex:241-245` |
 | 19 | A notificação de menção no chat aponta para `/backoffice/pacientes/:id/editar?message=:id` — o formulário de cadastro do paciente, não o chat de onde a menção saiu. Somado ao achado sobre `ChatPolicy`, quem é mencionado recebe um aviso que leva a uma tela que pode não abrir para o perfil dele. | `lib/bloomy/multidisciplinary_chat/send_message.ex:62` |
@@ -838,14 +867,14 @@ bugs do Design Space; são observações sobre o produto.
 | 26 | O mapa de calor renderiza `{inspect(@count)}` direto no HTML. É uma chamada de depuração deixada na marcação: o usuário vê a representação Elixir do valor, incluindo `nil` quando não há dado. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:179` |
 | 27 | A célula de especialidade cai em `"?"` quando a contagem não foi calculada — o usuário lê literalmente "? horas livres". Desconhecido é um estado legítimo e merece uma frase, não um caractere. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:103` |
 | 28 | `render_table/2` resolve a granularidade de forma oposta nos dois eixos: em `professional`, tudo que não é `"day"` vira semana; em `room`, tudo que não é `"week"` vira dia. Um valor inesperado — `nil`, lixo de formulário — cai em visões diferentes conforme o eixo. | `lib/bloomy_web/backoffice/live/unit_map_live/show.ex:28-40` |
-| 29 | `RecalculateExpectedHours` soma os segundos previstos e faz `div(3600)`, que trunca — e `expected_hours` é coluna `:integer`. Um dia previsto de 7h30 é gravado como 7. O arredondamento vai sempre contra o profissional, e num mês de 22 dias úteis são 11 horas. | `lib/bloomy/professionals/clinical_hours/recalculate_professional_expected_hour.ex:10` |
+| 29 | `RecalculateExpectedHours` soma os segundos previstos e faz `div(3600)`, que trunca — e `expected_hours` é coluna `:integer`. Um dia previsto de 7h30 é gravado como 7. O arredondamento vai sempre contra o profissional, e num mês de 22 dias úteis são 11 horas. | `lib/bloomy/professionals/clinical_hours/recalculate_professional_expected_hour.ex:11` |
 | 30 | O log de verificação por geolocalização só é gravado quando latitude e longitude chegam preenchidas, e o resultado do `Repo.insert` é descartado. Sem coordenadas — ou com falha na gravação — o check-in reporta sucesso e o registro fica indistinguível de um verificado. | `lib/bloomy/professionals/clinical_hours/checkin.ex:18-38` |
 | 31 | `ExpectedClinicHour.changeset` valida só `start_at`, e `RecalculateExpectedHours` chama `Time.diff(end_at, start_at)` sem checar nulo. O cadastro autoriza exatamente a forma que o cálculo não processa; o erro aparece no recálculo, longe de quem salvou. | `lib/bloomy/professionals/clinical_hours/expected_clinic_hour.ex:20` |
 | 32 | Nada compara `end_at` com `start_at` em `ClinicHour`. Uma saída anterior à entrada é aceita e `Time.diff` devolve negativo, subtraindo horas do total do dia — que pode ficar menor que uma de suas parcelas. | `lib/bloomy/professionals/clinical_hours/clinic_hour.ex:20-31` |
-| 33 | `Checkin.has_open_checkin?/1` ancora a busca em `Date.utc_today()`. Depois das 21h em Brasília, a pergunta "esta pessoa tem check-in aberto hoje?" é feita sobre o dia seguinte. Terceira ocorrência do mesmo padrão, junto dos achados 22 e o período do mapa. | `lib/bloomy/professionals/clinical_hours/checkin.ex:60` |
+| 33 | `Checkin.has_open_checkin?/1` ancora a busca em `Date.utc_today()`. Depois das 21h em Brasília, a pergunta "esta pessoa tem check-in aberto hoje?" é feita sobre o dia seguinte. Terceira ocorrência do mesmo padrão, junto dos achados 22 e o período do mapa. | `lib/bloomy/professionals/clinical_hours/checkin.ex:56` |
 | 34 | `ScheduleVerification.verify/2` usa `Enum.find_value` sobre sete verificadores: para no primeiro que falha. Um horário com quatro impedimentos exige quatro tentativas de salvar para que todos apareçam, e a ordem em que eles surgem é a ordem do array — a lotação da sala, a mais fácil de contornar, é a última. | `lib/bloomy/schedules/schedule_verification.ex:10-24` |
-| 35 | `TherapyPhase.changeset/2` faz `cast` de paciente, especialidade e etapa e **não chama `validate_required` para nenhum**. Uma fase sem especialidade é gravável, não pertence a percurso nenhum e nenhuma tela sabe onde mostrá-la. | `lib/bloomy/patients/therapy_phase.ex:36` |
+| 35 | `TherapyPhase.changeset/2` faz `cast` de paciente, especialidade e etapa e **não chama `validate_required` para nenhum**. Uma fase sem especialidade é gravável, não pertence a percurso nenhum e nenhuma tela sabe onde mostrá-la. | `lib/bloomy/patients/therapy_phase.ex:37` |
 | 36 | `step` tem `default: :ambiance` sem validação. Uma fase gravada sem etapa lê-se como "ambientação" — o começo do percurso — mesmo para quem está em terapia há um ano. Valor omitido e valor escolhido ficam idênticos. | `lib/bloomy/patients/therapy_phase.ex:9-18` |
 | 37 | `set_status/2` mantém o paciente **ativo** quando a data de inativação é futura, mas `deactivate_patient_callbacks/3` roda sempre que há data. Agendar a inativação para o mês que vem cancela **hoje** todos os agendamentos daquele mês em diante. O status adia; a destruição não. | `lib/bloomy/patients/change_status.ex:37-39,99-108` |
-| 38 | O corte da inativação é `DateTime.new!(deactivation_date, ~T[00:00:00], "Etc/UTC")` — 21h da véspera em Brasília. Atendimentos das últimas três horas do dia anterior são cancelados com motivo "paciente inativado" num dia em que o paciente ainda estava ativo. Quarta ocorrência do padrão de fuso. | `lib/bloomy/patients/change_status.ex:62` |
+| 38 | O corte da inativação é `DateTime.new!(deactivation_date, ~T[00:00:00], "Etc/UTC")` — 21h da véspera em Brasília. Atendimentos das últimas três horas do dia anterior são cancelados com motivo "paciente inativado" num dia em que o paciente ainda estava ativo. Quarta ocorrência do padrão de fuso. | `lib/bloomy/patients/change_status.ex:63` |
 | 39 | `disable_auto_renew_hour_maps/2` não filtra por data: desliga a renovação automática de **todos** os mapas do paciente, inclusive os que já terminaram. | `lib/bloomy/patients/change_status.ex:76-83` |

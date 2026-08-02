@@ -86,7 +86,7 @@ export const insurerPortalScenarios: Scenario[] = [
     route: "/insurer",
     persona: "applicator",
     fixture: "insurer-attendance",
-    rules: ["insurer-sees-attendance-not-clinical-record"],
+    rules: ["insurer-sees-attendance-not-clinical-record", "insurer-sees-only-its-own-beneficiaries"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [

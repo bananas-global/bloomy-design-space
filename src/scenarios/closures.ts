@@ -166,7 +166,7 @@ export const closureScenarios: Scenario[] = [
     route: "/closures",
     persona: "admin",
     fixture: "closure-paid",
-    rules: ["paid-closure-is-frozen"],
+    rules: ["paid-closure-is-frozen", "closure-status-moves-backward-only"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     preconditions: [

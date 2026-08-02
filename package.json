@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check": "pnpm typecheck && pnpm test && pnpm build"
+    "check:citations": "node scripts/check-citations.mjs",
+    "check": "pnpm typecheck && pnpm test && pnpm check:citations && pnpm build"
   },
   "dependencies": {
     "@brucesantos/design-space": "^0.1.1",
