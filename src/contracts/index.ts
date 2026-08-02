@@ -1361,6 +1361,43 @@ export type HourMapData = {
 };
 
 /* ================================================================== *
+ * Chat multidisciplinar — a coordenação escrita do caso
+ * ================================================================== */
+
+/**
+ * Uma mensagem do chat.
+ *
+ * O schema tem `content`, autor, paciente e nada mais: **não há campo de edição
+ * nem de exclusão**. O que foi escrito fica, e isso faz do chat um registro do
+ * caso, não um mensageiro.
+ */
+export type ChatMessage = {
+  id: string;
+  content: string;
+  authorName: string;
+  /** Papel do autor no momento — a mesma pessoa aparece com papéis diferentes. */
+  authorRole: string;
+  at: string;
+  /** Nomes de usuário mencionados com arroba no texto. */
+  mentions: string[];
+};
+
+export type ChatData = {
+  patient: PatientRef;
+  messages: ChatMessage[];
+  /** Quem está lendo, para a tela saber o que oferecer. */
+  currentUser: { username: string; name: string; role: string };
+  /**
+   * Quem existe e com que papel, para a tela poder avisar antes do envio que
+   * uma menção não vai chegar a lugar nenhum. Vem pelo contrato, e não de uma
+   * fixture importada: tela não conhece fixture.
+   */
+  directory: { username: string; role: string }[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Formatação
  * ================================================================== */
 

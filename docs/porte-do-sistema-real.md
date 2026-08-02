@@ -487,6 +487,33 @@ Quatro regras, seis cenários, a tela `HourMap` e dezoito testes.
 
 Verde: `pnpm check` e 413 jornadas Playwright.
 
+### 18. Clínico, parte 7: chat do caso — `porte/clinico-chat`
+
+Concluída. **Fecha o módulo clínico.**
+
+A tentação é tratar o chat como recurso secundário — um mensageiro embutido. O
+schema diz outra coisa: mensagem tem conteúdo, autor e paciente, e **nenhum
+campo de edição ou exclusão**. É registro de coordenação clínica, e alguém vai
+consultá-lo meses depois para entender por que a conduta mudou.
+
+- **O aviso de permanência vem antes do envio**, ao lado do campo e associado
+  por `aria-describedby`. Não é pedido de confirmação: é informação antes da
+  ação. Descobrir que não dá para corrigir quando já não dá é a pior hora.
+- **A menção notifica e não dá acesso.** `ChatPolicy` não inclui recepção,
+  operação nem People — a notificação sai e a tela da pessoa não abre. A tela
+  avisa isso enquanto se digita, o que o sistema real não faz.
+- **O aplicador alcança o chat**, e é a única superfície escrita do caso que ele
+  alcança: não vê programa, protocolo nem prontuário. Fechar o chat para ele
+  silenciaria justamente quem observa o paciente executando.
+
+Uma correção de camada no caminho: eu havia importado uma fixture dentro da
+tela, para checar as menções. O diretório passou a vir pelo contrato — tela não
+conhece fixture.
+
+Quatro regras, cinco cenários, a tela `Chat` e quinze testes.
+
+Verde: `pnpm check` e 431 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

@@ -1393,6 +1393,79 @@ test.describe("Mapa de horas", () => {
   });
 });
 
+test.describe("Chat do caso", () => {
+  test("cada mensagem mostra o papel de quem escreveu", async ({ page }) => {
+    await page.goto(urlFor("chat.week"));
+
+    // A mesma frase pesa diferente vinda de quem supervisiona e de quem aplica.
+    await expect(page.getByText("Aplicador").first()).toBeVisible();
+    await expect(page.getByText("Supervisor").first()).toBeVisible();
+    await expect(page.getByText("4 especialidades participando")).toBeVisible();
+  });
+
+  test("a conversa é lida de cima para baixo", async ({ page }) => {
+    await page.goto(urlFor("chat.week"));
+
+    // A trilha de navegação também é uma lista: escopo na conversa.
+    const conversa = page.getByRole("list").filter({ hasText: "cobriu os ouvidos" });
+    const primeira = conversa.getByRole("listitem").first();
+    await expect(primeira).toContainText("Otávio Ferrandini");
+    await expect(primeira).toContainText("cobriu os ouvidos");
+  });
+
+  test("o aviso de permanência fica ao lado do campo, antes do envio", async ({ page }) => {
+    await page.goto(urlFor("chat.permanence-before-sending"));
+
+    const campo = page.getByLabel("Nova mensagem");
+    await expect(campo).toBeVisible();
+    await expect(page.locator("#mensagem-permanencia")).toHaveText(
+      /não pode ser editado nem apagado.*consultá-lo meses depois/,
+    );
+    // Não é confirmação: é informação antes da ação.
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("a menção que não vai chegar é avisada ao digitar", async ({ page }) => {
+    await page.goto(urlFor("chat.mention-without-access"));
+
+    await page.getByLabel("Nova mensagem").fill("@helena consegue reservar a sala?");
+    await expect(page.getByRole("heading", { name: "Menção que não vai chegar" })).toBeVisible();
+    await expect(page.getByText(/o perfil dessa pessoa não alcança o chat do caso/)).toBeVisible();
+    await expect(page.getByText(/A notificação sai e a tela não abre/)).toBeVisible();
+  });
+
+  test("menção a quem não existe tem motivo diferente", async ({ page }) => {
+    await page.goto(urlFor("chat.mention-without-access"));
+
+    await page.getByLabel("Nova mensagem").fill("@fulano dá uma olhada");
+    await expect(page.getByText(/não existe um usuário com esse nome/)).toBeVisible();
+  });
+
+  test("menção válida não gera aviso", async ({ page }) => {
+    await page.goto(urlFor("chat.mention-without-access"));
+
+    await page.getByLabel("Nova mensagem").fill("@otavio consegue observar isso amanhã?");
+    await expect(page.getByRole("heading", { name: "Menção que não vai chegar" })).toHaveCount(0);
+  });
+
+  test("o aplicador vê que este é o canal escrito dele", async ({ page }) => {
+    await page.goto(urlFor("chat.applicators-only-channel"));
+
+    await expect(
+      page.getByRole("heading", { name: "Este é o seu canal escrito deste caso" }),
+    ).toBeVisible();
+    await expect(page.getByText(/antecipar a mudança de conduta/)).toBeVisible();
+    // Ele escreve normalmente.
+    await expect(page.getByLabel("Nova mensagem")).toBeEnabled();
+  });
+
+  test("o chat vazio explica para que serve", async ({ page }) => {
+    await page.goto(urlFor("chat.empty"));
+
+    await expect(page.getByText(/registra o que observa e combina conduta/)).toBeVisible();
+  });
+});
+
 test.describe("jornada por teclado", () => {
   test("da sessão até a assinatura sem usar o mouse", async ({ page }) => {
     await page.goto(urlFor("session.pending-signature"));

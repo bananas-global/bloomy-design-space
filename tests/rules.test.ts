@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type {
   Appointment,
+  ChatData,
   HourMap,
   HourMapSlot,
   ManagementData,
@@ -204,6 +205,17 @@ import {
   weekdayLabel,
   weeklyMinutes,
 } from "../src/rules/hourMap.js";
+import {
+  CHAT_ROLES,
+  canEditMessage,
+  canReadChat,
+  canSend,
+  extractMentions,
+  inOrder,
+  mentionsOfCurrentUser,
+  mentionsWithoutAccess,
+  participatingRoles,
+} from "../src/rules/chat.js";
 
 /**
  * Testes das regras de negócio.
@@ -3563,5 +3575,133 @@ describe("horas por semana", () => {
   it("nomeia os dias da semana a partir de 1", () => {
     expect(weekdayLabel(1)).toBe("Segunda");
     expect(weekdayLabel(7)).toBe("Domingo");
+  });
+});
+
+/* ================================================================== chat */
+
+/**
+ * O chat é fácil de tratar como recurso secundário. Estes testes fixam o que o
+ * schema diz: registro permanente de coordenação clínica, aberto à equipe
+ * inteira — inclusive ao aplicador, para quem é o único canal escrito do caso.
+ */
+
+const DIRETORIO_TESTE = [
+  { username: "clara", role: "supervisor" },
+  { username: "marina", role: "therapeutic_companion" },
+  { username: "otavio", role: "applicator" },
+  { username: "helena", role: "attendant" },
+];
+
+describe("mention-notifies-but-does-not-grant", () => {
+  it("extrai menções com ponto e sublinhado no nome", () => {
+    expect(extractMentions("@marina.okabe e @clara vejam isso")).toEqual([
+      "marina.okabe",
+      "clara",
+    ]);
+  });
+
+  it("apara o ponto final de fim de frase", () => {
+    // "@clara." no fim de uma frase precisa encontrar "clara".
+    expect(extractMentions("Combinado com @clara.")).toEqual(["clara"]);
+  });
+
+  it("não repete a mesma menção", () => {
+    expect(extractMentions("@clara, @clara, @clara")).toEqual(["clara"]);
+  });
+
+  it("texto sem menção devolve lista vazia", () => {
+    expect(extractMentions("Sessão correu bem hoje.")).toEqual([]);
+    expect(extractMentions("e-mail@exemplo.test")).toEqual(["exemplo.test"]);
+  });
+
+  it("avisa quando a pessoa mencionada não alcança o chat", () => {
+    const avisos = mentionsWithoutAccess("@helena consegue reservar a sala?", DIRETORIO_TESTE);
+    expect(avisos).toEqual([
+      { username: "helena", reason: "o perfil dessa pessoa não alcança o chat do caso" },
+    ]);
+  });
+
+  it("avisa quando a pessoa mencionada não existe", () => {
+    const avisos = mentionsWithoutAccess("@fulano dá uma olhada", DIRETORIO_TESTE);
+    expect(avisos[0]!.reason).toMatch(/não existe um usuário com esse nome/);
+  });
+
+  it("não avisa quando a menção alcança o chat", () => {
+    expect(mentionsWithoutAccess("@clara @otavio", DIRETORIO_TESTE)).toEqual([]);
+  });
+});
+
+describe("chat-is-the-applicators-only-written-channel", () => {
+  it("a equipe clínica inteira alcança o chat", () => {
+    for (const role of CHAT_ROLES) {
+      expect(canReadChat(role).allowed).toBe(true);
+    }
+  });
+
+  it("o aplicador está entre eles — e é o único canal escrito dele", () => {
+    // Ele não alcança programas, protocolos nem prontuário, e alcança este.
+    expect(canReadChat("applicator").allowed).toBe(true);
+  });
+
+  it("recepção, operação e People não alcançam nem para ler", () => {
+    for (const role of ["attendant", "operation", "people"]) {
+      const result = canReadChat(role);
+      expect(result.allowed).toBe(false);
+      expect(result.reason).toMatch(/nem para ler/);
+    }
+  });
+});
+
+describe("chat-messages-are-permanent", () => {
+  it("não há edição nem exclusão, e a negativa diz por quê", () => {
+    const result = canEditMessage();
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/registro de coordenação clínica/);
+    expect(result.reason).toMatch(/consultá-la meses depois/);
+  });
+
+  it("mensagem em branco não é enviada", () => {
+    expect(canSend("   ").reason).toMatch(/Escreva alguma coisa/);
+    expect(canSend("ok").allowed).toBe(true);
+  });
+});
+
+describe("leitura da conversa", () => {
+  const dados: ChatData = {
+    patient: { id: "p", name: "Théo", birthDate: "2019-11-04" },
+    currentUser: { username: "clara", name: "Clara", role: "supervisor" },
+    directory: DIRETORIO_TESTE,
+    now: "2026-07-30T09:00:00.000-03:00",
+    messages: [
+      {
+        id: "b",
+        content: "segunda",
+        authorName: "Marina",
+        authorRole: "Terapeuta",
+        at: "2026-07-28T09:00:00.000-03:00",
+        mentions: ["clara"],
+      },
+      {
+        id: "a",
+        content: "primeira",
+        authorName: "Otávio",
+        authorRole: "Aplicador",
+        at: "2026-07-27T15:00:00.000-03:00",
+        mentions: [],
+      },
+    ],
+  };
+
+  it("ordena em ordem cronológica — a conversa se lê de cima para baixo", () => {
+    expect(inOrder(dados).map((m) => m.id)).toEqual(["a", "b"]);
+  });
+
+  it("encontra as menções ao usuário atual", () => {
+    expect(mentionsOfCurrentUser(dados).map((m) => m.id)).toEqual(["b"]);
+  });
+
+  it("conta as especialidades que participaram — a medida de multidisciplinar", () => {
+    expect(participatingRoles(dados)).toEqual(["Terapeuta", "Aplicador"]);
   });
 });

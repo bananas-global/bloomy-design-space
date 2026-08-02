@@ -24,7 +24,7 @@ própria.
 
 ## O que existe hoje
 
-134 cenários em dezessete módulos, cobrindo sucesso, vazio, permissão, regra e
+139 cenários em dezoito módulos, cobrindo sucesso, vazio, permissão, regra e
 exceção.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
@@ -40,6 +40,7 @@ em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 | **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Gerência** | segunda de manhã, o mais antigo não é o mais urgente, aplicador sem supervisor, nenhuma pendência, quem atende sem acesso |
 | **Mapa de horas** | mapa com conflitos, sem agenda não é ocupado, perde profissional e sala, mapa limpo, mapa aplicado, mapa em branco |
+| **Chat do caso** | uma semana de conversa, permanência antes do envio, menção que não chega, único canal do aplicador, chat vazio |
 | **Prontuário** | prontuário completo, documento que ninguém abre, documentos vencendo, anamnese incompleta, faltas acima do limite, sem critérios, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Estrutura** | estrutura da unidade, serviço sem sala, serviço impossível de agendar, três origens de bloqueio, não cobrável dispensa check-in, unidade sem estrutura |
@@ -127,6 +128,10 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `conflict-family-decides-what-is-lost` | Conflito de profissional apaga o profissional; de sala, a sala. |
 | `no-agenda-is-not-a-clash` | Sem agenda padrão é cadastro faltando, não horário ocupado. |
 | `applied-map-is-not-redrawn` | Mapa aplicado não é editado: os agendamentos já existem. |
+| `chat-is-per-patient` | O canal é do paciente, e acompanha o caso. |
+| `chat-messages-are-permanent` | Sem edição e sem exclusão: o schema não tem campo para isso. |
+| `mention-notifies-but-does-not-grant` | Menção notifica e não dá acesso a nada. |
+| `chat-is-the-applicators-only-written-channel` | É a única superfície escrita do caso que ele alcança. |
 | `session-requires-checkin` | Atendimento cobrável de paciente só começa depois do check-in. |
 | `one-open-session-per-professional` | Um profissional não tem dois atendimentos em aberto. |
 | `empty-register-blocks-signature` | Finalizar sem evolução leva a pendente de registro, não a assinatura. |

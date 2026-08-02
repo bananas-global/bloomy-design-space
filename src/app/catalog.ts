@@ -18,6 +18,7 @@ import { structureFixtures } from "../fixtures/structure.js";
 import { recordFixtures } from "../fixtures/record.js";
 import { managementFixtures } from "../fixtures/management.js";
 import { hourMapFixtures } from "../fixtures/hourMap.js";
+import { chatFixtures } from "../fixtures/chat.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -35,6 +36,7 @@ import { structureRules } from "../rules/structure.js";
 import { recordRules } from "../rules/record.js";
 import { managementRules } from "../rules/management.js";
 import { hourMapRules } from "../rules/hourMap.js";
+import { chatRules } from "../rules/chat.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -52,6 +54,7 @@ import { structureScenarios } from "../scenarios/structure.js";
 import { recordScenarios } from "../scenarios/record.js";
 import { managementScenarios } from "../scenarios/management.js";
 import { hourMapScenarios } from "../scenarios/hourMap.js";
+import { chatScenarios } from "../scenarios/chat.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -583,6 +586,31 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "chat",
+    name: "Chat do caso",
+    description:
+      "A coordenação escrita entre especialidades — registro permanente, não mensageiro.",
+    flows: [
+      {
+        id: "coordinate-the-case",
+        title: "Coordenar um caso por escrito",
+        description:
+          "Da conversa da semana até as duas coisas que a tela precisa avisar antes do envio.",
+        steps: [
+          {
+            scenario: "chat.week",
+            label: "Ler o que a equipe registrou",
+            decision: "O que a tela precisa avisar antes de eu enviar?",
+            branches: {
+              "Que não dá para corrigir": "chat.permanence-before-sending",
+              "Que a menção não vai chegar": "chat.mention-without-access",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -603,6 +631,7 @@ export const scenarios: Scenario[] = [
   ...recordScenarios,
   ...managementScenarios,
   ...hourMapScenarios,
+  ...chatScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -624,6 +653,7 @@ export const fixtures: Fixture[] = [
   ...recordFixtures,
   ...managementFixtures,
   ...hourMapFixtures,
+  ...chatFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -644,6 +674,7 @@ export const rules: Rule[] = [
   ...recordRules,
   ...managementRules,
   ...hourMapRules,
+  ...chatRules,
 ];
 
 export { personas };

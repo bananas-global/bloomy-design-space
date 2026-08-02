@@ -22,6 +22,7 @@ import { Structure } from "../screens/Structure.js";
 import { PatientRecordScreen } from "../screens/PatientRecord.js";
 import { Management } from "../screens/Management.js";
 import { HourMapScreen } from "../screens/HourMap.js";
+import { Chat } from "../screens/Chat.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -53,6 +54,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients/:id/plan", screen: InterventionPlanScreen },
     { path: "/patients/:id/record", screen: PatientRecordScreen },
     { path: "/patients/:id/hour-map", screen: HourMapScreen },
+    { path: "/patients/:id/chat", screen: Chat },
     { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/authorizations", screen: AuthorizationHub },
     { path: "/closures", screen: Closures },
