@@ -166,6 +166,51 @@ const dayWithAbsence: Appointment[] = [
   ...standardDay.slice(4),
 ];
 
+/**
+ * Um dia com as duas coisas: quem faltou e quem avisou.
+ *
+ * Existe para que a diferença entre ausência e cancelamento seja mensurável na
+ * tela. Com só uma das duas não há o que separar.
+ */
+const dayWithBoth: Appointment[] = [
+  ...standardDay.slice(0, 3),
+  appointment({
+    id: "ap-104",
+    patient: patients.tiago,
+    start: at("09:30"),
+    end: at("10:00"),
+    status: "no_show",
+    procedure: "Consulta pediátrica",
+  }),
+  appointment({
+    id: "ap-105",
+    patient: patients.julia,
+    start: at("10:00"),
+    end: at("10:45"),
+    status: "cancelled",
+    procedure: "Consulta de rotina",
+    cancellation: {
+      reason: "Avisou na véspera: a criança amanheceu com febre.",
+      by: "Recepção — Bianca",
+      at: at("07:42"),
+    },
+  }),
+  appointment({
+    id: "ap-106",
+    patient: patients.pedro,
+    start: at("11:00"),
+    end: at("11:45"),
+    status: "cancelled",
+    procedure: "Sessão de intervenção ABA",
+    cancellation: {
+      reason: "Avisou com dois dias: viagem da família.",
+      by: "Recepção — Bianca",
+      at: at("08:05"),
+    },
+  }),
+  ...standardDay.slice(5),
+];
+
 /* ------------------------------------------------------------------ *
  * Registro
  * ------------------------------------------------------------------ */
@@ -214,6 +259,13 @@ export const agendaFixtures: Fixture<AgendaData>[] = [
     label: "Agenda com ausência já registrada",
     description: "Tolerância vencida e ausência confirmada, com o relógio em 10:05.",
     data: agenda(dayWithAbsence, at("10:05")),
+  },
+  {
+    id: "agenda-absence-and-cancellation",
+    label: "Uma ausência e dois cancelamentos no mesmo dia",
+    description:
+      "O filtro `absence` do sistema somaria os três e responderia 3. Dois deles avisaram antes.",
+    data: agenda(dayWithBoth, at("12:10")),
   },
   {
     id: "agenda-empty",

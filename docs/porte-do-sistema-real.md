@@ -1298,6 +1298,38 @@ título afirma o quê; o corpo traz o prazo e a razão.
 2 cenários, 9 testes de regra, 3 jornadas.
 
 
+### 44. Ausência não é cancelamento — `porte/ausencia`
+
+`ScheduleFilters` tem três maneiras sobrepostas de perguntar a mesma coisa —
+`missed` olha a coluna `missed_at`, `cancelled` olha `cancelled_at`, e `absence`
+olha o campo `status` — e a terceira **soma as duas primeiras**:
+
+```elixir
+defp filter_by("absence", value, query) when value in ["true", true] do
+  from(s in query, where: s.status in [:missed, :cancelled])
+end
+```
+
+Cancelar e faltar são comportamentos opostos: um é comunicar, o outro é não
+comunicar. Somados, o número não mede adesão — mede horário perdido, que é outra
+pergunta e tem outro dono. **E é com esse número que alguém liga para a
+família.**
+
+A tela passou a separar as duas contagens, dizer o número que o filtro atual
+responderia, e dar a proporção que era aviso prévio — é ela que muda a conversa.
+O recorte só aparece quando os dois existem no mesmo dia; com um só não há o que
+separar, e o aviso viraria ruído.
+
+**O teste de coerência recusou uma regra minha, com razão.** Eu havia escrito
+`status-and-schedule-status-are-the-same-filter` — os dois filtros executam a
+mesma cláusula, dois nomes para um só. Ela ficou órfã porque **não tem
+manifestação em tela nenhuma**, e o teste que exige um cenário por regra a
+reprovou. Uma regra que nenhum cenário consegue exercitar é texto, não
+especificação: virou achado sobre o monólito, que é o lugar dela.
+
+1 cenário, 5 testes de regra, 3 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1344,3 +1376,6 @@ bugs do Design Space; são observações sobre o produto.
 | 37 | `set_status/2` mantém o paciente **ativo** quando a data de inativação é futura, mas `deactivate_patient_callbacks/3` roda sempre que há data. Agendar a inativação para o mês que vem cancela **hoje** todos os agendamentos daquele mês em diante. O status adia; a destruição não. | `lib/bloomy/patients/change_status.ex:37-39,99-108` |
 | 38 | O corte da inativação é `DateTime.new!(deactivation_date, ~T[00:00:00], "Etc/UTC")` — 21h da véspera em Brasília. Atendimentos das últimas três horas do dia anterior são cancelados com motivo "paciente inativado" num dia em que o paciente ainda estava ativo. Quarta ocorrência do padrão de fuso. | `lib/bloomy/patients/change_status.ex:63` |
 | 39 | `disable_auto_renew_hour_maps/2` não filtra por data: desliga a renovação automática de **todos** os mapas do paciente, inclusive os que já terminaram. | `lib/bloomy/patients/change_status.ex:76-83` |
+| 40 | O filtro `absence` de `ScheduleFilters` seleciona `status in [:missed, :cancelled]` — cancelamento entra na contagem de ausência. São comportamentos opostos: cancelar é comunicar. O número resultante não mede adesão, e é ele que embasa a conversa com a família. | `lib/bloomy/schedules/schedule_filters.ex:216` |
+| 41 | `status` e `schedule_status` são dois filtros com a mesma cláusula (`where: s.status == ^value`). Dobra o que precisa ser mantido e faz a próxima pessoa procurar qual dos dois é o certo. | `lib/bloomy/schedules/schedule_filters.ex:63,124` |
+| 42 | Três filtros perguntam pelo mesmo fato por vias diferentes: `missed` pela coluna `missed_at`, `cancelled` por `cancelled_at`, `absence` pelo campo `status`. Concordam até o dia em que a situação muda depois do carimbo — e aí duas telas do mesmo sistema mostram números diferentes sem que nenhuma esteja errada. | `lib/bloomy/schedules/schedule_filters.ex:210-226` |

@@ -28,7 +28,7 @@ import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
 import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
 import { therapyPhaseFixtures, deactivationFixtures } from "../fixtures/therapyPhases.js";
 import { patientGapFixtures } from "../fixtures/patientGaps.js";
-import { agendaRules, schedulingRules } from "../rules/agenda.js";
+import { agendaRules, schedulingRules, absenceRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
@@ -929,6 +929,7 @@ export const fixtures: Fixture[] = [
 export const rules: Rule[] = [
   ...agendaRules,
   ...schedulingRules,
+  ...absenceRules,
   ...sessionRules,
   ...programRules,
   ...protocolRules,

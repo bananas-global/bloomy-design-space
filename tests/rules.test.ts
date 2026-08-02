@@ -5129,3 +5129,50 @@ describe("auto-renew-off-is-invisible", () => {
     expect(expiryMessage("over", 1)).toContain("1 dia");
   });
 });
+
+/* ============================================ Ausência e cancelamento */
+
+import type { AppointmentStatus } from "../src/contracts/index.js";
+import {
+  attendanceBreakdown,
+  countedAsAbsenceToday,
+  isAbsence,
+  shareThatWasWarned,
+} from "../src/rules/agenda.js";
+
+describe("the-absence-filter-counts-cancellations", () => {
+  it("reproduz o filtro do sistema: cancelado conta como ausência", () => {
+    expect(countedAsAbsenceToday("missed")).toBe(true);
+    // `Schedule` diz `missed`, a agenda diz `no_show`: mesmo fato, dois nomes.
+    expect(countedAsAbsenceToday("no_show")).toBe(true);
+    expect(countedAsAbsenceToday("cancelled")).toBe(true);
+    expect(countedAsAbsenceToday("finished")).toBe(false);
+  });
+
+  it("ausência é não aparecer sem avisar — cancelar é o oposto disso", () => {
+    expect(isAbsence("missed")).toBe(true);
+    expect(isAbsence("no_show")).toBe(true);
+    expect(isAbsence("cancelled")).toBe(false);
+  });
+
+  it("devolve as parcelas e a soma, porque é a comparação que mostra o tamanho", () => {
+    const semana: AppointmentStatus[] = [
+      "no_show",
+      "cancelled",
+      "cancelled",
+      "cancelled",
+      "finished",
+      "finished",
+    ];
+    expect(attendanceBreakdown(semana)).toEqual({ missed: 1, cancelled: 3, countedTogether: 4 });
+  });
+
+  it("mede quanto do número relatado era, na verdade, aviso prévio", () => {
+    expect(shareThatWasWarned({ missed: 1, cancelled: 3, countedTogether: 4 })).toBe(75);
+    expect(shareThatWasWarned({ missed: 4, cancelled: 0, countedTogether: 4 })).toBe(0);
+  });
+
+  it("não divide por zero quando não houve nenhum dos dois", () => {
+    expect(shareThatWasWarned({ missed: 0, cancelled: 0, countedTogether: 0 })).toBeUndefined();
+  });
+});
