@@ -4369,3 +4369,163 @@ describe("supervision-table-omits-supervision", () => {
     expect(daysWaiting(supervised({ id: "a", start: "2026-08-10T14:00:00.000-03:00" }), "2026-07-30")).toBe(0);
   });
 });
+
+/* ====================================================== Mapa da unidade */
+
+import type { UnitMapData, UnitMapDay, UnitMapRow } from "../src/contracts/index.js";
+import {
+  canManageMap,
+  canSeeMap,
+  dayState,
+  granularityLocked,
+  granularityOf,
+  hourLostToRounding,
+  hoursWithMoreThanOne,
+  itemsInLostHour,
+  occupancy,
+  rowsWithoutAgenda,
+  visibleHours,
+  weekOccupancy,
+} from "../src/rules/unitMap.js";
+
+function mapDay(availableHours: number[], itemsByHour: UnitMapDay["itemsByHour"] = {}): UnitMapDay {
+  return { date: "2026-07-27", weekdayName: "Segunda", availableHours, itemsByHour };
+}
+
+function mapItem(id: string) {
+  return { id, patientName: "Théo Andrade Lins", serviceName: "Sessão", status: "scheduled" as const };
+}
+
+function mapRow(days: UnitMapDay[]): UnitMapRow {
+  return { id: "r", name: "Marina Okabe", days };
+}
+
+describe("no-agenda-is-not-zero-occupancy", () => {
+  it("devolve undefined, e não 0, quando não há agenda padrão no dia", () => {
+    // É a diferença toda: 0 seria indistinguível de um dia definido e livre.
+    expect(occupancy(mapDay([]))).toBeUndefined();
+    expect(occupancy(mapDay([8, 9, 10, 11]))).toBe(0);
+  });
+
+  it("dá estados diferentes aos dois zeros, porque eles pedem ações opostas", () => {
+    expect(dayState(mapDay([]))).toBe("no-agenda");
+    expect(dayState(mapDay([8, 9]))).toBe("free");
+  });
+
+  it("calcula a proporção sobre as horas definidas, e não sobre o dia inteiro", () => {
+    expect(occupancy(mapDay([8, 9, 10, 11], { 8: [mapItem("a")], 9: [mapItem("b")] }))).toBe(50);
+    expect(dayState(mapDay([8, 9], { 8: [mapItem("a")], 9: [mapItem("b")] }))).toBe("full");
+  });
+
+  it("ignora atendimento em hora fora da agenda padrão ao calcular ocupação", () => {
+    // A hora existe e o atendimento existe; a ocupação mede o que foi definido.
+    expect(occupancy(mapDay([8, 9], { 18: [mapItem("a")] }))).toBe(0);
+  });
+
+  it("a semana também se recusa a inventar zero", () => {
+    expect(weekOccupancy(mapRow([mapDay([]), mapDay([])]))).toBeUndefined();
+    expect(weekOccupancy(mapRow([mapDay([8, 9], { 8: [mapItem("a")] }), mapDay([8, 9])]))).toBe(25);
+  });
+
+  it("isola as linhas que precisam de cadastro, e não de agendamento", () => {
+    const dados: UnitMapData = {
+      unit: { name: "u", opensAt: "08:00", closesAt: "18:00" },
+      axis: "professional",
+      granularity: "week",
+      week: { start: "2026-07-27", end: "2026-07-31" },
+      rows: [
+        { id: "iara", name: "Iara Monteiro Sales", days: [mapDay([]), mapDay([])] },
+        { id: "renato", name: "Renato Bezerra Alcântara", days: [mapDay([8, 9]), mapDay([])] },
+      ],
+    };
+
+    expect(rowsWithoutAgenda(dados).map((row) => row.id)).toEqual(["iara"]);
+  });
+});
+
+describe("unit-hours-drop-the-last-partial-hour", () => {
+  it("vai da abertura até a hora do fechamento menos um", () => {
+    expect(visibleHours({ opensAt: "08:00", closesAt: "18:30" })).toEqual([
+      8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+    ]);
+  });
+
+  it("perde a última faixa só quando o fechamento não é hora cheia", () => {
+    expect(hourLostToRounding({ opensAt: "08:00", closesAt: "18:30" })).toBe(18);
+    expect(hourLostToRounding({ opensAt: "08:00", closesAt: "18:00" })).toBeUndefined();
+  });
+
+  it("uma unidade que fecha em hora cheia também perde a última hora do expediente", () => {
+    // Não é o mesmo defeito: aqui as 17h aparecem e as 18h não existem como
+    // faixa de atendimento. Fixado para a distinção não se perder.
+    expect(visibleHours({ opensAt: "08:00", closesAt: "18:00" })).toContain(17);
+    expect(visibleHours({ opensAt: "08:00", closesAt: "18:00" })).not.toContain(18);
+  });
+
+  it("nomeia o que existe na faixa perdida, e não só que ela existe", () => {
+    const dados: UnitMapData = {
+      unit: { name: "u", opensAt: "08:00", closesAt: "18:30" },
+      axis: "professional",
+      granularity: "week",
+      week: { start: "2026-07-27", end: "2026-07-31" },
+      rows: [mapRow([mapDay([8, 18], { 18: [mapItem("a"), mapItem("b")] })])],
+    };
+
+    expect(itemsInLostHour(dados).map((entry) => entry.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("occupancy-counts-hours-touched", () => {
+  it("uma hora com três atendimentos conta como uma hora ocupada", () => {
+    const dia = mapDay([8, 9, 10, 11], {
+      8: [mapItem("a"), mapItem("b"), mapItem("c")],
+    });
+
+    expect(occupancy(dia)).toBe(25);
+    expect(hoursWithMoreThanOne(dia)).toEqual([8]);
+  });
+
+  it("não aponta hora cheia com um atendimento só", () => {
+    expect(hoursWithMoreThanOne(mapDay([8], { 8: [mapItem("a")] }))).toEqual([]);
+  });
+});
+
+describe("the-axis-decides-the-question", () => {
+  it("só profissional e sala aceitam as duas granularidades", () => {
+    expect(granularityOf("professional")).toBe("both");
+    expect(granularityOf("room")).toBe("both");
+    expect(granularityOf("patient")).toBe("week");
+    expect(granularityOf("unit")).toBe("week");
+  });
+
+  it("os eixos travados explicam por quê, em vez de só desabilitar", () => {
+    expect(granularityLocked("patient")).toContain("distribuição");
+    expect(granularityLocked("unit")).toContain("agregado");
+    expect(granularityLocked("professional")).toBeUndefined();
+  });
+});
+
+describe("people-cannot-see-the-map-they-cause", () => {
+  it("libera os oito papéis que a política lista", () => {
+    for (const role of ["admin", "clinic_admin", "coordinator", "therapeutic_companion", "supervisor", "applicator", "specialist", "attendant"]) {
+      expect(canSeeMap(role).allowed).toBe(true);
+    }
+  });
+
+  it("recusa o People dizendo por que a ausência é estranha", () => {
+    const decision = canSeeMap("people");
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("agenda padrão");
+  });
+
+  it("recusa a operação com o motivo genérico", () => {
+    expect(canSeeMap("operation").allowed).toBe(false);
+  });
+
+  it("ver e mexer são permissões diferentes", () => {
+    expect(canManageMap(["unit_maps.manage_unit_map"]).allowed).toBe(true);
+    const decision = canManageMap(["unit_maps.show"]);
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("coordenação");
+  });
+});

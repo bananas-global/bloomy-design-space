@@ -23,6 +23,7 @@ import { prospectFixtures } from "../fixtures/prospects.js";
 import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
 import { supervisionFixtures } from "../fixtures/supervision.js";
+import { unitMapFixtures } from "../fixtures/unitMap.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -45,6 +46,7 @@ import { prospectRules } from "../rules/prospects.js";
 import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
 import { supervisionRules } from "../rules/supervision.js";
+import { unitMapRules } from "../rules/unitMap.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -67,6 +69,7 @@ import { prospectScenarios } from "../scenarios/prospects.js";
 import { reportScenarios } from "../scenarios/reports.js";
 import { notificationScenarios } from "../scenarios/notifications.js";
 import { supervisionScenarios } from "../scenarios/supervision.js";
+import { unitMapScenarios } from "../scenarios/unitMap.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -727,6 +730,32 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "unit-map",
+    name: "Mapa da unidade",
+    description:
+      "A única tela sobre capacidade — e as três maneiras que ela tem de mostrar zero.",
+    flows: [
+      {
+        id: "find-where-someone-fits",
+        title: "Descobrir onde cabe mais alguém",
+        description:
+          "Da semana da unidade até os três zeros que pedem ações opostas, e a faixa que o mapa perde.",
+        steps: [
+          {
+            scenario: "unit-map.week",
+            label: "Ler a semana por profissional",
+            decision: "Este zero quer dizer o quê?",
+            branches: {
+              "Falta cadastrar a agenda": "unit-map.no-agenda-is-not-zero",
+              "Falta olhar a faixa que sumiu": "unit-map.lost-hour",
+              "A hora já está tomada três vezes": "unit-map.crowded-hour",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -752,6 +781,7 @@ export const scenarios: Scenario[] = [
   ...reportScenarios,
   ...notificationScenarios,
   ...supervisionScenarios,
+  ...unitMapScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -778,6 +808,7 @@ export const fixtures: Fixture[] = [
   ...reportFixtures,
   ...notificationFixtures,
   ...supervisionFixtures,
+  ...unitMapFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -803,6 +834,7 @@ export const rules: Rule[] = [
   ...reportRules,
   ...notificationRules,
   ...supervisionRules,
+  ...unitMapRules,
 ];
 
 export { personas };

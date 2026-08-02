@@ -35,6 +35,7 @@ const NAV: NavItem[] = [
   { label: "Estrutura", path: "/structure", permission: "services.list" },
   { label: "Autorizações", path: "/authorizations", permission: "authorizations.hub" },
   { label: "Fechamentos", path: "/closures", permission: "closures.list" },
+  { label: "Mapa da unidade", path: "/unit-map", permission: "unit_maps.show" },
   { label: "Supervisão", path: "/supervision", permission: "professionals.list_supervisor" },
   { label: "Gerência", path: "/management", permission: "management.list" },
   { label: "Notificações", path: "/notifications" },

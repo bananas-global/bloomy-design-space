@@ -1640,3 +1640,50 @@ export interface SupervisionData {
   selectedSupervisorId?: string;
   schedules: SupervisedSchedule[];
 }
+
+/* ====================================================== Mapa da unidade */
+
+/** Os quatro eixos do mapa. Dois deles não têm escolha de granularidade. */
+export type UnitMapAxis = "patient" | "professional" | "room" | "unit";
+
+export interface UnitMapItem {
+  id: string;
+  patientName: string;
+  serviceName: string;
+  status: ScheduleStatus;
+}
+
+export interface UnitMapDay {
+  date: string;
+  weekdayName: string;
+  /**
+   * As horas em que esta linha tem agenda padrão definida.
+   *
+   * Vazio **não** é o mesmo que zero atendimentos: é ausência de cadastro. A
+   * distinção é a razão de o módulo existir.
+   */
+  availableHours: number[];
+  /** Hora cheia → o que acontece nela. Uma hora com três atendimentos é uma chave. */
+  itemsByHour: Record<number, UnitMapItem[]>;
+}
+
+export interface UnitMapRow {
+  id: string;
+  name: string;
+  subtitle?: string;
+  days: UnitMapDay[];
+}
+
+export interface UnitMapData {
+  unit: {
+    name: string;
+    /** Hora de abertura, como `HH:MM`. */
+    opensAt: string;
+    /** Hora de fechamento, como `HH:MM`. */
+    closesAt: string;
+  };
+  axis: UnitMapAxis;
+  granularity: "week" | "day";
+  week: { start: string; end: string };
+  rows: UnitMapRow[];
+}
