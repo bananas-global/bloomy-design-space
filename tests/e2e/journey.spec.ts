@@ -1839,3 +1839,84 @@ test.describe("supervisão", () => {
     await expect(page.getByText(/Ampliar o período ou olhar para a frente/)).toBeVisible();
   });
 });
+
+test.describe("mapa da unidade", () => {
+  test("o eixo aparece junto da pergunta que ele responde", async ({ page }) => {
+    await page.goto(urlFor("unit-map.week"));
+
+    await expect(page.getByText("Onde cabe mais um atendimento na agenda de alguém?")).toBeVisible();
+  });
+
+  test("a tela diz o que a ocupação de fato mede", async ({ page }) => {
+    await page.goto(urlFor("unit-map.week"));
+
+    // Sem essa frase, alguém decide contratação com ocupação de sala.
+    await expect(
+      page.getByText(/não para medir aproveitamento de capacidade/).first(),
+    ).toBeVisible();
+  });
+
+  test("sem agenda definida não vira zero por cento", async ({ page }) => {
+    await page.goto(urlFor("unit-map.no-agenda-is-not-zero"));
+
+    await expect(page.getByText("Sem agenda padrão — ocupação não se calcula")).toBeVisible();
+    await expect(page.getByText("Sem agenda padrão definida").first()).toBeVisible();
+    // O outro zero, que pede a ação oposta.
+    await expect(page.getByText("Nenhuma hora ocupada").first()).toBeVisible();
+  });
+
+  test("o aviso de agenda faltando nomeia o People, que não abre esta tela", async ({ page }) => {
+    await page.goto(urlFor("unit-map.no-agenda-is-not-zero"));
+
+    await expect(page.getByText("Uma linha não tem agenda padrão definida")).toBeVisible();
+    await expect(page.getByText(/Definir agenda padrão é do/)).toBeVisible();
+  });
+
+  test("a faixa que o mapa perde é dita, com quem está nela", async ({ page }) => {
+    await page.goto(urlFor("unit-map.lost-hour"));
+
+    await expect(page.getByText("O mapa vai até as 17h e a unidade fecha às 18:30")).toBeVisible();
+    await expect(page.getByText(/2 atendimentos existem nessa faixa/)).toBeVisible();
+    await expect(page.getByText(/justamente na faixa mais disputada do dia/)).toBeVisible();
+  });
+
+  test("uma hora com três atendimentos mostra três e conta uma", async ({ page }) => {
+    await page.goto(urlFor("unit-map.crowded-hour"));
+
+    await expect(page.getByText("3×")).toBeVisible();
+    await expect(page.getByText(/14h com mais de um/)).toBeVisible();
+    // Quatro dias de oito horas cada mais um de oito: 2 horas tomadas de 40.
+    await expect(page.getByText("5% das horas definidas estão ocupadas")).toBeVisible();
+  });
+
+  test("no eixo do paciente a granularidade travada é explicada", async ({ page }) => {
+    await page.goto(urlFor("unit-map.granularity-locked"));
+
+    await expect(page.getByText("Neste eixo não se escolhe entre semana e dia")).toBeVisible();
+    await expect(page.getByText(/um dia isolado não mostra distribuição/)).toBeVisible();
+  });
+
+  test("a terapeuta lê o mapa e não mexe nele", async ({ page }) => {
+    await page.goto(urlFor("unit-map.granularity-locked"));
+
+    const mexer = page.getByRole("button", { name: "Mexer no mapa" });
+    await expect(mexer).toBeVisible();
+    await expect(mexer).toBeDisabled();
+  });
+
+  test("o People não abre o mapa, e a recusa diz por que isso é estranho", async ({ page }) => {
+    await page.goto(urlFor("unit-map.people-cannot-see"));
+
+    await expect(page.getByText("Você não alcança o mapa da unidade")).toBeVisible();
+    await expect(page.getByText(/define a agenda padrão dos profissionais/)).toBeVisible();
+  });
+
+  test("a grade é uma tabela com cabeçalhos de linha e coluna", async ({ page }) => {
+    await page.goto(urlFor("unit-map.crowded-hour"));
+
+    const tabela = page.getByRole("table").first();
+    await expect(tabela.getByRole("columnheader", { name: "Dia" })).toBeVisible();
+    await expect(tabela.getByRole("columnheader", { name: "14h" })).toBeVisible();
+    await expect(tabela.getByRole("rowheader", { name: "Quarta" })).toBeVisible();
+  });
+});

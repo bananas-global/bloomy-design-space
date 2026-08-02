@@ -636,6 +636,48 @@ permissão" seco o deixaria procurando.
 6 cenários, 15 testes de regra, 10 jornadas.
 
 
+### 23. Mapa da unidade — `porte/mapa-da-unidade`
+
+A única tela do produto cuja pergunta não é sobre um caso, e sim sobre
+capacidade: **onde cabe mais alguém**. Quatro eixos — paciente, profissional,
+sala e unidade — sobre a mesma semana, mais dois modais de edição. É o maior
+componente do backoffice: 4.348 linhas.
+
+O que a torna difícil é que ela tem **três maneiras de mostrar zero**, e elas
+pedem ações opostas:
+
+| O que a tela mostra | O que significa | Quem resolve |
+| --- | --- | --- |
+| 0% de ocupação | O dia está definido e não tem ninguém | Coordenação, marcando |
+| 0% de ocupação | Não existe agenda padrão nesse dia | People, cadastrando |
+| nada | O atendimento está numa faixa que o mapa descarta | ninguém, porque ninguém vê |
+
+As três aparecem iguais. `calculate_occupancy(_items, [])` devolve `0`, então
+sem-agenda e livre são o mesmo número; e `unit_hours` vai até
+`fechamento.hora − 1`, então uma unidade que fecha às 18h30 perde tudo o que
+acontece às 18h.
+
+Três decisões seguem daí:
+
+- **`occupancy/1` devolve `undefined`, e não `0`, quando não há agenda padrão.**
+  Um número não consegue carregar a diferença entre "0% de oito horas" e
+  "nenhuma hora definida". O tipo carrega.
+- **A faixa perdida é nomeada com o que existe dentro dela.** Não basta dizer
+  que o recorte termina antes: `itemsInLostHour/1` lista os atendimentos que
+  somem, porque eles ocupam sala e profissional de verdade.
+- **A granularidade travada é explicada.** No sistema real, os botões de semana
+  e dia ficam apagados nos eixos de paciente e unidade, sem motivo. Dois botões
+  mortos ensinam que a tela está quebrada; a frase ensina que a pergunta não faz
+  sentido ali.
+
+E há um par que fecha sozinho: o mapa aponta "sem agenda definida", e
+`UnitMapPolicy.can?(role, :show)` não inclui `people` — quem resolveria a
+pendência não vê a tela que a mostra. O aviso nomeia o destinatário justamente
+porque ele não vai passar por aqui.
+
+6 cenários, 18 testes de regra, 10 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -665,3 +707,9 @@ bugs do Design Space; são observações sobre o produto.
 | 20 | O papel `supervisor` não tem `:list_supervisor`. A tela de Supervisão é de admin, admin de clínica e coordenação — quem supervisiona nunca a abre. Coerente com o desenho da tela, e contraditório com o nome dela. | `lib/bloomy/professionals/professional_policy.ex:18` |
 | 21 | A tabela da tela de Supervisão não tem coluna de assinatura pendente. A segunda assinatura é o único efeito mecânico do vínculo em todo o sistema, e não aparece na tela do vínculo — quem coordena descobre a pendência pelo atraso. | `lib/bloomy_web/backoffice/live/supervisor/index.ex:84-118` |
 | 22 | O período padrão da Supervisão é calculado com `Date.utc_today()`. Entre 21h e a meia-noite em Brasília, “hoje” já é o dia seguinte em UTC e a janela inteira anda um dia. Passa despercebido num intervalo de 30 dias até alguém conferir um número contra um relatório. | `lib/bloomy_web/backoffice/live/supervisor/index.ex:288-292` |
+| 23 | `calculate_occupancy(_items, [])` devolve `0`. Um profissional **sem agenda padrão** no dia aparece com 0% de ocupação, idêntico a quem tem o dia todo definido e nenhum atendimento. As duas leituras pedem ações opostas — marcar alguém, ou cadastrar a agenda — e a segunda nunca acontece enquanto forem o mesmo número. | `lib/bloomy/unit_maps/list_with_defined_agenda_hours_week.ex:199` |
+| 24 | `unit_hours = start_at.hour..(end_at.hour - 1)`. Uma unidade que fecha às 18h30 mostra o mapa até as 17h, e tudo o que acontece às 18h some da única tela que serve para ver ocupação — na faixa mais disputada do dia. | `lib/bloomy_web/backoffice/live/unit_map_live/show.ex:89-90` |
+| 25 | `UnitMapPolicy.can?(role, :show)` não inclui `people`. Quem define a agenda padrão dos profissionais não alcança o mapa, que é onde a ausência dessa definição aparece. Par exato do achado 23. | `lib/bloomy/unit_maps/unit_map_policy.ex:2` |
+| 26 | O mapa de calor renderiza `{inspect(@count)}` direto no HTML. É uma chamada de depuração deixada na marcação: o usuário vê a representação Elixir do valor, incluindo `nil` quando não há dado. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:179` |
+| 27 | A célula de especialidade cai em `"?"` quando a contagem não foi calculada — o usuário lê literalmente "? horas livres". Desconhecido é um estado legítimo e merece uma frase, não um caractere. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:103` |
+| 28 | `render_table/2` resolve a granularidade de forma oposta nos dois eixos: em `professional`, tudo que não é `"day"` vira semana; em `room`, tudo que não é `"week"` vira dia. Um valor inesperado — `nil`, lixo de formulário — cai em visões diferentes conforme o eixo. | `lib/bloomy_web/backoffice/live/unit_map_live/show.ex:28-40` |
