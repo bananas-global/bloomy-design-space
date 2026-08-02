@@ -123,7 +123,13 @@ export function wouldConflict(
 
 /* ================================================ Marcar um atendimento */
 
-import type { Impediment, ImpedimentKind, ScheduleAttempt } from "../contracts/index.js";
+import type {
+  AppointmentStatus,
+  Impediment,
+  ImpedimentKind,
+  ScheduleAttempt,
+  ScheduleStatus,
+} from "../contracts/index.js";
 
 /**
  * Regras da tentativa de marcar.
@@ -271,4 +277,82 @@ export function roomVerificationSkipped(attempt: ScheduleAttempt): string | unde
 export function roomHeadroom(attempt: ScheduleAttempt): number | undefined {
   if (attempt.roomCapacity === undefined || attempt.roomOccupancy === undefined) return undefined;
   return attempt.roomCapacity - attempt.roomOccupancy;
+}
+
+/* ================================================ Ausência e cancelamento */
+
+/**
+ * Regras da contagem de ausência.
+ *
+ * `ScheduleFilters` tem três maneiras sobrepostas de perguntar a mesma coisa —
+ * `missed`, `cancelled` e `absence` — e a terceira mistura as duas primeiras.
+ *
+ * A duplicidade entre os filtros `status` e `schedule_status` **não** virou
+ * regra aqui: ela não tem manifestação em tela nenhuma, e uma regra que nenhum
+ * cenário consegue exercitar é texto, não especificação. Ficou registrada como
+ * achado sobre o monólito, que é o lugar dela.
+ */
+export const absenceRules: Rule[] = [
+  {
+    id: "the-absence-filter-counts-cancellations",
+    statement:
+      "O filtro `absence` seleciona `status in [:missed, :cancelled]`. Uma família que avisou com antecedência entra na mesma conta de quem não apareceu.",
+    rationale:
+      "São comportamentos opostos: cancelar é comunicar, faltar é não comunicar. Somados, o número não mede adesão — mede horário perdido, que é outra pergunta e tem outro dono. E é com esse número que alguém conversa com a família.",
+    source: "src/rules/agenda.ts",
+  },
+  {
+    id: "three-filters-ask-the-same-question",
+    statement:
+      "`missed` olha a coluna `missed_at`, `cancelled` olha `cancelled_at`, e `absence` olha o campo `status`. Três caminhos para o mesmo fato, por vias diferentes.",
+    rationale:
+      "Enquanto os três concordam, ninguém percebe. Divergem no dia em que a situação muda depois do carimbo — e aí duas telas do mesmo sistema mostram números diferentes sem que nenhuma esteja errada.",
+    source: "src/rules/agenda.ts",
+  },
+];
+
+/**
+ * O que o filtro `absence` do sistema real devolve.
+ *
+ * Aceita os dois vocabulários porque eles convivem: `Schedule` usa `missed` e a
+ * agenda usa `no_show` para o mesmo fato. Essa duplicidade de nome é parte do
+ * problema que esta regra descreve.
+ */
+export function countedAsAbsenceToday(status: ScheduleStatus | AppointmentStatus): boolean {
+  return status === "missed" || status === "no_show" || status === "cancelled";
+}
+
+/** O que ausência quer dizer: não apareceu, e ninguém avisou. */
+export function isAbsence(status: ScheduleStatus | AppointmentStatus): boolean {
+  return status === "missed" || status === "no_show";
+}
+
+export type AttendanceBreakdown = {
+  /** Não apareceu. */
+  missed: number;
+  /** Avisou antes. */
+  cancelled: number;
+  /** O total que o filtro do sistema devolveria — a soma dos dois. */
+  countedTogether: number;
+};
+
+/**
+ * Implementação de `the-absence-filter-counts-cancellations`.
+ *
+ * Devolve os dois números **e** a soma, de propósito: é a comparação entre eles
+ * que mostra o tamanho do problema. Só a soma esconderia; só as parcelas não
+ * diriam o que o sistema hoje responde.
+ */
+export function attendanceBreakdown(
+  statuses: (ScheduleStatus | AppointmentStatus)[],
+): AttendanceBreakdown {
+  const missed = statuses.filter(isAbsence).length;
+  const cancelled = statuses.filter((status) => status === "cancelled").length;
+  return { missed, cancelled, countedTogether: missed + cancelled };
+}
+
+/** Quanto da "ausência" relatada é, na verdade, aviso prévio. */
+export function shareThatWasWarned(breakdown: AttendanceBreakdown): number | undefined {
+  if (breakdown.countedTogether === 0) return undefined;
+  return Math.round((breakdown.cancelled / breakdown.countedTogether) * 100);
 }

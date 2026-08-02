@@ -2408,3 +2408,27 @@ test.describe("vencimento do mapa de horas", () => {
     await expect(page.getByText("Vencimento do mapa")).toHaveCount(0);
   });
 });
+
+test.describe("ausência e cancelamento", () => {
+  test("a tela separa as duas contagens e diz o que o sistema responderia", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-and-cancellation"));
+
+    await expect(page.getByText("Ausência e cancelamento não são a mesma coisa")).toBeVisible();
+    await expect(page.getByText(/1 ausência e 2 cancelamentos/)).toBeVisible();
+    await expect(page.getByText(/soma os dois e responde 3/)).toBeVisible();
+  });
+
+  test("diz a proporção que era aviso prévio, porque é ela que muda a conversa", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-and-cancellation"));
+
+    await expect(page.getByText(/67% desse número é família que avisou antes/)).toBeVisible();
+    await expect(page.getByText(/Cancelar é comunicar; faltar é não comunicar/)).toBeVisible();
+  });
+
+  test("com só um dos dois, o recorte não aparece", async ({ page }) => {
+    await page.goto(urlFor("agenda.no-show"));
+
+    // Sem os dois não há o que separar, e o aviso viraria ruído.
+    await expect(page.getByText("Ausência e cancelamento não são a mesma coisa")).toHaveCount(0);
+  });
+});

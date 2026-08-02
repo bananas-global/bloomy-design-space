@@ -38,6 +38,28 @@ export const agendaScenarios: Scenario[] = [
     tags: ["lista", "sucesso"],
   },
   {
+    id: "agenda.absence-and-cancellation",
+    title: "Ausência e cancelamento não são a mesma coisa",
+    intent:
+      "Separar dois comportamentos opostos que o filtro do sistema soma — e é com essa soma que alguém liga para a família.",
+    route: "/agenda",
+    persona: "attendant",
+    fixture: "agenda-absence-and-cancellation",
+    rules: ["the-absence-filter-counts-cancellations", "three-filters-ask-the-same-question"],
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    preconditions: [
+      "O filtro `absence` de `ScheduleFilters` seleciona `status in [:missed, :cancelled]`.",
+      "Uma ausência e dois cancelamentos no mesmo dia, os dois avisados antes.",
+    ],
+    expected: [
+      "A tela separa as duas contagens e diz o número que o sistema responderia.",
+      "E diz a proporção que era aviso prévio, porque é ela que muda a conversa.",
+      "O recorte não aparece quando só existe um dos dois — aí não há o que separar.",
+    ],
+    tags: ["regra", "decisão"],
+  },
+  {
     id: "agenda.empty",
     title: "Agenda vazia",
     intent: "Garantir que um dia sem atendimento não pareça defeito do sistema.",

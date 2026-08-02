@@ -10,6 +10,7 @@ import {
   LoadingState,
   Notice,
 } from "../components/primitives.js";
+import { attendanceBreakdown, shareThatWasWarned } from "../rules/agenda.js";
 
 /**
  * Agenda do dia.
@@ -38,6 +39,8 @@ export function AgendaDay({ context }: ScreenProps) {
   const agenda = data as AgendaData | null;
   const appointments = agenda?.appointments ?? [];
   const conflicted = appointments.filter((item) => (item.conflictsWith?.length ?? 0) > 0);
+  const faltas = attendanceBreakdown(appointments.map((item) => item.status));
+  const avisado = shareThatWasWarned(faltas);
 
   if (appointments.length === 0) {
     return wrap(
@@ -50,9 +53,29 @@ export function AgendaDay({ context }: ScreenProps) {
     );
   }
 
+  /* Ausência e cancelamento são comportamentos opostos, e o filtro do sistema
+     os soma. O recorte só aparece quando os dois existem no mesmo dia — com um
+     só, não há o que separar, e o aviso viraria ruído. */
+  const recorteDeFaltas =
+    faltas.missed > 0 && faltas.cancelled > 0 ? (
+      <Notice tone="info" title="Ausência e cancelamento não são a mesma coisa">
+        <p className="m-0">
+          Hoje há {faltas.missed} {faltas.missed === 1 ? "ausência" : "ausências"} e{" "}
+          {faltas.cancelled} {faltas.cancelled === 1 ? "cancelamento" : "cancelamentos"}. O filtro
+          de ausência do sistema soma os dois e responde {faltas.countedTogether}.
+        </p>
+        <p className="m-0 mt-2">
+          {avisado}% desse número é família que avisou antes. Cancelar é comunicar; faltar é não
+          comunicar — somados, o número não mede adesão, mede horário perdido. E é com ele que
+          alguém liga para a família.
+        </p>
+      </Notice>
+    ) : null;
+
   return wrap(
     context,
     <div className="space-y-4">
+      {recorteDeFaltas}
       {conflicted.length > 0 && (
         <Notice
           tone="danger"
