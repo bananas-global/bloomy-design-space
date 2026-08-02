@@ -35,6 +35,7 @@ import { absenceOriginFixtures } from "../fixtures/absenceOrigin.js";
 import { autoCheckoutFixtures } from "../fixtures/autoCheckout.js";
 import { authorizationRenewalFixtures } from "../fixtures/authorizationRenewal.js";
 import { fieldOrderingFixtures } from "../fixtures/fieldOrdering.js";
+import { patientAddressFixtures } from "../fixtures/patientAddress.js";
 import { meetingSummaryFixtures } from "../fixtures/meetingSummary.js";
 import { tissBatchFixtures } from "../fixtures/tissBatch.js";
 import { distributionFixtures } from "../fixtures/distribution.js";
@@ -48,6 +49,7 @@ import { overdueRules, supervisorOverdueRules } from "../rules/overdue.js";
 import { coverageRules } from "../rules/coverage.js";
 import { closureGenerationRules } from "../rules/closureGeneration.js";
 import { fieldOrderingRules } from "../rules/fieldOrdering.js";
+import { patientAddressRules } from "../rules/patientAddress.js";
 import { appointmentRowRules, meetingSummaryRules } from "../rules/meetingSummary.js";
 import { tissBatchRules } from "../rules/tissBatch.js";
 import { distributionRules } from "../rules/distribution.js";
@@ -114,6 +116,7 @@ import { absenceOriginScenarios } from "../scenarios/absenceOrigin.js";
 import { autoCheckoutScenarios } from "../scenarios/autoCheckout.js";
 import { authorizationRenewalScenarios } from "../scenarios/authorizationRenewal.js";
 import { fieldOrderingScenarios } from "../scenarios/fieldOrdering.js";
+import { patientAddressScenarios } from "../scenarios/patientAddress.js";
 import { meetingSummaryScenarios } from "../scenarios/meetingSummary.js";
 import { tissBatchScenarios } from "../scenarios/tissBatch.js";
 import { distributionScenarios } from "../scenarios/distribution.js";
@@ -1046,6 +1049,7 @@ export const scenarios: Scenario[] = [
   ...autoCheckoutScenarios,
   ...authorizationRenewalScenarios,
   ...fieldOrderingScenarios,
+  ...patientAddressScenarios,
   ...meetingSummaryScenarios,
   ...tissBatchScenarios,
   ...distributionScenarios,
@@ -1087,6 +1091,7 @@ export const fixtures: Fixture[] = [
   ...autoCheckoutFixtures,
   ...authorizationRenewalFixtures,
   ...fieldOrderingFixtures,
+  ...patientAddressFixtures,
   ...meetingSummaryFixtures,
   ...tissBatchFixtures,
   ...distributionFixtures,
@@ -1103,6 +1108,7 @@ export const rules: Rule[] = [
   ...coverageRules,
   ...closureGenerationRules,
   ...fieldOrderingRules,
+  ...patientAddressRules,
   ...appointmentRowRules,
   ...meetingSummaryRules,
   ...tissBatchRules,
