@@ -3389,3 +3389,66 @@ test.describe("aceite do plano de intervenção", () => {
     await expect(page.getByText(/assinou em .* · documento diz/)).toHaveCount(5);
   });
 });
+
+test.describe("escopo de pacientes", () => {
+  test("as duas leituras do mesmo papel aparecem juntas", async ({ page }) => {
+    await page.goto(urlFor("team.patient-scope-contradiction"));
+
+    await expect(
+      page.getByText("O código afirma duas regras diferentes para o mesmo papel"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/o que acontece: todos os pacientes da unidade/),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/numa parte que não chega a rodar: Uma cláusula depois lista o mesmo papel/),
+    ).toBeVisible();
+    await expect(page.getByText(/O problema não é qual foi escolhida/)).toBeVisible();
+  });
+
+  test("o alcance é dito em pessoas, e não em nome de tabela", async ({ page }) => {
+    await page.goto(urlFor("team.patient-scope-contradiction"));
+
+    await expect(page.getByText("todos os pacientes da clínica", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("só os pacientes das próprias agendas", { exact: true })).toHaveCount(1);
+    await expect(page.getByText("nenhum paciente", { exact: true })).toHaveCount(1);
+    // Nenhum nome de tabela vaza para a tela.
+    await expect(page.getByText(/patient_units|health_care_id/)).toHaveCount(0);
+  });
+
+  test("“nenhum paciente” é separado da forma obscura de escrevê-lo", async ({ page }) => {
+    await page.goto(urlFor("team.patient-scope-empty-is-deliberate"));
+
+    await expect(
+      page.getByText("“Nenhum paciente” está escrito como uma condição impossível"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/“quisemos zero” é para manter, “a condição está errada” é para consertar/),
+    ).toBeVisible();
+  });
+
+  test("o papel sem regra aparece como acerto, com a correção perigosa nomeada", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("team.patient-scope-unknown-role-raises"));
+
+    await expect(
+      page.getByText("Um papel sem regra derruba a tela, e isso está certo"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/A correção intuitiva seria acrescentar um caso final/),
+    ).toBeVisible();
+    await expect(page.getByText(/vazamento silencioso/)).toBeVisible();
+  });
+
+  test("sem a cláusula morta, o aviso some e o alcance continua o mesmo", async ({ page }) => {
+    await page.goto(urlFor("team.patient-scope-without-the-dead-clause"));
+
+    await expect(
+      page.getByText("O código afirma duas regras diferentes para o mesmo papel"),
+    ).toHaveCount(0);
+    await expect(page.getByText("o código diz outra coisa em outro ponto")).toHaveCount(0);
+    // A supervisão continua vendo a unidade: o comportamento não mudou.
+    await expect(page.getByText("todos os pacientes da unidade", { exact: true })).toHaveCount(1);
+  });
+});

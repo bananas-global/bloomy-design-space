@@ -2381,3 +2381,25 @@ export interface PlanSignature {
 export interface PlanSignatureData {
   signatures: PlanSignature[];
 }
+
+/**
+ * Escopo de pacientes por papel.
+ *
+ * `PatientPolicy.scope/2` decide quem vê quais pacientes. As cláusulas são
+ * casadas na ordem em que estão escritas.
+ */
+export interface ScopeRule {
+  id: string;
+  role: string;
+  /** O que a cláusula que de fato roda faz. */
+  effective: string;
+  /** O que uma cláusula posterior, morta, diz que aconteceria. */
+  shadowed?: string;
+  /** Como o escopo é expresso no código. */
+  shape: "all" | "by-unit" | "by-own-schedules" | "empty" | "by-link" | "raises";
+  source: string;
+}
+
+export interface PatientScopeData {
+  rules: ScopeRule[];
+}
