@@ -1687,3 +1687,55 @@ export interface UnitMapData {
   week: { start: string; end: string };
   rows: UnitMapRow[];
 }
+
+/* ====================================================== Controle de horas */
+
+/** Quem registrou a marca: o próprio profissional pelo app, ou alguém no escritório. */
+export type RegisteredBy = "app" | "admin";
+
+/** Uma faixa efetivamente trabalhada. `endAt` ausente é jornada em aberto. */
+export interface ClinicHour {
+  id: string;
+  startAt: string;
+  endAt?: string;
+  checkinDoneBy: RegisteredBy;
+  checkoutDoneBy?: RegisteredBy;
+}
+
+/**
+ * Uma faixa prevista.
+ *
+ * `endAt` é opcional no changeset do sistema real e obrigatório no cálculo —
+ * é a forma exata que a soma não consegue processar.
+ */
+export interface ExpectedClinicHour {
+  id: string;
+  startAt: string;
+  endAt?: string;
+}
+
+/** Uma marca de verificação por geolocalização. Pode simplesmente não existir. */
+export interface HourVerification {
+  type: "checkin" | "checkout";
+  latitude: string;
+  longitude: string;
+  at: string;
+}
+
+export interface ClinicalHourRecord {
+  id: string;
+  date: string;
+  professionalName: string;
+  unitName: string;
+  observation?: string;
+  clinicHours: ClinicHour[];
+  expectedClinicHours: ExpectedClinicHour[];
+  verifications: HourVerification[];
+  /** O inteiro que o sistema real guarda — já truncado. */
+  storedExpectedHours: number;
+  expectedDailyPaymentCents?: number;
+}
+
+export interface ClinicalHoursData {
+  records: ClinicalHourRecord[];
+}
