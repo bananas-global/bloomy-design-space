@@ -24,6 +24,7 @@ import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
 import { supervisionFixtures } from "../fixtures/supervision.js";
 import { unitMapFixtures } from "../fixtures/unitMap.js";
+import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
@@ -47,6 +48,7 @@ import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
 import { supervisionRules } from "../rules/supervision.js";
 import { unitMapRules } from "../rules/unitMap.js";
+import { clinicalHourRules } from "../rules/clinicalHours.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
@@ -70,6 +72,7 @@ import { reportScenarios } from "../scenarios/reports.js";
 import { notificationScenarios } from "../scenarios/notifications.js";
 import { supervisionScenarios } from "../scenarios/supervision.js";
 import { unitMapScenarios } from "../scenarios/unitMap.js";
+import { clinicalHourScenarios } from "../scenarios/clinicalHours.js";
 
 /**
  * Catálogo: tudo que descreve o produto **sem** tocar em React.
@@ -756,6 +759,33 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "clinical-hours",
+    name: "Controle de horas",
+    description:
+      "A tela em que um erro vira dinheiro — e os cinco erros que ela comete em silêncio.",
+    flows: [
+      {
+        id: "check-a-day",
+        title: "Conferir um dia de trabalho",
+        description:
+          "Da semana até os quatro silêncios: o truncamento, a verificação que não aconteceu, a faixa invertida e a previsão sem fim.",
+        steps: [
+          {
+            scenario: "clinical-hours.week",
+            label: "Ler a semana",
+            decision: "Este número está certo?",
+            branches: {
+              "Meia hora sumiu no arredondamento": "clinical-hours.truncation",
+              "Ninguém sabe onde a pessoa estava": "clinical-hours.unverified",
+              "A saída é anterior à entrada": "clinical-hours.reversed",
+              "A previsão não tem fim": "clinical-hours.incomplete-expected",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -782,6 +812,7 @@ export const scenarios: Scenario[] = [
   ...notificationScenarios,
   ...supervisionScenarios,
   ...unitMapScenarios,
+  ...clinicalHourScenarios,
 ];
 
 export const fixtures: Fixture[] = [
@@ -809,6 +840,7 @@ export const fixtures: Fixture[] = [
   ...notificationFixtures,
   ...supervisionFixtures,
   ...unitMapFixtures,
+  ...clinicalHourFixtures,
 ] as Fixture[];
 
 export const rules: Rule[] = [
@@ -835,6 +867,7 @@ export const rules: Rule[] = [
   ...notificationRules,
   ...supervisionRules,
   ...unitMapRules,
+  ...clinicalHourRules,
 ];
 
 export { personas };

@@ -4529,3 +4529,162 @@ describe("people-cannot-see-the-map-they-cause", () => {
     expect(decision.reason).toContain("coordenação");
   });
 });
+
+/* ==================================================== Controle de horas */
+
+import type { ClinicHour, ClinicalHourRecord } from "../src/contracts/index.js";
+import {
+  attributionOf,
+  canEditHours,
+  expectedMinutes,
+  expectedWithoutEnd,
+  formatMinutes,
+  minutesLostToTruncation,
+  monthlyLossHours,
+  openHours,
+  reversedHours,
+  spanMinutes,
+  storedExpectedHours,
+  verificationState,
+  workedMinutes,
+} from "../src/rules/clinicalHours.js";
+
+function clinicHour(overrides: Partial<ClinicHour> & { id: string }): ClinicHour {
+  return { startAt: "08:00", endAt: "12:00", checkinDoneBy: "app", checkoutDoneBy: "app", ...overrides };
+}
+
+function hourRecord(overrides: Partial<ClinicalHourRecord> & { id: string }): ClinicalHourRecord {
+  return {
+    date: "2026-07-27",
+    professionalName: "Marina Okabe",
+    unitName: "Unidade Pinheiros",
+    clinicHours: [],
+    expectedClinicHours: [],
+    verifications: [],
+    storedExpectedHours: 0,
+    ...overrides,
+  };
+}
+
+describe("expected-hours-truncate-downwards", () => {
+  const seteEMeia = [
+    { id: "a", startAt: "08:00", endAt: "12:00" },
+    { id: "b", startAt: "13:30", endAt: "17:00" },
+  ];
+
+  it("soma os minutos previstos sem perder a fração", () => {
+    expect(expectedMinutes(seteEMeia)).toBe(450);
+  });
+
+  it("reproduz o div(3600) do sistema real: 7h30 vira 7", () => {
+    expect(storedExpectedHours(seteEMeia)).toBe(7);
+  });
+
+  it("mede o que some, para a perda ser dita e não deduzida", () => {
+    expect(minutesLostToTruncation(seteEMeia)).toBe(30);
+  });
+
+  it("não inventa perda quando o previsto é hora cheia", () => {
+    const cheio = [{ id: "a", startAt: "08:00", endAt: "16:00" }];
+    expect(storedExpectedHours(cheio)).toBe(8);
+    expect(minutesLostToTruncation(cheio)).toBe(0);
+  });
+
+  it("projeta a perda no mês, porque meia hora isolada não convence ninguém", () => {
+    expect(monthlyLossHours(seteEMeia)).toBe(11);
+  });
+
+  it("o arredondamento vai sempre para o mesmo lado — nunca para cima", () => {
+    // 7h59 previstas continuam sendo gravadas como 7.
+    const quaseOito = [{ id: "a", startAt: "08:00", endAt: "15:59" }];
+    expect(storedExpectedHours(quaseOito)).toBe(7);
+    expect(minutesLostToTruncation(quaseOito)).toBe(59);
+  });
+});
+
+describe("expected-hour-without-end-breaks-the-sum", () => {
+  it("isola as previsões sem fim, que o recálculo do sistema real não processa", () => {
+    const previsto = [
+      { id: "a", startAt: "08:00", endAt: "12:00" },
+      { id: "b", startAt: "13:30" },
+    ];
+
+    expect(expectedWithoutEnd(previsto).map((entry) => entry.id)).toEqual(["b"]);
+  });
+
+  it("ignora a faixa sem fim na soma, em vez de derrubar a conta", () => {
+    expect(expectedMinutes([{ id: "a", startAt: "08:00", endAt: "12:00" }, { id: "b", startAt: "13:30" }])).toBe(240);
+  });
+});
+
+describe("checkout-before-checkin-is-accepted", () => {
+  it("devolve duração negativa para a faixa invertida, em vez de escondê-la", () => {
+    expect(spanMinutes({ startAt: "17:00", endAt: "13:00" })).toBe(-240);
+  });
+
+  it("aponta as faixas invertidas", () => {
+    const faixas = [clinicHour({ id: "a" }), clinicHour({ id: "b", startAt: "17:00", endAt: "13:00" })];
+    expect(reversedHours(faixas).map((hour) => hour.id)).toEqual(["b"]);
+  });
+
+  it("o total do dia fica menor que a primeira faixa sozinha — que é o problema", () => {
+    const faixas = [clinicHour({ id: "a" }), clinicHour({ id: "b", startAt: "17:00", endAt: "13:00" })];
+    expect(workedMinutes(faixas)).toBe(0);
+    expect(spanMinutes(faixas[0]!)).toBe(240);
+  });
+
+  it("faixa em aberto não conta como invertida, e tem lista própria", () => {
+    const abertas = [clinicHour({ id: "a", endAt: undefined, checkoutDoneBy: undefined })];
+    expect(reversedHours(abertas)).toEqual([]);
+    expect(openHours(abertas).map((hour) => hour.id)).toEqual(["a"]);
+  });
+});
+
+describe("verification-is-optional-and-silent", () => {
+  it("distingue verificado, meio verificado e nada — o do meio é o que se perde", () => {
+    const ponto = { latitude: "-23.56", longitude: "-46.69", at: "2026-07-27T08:00:00.000-03:00" };
+
+    expect(
+      verificationState(hourRecord({ id: "a", verifications: [{ type: "checkin", ...ponto }, { type: "checkout", ...ponto }] })),
+    ).toBe("verified");
+    expect(verificationState(hourRecord({ id: "b", verifications: [{ type: "checkin", ...ponto }] }))).toBe("half");
+    expect(verificationState(hourRecord({ id: "c", verifications: [] }))).toBe("none");
+  });
+});
+
+describe("who-registered-is-part-of-the-record", () => {
+  it("nomeia o caso misto, que é o que mais interessa numa conferência", () => {
+    expect(attributionOf(clinicHour({ id: "a", checkinDoneBy: "app", checkoutDoneBy: "admin" }))).toBe("mixed");
+    expect(attributionOf(clinicHour({ id: "b", checkinDoneBy: "admin", checkoutDoneBy: "app" }))).toBe("mixed");
+  });
+
+  it("faixa marcada inteira pelo app é do profissional; inteira pelo escritório é do escritório", () => {
+    expect(attributionOf(clinicHour({ id: "a" }))).toBe("self");
+    expect(attributionOf(clinicHour({ id: "b", checkinDoneBy: "admin", checkoutDoneBy: "admin" }))).toBe("office");
+  });
+
+  it("faixa em aberto se classifica só pela entrada", () => {
+    expect(attributionOf(clinicHour({ id: "a", endAt: undefined, checkoutDoneBy: undefined }))).toBe("self");
+    expect(
+      attributionOf(clinicHour({ id: "b", endAt: undefined, checkinDoneBy: "admin", checkoutDoneBy: undefined })),
+    ).toBe("office");
+  });
+});
+
+describe("leitura de horas", () => {
+  it("formata sem casas quando é hora cheia, e com sinal quando é negativo", () => {
+    expect(formatMinutes(450)).toBe("7h30");
+    expect(formatMinutes(480)).toBe("8h");
+    expect(formatMinutes(-240)).toBe("−4h");
+    // Abaixo de uma hora sai em minutos: "0h30" se lê mal num aviso.
+    expect(formatMinutes(30)).toBe("30min");
+    expect(formatMinutes(0)).toBe("0h");
+  });
+
+  it("corrigir registro é de quem a política lista, e o motivo nomeia o app", () => {
+    expect(canEditHours(["clinical_hours.edit"]).allowed).toBe(true);
+    const decision = canEditHours([]);
+    expect(decision.allowed).toBe(false);
+    expect(decision.reason).toContain("aplicativo");
+  });
+});

@@ -1920,3 +1920,78 @@ test.describe("mapa da unidade", () => {
     await expect(tabela.getByRole("rowheader", { name: "Quarta" })).toBeVisible();
   });
 });
+
+test.describe("controle de horas", () => {
+  test("cada faixa diz quem a registrou", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.week"));
+
+    await expect(page.getByText("Marcado pelo profissional, no app").first()).toBeVisible();
+    await expect(page.getByText("Preenchido no escritório").first()).toBeVisible();
+    // O caso que mais interessa numa conferência, e que hoje não aparece.
+    await expect(page.getByText("Aberto pelo profissional e fechado no escritório")).toBeVisible();
+  });
+
+  test("o previsto aparece como é e como está gravado", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.truncation"));
+
+    // Escopado no termo "Previsto": o mesmo 7h30 também aparece como total
+    // trabalhado, e a asserção precisa dizer qual dos dois interessa.
+    const previsto = page.getByRole("definition").first();
+    await expect(previsto).toContainText("7h30");
+    await expect(previsto).toContainText("gravado como 7h");
+  });
+
+  test("a perda do truncamento é projetada no mês", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.truncation"));
+
+    await expect(page.getByText("30min somem no arredondamento")).toBeVisible();
+    await expect(page.getByText("11 horas")).toBeVisible();
+    await expect(page.getByText(/arredondamento vai sempre para o mesmo lado/)).toBeVisible();
+  });
+
+  test("um dia sem localização diz que não sabe, em vez de parecer verificado", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.unverified"));
+
+    await expect(page.getByText("Nenhuma marca tem localização registrada")).toBeVisible();
+    await expect(page.getByText(/GPS desligado, permissão negada ou falha na inserção/)).toBeVisible();
+  });
+
+  test("a faixa invertida é apontada e a duração negativa tem sinal", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.reversed"));
+
+    await expect(page.getByText("Saída anterior à entrada")).toBeVisible();
+    await expect(page.getByText("das 17:00 às 13:00")).toBeVisible();
+    // Sinal e não só cor: quem não distingue vermelho ainda lê o menos.
+    await expect(page.getByText("−4h")).toBeVisible();
+  });
+
+  test("o total do dia invertido fica menor que a primeira faixa sozinha", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.reversed"));
+
+    await expect(page.getByText(/menor que a primeira faixa sozinha/)).toBeVisible();
+  });
+
+  test("a previsão sem fim é apontada, e a jornada aberta separadamente", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.incomplete-expected"));
+
+    await expect(page.getByText("Faixa prevista sem hora de fim")).toBeVisible();
+    await expect(page.getByText(/o erro aparece na hora de recalcular/)).toBeVisible();
+    // São problemas diferentes e ganham avisos diferentes.
+    await expect(page.getByText("Jornada em aberto")).toBeVisible();
+  });
+
+  test("quem não corrige vê o botão desabilitado com o motivo", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.no-permission"));
+
+    const corrigir = page.getByRole("button", { name: "Corrigir um registro" });
+    await expect(corrigir).toBeVisible();
+    await expect(corrigir).toBeDisabled();
+  });
+
+  test("o vazio explica de onde vêm os registros", async ({ page }) => {
+    await page.goto(urlFor("clinical-hours.empty"));
+
+    await expect(page.getByText("Nenhum registro no período")).toBeVisible();
+    await expect(page.getByText(/depois do primeiro check-in/)).toBeVisible();
+  });
+});

@@ -678,6 +678,42 @@ porque ele não vai passar por aqui.
 6 cenários, 18 testes de regra, 10 jornadas.
 
 
+### 24. Controle de horas — `porte/controle-de-horas`
+
+A tela em que um erro vira dinheiro. Cada dia tem horas previstas, horas
+efetivamente marcadas e um valor diário esperado, e o que separa as três é
+aritmética que ninguém confere — porque cada linha isolada erra pouco.
+
+Todos os cinco defeitos que ela pode cometer são **silenciosos**: truncam,
+aceitam, descartam ou omitem sem reclamar. O módulo inteiro consiste em tirar
+cada um deles do silêncio.
+
+- **A previsão é truncada para baixo.** `Enum.sum_by(...) |> div(3600)` numa
+  coluna `:integer`: 7h30 vira 7, e a fração não caberia no tipo nem que
+  quisessem. O arredondamento vai sempre para o mesmo lado. A tela mostra o
+  previsto como é **e** como está gravado, e projeta a perda no mês — meia hora
+  isolada não convence ninguém a olhar; onze horas convencem.
+- **A verificação por geolocalização é opcional e silenciosa.** `maybe_create_log`
+  só grava com latitude e longitude preenchidas, e o resultado do `Repo.insert`
+  é descartado. GPS desligado, permissão negada ou falha na inserção produzem o
+  mesmo resultado: check-in bem-sucedido, nenhuma coordenada, nada dito. O
+  registro fica com a aparência de um verificado. `verificationState/1` tem três
+  estados, e o do meio — só uma das duas marcas — é o que o sistema real perde.
+- **Saída anterior à entrada é aceita.** Nada compara `end_at` com `start_at`,
+  e `Time.diff` devolve negativo. A soma do dia pode ficar menor que uma de suas
+  parcelas.
+- **A previsão sem fim quebra o recálculo.** `ExpectedClinicHour` valida só
+  `start_at`; `RecalculateExpectedHours` faz `Time.diff(end_at, start_at)` sem
+  checar. Não é divergência de opinião entre camadas: é o changeset autorizando
+  exatamente a forma que a função a jusante trata como impossível.
+- **Quem marcou já está gravado e não é mostrado.** `checkin_done_by` e
+  `checkout_done_by` são a única distinção entre hora registrada e hora
+  atribuída, e o caso mais interessante numa conferência — dia aberto no app e
+  fechado no escritório — não aparece em tela nenhuma.
+
+7 cenários, 18 testes de regra, 9 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -713,3 +749,8 @@ bugs do Design Space; são observações sobre o produto.
 | 26 | O mapa de calor renderiza `{inspect(@count)}` direto no HTML. É uma chamada de depuração deixada na marcação: o usuário vê a representação Elixir do valor, incluindo `nil` quando não há dado. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:179` |
 | 27 | A célula de especialidade cai em `"?"` quando a contagem não foi calculada — o usuário lê literalmente "? horas livres". Desconhecido é um estado legítimo e merece uma frase, não um caractere. | `lib/bloomy_web/backoffice/live/unit_map_live/components/unit_heat_map.ex:103` |
 | 28 | `render_table/2` resolve a granularidade de forma oposta nos dois eixos: em `professional`, tudo que não é `"day"` vira semana; em `room`, tudo que não é `"week"` vira dia. Um valor inesperado — `nil`, lixo de formulário — cai em visões diferentes conforme o eixo. | `lib/bloomy_web/backoffice/live/unit_map_live/show.ex:28-40` |
+| 29 | `RecalculateExpectedHours` soma os segundos previstos e faz `div(3600)`, que trunca — e `expected_hours` é coluna `:integer`. Um dia previsto de 7h30 é gravado como 7. O arredondamento vai sempre contra o profissional, e num mês de 22 dias úteis são 11 horas. | `lib/bloomy/professionals/clinical_hours/recalculate_professional_expected_hour.ex:10` |
+| 30 | O log de verificação por geolocalização só é gravado quando latitude e longitude chegam preenchidas, e o resultado do `Repo.insert` é descartado. Sem coordenadas — ou com falha na gravação — o check-in reporta sucesso e o registro fica indistinguível de um verificado. | `lib/bloomy/professionals/clinical_hours/checkin.ex:18-38` |
+| 31 | `ExpectedClinicHour.changeset` valida só `start_at`, e `RecalculateExpectedHours` chama `Time.diff(end_at, start_at)` sem checar nulo. O cadastro autoriza exatamente a forma que o cálculo não processa; o erro aparece no recálculo, longe de quem salvou. | `lib/bloomy/professionals/clinical_hours/expected_clinic_hour.ex:20` |
+| 32 | Nada compara `end_at` com `start_at` em `ClinicHour`. Uma saída anterior à entrada é aceita e `Time.diff` devolve negativo, subtraindo horas do total do dia — que pode ficar menor que uma de suas parcelas. | `lib/bloomy/professionals/clinical_hours/clinic_hour.ex:20-31` |
+| 33 | `Checkin.has_open_checkin?/1` ancora a busca em `Date.utc_today()`. Depois das 21h em Brasília, a pergunta "esta pessoa tem check-in aberto hoje?" é feita sobre o dia seguinte. Terceira ocorrência do mesmo padrão, junto dos achados 22 e o período do mapa. | `lib/bloomy/professionals/clinical_hours/checkin.ex:60` |
