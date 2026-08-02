@@ -206,6 +206,17 @@ export function Overdue({ context }: ScreenProps) {
         </Notice>
       )}
 
+      {/* "Não iniciado" nem sempre quer dizer que ninguém começou: um worker
+          devolve a esse estado tudo o que ficou em andamento no dia anterior,
+          sem deixar log. */}
+      {lista.some((entry) => entry.status === "not_started") && (
+        <Notice tone="info" title="“Não iniciado” pode ser uma sessão desfeita" level={3}>
+          Todo atendimento que fica em andamento ou pronto no dia anterior volta para “não
+          iniciado” na virada, por rotina automática e sem registro. Quem começou uma sessão e foi
+          interrompido encontra o agendamento como se nada tivesse acontecido.
+        </Notice>
+      )}
+
       <Card as="section">
         <CardHeader
           title={daCoordenacao ? "Atrasados para a coordenação" : "Atrasados há mais de 48 horas"}

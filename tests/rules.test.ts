@@ -5515,3 +5515,72 @@ describe("the-month-closes-three-hours-early", () => {
     expect(hoursLostAtTheBoundary(geracao([], "2026-08-02T00:00:00.000Z"))).toBeUndefined();
   });
 });
+
+/* ============================================ De onde vem uma ausência */
+
+import type { AbsenceOriginData, AbsenceRecord } from "../src/contracts/index.js";
+import {
+  absencesByOrigin,
+  shareThatIsReallyAbsence,
+  wasObserved,
+  whatTheOriginMeasures,
+} from "../src/rules/agenda.js";
+
+function ausencia(overrides: Partial<AbsenceRecord> & { id: string }): AbsenceRecord {
+  return {
+    patientName: "Théo",
+    professionalName: "Marina",
+    date: "2026-07-14",
+    origin: "observed",
+    ...overrides,
+  };
+}
+
+describe("the-absence-number-holds-three-different-things", () => {
+  const mes: AbsenceOriginData = {
+    month: "2026-07",
+    records: [
+      ausencia({ id: "a1" }),
+      ausencia({ id: "a2" }),
+      ausencia({ id: "c1", origin: "cancelled" }),
+      ausencia({ id: "c2", origin: "cancelled" }),
+      ausencia({ id: "f1", origin: "fabricated_by_delay", daysStalled: 7 }),
+      ausencia({ id: "f2", origin: "fabricated_by_delay", daysStalled: 9 }),
+    ],
+  };
+
+  it("separa as três origens na ordem em que elas se afastam de “ausência”", () => {
+    expect(absencesByOrigin(mes)).toEqual([
+      { origin: "observed", count: 2 },
+      { origin: "cancelled", count: 2 },
+      { origin: "fabricated_by_delay", count: 2 },
+    ]);
+  });
+
+  it("omite origem que não aparece — a lista não anuncia zeros", () => {
+    const soObservadas: AbsenceOriginData = { month: "2026-07", records: [ausencia({ id: "a" })] };
+    expect(absencesByOrigin(soObservadas)).toEqual([{ origin: "observed", count: 1 }]);
+  });
+
+  it("mede quanto do número relatado é comportamento da família", () => {
+    expect(shareThatIsReallyAbsence(mes)).toBe(33);
+  });
+
+  it("não divide por zero num mês sem ausência nenhuma", () => {
+    expect(shareThatIsReallyAbsence({ month: "2026-07", records: [] })).toBeUndefined();
+  });
+});
+
+describe("some-absences-were-never-observed", () => {
+  it("só a origem observada conta como ausência de fato", () => {
+    expect(wasObserved(ausencia({ id: "a" }))).toBe(true);
+    expect(wasObserved(ausencia({ id: "c", origin: "cancelled" }))).toBe(false);
+    expect(wasObserved(ausencia({ id: "f", origin: "fabricated_by_delay" }))).toBe(false);
+  });
+
+  it("cada origem diz o que mede, e não só como se chama", () => {
+    expect(whatTheOriginMeasures("observed")).toContain("comportamento");
+    expect(whatTheOriginMeasures("cancelled")).toContain("oposto de faltar");
+    expect(whatTheOriginMeasures("fabricated_by_delay")).toContain("desorganização interna");
+  });
+});

@@ -2594,3 +2594,45 @@ test.describe("geração mensal de fechamentos", () => {
     await expect(page.getByText("O mês fechou três horas antes")).toHaveCount(0);
   });
 });
+
+test.describe("de onde vêm as ausências", () => {
+  test("a tela abre pela proporção, e não pelo total", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-origins"));
+
+    await expect(
+      page.getByText("O sistema conta 12 ausências. 33% mede comportamento da família."),
+    ).toBeVisible();
+  });
+
+  test("cada origem diz o que mede", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-origins"));
+
+    // A etiqueta de origem aparece em cada registro; o resumo é o único lugar
+    // que diz o que a origem mede.
+    await expect(page.getByText("4 alguém registrou a falta")).toBeVisible();
+    await expect(page.getByText(/o oposto de faltar/)).toBeVisible();
+    await expect(page.getByText(/desorganização interna/)).toBeVisible();
+  });
+
+  test("as conversões automáticas têm aviso próprio, com os dias parados", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-origins"));
+
+    await expect(page.getByText("Ausências que ninguém observou")).toBeVisible();
+    await expect(page.getByText(/convertida depois de 9 dias parada em atraso/)).toBeVisible();
+    await expect(page.getByText(/a criança pode ter vindo e o registro simplesmente não ter sido fechado/i)).toBeVisible();
+  });
+
+  test("com todas observadas, a separação cala", async ({ page }) => {
+    await page.goto(urlFor("agenda.absence-all-observed"));
+
+    await expect(page.getByText(/mede comportamento da família/)).toHaveCount(0);
+    await expect(page.getByText("Ausências que ninguém observou")).toHaveCount(0);
+  });
+
+  test("“não iniciado” é qualificado na lista de atrasados", async ({ page }) => {
+    await page.goto(urlFor("agenda.overdue-as-coordinator"));
+
+    await expect(page.getByText("“Não iniciado” pode ser uma sessão desfeita")).toBeVisible();
+    await expect(page.getByText(/por rotina automática e sem registro/)).toBeVisible();
+  });
+});

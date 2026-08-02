@@ -1459,6 +1459,43 @@ Os três avisos calam quando não há o que reportar, e há uma jornada para iss
 2 cenários, 8 testes de regra, 5 jornadas.
 
 
+### 49. A ausência que ninguém observou — `porte/origem-da-ausencia`
+
+Dois workers fecham o arco aberto pelo filtro `absence`.
+
+**`MarkDelayedSchedulesAsMissedWorker`** converte em ausência todo agendamento
+parado há sete dias em atraso, com `missing_reason: :delay` e descrição
+"atraso". **Ninguém viu a família não aparecer.** A criança pode ter vindo e o
+registro simplesmente não ter sido fechado — e depois da conversão não há como
+distinguir uma coisa da outra sem abrir o histórico.
+
+Somando ao achado 40, o número que o sistema chama de "ausências" contém **três
+coisas**:
+
+| Origem | O que mede |
+| --- | --- |
+| Alguém registrou a falta | comportamento da família |
+| A família avisou antes | comunicação — o oposto de faltar |
+| Convertida pelo worker | desorganização interna |
+
+Na fixture do mês: doze registros, **quatro pessoas faltaram**. A tela abre pela
+proporção, e não pelo total — doze não diz nada, quatro de doze diz tudo. E cada
+origem diz **o que mede**, porque nomear sem isso deixaria a separação parecendo
+preciosismo de vocabulário.
+
+**`NotAttendedWorker`** devolve para "não iniciado" tudo o que ficou em
+andamento ou pronto no dia anterior, por `update_all`, sem log. Quem começou uma
+sessão e foi interrompido volta no dia seguinte e encontra o agendamento como se
+nada tivesse acontecido. Por isso "não iniciado" ganhou uma ressalva na lista de
+atrasados: nem sempre quer dizer que ninguém começou.
+
+Uma regra minha ficou órfã no meio do caminho — a da sessão desfeita — e o teste
+de coerência a pegou. Diferente do caso da rodada 44, esta **é** observável, e a
+resposta certa foi dar a ela o cenário que faltava, não apagá-la.
+
+2 cenários, 6 testes de regra, 5 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -1515,3 +1552,5 @@ bugs do Design Space; são observações sobre o produto.
 | 47 | `GenerateMonthlyClosuresWorker` filtra `p.status == true` — ativo **quando o worker roda**, não durante o mês fechado. Um profissional desativado antes da virada não recebe fechamento pelas horas que trabalhou, e a ausência de um fechamento não gera sinal nenhum. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:41` |
 | 48 | O mesmo worker conta `failures` e devolve `{:ok, ...}` de qualquer jeito. O Oban registra sucesso, não reprocessa, e ninguém é avisado — a contagem de falhas existe no retorno e não vira nada. Mesmo padrão dos achados 14 e 30. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:24-27` |
 | 49 | O worker usa `Date.utc_today()` para decidir a competência. Rodando à meia-noite UTC do dia 1º, em Brasília são 21h do último dia do mês que está sendo fechado — as três últimas horas caem no fechamento seguinte, na faixa em que acompanhamento terapêutico acontece. Sexta ocorrência do padrão de fuso. | `lib/bloomy/professionals/closures/generate_monthly_closures_worker.ex:14` |
+| 50 | `MarkDelayedSchedulesAsMissedWorker` converte em ausência (`missing_reason: :delay`) todo agendamento parado há sete dias em atraso. É limpeza de fila apresentada como fato clínico: ninguém observou a falta, e depois da conversão não há como distinguir do caso real sem abrir o histórico. Somado ao achado 40, o número de "ausências" contém três coisas diferentes. | `lib/bloomy/schedules/mark_delayed_schedules_as_missed_worker.ex:10-27` |
+| 51 | `NotAttendedWorker` devolve para `:not_started`, via `update_all` e sem log, todo atendimento que ficou em `:ready_for_service` ou `:ongoing` no dia anterior. A sessão que alguém começou e não fechou é desfeita na virada, sem deixar evidência de que houve início. | `lib/bloomy/schedules/not_attended_worker.ex:10-21` |
