@@ -15,6 +15,9 @@ export const contrastPairs: ContrastPair[] = [
   { name: "texto secundário sobre superfície", foreground: "rgba(43,35,91,0.72)", background: "#ffffff" }, // 5.79
   { name: "texto secundário sobre fundo do app", foreground: "rgba(43,35,91,0.72)", background: "#f0f6f8" }, // 5.31
   { name: "placeholder sobre superfície", foreground: "rgba(43,35,91,0.66)", background: "#ffffff" }, // 4.80
+  // O botão indisponível é alcançável pelo Tab, então não vale a isenção da
+  // WCAG 1.4.3 para componentes inativos: ele precisa passar por mérito.
+  { name: "rótulo de ação indisponível", foreground: "rgba(43,35,91,0.72)", background: "#f4f6f7" }, // 5.56
 
   /* ---------------------------------------------------------------- ação */
   { name: "link sobre superfície", foreground: "#276e8c", background: "#ffffff" }, // 5.68

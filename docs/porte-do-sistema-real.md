@@ -832,6 +832,35 @@ rodado contra as 26 policies e o resultado é idêntico ao arquivo em uso.
 Sem cenário novo: 2 testes de contrato, 1 script.
 
 
+### 28. Ação indisponível alcança o teclado — `porte/acao-indisponivel`
+
+A convenção central deste Design Space é que **ação bloqueada não some**: fica
+visível, inativa, e diz o motivo. A implementação usava o atributo nativo
+`disabled` — e um botão `disabled` sai da ordem de foco.
+
+Quem navega por teclado passava direto: nunca encontrava o botão, nunca era
+levado até ele, nunca ouvia o `aria-describedby` com o motivo. **A convenção
+inteira valia só para quem enxerga a tela** — e para os demais o comportamento
+era indistinguível de esconder a ação, que é o que ela existe para evitar.
+
+Medido no navegador, e não deduzido: com `disabled` o botão não aparecia na
+ordem de foco; agora aparece na posição 11 de 14 na tela de marcar atendimento,
+recebe foco, e o `aria-describedby` aponta para o texto do motivo.
+
+Junto veio um segundo problema no mesmo componente: `disabled:opacity-55` dava
+**2,35:1** no botão primário e **3,48:1** no secundário. Isso era **conforme** —
+a WCAG 1.4.3 isenta componentes inativos, e é por isso que o axe nunca reprovou.
+Ao devolver o botão à ordem de foco a isenção deixa de valer, e com ela o
+argumento: um controle que a pessoa alcança e não consegue ler não ajuda
+ninguém. O estado indisponível passou a ter cor própria, **5,56:1**, declarada
+em `src/tokens/contrast.ts` para o teste de tokens protegê-la.
+
+As 34 asserções `toBeDisabled()` existentes continuaram passando — o Playwright
+já trata `aria-disabled="true"` como desabilitado.
+
+Registrado em `docs/decisions/0003`. 4 jornadas novas, 1 par de contraste.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
