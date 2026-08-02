@@ -595,6 +595,47 @@ Três decisões desenhadas a partir disso:
 coberto de ponta a ponta.
 
 
+### 22. Supervisão — `porte/supervisao`
+
+O módulo existe por causa de uma linha:
+
+```elixir
+def can?(role, :list_supervisor), do: role in ~W(admin clinic_admin coordinator)
+```
+
+O papel `supervisor` não está lá. **A tela que leva o nome dele não abre para
+ele.** Isso não é necessariamente errado — é uma visão de coordenação sobre quem
+supervisiona quem — mas o nome promete o contrário, e quem lê a lista de papéis
+assume que supervisor supervisiona por ali.
+
+Uma vez aceita essa frase, o resto do desenho fica coerente, e três coisas
+passam a incomodar:
+
+- **O período abre em [hoje − 30, hoje].** Auditoria e acompanhamento pedem
+  janelas opostas. Conferir o que passou é legítimo; ser o único padrão
+  significa que ninguém abre a tela para decidir onde estar amanhã — que é
+  exatamente onde a supervisão muda o resultado. A tela passou a dizer, por
+  extenso, para que lado está olhando.
+- **A tabela mostra tudo menos supervisão.** Serviço, profissional, paciente,
+  sala, horário, situação do agendamento. Não mostra se a segunda assinatura
+  está pendente — que é o **único efeito mecânico** do vínculo de supervisão em
+  todo o sistema. `supervisionState/1` é a coluna que falta, derivada da situação
+  do agendamento, que já distingue `pending_signature` de
+  `pending_supervisor_signature`.
+- **A lista some com quem acabou de ser designado.** `has_supervisor_internships`
+  monta a lista a partir dos vínculos, e não do papel. É a escolha certa —
+  supervisão é uma relação, não um cargo — e o preço é que um supervisor sem
+  vínculo fica invisível exatamente quando alguém precisaria encontrá-lo para
+  lhe atribuir o primeiro caso. A tela nomeia quem ficou de fora, em vez de
+  corrigir em silêncio.
+
+Quem não abre a tela é mandado para onde a tarefa acontece: o supervisor
+acompanha os casos dele pelo atendimento, onde a assinatura é pedida. Um "sem
+permissão" seco o deixaria procurando.
+
+6 cenários, 15 testes de regra, 10 jornadas.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -621,3 +662,6 @@ bugs do Design Space; são observações sobre o produto.
 | 17 | Três dos quatro remetentes passam `""` como `on_click_url`. Em Elixir a string vazia é *truthy*: um template que faça `if notification.on_click_url` renderiza um link clicável para lugar nenhum. As notificações que mais precisariam levar a algum lugar — as três de agendamento — são justamente as que não levam. | `lib/bloomy/schedules/assume_schedule.ex:21,37,64` |
 | 18 | `mark_all_notifications_read_for/1` grava `DateTime.utc_now()` sem truncar numa coluna `:utc_datetime`, enquanto `mark_notifications_read/1` trunca para segundo. Ecto rejeita microssegundos não vazios ao serializar `:utc_datetime` — há risco de “marcar todas como lidas” falhar onde “marcar uma” funciona. **Não reproduzido**: não rodamos o monólito. Vale um teste antes de qualquer conclusão. | `lib/bloomy/backoffice.ex:241-245` |
 | 19 | A notificação de menção no chat aponta para `/backoffice/pacientes/:id/editar?message=:id` — o formulário de cadastro do paciente, não o chat de onde a menção saiu. Somado ao achado sobre `ChatPolicy`, quem é mencionado recebe um aviso que leva a uma tela que pode não abrir para o perfil dele. | `lib/bloomy/multidisciplinary_chat/send_message.ex:62` |
+| 20 | O papel `supervisor` não tem `:list_supervisor`. A tela de Supervisão é de admin, admin de clínica e coordenação — quem supervisiona nunca a abre. Coerente com o desenho da tela, e contraditório com o nome dela. | `lib/bloomy/professionals/professional_policy.ex:18` |
+| 21 | A tabela da tela de Supervisão não tem coluna de assinatura pendente. A segunda assinatura é o único efeito mecânico do vínculo em todo o sistema, e não aparece na tela do vínculo — quem coordena descobre a pendência pelo atraso. | `lib/bloomy_web/backoffice/live/supervisor/index.ex:84-118` |
+| 22 | O período padrão da Supervisão é calculado com `Date.utc_today()`. Entre 21h e a meia-noite em Brasília, “hoje” já é o dia seguinte em UTC e a janela inteira anda um dia. Passa despercebido num intervalo de 30 dias até alguém conferir um número contra um relatório. | `lib/bloomy_web/backoffice/live/supervisor/index.ex:288-292` |

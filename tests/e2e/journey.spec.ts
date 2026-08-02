@@ -1747,3 +1747,95 @@ test.describe("notificações", () => {
     await expect(page.getByText(/o resto do produto ainda não avisa nada/)).toBeVisible();
   });
 });
+
+test.describe("supervisão", () => {
+  test("o período padrão diz que está olhando só para trás", async ({ page }) => {
+    await page.goto(urlFor("supervision.default-period"));
+
+    await expect(page.getByText(/Este período olha só para trás/)).toBeVisible();
+    // A frase sobre o padrão importa mais que as datas: ela diz que a janela
+    // não foi escolhida por quem abriu.
+    await expect(page.getByText(/É o padrão do sistema: 30 dias para trás/)).toBeVisible();
+  });
+
+  test("o que está parado esperando o supervisor vem antes da lista", async ({ page }) => {
+    await page.goto(urlFor("supervision.awaiting-signature"));
+
+    await expect(
+      page.getByText("3 atendimentos parados esperando a assinatura do supervisor"),
+    ).toBeVisible();
+    await expect(page.getByText(/único efeito mecânico do vínculo/)).toBeVisible();
+  });
+
+  test("o estado da supervisão tem rótulo textual em cada linha", async ({ page }) => {
+    await page.goto(urlFor("supervision.awaiting-signature"));
+
+    await expect(page.getByText("Aguardando a assinatura do supervisor")).toHaveCount(3);
+    await expect(page.getByText("Aguardando quem atendeu assinar")).toHaveCount(1);
+    await expect(page.getByText("Assinado pelos dois")).toHaveCount(1);
+  });
+
+  test("os parados mostram há quantos dias estão parados", async ({ page }) => {
+    await page.goto(urlFor("supervision.awaiting-signature"));
+
+    // 13/07 contra a referência de 30/07.
+    await expect(page.getByText("há 17 dias")).toBeVisible();
+  });
+
+  test("quem espera quem atendeu é separado, porque a cobrança tem outro destinatário", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("supervision.awaiting-signature"));
+
+    await expect(page.getByText("1 espera quem atendeu assinar")).toBeVisible();
+    await expect(page.getByText(/a assinatura do supervisor nem foi pedida ainda/)).toBeVisible();
+  });
+
+  test("o supervisor não abre a tela que leva o nome dele, e é mandado para onde funciona", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("supervision.not-for-the-supervisor"));
+
+    await expect(page.getByText("Esta tela é da coordenação")).toBeVisible();
+    await expect(page.getByText(/pelo atendimento, onde a sua assinatura é pedida/)).toBeVisible();
+  });
+
+  test("o menu esconde Supervisão de quem supervisiona", async ({ page }) => {
+    await page.goto(urlFor("supervision.not-for-the-supervisor"));
+
+    // `list_supervisor` é de admin, clinic_admin e coordinator. O item some
+    // para o supervisor — o que é coerente, e é a coerência que vale fixar.
+    const nav = page.getByLabel("Navegação principal");
+    await expect(nav.getByRole("link", { name: "Supervisão" })).toHaveCount(0);
+  });
+
+  test("a coordenação alcança Supervisão pelo menu", async ({ page }) => {
+    await page.goto(urlFor("supervision.default-period"));
+
+    const nav = page.getByLabel("Navegação principal");
+    await expect(nav.getByRole("link", { name: "Supervisão" })).toBeVisible();
+  });
+
+  test("a supervisora sem vínculo é nomeada, com o motivo de ter sumido", async ({ page }) => {
+    await page.goto(urlFor("supervision.supervisor-without-links"));
+
+    await expect(page.getByText("Quem não aparece nesta lista")).toBeVisible();
+    await expect(page.getByText(/Iara Monteiro Sales/)).toBeVisible();
+    await expect(page.getByText(/supervisão é uma relação, não um cargo/)).toBeVisible();
+  });
+
+  test("com a janela virada, a tela passa a servir para decidir onde estar", async ({ page }) => {
+    await page.goto(urlFor("supervision.forward-period"));
+
+    await expect(page.getByText(/alcança o que ainda vai acontecer/)).toBeVisible();
+    await expect(page.getByText("Ainda não atendido")).toHaveCount(2);
+    await expect(page.getByText("Não exige segunda assinatura")).toHaveCount(1);
+  });
+
+  test("o vazio sugere o próximo passo em vez de encerrar a conversa", async ({ page }) => {
+    await page.goto(urlFor("supervision.empty-period"));
+
+    await expect(page.getByText("Nenhum atendimento no período")).toBeVisible();
+    await expect(page.getByText(/Ampliar o período ou olhar para a frente/)).toBeVisible();
+  });
+});
