@@ -861,6 +861,36 @@ já trata `aria-disabled="true"` como desabilitado.
 Registrado em `docs/decisions/0003`. 4 jornadas novas, 1 par de contraste.
 
 
+### 29. O anel de foco nascia invisível — `porte/anel-de-foco`
+
+Passagem de teclado pelas telas novas. O que apareceu não foi das telas novas:
+era do produto inteiro, desde sempre.
+
+`tokens.css` declara o anel de foco e traz um comentário dizendo que removê-lo é
+violação de guardrail. O anel estava lá, o comentário estava lá, e **o anel não
+aparecia**. Dois defeitos independentes:
+
+1. **`:where()` tem especificidade zero.** `outline-style` e `outline-width`
+   chegavam; `outline-color` era perdida e caía no valor inicial da propriedade,
+   `currentColor`. Num botão primário isso é branco — e com
+   `outline-offset: 2px` o anel é desenhado sobre o cartão, que é branco. Anel
+   branco sobre branco em toda ação primária.
+
+2. **`transition-colors` do Tailwind v4 inclui `outline-color`.** Corrigida a
+   especificidade, o anel ainda **nascia em `currentColor`** e só chegava ao
+   roxo no fim da transição: `rgb(255,255,255)` no instante do foco,
+   `rgb(97,68,197)` 600 ms depois. Quem navega devagar via; quem tabula rápido
+   nunca via — e é quem mais depende dele.
+
+Nenhum teste pegava. O axe não avalia contraste de anel de foco, e os 186
+cenários passavam. A lição não é "faltou um teste": é que **estilo declarado não
+é estilo aplicado**, e a diferença só aparece medindo o valor computado num
+navegador. As duas jornadas novas medem o anel **sem espera nenhuma**, que é a
+leitura que reprovava antes.
+
+Registrado em `docs/decisions/0004`. 2 jornadas, 2 pares de contraste.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

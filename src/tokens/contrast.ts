@@ -19,6 +19,13 @@ export const contrastPairs: ContrastPair[] = [
   // WCAG 1.4.3 para componentes inativos: ele precisa passar por mérito.
   { name: "rótulo de ação indisponível", foreground: "rgba(43,35,91,0.72)", background: "#f4f6f7" }, // 5.56
 
+  // O anel de foco. Declarado porque ele já chegou ao navegador em branco uma
+  // vez — invisível sobre cartão branco, em toda ação primária do produto.
+  // WCAG 1.4.11 pede 3:1 para elemento não textual; estes passam com folga no
+  // alvo de texto, então ficam na lista normal.
+  { name: "anel de foco sobre superfície", foreground: "#6144c5", background: "#ffffff" }, // 6.69
+  { name: "anel de foco sobre fundo do app", foreground: "#6144c5", background: "#f0f6f8" }, // 6.12
+
   /* ---------------------------------------------------------------- ação */
   { name: "link sobre superfície", foreground: "#276e8c", background: "#ffffff" }, // 5.68
   { name: "link sobre fundo do app", foreground: "#276e8c", background: "#f0f6f8" }, // 5.21
