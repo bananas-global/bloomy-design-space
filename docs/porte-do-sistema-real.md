@@ -1031,6 +1031,34 @@ devolvi o `role="status"` à dica inicial, confirmei a reprovação, restaurei.
 completados.
 
 
+### 35. Ordem de tabulação, e uma heurística errada — `porte/tabulacao`
+
+Varredura comparando a ordem do DOM com a posição visual em todos os cenários.
+
+**A primeira versão acusou três telas, e as três estavam certas.** Ela comparava
+só a coordenada vertical, então marcava como defeito o momento em que o foco
+desce a coluna esquerda e sobe para o topo da direita. Isso não é defeito: é o
+comportamento esperado de um layout de duas colunas, e é o que quem navega por
+teclado espera encontrar. Medido em 1280 px: "Abrir cadastro" em `y=552, x=413`,
+"Cancelar atendimento" em `y=281, x=853` — colunas diferentes.
+
+**A resposta certa era consertar a varredura, não as telas.** Uma verificação que
+acusa código correto é pior que nenhuma: ou alguém "corrige" o que estava bom, ou
+todo mundo aprende a ignorar o aviso. Com a heurística ciente de colunas — só
+acusa salto para cima quando os dois elementos estão a menos de 120 px de
+distância horizontal —, os 186 cenários passam limpos.
+
+Sobrou a propriedade que de fato importa: **dentro de uma mesma coluna, o foco
+desce.** Um salto para cima ali significa que a ordem do DOM discorda da ordem
+lida.
+
+Provada por mutação: inverti visualmente a lista de notificações com
+`flex-col-reverse`, mantendo a ordem do DOM; a varredura reprovou; restaurei.
+
+1 jornada de varredura (186 cenários). Nenhuma tela alterada — e é esse o
+resultado.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
