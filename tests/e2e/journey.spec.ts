@@ -3323,3 +3323,69 @@ test.describe("auto check-in no totem", () => {
     await expect(page.getByText("recusada, e é de outro dia")).toHaveCount(2);
   });
 });
+
+test.describe("aceite do plano de intervenção", () => {
+  test("cada aceite mostra a data assinada e a que ficou no documento", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-signature-wrong-date"));
+
+    await expect(page.getByText("3 de 5 aceites ficaram datados do dia seguinte")).toBeVisible();
+    await expect(
+      page.getByText(
+        /Tiago Barreto assinou às 21h de 30 de jul\. de 2026, e o documento diz 31 de jul\. de 2026/,
+      ),
+    ).toBeVisible();
+    // As duas datas aparecem em todas as linhas, inclusive nas corretas.
+    await expect(page.getByText(/assinou em .* · documento diz/)).toHaveCount(5);
+  });
+
+  test("a diferença é dita como erro de preenchimento aparente, não do sistema", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("guardian.plan-signature-wrong-date"));
+
+    await expect(
+      page.getByText(/parece que alguém preencheu errado, ou que a assinatura foi colhida depois/),
+    ).toBeVisible();
+  });
+
+  test("a proporção de aceites noturnos aparece como número", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-signature-wrong-date"));
+
+    await expect(
+      page.getByText("A janela do defeito é o horário principal deste público"),
+    ).toBeVisible();
+    await expect(page.getByText(/4 de 5 aceites vieram depois das 18h/)).toBeVisible();
+    await expect(
+      page.getByText(/proporções completamente diferentes conforme quem está do outro lado/),
+    ).toBeVisible();
+  });
+
+  test("o aceite posterior ao fim do plano tem aviso próprio", async ({ page }) => {
+    await page.goto(urlFor("guardian.plan-signature-after-the-end"));
+
+    await expect(
+      page.getByText("Um aceite ficou registrado depois do fim do próprio plano"),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/O plano de Ivo P\. terminou em 30 de jul\. de 2026/),
+    ).toBeVisible();
+    await expect(page.getByText(/um documento que se desmente/)).toBeVisible();
+    await expect(
+      page.getByText(/não tem como saber qual das duas datas está errada/),
+    ).toBeVisible();
+  });
+
+  test("assinando durante o dia, nada erra e as duas datas continuam visíveis", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("guardian.plan-signature-daytime"));
+
+    await expect(page.getByText(/ficaram datados do dia seguinte/)).toHaveCount(0);
+    // `exact` para não casar com o resumo do cabeçalho, que também diz
+    // "com data trocada" — ali o número é zero, e é justamente o ponto.
+    await expect(page.getByText("data trocada", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("data correta", { exact: true })).toHaveCount(5);
+    await expect(page.getByText("5 no total · 0 com data trocada")).toBeVisible();
+    await expect(page.getByText(/assinou em .* · documento diz/)).toHaveCount(5);
+  });
+});
