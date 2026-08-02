@@ -55,7 +55,7 @@ Números do fim da janela de trabalho contínuo, em 2026-08-02.
 | Telas React | 48 |
 | Testes de regra | 667 |
 | Jornadas Playwright | 877 |
-| Achados sobre o sistema real | 105 |
+| Achados sobre o sistema real | 106 |
 | Rodadas registradas | 73 |
 
 Tudo em `main`, uma branch por módulo, `pnpm check` e `pnpm test:e2e` verdes
@@ -2795,3 +2795,4 @@ bugs do Design Space; são observações sobre o produto.
 | 103 | `status_tag/1` é **só um ponto colorido** de 10px, verde ou vermelho, sem texto. O `title` é opcional, e onde ele não é passado a situação existe apenas na cor — quem não distingue verde de vermelho não recebe a informação, e quem usa leitor de tela não recebe nada. | `lib/bloomy_web/components/core_components.ex:2302-2314` |
 | 104 | `tag/1` declara `light-red` entre os valores válidos de `variant` e **não tem ramo para ele**. Quem usar recebe uma etiqueta sem fundo e sem cor de texto, com a validação de atributo dizendo que está tudo certo. Hoje ninguém usa — é armadilha latente, e o primeiro a cair nela vai procurar o erro no lugar errado. | `lib/bloomy_web/components/core_components.ex:2231,2237-2255` |
 | 105 | `progress/1` define cor de trilho para `default`, `accent` e `error`, e **não para `purple`** — essa variante fica com o trilho azul da classe base e a barra roxa por cima. Não quebra, mas é a única das quatro em que trilho e barra não combinam. | `lib/bloomy_web/components/core_components.ex:2201-2235` |
+| 106 | Em `radio_selector/1`, o rótulo externo da opção marcada recebe `has-[input:checked]:text-brand-blue/30` — texto azul a 30% de opacidade. O texto interno tem regra própria (`peer-checked:text-brand-blue-dark`) e vence, então o 30% nunca aparece. É classe morta, não defeito visível — e vira defeito visível no dia em que alguém mexer no `span`. | `lib/bloomy_web/components/core_components.ex:1441-1443,1457` |

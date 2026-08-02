@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
@@ -8,6 +8,8 @@ import {
   Avatar, Back, DescriptionList, EmptyStateCard, InsideCard,
   LoadingCard, MetaInfo, Progress, SectionHeader,
 } from "../components/bloomy/Layout.js";
+import { Dropdown, DropdownMenu, Modal } from "../components/bloomy/Overlay.js";
+import { CheckboxGroup, RadioGroup, RadioSelector, Tooltip } from "../components/bloomy/Choice.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -44,6 +46,65 @@ const LINHAS = [
   { horario: "09:30", paciente: "Otávio L.", servico: "Fonoaudiologia", situacao: false },
   { horario: "11:00", paciente: "Bruna S.", servico: "Psicologia ABA", situacao: true },
 ];
+
+/** Demonstração do diálogo: precisa de estado, então vive num componente. */
+function DemoModal() {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setAberto(true)}>Abrir diálogo</Button>
+      <Modal id="demo-modal" open={aberto} onClose={() => setAberto(false)} title="Inativar paciente">
+        <p className="m-0 max-w-[60ch] text-sm text-navy">
+          Fecha com Esc, com clique no fundo e pelo botão. O Tab circula aqui dentro e não escapa
+          para a página atrás.
+        </p>
+      </Modal>
+    </>
+  );
+}
+
+function DemoEscolhas() {
+  const [radio, setRadio] = useState("presente");
+  const [aba, setAba] = useState("dia");
+  const [marcados, setMarcados] = useState<string[]>(["fono"]);
+  return (
+    <div className="space-y-4">
+      <RadioGroup
+        label="Presença"
+        name="g-presenca"
+        value={radio}
+        onChange={setRadio}
+        options={[
+          { value: "presente", label: "Presente" },
+          { value: "ausente", label: "Ausente" },
+          { value: "justificada", label: "Falta justificada" },
+        ]}
+      />
+      <RadioSelector
+        label="Período"
+        name="g-periodo"
+        value={aba}
+        onChange={setAba}
+        options={[
+          { value: "dia", label: "Dia" },
+          { value: "semana", label: "Semana" },
+          { value: "mes", label: "Mês", warningNumber: 3 },
+        ]}
+      />
+      <CheckboxGroup
+        label="Especialidades"
+        name="g-esp"
+        values={marcados}
+        onChange={setMarcados}
+        options={[
+          { value: "fono", label: "Fonoaudiologia" },
+          { value: "to", label: "Terapia ocupacional" },
+          { value: "psico", label: "Psicologia" },
+        ]}
+      />
+    </div>
+  );
+}
 
 export const GALLERY: GalleryEntry[] = [
   {
@@ -101,7 +162,15 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "modal", origem: "lib/bloomy_web/components/core_components.ex:66", descricao: "Diálogo sobreposto, com foco preso e fechamento por Esc." },
+  { name: "modal", origem: "lib/bloomy_web/components/core_components.ex:66", descricao: "Diálogo sobreposto, com foco preso e fechamento por Esc.",
+    demos: [
+      {
+        titulo: "Diálogo com foco preso",
+        nota: "Esc fecha, clique no fundo fecha, e o Tab circula dentro — como o `focus_wrap` do original.",
+        render: () => <DemoModal />,
+      },
+    ],
+  },
   { name: "drawer_modal", origem: "lib/bloomy_web/components/core_components.ex:182", descricao: "Painel que entra pela lateral, para formulários longos." },
   { name: "modal_content", origem: "lib/bloomy_web/components/core_components.ex:286", descricao: "O miolo do diálogo, separado para reuso." },
   { name: "flash", origem: "lib/bloomy_web/components/core_components.ex:321", descricao: "Aviso temporário de resultado de ação." },
@@ -152,9 +221,47 @@ export const GALLERY: GalleryEntry[] = [
   { name: "fake_input", origem: "lib/bloomy_web/components/core_components.ex:1269", descricao: "Campo somente-leitura com aparência de campo." },
   { name: "input_switch_card", origem: "lib/bloomy_web/components/core_components.ex:1301", descricao: "Cartão com chave liga-desliga e descrição." },
   { name: "fake_radio_group", origem: "lib/bloomy_web/components/core_components.ex:1332", descricao: "Grupo de opções não editável, para exibição." },
-  { name: "radio_group", origem: "lib/bloomy_web/components/core_components.ex:1379", descricao: "Escolha única entre opções, navegável por setas." },
-  { name: "radio_selector", origem: "lib/bloomy_web/components/core_components.ex:1429", descricao: "Escolha única em formato de cartões clicáveis." },
-  { name: "checkbox_group", origem: "lib/bloomy_web/components/core_components.ex:1493", descricao: "Escolha múltipla em grupo." },
+  { name: "radio_group", origem: "lib/bloomy_web/components/core_components.ex:1379", descricao: "Escolha única entre opções, navegável por setas.",
+    demos: [{ titulo: "Opções soltas, a marcada ganha fundo", render: () => <DemoEscolhas /> }],
+  },
+  { name: "radio_selector", origem: "lib/bloomy_web/components/core_components.ex:1429", descricao: "Escolha única em formato de cartões clicáveis.",
+    demos: [
+      {
+        titulo: "Barra segmentada",
+        nota: "A marcada ganha fundo e a linha superior por dentro — ver o exemplo em `radio_group`.",
+        render: () => (
+          <RadioSelector
+            name="g-sel"
+            value="semana"
+            options={[
+              { value: "dia", label: "Dia" },
+              { value: "semana", label: "Semana" },
+              { value: "mes", label: "Mês" },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
+  { name: "checkbox_group", origem: "lib/bloomy_web/components/core_components.ex:1493", descricao: "Escolha múltipla em grupo.",
+    demos: [
+      {
+        titulo: "Escolha múltipla",
+        nota: "Mesma anatomia do rádio — ver o exemplo em `radio_group`.",
+        render: () => (
+          <CheckboxGroup
+            label="Documentos entregues"
+            name="g-doc"
+            values={["rg"]}
+            options={[
+              { value: "rg", label: "Identidade" },
+              { value: "cpf", label: "CPF" },
+            ]}
+          />
+        ),
+      },
+    ],
+  },
   {
     name: "label",
     origem: "lib/bloomy_web/components/core_components.ex:1536",
@@ -322,8 +429,32 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "dropdown", origem: "lib/bloomy_web/components/core_components.ex:2030", descricao: "Menu suspenso ancorado num gatilho." },
-  { name: "dropdown_menu", origem: "lib/bloomy_web/components/core_components.ex:2054", descricao: "A lista de itens do menu suspenso." },
+  { name: "dropdown", origem: "lib/bloomy_web/components/core_components.ex:2030", descricao: "Menu suspenso ancorado num gatilho.",
+    demos: [
+      {
+        titulo: "Painel ancorado num gatilho livre",
+        render: () => (
+          <Dropdown id="g-drop" trigger={<Button variant="outline" size="medium">Unidade</Button>}>
+            <p className="m-0 px-2 py-1.5 text-sm">Vila Aurora</p>
+            <p className="m-0 px-2 py-1.5 text-sm">Centro</p>
+          </Dropdown>
+        ),
+      },
+    ],
+  },
+  { name: "dropdown_menu", origem: "lib/bloomy_web/components/core_components.ex:2054", descricao: "A lista de itens do menu suspenso.",
+    demos: [
+      {
+        titulo: "Os três pontinhos",
+        render: () => (
+          <DropdownMenu
+            id="g-menu"
+            items={[<button key="a">Editar</button>, <button key="b">Inativar</button>]}
+          />
+        ),
+      },
+    ],
+  },
   { name: "meta_info", origem: "lib/bloomy_web/components/core_components.ex:2090", descricao: "Par de rótulo e valor, para metadados.",
     demos: [
       {
@@ -451,7 +582,19 @@ export const GALLERY: GalleryEntry[] = [
   { name: "range_monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2394", descricao: "Seleção de intervalo de meses." },
   { name: "monthpicker", origem: "lib/bloomy_web/components/core_components.ex:2420", descricao: "Seleção de um mês." },
   { name: "week_selector", origem: "lib/bloomy_web/components/core_components.ex:2450", descricao: "Navegação por semana." },
-  { name: "tooltip", origem: "lib/bloomy_web/components/core_components.ex:2498", descricao: "Dica de contexto ancorada num elemento." },
+  { name: "tooltip", origem: "lib/bloomy_web/components/core_components.ex:2498", descricao: "Dica de contexto ancorada num elemento.",
+    demos: [
+      {
+        titulo: "Aparece no mouse e no foco",
+        nota: "O foco entra junto de propósito: é o que o menu recolhido usa para dizer o nome do item.",
+        render: () => (
+          <Tooltip id="g-tip" content="Mapa da Unidade">
+            <Button variant="tint" size="medium">Passe o mouse ou dê Tab</Button>
+          </Tooltip>
+        ),
+      },
+    ],
+  },
   { name: "timeline_list", origem: "lib/bloomy_web/components/core_components.ex:2528", descricao: "Linha do tempo de eventos." },
   { name: "loading_card", origem: "lib/bloomy_web/components/core_components.ex:2550", descricao: "Cartão de carregamento.",
     demos: [{ titulo: "Mensagem e roda", render: () => <LoadingCard message="Carregando os fechamentos" /> }],
