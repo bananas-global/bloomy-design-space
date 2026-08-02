@@ -7,6 +7,7 @@ import { AppointmentDetail } from "../screens/AppointmentDetail.js";
 import { SessionDetail } from "../screens/SessionDetail.js";
 import { InterventionPlanScreen } from "../screens/InterventionPlan.js";
 import { ProtocolApplication } from "../screens/ProtocolApplication.js";
+import { InClinic } from "../screens/InClinic.js";
 import { PatientList } from "../screens/PatientList.js";
 import { PatientDetail } from "../screens/PatientDetail.js";
 import { ClaimList } from "../screens/ClaimList.js";
@@ -34,6 +35,7 @@ export const productDefinition: ProductDefinition = {
   // certa para quem recebe o link sem contexto.
   routes: [
     { path: "/agenda", screen: AgendaDay },
+    { path: "/in-clinic", screen: InClinic },
     { path: "/agenda/:id", screen: AppointmentDetail },
     { path: "/sessions/:id", screen: SessionDetail },
     { path: "/patients", screen: PatientList },

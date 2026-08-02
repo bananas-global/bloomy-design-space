@@ -5,6 +5,8 @@ import type {
   ClinicalSessionData,
   Claim,
   Criteria,
+  DaySchedule,
+  InClinicData,
   InterventionPlan,
   Patient,
   PlanProgram,
@@ -58,6 +60,13 @@ import {
   nextUnanswered,
   reassessmentDate,
 } from "../src/rules/protocols.js";
+import {
+  canCheckin,
+  presenceAlert,
+  schedulesAfterCheckin,
+  schedulesAfterCheckout,
+  visibleTabs,
+} from "../src/rules/inClinic.js";
 
 /**
  * Testes das regras de negócio.
@@ -1109,5 +1118,229 @@ describe("reassessment-follows-the-instrument", () => {
     expect(daysUntilReassessment({ ...base, reassessmentDate: "2026-07-20" })).toBe(-10);
     expect(daysUntilReassessment({ ...base, reassessmentDate: "2026-08-09" })).toBe(10);
     expect(daysUntilReassessment(base)).toBeUndefined();
+  });
+});
+
+/* ============================================================== na clínica */
+
+/**
+ * O check-in reescreve a situação de todos os agendamentos do paciente naquele
+ * dia. Está em três `update_all` de `ServiceRecords.Context` que ninguém lê ao
+ * desenhar a tela — e é o que decide se o atendimento pode começar.
+ */
+
+function daySchedule(
+  id: string,
+  start: string,
+  status: DaySchedule["status"] = "scheduled",
+): DaySchedule {
+  return {
+    id,
+    start,
+    end: start.replace(/T(\d\d)/, (_, hour) => `T${String(Number(hour) + 1).padStart(2, "0")}`),
+    status,
+    professionalName: "Marina Okabe",
+    serviceName: "Terapia ABA",
+  };
+}
+
+const CHECKIN = "2026-07-30T09:24:00.000-03:00";
+
+describe("checkin-marks-later-schedules-ready", () => {
+  it("coloca em Pronto o que ainda não começou, vindo de Agendado", () => {
+    const [result] = schedulesAfterCheckin(
+      [daySchedule("s1", "2026-07-30T10:00:00.000-03:00")],
+      CHECKIN,
+    );
+    expect(result!.status).toBe("ready_for_service");
+  });
+
+  it("recupera para Pronto o que estava Atrasado e ainda não começou", () => {
+    const [result] = schedulesAfterCheckin(
+      [daySchedule("s1", "2026-07-30T10:00:00.000-03:00", "delayed")],
+      CHECKIN,
+    );
+    expect(result!.status).toBe("ready_for_service");
+  });
+
+  it("não toca em agendamento de outro dia", () => {
+    const outro = daySchedule("s1", "2026-07-31T10:00:00.000-03:00");
+    expect(schedulesAfterCheckin([outro], CHECKIN)).toEqual([outro]);
+  });
+
+  it("não toca em situação que não é Agendado nem Atrasado", () => {
+    for (const status of ["ongoing", "finished", "cancelled", "missed"] as const) {
+      const item = daySchedule("s1", "2026-07-30T10:00:00.000-03:00", status);
+      expect(schedulesAfterCheckin([item], CHECKIN)[0]!.status).toBe(status);
+    }
+  });
+});
+
+describe("checkin-marks-earlier-schedules-delayed", () => {
+  it("marca como Atrasado o horário que já passou e estava Agendado", () => {
+    const [result] = schedulesAfterCheckin(
+      [daySchedule("s1", "2026-07-30T09:00:00.000-03:00")],
+      CHECKIN,
+    );
+    expect(result!.status).toBe("delayed");
+  });
+
+  it("distingue quem chegou tarde de quem faltou", () => {
+    // O que está Faltou permanece Faltou: o check-in de agora não apaga a
+    // ausência de um horário que já foi encerrado como falta.
+    const [result] = schedulesAfterCheckin(
+      [daySchedule("s1", "2026-07-30T08:00:00.000-03:00", "missed")],
+      CHECKIN,
+    );
+    expect(result!.status).toBe("missed");
+  });
+
+  it("horário vencido que já estava Pronto volta a Agendado, e não a Atrasado", () => {
+    // Divergência do monólito reproduzida como é: a mesma situação de fato —
+    // paciente presente, horário vencido — para em dois estados diferentes
+    // conforme o que veio antes.
+    const [result] = schedulesAfterCheckin(
+      [daySchedule("s1", "2026-07-30T09:00:00.000-03:00", "ready_for_service")],
+      CHECKIN,
+    );
+    expect(result!.status).toBe("scheduled");
+  });
+
+  it("um único check-in resolve o dia inteiro de uma vez", () => {
+    const result = schedulesAfterCheckin(
+      [
+        daySchedule("passado", "2026-07-30T08:00:00.000-03:00"),
+        daySchedule("futuro", "2026-07-30T10:00:00.000-03:00"),
+        daySchedule("futuro-2", "2026-07-30T11:00:00.000-03:00", "delayed"),
+      ],
+      CHECKIN,
+    );
+    expect(result.map((item) => item.status)).toEqual([
+      "delayed",
+      "ready_for_service",
+      "ready_for_service",
+    ]);
+  });
+});
+
+describe("checkout-returns-schedules-to-scheduled", () => {
+  it("devolve a Agendado tudo que estava Pronto no dia, mesmo o que não começou", () => {
+    const result = schedulesAfterCheckout(
+      [
+        daySchedule("s1", "2026-07-30T10:00:00.000-03:00", "ready_for_service"),
+        daySchedule("s2", "2026-07-30T14:00:00.000-03:00", "ready_for_service"),
+      ],
+      CHECKIN,
+    );
+    expect(result.map((item) => item.status)).toEqual(["scheduled", "scheduled"]);
+  });
+
+  it("não mexe no que já foi finalizado nem no que está em sessão", () => {
+    const result = schedulesAfterCheckout(
+      [
+        daySchedule("s1", "2026-07-30T08:00:00.000-03:00", "finished"),
+        daySchedule("s2", "2026-07-30T09:00:00.000-03:00", "ongoing"),
+      ],
+      CHECKIN,
+    );
+    expect(result.map((item) => item.status)).toEqual(["finished", "ongoing"]);
+  });
+});
+
+describe("one-active-checkin-per-patient", () => {
+  const dados: InClinicData = {
+    unit: { id: "u", name: "Pinheiros" },
+    now: "2026-07-30T09:40:00.000-03:00",
+    patients: [
+      {
+        id: "sr-1",
+        patient: { id: "pac-1", name: "Théo Andrade Lins", birthDate: "2019-11-04" },
+        checkinAt: "2026-07-30T09:32:00.000-03:00",
+        checkinBy: "web",
+        schedules: [],
+      },
+    ],
+    professionals: [],
+  };
+
+  it("recusa o segundo check-in dizendo desde quando o primeiro está aberto", () => {
+    const result = canCheckin(dados, "pac-1", ["service_records.checkin"]);
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/já possui um check-in ativo, feito às 09:32/);
+  });
+
+  it("permite quando o check-in anterior já teve saída", () => {
+    const comSaida: InClinicData = {
+      ...dados,
+      patients: [{ ...dados.patients[0]!, checkoutAt: "2026-07-30T09:35:00.000-03:00" }],
+    };
+    expect(canCheckin(comSaida, "pac-1", ["service_records.checkin"]).allowed).toBe(true);
+  });
+
+  it("bloqueia por permissão antes de olhar o histórico", () => {
+    expect(canCheckin(dados, "pac-1", []).reason).toMatch(/não registra check-in/);
+  });
+});
+
+describe("in-clinic-tabs-follow-role", () => {
+  it("esconde pacientes de People e profissionais de quem atende", () => {
+    expect(visibleTabs("people")).toEqual({ patients: false, professionals: true });
+    expect(visibleTabs("therapeutic_companion")).toEqual({
+      patients: true,
+      professionals: false,
+    });
+    expect(visibleTabs("supervisor")).toEqual({ patients: true, professionals: false });
+    expect(visibleTabs("specialist")).toEqual({ patients: true, professionals: false });
+  });
+
+  it("a recepção e a coordenação veem as duas", () => {
+    expect(visibleTabs("attendant")).toEqual({ patients: true, professionals: true });
+    expect(visibleTabs("coordinator")).toEqual({ patients: true, professionals: true });
+  });
+});
+
+describe("alerta de presença", () => {
+  const base = {
+    id: "sr",
+    patient: { id: "p", name: "Noah", birthDate: "2019-04-30" },
+    checkinAt: CHECKIN,
+    checkinBy: "web" as const,
+  };
+
+  it("não alarma quem tem atendimento pronto", () => {
+    expect(
+      presenceAlert({
+        ...base,
+        schedules: [daySchedule("s", "2026-07-30T10:00:00.000-03:00", "ready_for_service")],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("não alarma quem já está em sessão", () => {
+    expect(
+      presenceAlert({
+        ...base,
+        schedules: [daySchedule("s", "2026-07-30T09:00:00.000-03:00", "ongoing")],
+      }),
+    ).toBeUndefined();
+  });
+
+  it("nomeia os horários atrasados em vez de só avisar do atraso", () => {
+    expect(
+      presenceAlert({
+        ...base,
+        schedules: [daySchedule("s", "2026-07-30T09:00:00.000-03:00", "delayed")],
+      }),
+    ).toMatch(/o atendimento das 09:00 está atrasado/);
+  });
+
+  it("avisa quando não há nada que possa começar", () => {
+    expect(presenceAlert({ ...base, schedules: [] })).toMatch(/não há atendimento pronto/);
+  });
+
+  it("não alarma quem já saiu", () => {
+    expect(
+      presenceAlert({ ...base, checkoutAt: "2026-07-30T10:00:00.000-03:00", schedules: [] }),
+    ).toBeUndefined();
   });
 });

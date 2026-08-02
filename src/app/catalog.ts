@@ -5,18 +5,21 @@ import { agendaFixtures } from "../fixtures/agenda.js";
 import { sessionFixtures } from "../fixtures/session.js";
 import { programFixtures } from "../fixtures/programs.js";
 import { protocolFixtures } from "../fixtures/protocols.js";
+import { inClinicFixtures } from "../fixtures/inClinic.js";
 import { patientFixtures } from "../fixtures/patients.js";
 import { financeFixtures } from "../fixtures/finance.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
 import { protocolRules } from "../rules/protocols.js";
+import { inClinicRules } from "../rules/inClinic.js";
 import { patientRules } from "../rules/patients.js";
 import { financeRules } from "../rules/finance.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
 import { protocolScenarios } from "../scenarios/protocols.js";
+import { inClinicScenarios } from "../scenarios/inClinic.js";
 import { patientScenarios } from "../scenarios/patients.js";
 import { financeScenarios } from "../scenarios/finance.js";
 
@@ -235,6 +238,31 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "in-clinic",
+    name: "Na Clínica",
+    description:
+      "O quadro da unidade: quem está presente agora, desde quando, e o que o check-in fez com a agenda do dia.",
+    flows: [
+      {
+        id: "watch-the-floor",
+        title: "Acompanhar o salão da unidade",
+        description:
+          "O quadro que a recepção mantém aberto, e o caso que exige alguém agir.",
+        steps: [
+          {
+            scenario: "in-clinic.morning",
+            label: "Ver quem está na unidade",
+            decision: "Há alguém presente sem atendimento que possa começar?",
+            branches: {
+              "Presente e sem nada pronto": "in-clinic.nothing-ready",
+              "Salão vazio": "in-clinic.empty",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -242,6 +270,7 @@ export const scenarios: Scenario[] = [
   ...sessionScenarios,
   ...programScenarios,
   ...protocolScenarios,
+  ...inClinicScenarios,
   ...patientScenarios,
   ...financeScenarios,
 ];
@@ -251,6 +280,7 @@ export const fixtures: Fixture[] = [
   ...sessionFixtures,
   ...programFixtures,
   ...protocolFixtures,
+  ...inClinicFixtures,
   ...patientFixtures,
   ...financeFixtures,
 ] as Fixture[];
@@ -260,6 +290,7 @@ export const rules: Rule[] = [
   ...sessionRules,
   ...programRules,
   ...protocolRules,
+  ...inClinicRules,
   ...patientRules,
   ...financeRules,
 ];

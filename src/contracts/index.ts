@@ -454,6 +454,66 @@ export type ProtocolExecutionData = {
 };
 
 /* ================================================================== *
+ * Na clínica — quem está na unidade agora
+ * ================================================================== */
+
+/**
+ * Origem de um check-in ou check-out.
+ *
+ * `system` só existe no check-out: é o fechamento automático de quem saiu sem
+ * registrar. Reproduzir a assimetria importa — um check-out feito pelo sistema
+ * não é prova de presença do mesmo jeito que um feito na recepção.
+ */
+export type CheckSource = "admin" | "web" | "app" | "system";
+
+/** Um agendamento do dia, resumido ao que o quadro da unidade mostra. */
+export type DaySchedule = {
+  id: string;
+  start: string;
+  end: string;
+  status: ScheduleStatus;
+  professionalName: string;
+  serviceName: string;
+};
+
+export type PatientPresence = {
+  id: string;
+  patient: PatientRef;
+  checkinAt: string;
+  checkinBy: Exclude<CheckSource, "system">;
+  checkoutAt?: string;
+  checkoutBy?: CheckSource;
+  /** Agendamentos do paciente no dia do check-in, em ordem de horário. */
+  schedules: DaySchedule[];
+  observation?: string;
+};
+
+export type ProfessionalPresence = {
+  id: string;
+  professional: Professional;
+  checkinAt: string;
+  checkoutAt?: string;
+  /** Quantos atendimentos ainda em aberto. Bloqueia iniciar o próximo. */
+  openSessions: number;
+};
+
+/**
+ * O quadro da unidade.
+ *
+ * No Bloomy real esta tela se atualiza sozinha: assina o canal de check-in e,
+ * além disso, recarrega a cada sessenta segundos. É um painel de parede da
+ * recepção, não um relatório — e isso muda o que pode ficar escondido atrás de
+ * um clique.
+ */
+export type InClinicData = {
+  unit: Unit;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+  patients: PatientPresence[];
+  professionals: ProfessionalPresence[];
+};
+
+/* ================================================================== *
  * Agenda
  * ================================================================== */
 

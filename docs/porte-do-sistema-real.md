@@ -138,6 +138,31 @@ Cinco regras, sete cenários, a tela `ProtocolApplication` e dezesseis testes.
 
 Verde: `pnpm check` e 164 jornadas Playwright.
 
+### 5. Clínico, parte 4: na clínica — `porte/clinico-na-clinica`
+
+Concluída.
+
+O quadro da unidade, e o que o check-in faz com a agenda do dia. É a única tela
+do Bloomy que se atualiza sozinha: assina o canal de check-in e recarrega a cada
+sessenta segundos. Painel de parede da recepção, não relatório.
+
+- **O check-in não é um carimbo.** Ele reescreve a situação de todos os
+  agendamentos do paciente naquele dia, em três `update_all` de
+  `ServiceRecords.Context` que ninguém lê ao desenhar a tela — e é o que decide
+  se o atendimento pode começar.
+- **Atraso e falta são coisas diferentes**, e o check-in é o que as separa. Sem
+  isso, o horário perdido fica igual a um horário nunca honrado, e o indicador
+  de falta deixa de servir para conversar com a família.
+- **O check-out devolve a Agendado tudo que estava Pronto no dia**, inclusive o
+  que ainda não começou. O paciente foi embora; nenhum horário continua pronto.
+- Este é o único módulo em que a decisão de exibição é por **papel** e não por
+  permissão nomeada, porque é assim no monólito. Está isolado em
+  `visibleTabs/1`, com nota para nenhuma outra tela copiar o padrão.
+
+Cinco regras, cinco cenários, a tela `InClinic` e vinte testes.
+
+Verde: `pnpm check` e 181 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -154,3 +179,4 @@ bugs do Design Space; são observações sobre o produto.
 | 7 | A cascata de aquisição pergunta pela negativa (`has_unaquired_step?`), então um nível **sem filhos** conta como adquirido. Um objetivo sem programas fecha sozinho. | `lib/bloomy/programs/context.ex:119` |
 | 8 | `ProtocolPolicy.can?(role, :list)` não inclui `supervisor`. Quem supervisiona o caso não alcança a avaliação que o originou — nem para leitura. | `lib/bloomy/protocols/protocol_policy.ex` |
 | 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |
+| 10 | No check-in, um horário vencido que estava em **Agendado** vira Atrasado, mas um que já estava em **Pronto** volta para Agendado. A mesma situação de fato — paciente presente, horário vencido — para em dois estados conforme o que veio antes. | `lib/bloomy/service_records/context.ex:94-141` |

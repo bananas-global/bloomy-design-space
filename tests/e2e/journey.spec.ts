@@ -444,6 +444,71 @@ test.describe("Protocolos", () => {
   });
 });
 
+/* ============================================================== na clínica */
+
+test.describe("Na Clínica", () => {
+  test("o quadro distingue quem chegou antes de quem chegou depois", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.morning"));
+
+    // Chegou antes do horário: os atendimentos seguintes ficaram prontos.
+    const theo = page.getByRole("listitem").filter({ hasText: "Théo Andrade Lins" });
+    await expect(theo.getByText("Pronto").first()).toBeVisible();
+
+    // Chegou depois: o horário vencido é atraso, não falta.
+    const isadora = page.getByRole("listitem").filter({ hasText: "Isadora Bueno Ramalho" });
+    await expect(isadora.getByText("Atrasado").first()).toBeVisible();
+    await expect(isadora.getByText(/o atendimento das 09:00 está atrasado/)).toBeVisible();
+  });
+
+  test("quem já saiu fica na página, em seção própria", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.morning"));
+
+    await expect(page.getByRole("heading", { name: "Já saíram hoje" })).toBeVisible();
+    const saiu = page.getByRole("listitem").filter({ hasText: "Laura Menendes Pinto" });
+    await expect(saiu.getByText(/Saiu às 09:05/)).toBeVisible();
+  });
+
+  test("a origem do check-in é dita em cada linha", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.morning"));
+
+    await expect(page.getByText(/registrado no totem/).first()).toBeVisible();
+    await expect(page.getByText(/registrado na recepção/).first()).toBeVisible();
+    await expect(page.getByText(/registrado pelo aplicativo/).first()).toBeVisible();
+  });
+
+  test("presente sem nada pronto é destacado como caso que exige ação", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.nothing-ready"));
+
+    const noah = page.getByRole("listitem").filter({ hasText: "Noah Rivas Camargo" });
+    await expect(noah.getByRole("heading", { name: "Precisa de alguém agora" })).toBeVisible();
+    await expect(noah.getByText(/não há atendimento pronto para começar/)).toBeVisible();
+  });
+
+  test("quem atende não vê a presença dos colegas", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.therapist-view"));
+
+    await expect(page.getByRole("heading", { name: "Pacientes na unidade" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Profissionais na unidade" })).toHaveCount(0);
+  });
+
+  test("o People vê só profissionais, com o que trava o próximo atendimento", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.people-view"));
+
+    await expect(page.getByRole("heading", { name: "Pacientes na unidade" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Profissionais na unidade" })).toBeVisible();
+    await expect(page.getByText("1 atendimento em aberto")).toBeVisible();
+  });
+
+  test("a unidade vazia explica o que aparece aqui", async ({ page }) => {
+    await page.goto(urlFor("in-clinic.empty"));
+
+    await expect(page.getByRole("heading", { name: "Ninguém na unidade agora" })).toBeVisible();
+    await expect(
+      page.getByText("Nenhum profissional com entrada registrada agora."),
+    ).toBeVisible();
+  });
+});
+
 /* =============================================================== pacientes */
 
 test.describe("Pacientes", () => {
