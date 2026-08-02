@@ -132,6 +132,28 @@ export const hourMapFixtures: Fixture<HourMapData>[] = [
     },
   },
   {
+    id: "hour-map-expiring",
+    label: "Vence em cinco dias, sem sucessor",
+    description:
+      "Mapa aplicado que termina em 04/08, com renovação automática desligada e nenhum mapa começando depois. É o que `hour_map_status=expiring` encontra.",
+    data: {
+      map: hourMap({ status: "applied", autoRenew: false, durationEnd: "2026-08-04" }),
+      now: NOW,
+      hasSuccessor: false,
+    },
+  },
+  {
+    id: "hour-map-expiring-with-successor",
+    label: "Vence em cinco dias, e já há o próximo",
+    description:
+      "O mesmo vencimento, com um mapa começando depois. A semana continua, e a tela precisa dizer isso em vez de calar.",
+    data: {
+      map: hourMap({ status: "applied", autoRenew: false, durationEnd: "2026-08-04" }),
+      now: NOW,
+      hasSuccessor: true,
+    },
+  },
+  {
     id: "hour-map-empty",
     label: "Mapa em branco",
     description: "Nenhum horário desenhado ainda. Não há o que aplicar.",

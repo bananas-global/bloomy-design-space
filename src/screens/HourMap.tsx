@@ -15,6 +15,9 @@ import {
 import {
   canApply,
   canEdit,
+  daysToExpiry,
+  expiryMessage,
+  expiryState,
   conflictMessage,
   losesProfessional,
   losesRoom,
@@ -98,6 +101,30 @@ export function HourMapScreen({ context }: ScreenProps) {
           </ul>
         </Notice>
       )}
+
+      {/* O vencimento vem antes da grade: um mapa que termina sem sucessor é
+          intervenção que para, e isso decide o que fazer com a tela toda.
+          A frase existe para todos os estados menos o seguro — ausência de
+          etiqueta não é sinal, porque ninguém repara no que não está lá. */}
+      {(() => {
+        const estado = expiryState(map, mapData.now, mapData.hasSuccessor);
+        const frase = expiryMessage(estado, daysToExpiry(map, mapData.now));
+        if (!frase) return null;
+        return (
+          <Notice
+            tone={estado === "expiring-without-successor" || estado === "over" ? "danger" : "info"}
+            title={
+              estado === "expiring-without-successor"
+                ? "A semana do paciente deixa de existir"
+                : estado === "over"
+                  ? "Sem semana pretendida em vigor"
+                  : "Vencimento do mapa"
+            }
+          >
+            {frase}
+          </Notice>
+        );
+      })()}
 
       {map.warnings.length > 0 && (
         <Notice tone="info" title="Avisos gerados na aplicação">

@@ -5058,3 +5058,74 @@ describe("tamanho do problema", () => {
     expect(shareOfActive(gapsData([], 0))).toBeUndefined();
   });
 });
+
+/* ============================================== Vencimento do mapa de horas */
+
+import { daysToExpiry, expiryMessage, expiryState } from "../src/rules/hourMap.js";
+
+describe("expiring-map-without-successor-is-a-gap-in-therapy", () => {
+  const base: HourMap = {
+    id: "hm",
+    patient: { id: "p", name: "Théo", birthDate: "2019-11-04" },
+    unitName: "Pinheiros",
+    status: "applied",
+    durationStart: "2026-01-01",
+    durationEnd: "2026-08-04",
+    autoRenew: false,
+    slots: [],
+    warnings: [],
+  };
+
+  it("mede os dias até o fim da vigência", () => {
+    expect(daysToExpiry(base, "2026-07-30T09:00:00.000-03:00")).toBe(5);
+  });
+
+  it("renovar sozinho resolve o vencimento, e vem antes de medir dias", () => {
+    expect(expiryState({ ...base, autoRenew: true }, "2026-07-30T09:00:00.000-03:00", false)).toBe(
+      "renews",
+    );
+  });
+
+  it("ter sucessor resolve o vencimento, mesmo sem renovação automática", () => {
+    expect(expiryState(base, "2026-07-30T09:00:00.000-03:00", true)).toBe("has-successor");
+  });
+
+  it("sem renovação e sem sucessor, dentro de sete dias, é interrupção", () => {
+    expect(expiryState(base, "2026-07-30T09:00:00.000-03:00", false)).toBe(
+      "expiring-without-successor",
+    );
+  });
+
+  it("fora da janela de sete dias ainda avisa, com outro tom", () => {
+    expect(expiryState({ ...base, durationEnd: "2026-12-31" }, "2026-07-30T09:00:00.000-03:00", false)).toBe(
+      "far",
+    );
+  });
+
+  it("vigência vencida é um estado próprio, e não “expirando”", () => {
+    expect(expiryState({ ...base, durationEnd: "2026-07-01" }, "2026-07-30T09:00:00.000-03:00", false)).toBe(
+      "over",
+    );
+  });
+});
+
+describe("auto-renew-off-is-invisible", () => {
+  it("só o caso seguro fica calado — ausência de aviso não é sinal", () => {
+    expect(expiryMessage("renews", 5)).toBeUndefined();
+    expect(expiryMessage("has-successor", 5)).toContain("A semana continua");
+    expect(expiryMessage("far", 90)).toContain("não renova sozinho");
+  });
+
+  it("o aviso de interrupção diz a consequência clínica, e não só a data", () => {
+    const frase = expiryMessage("expiring-without-successor", 5);
+    // Não repete o título do aviso: traz o prazo e a razão.
+    expect(frase).not.toContain("deixa de existir");
+    expect(frase).toContain("regride");
+    expect(frase).toContain("não há nenhum mapa começando depois");
+  });
+
+  it("concorda em número com um dia", () => {
+    expect(expiryMessage("expiring-without-successor", 1)).toContain("Termina em 1 dia,");
+    expect(expiryMessage("over", 1)).toContain("1 dia");
+  });
+});
