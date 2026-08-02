@@ -59,6 +59,17 @@ test.describe("acessibilidade por cenário", () => {
 
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        // O que carrega `espelho-do-sistema` é cópia fiel do produto, e o produto
+        // reprova em contraste nesses pontos: branco sobre o azul do drawer dá
+        // 2,22:1, e o verde do rótulo de unidade sobre branco dá 2,81:1 — contra
+        // os 4,5:1 exigidos. Não é defeito desta especificação, é o sistema.
+        // Registrado como achado 99 e medido no teste `contraste.spec.ts`, que
+        // falha se qualquer um dos dois números mudar.
+        //
+        // Sem esta exclusão a mesma violação aparece em todos os 254 cenários e
+        // afoga qualquer problema novo. Excluir sem medir seria esconder; por
+        // isso as duas coisas andam juntas.
+        .exclude(".espelho-do-sistema")
         .analyze();
 
       const blocking = results.violations.filter((violation) =>
@@ -1190,8 +1201,35 @@ test.describe("superfícies", () => {
     await page.goto(urlFor("in-clinic.morning"));
 
     const nav = page.getByLabel("Navegação principal");
-    for (const item of ["Agenda", "Na Clínica", "Pacientes", "Equipe", "Estrutura"]) {
+
+    // Os rótulos do **sistema**, não os meus. Este teste antes fixava "Agenda",
+    // "Equipe" e "Estrutura", que eu tinha inventado; o produto diz
+    // "Agendamentos", "Profissionais" e "Unidades". Um espelho que renomeia
+    // deixa de ser espelho, e era o teste que estava segurando a invenção.
+    for (const item of [
+      "Agendamentos",
+      "Mapa da Unidade",
+      "Pacientes",
+      "Leads",
+      "Na Clínica",
+      "Profissionais",
+      "Unidades",
+      "Fechamentos",
+      // "Supervisão" fica de fora de propósito: ela é filtrada por
+      // `professionals.list_supervisor`, e a persona deste cenário não tem.
+      // Afirmá-la aqui testaria a navegação ignorando a permissão, que é
+      // metade do que o menu real faz.
+    ]) {
       await expect(nav.getByRole("link", { name: item })).toBeVisible();
+    }
+
+    // E os itens que existem no sistema e ainda não foram portados aparecem,
+    // inativos. Esconder faria o Design Space parecer mais completo do que é.
+    // Só os que não dependem de permissão: "Biblioteca" e "Serviços" também
+    // estão pendentes, mas são filtrados, e esta persona não os alcança.
+    for (const pendente of ["Dashboard", "Operadoras", "Bloqueios", "Colaboradores"]) {
+      await expect(nav.getByText(pendente, { exact: true })).toBeVisible();
+      await expect(nav.getByRole("link", { name: pendente })).toHaveCount(0);
     }
   });
 });

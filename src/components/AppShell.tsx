@@ -1,10 +1,36 @@
 import type { ReactNode } from "react";
 import type { ScenarioContext } from "@brucesantos/design-space";
 import symbol from "../assets/bloomy-symbol-negative.svg";
+import {
+  IconAgendamentos,
+  IconAtendimentos,
+  IconAutorizacoes,
+  IconBiblioteca,
+  IconBloqueios,
+  IconColaboradores,
+  IconDashboard,
+  IconFechamentos,
+  IconGerencia,
+  IconLeads,
+  IconMapaDaUnidade,
+  IconNaClinica,
+  IconOperadoras,
+  IconPacientes,
+  IconProfissionais,
+  IconServicos,
+  IconSidebar,
+  IconSupervisao,
+  IconUnidades,
+} from "./NavIcons.js";
 
 /**
- * Chrome do Bloomy: drawer navy à esquerda, cabeçalho com contexto de unidade e
- * perfil, conteúdo sobre o fundo ciano claro.
+ * Chrome do Bloomy — **espelho** do backoffice real.
+ *
+ * Portado de `lib/bloomy_web/components/layouts/backoffice.html.heex` e de
+ * `BackofficeComponents.drawer/1`. Antes disto o shell era invenção minha: menu
+ * navy, rótulos que o produto não usa, e o título da página no cabeçalho. O
+ * sistema tem drawer **azul-claro** (`brand-blue`), rótulos próprios, e o
+ * título dentro do conteúdo.
  *
  * Isto é UI de cliente e por isso vive no repositório do produto, nunca no motor
  * (regra de fronteira, §8). Um AppShell no pacote compartilhado forçaria Bloomy
@@ -12,33 +38,49 @@ import symbol from "../assets/bloomy-symbol-negative.svg";
  */
 
 type NavItem = {
+  /** O rótulo exato do sistema. */
   label: string;
-  path: string;
-  /** Permissão mínima para o item aparecer. */
-  /** Ausente quando o item não é filtrado por permissão — notificações são de todo mundo. */
+  /** A rota daqui, quando a situação já foi portada. */
+  path?: string;
+  Icon: (props: { className?: string }) => ReactNode;
+  /** Permissão mínima para o item aparecer, como no `:if` do layout real. */
   permission?: string;
+  /** Rota do sistema real, para quem for conferir o espelho. */
+  origem: string;
 };
 
 /**
- * Navegação do backoffice.
+ * Navegação do backoffice, na ordem do sistema.
  *
- * Só o que tem uma tela de lista própria. Atendimento, plano e protocolo se
- * alcançam a partir da agenda e do paciente — inventar itens de menu para eles
- * descreveria uma navegação que o produto não tem.
+ * **Os rótulos são os de lá, não os meus.** O produto diz "Agendamentos",
+ * "Leads", "Profissionais", "Biblioteca", "Colaboradores"; eu tinha inventado
+ * "Agenda", "Visitas", "Equipe", "Estrutura". Um espelho que renomeia deixa de
+ * ser espelho, e o vocabulário é a parte do produto que mais aparece em
+ * conversa.
+ *
+ * Itens sem `path` existem no sistema e ainda não foram portados. Aparecem
+ * desativados de propósito: esconder a lacuna faria o Design Space parecer mais
+ * completo do que é.
  */
 const NAV: NavItem[] = [
-  { label: "Agenda", path: "/agenda", permission: "schedules.list" },
-  { label: "Na Clínica", path: "/in-clinic", permission: "closures.list" },
-  { label: "Pacientes", path: "/patients", permission: "patients.list" },
-  { label: "Visitas", path: "/prospects", permission: "patients.create" },
-  { label: "Equipe", path: "/team", permission: "professionals.list" },
-  { label: "Estrutura", path: "/structure", permission: "services.list" },
-  { label: "Autorizações", path: "/authorizations", permission: "authorizations.hub" },
-  { label: "Fechamentos", path: "/closures", permission: "closures.list" },
-  { label: "Mapa da unidade", path: "/unit-map", permission: "unit_maps.show" },
-  { label: "Supervisão", path: "/supervision", permission: "professionals.list_supervisor" },
-  { label: "Gerência", path: "/management", permission: "management.list" },
-  { label: "Notificações", path: "/notifications" },
+  { label: "Dashboard", Icon: IconDashboard, origem: "/backoffice" },
+  { label: "Agendamentos", path: "/agenda", Icon: IconAgendamentos, permission: "schedules.list", origem: "/backoffice/agendamentos" },
+  { label: "Mapa da Unidade", path: "/unit-map", Icon: IconMapaDaUnidade, permission: "unit_maps.show", origem: "/backoffice/mapa-da-unidade" },
+  { label: "Pacientes", path: "/patients", Icon: IconPacientes, permission: "patients.list", origem: "/backoffice/pacientes" },
+  { label: "Leads", path: "/prospects", Icon: IconLeads, permission: "patients.create", origem: "/backoffice/visitas" },
+  { label: "Na Clínica", path: "/in-clinic", Icon: IconNaClinica, permission: "closures.list", origem: "/backoffice/na-clinica" },
+  { label: "Biblioteca", Icon: IconBiblioteca, permission: "programs.list", origem: "/backoffice/programas" },
+  { label: "Profissionais", path: "/team", Icon: IconProfissionais, permission: "professionals.list", origem: "/backoffice/profissionais" },
+  { label: "Unidades", path: "/structure", Icon: IconUnidades, permission: "services.list", origem: "/backoffice/unidades" },
+  { label: "Central de autorizações", path: "/authorizations", Icon: IconAutorizacoes, permission: "authorizations.hub", origem: "/backoffice/central_autorizacoes" },
+  { label: "Operadoras", Icon: IconOperadoras, origem: "/backoffice/operadoras" },
+  { label: "Serviços", Icon: IconServicos, permission: "services.list", origem: "/backoffice/servicos" },
+  { label: "Bloqueios", Icon: IconBloqueios, origem: "/backoffice/bloqueios" },
+  { label: "Atendimentos", path: "/clinical-hours", Icon: IconAtendimentos, origem: "/backoffice/atendimentos" },
+  { label: "Fechamentos", path: "/closures", Icon: IconFechamentos, permission: "closures.list", origem: "/backoffice/financeiro/fechamentos" },
+  { label: "Listas gerenciais", path: "/management", Icon: IconGerencia, permission: "management.list", origem: "/backoffice/gerencia" },
+  { label: "Colaboradores", Icon: IconColaboradores, origem: "/backoffice/usuarios" },
+  { label: "Supervisão", path: "/supervision", Icon: IconSupervisao, permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
 ];
 
 /**
@@ -72,13 +114,16 @@ export function AppShell({
   children: ReactNode;
 }) {
   const currentPath = typeof window === "undefined" ? "" : window.location.pathname;
+  const visiveis = NAV.filter(
+    (item) => item.permission === undefined || context.can(item.permission),
+  );
 
   return (
-    <div className="flex min-h-full bg-app">
-      {/* O link de pulo é o primeiro elemento focável da página. Sem ele, cada
-          tela do backoffice obriga a atravessar o drawer inteiro por Tab antes
-          de chegar ao conteúdo. Nos portais o drawer não existe, e o link
-          continua útil por causa do cabeçalho. */}
+    <div className="relative flex min-h-full min-w-0 bg-app">
+      {/* Primeiro elemento focável da página. Sem ele, cada tela do backoffice
+          obriga a atravessar o drawer inteiro por Tab antes de chegar ao
+          conteúdo. Nos portais o drawer não existe, e o link continua útil por
+          causa do cabeçalho. */}
       <a
         href="#conteudo"
         className="sr-only rounded-field bg-action px-3 py-2 text-sm font-semibold text-white focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50"
@@ -87,89 +132,143 @@ export function AppShell({
       </a>
 
       {surface === "backoffice" && (
-      <nav
-        className="bloomy-drawer sticky top-0 flex h-screen w-[220px] shrink-0 flex-col gap-1 bg-navy px-3 py-5 text-white"
-        aria-label="Navegação principal"
-      >
-        <div className="mb-5 flex items-center gap-2.5 px-2">
-          <img src={symbol} alt="" width={26} height={26} aria-hidden="true" />
-          <span className="text-lg font-extrabold tracking-tight">Bloomy</span>
-        </div>
+        <nav
+          className="bloomy-drawer espelho-do-sistema sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-hidden bg-[var(--color-brand-blue)] p-4"
+          aria-label="Navegação principal"
+        >
+          {/* No sistema o logotipo cheio aparece com o drawer aberto, e só o
+              símbolo quando recolhido. Aqui ele fica sempre aberto: recolher é
+              estado de uso, e o Design Space serve para comparar telas. */}
+          <img src={symbol} alt="Bloomy" className="mx-auto mb-8 mt-4 h-12" />
 
-        {NAV.filter((item) => item.permission === undefined || context.can(item.permission)).map((item) => {
-          const isCurrent = currentPath.startsWith(item.path);
-          return (
-            <a
-              key={item.path}
-              href={item.path}
-              aria-current={isCurrent ? "page" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                context.navigate(item.path);
-              }}
-              className={[
-                "rounded-field px-3 py-2 text-[0.9375rem] font-semibold no-underline transition-colors",
-                isCurrent
-                  ? "bg-white/12 text-white shadow-[inset_3px_0_0_0_var(--color-cyan-brand)]"
-                  : "text-ink-300 hover:bg-white/8 hover:text-white",
-              ].join(" ")}
-            >
-              {item.label}
-            </a>
-          );
-        })}
+          <ul className="m-0 flex list-none flex-col gap-2 overflow-y-auto overflow-x-hidden p-0">
+            {visiveis.map((item) => {
+              const atual = item.path !== undefined && currentPath.startsWith(item.path);
+              const naoPortado = item.path === undefined;
 
-        <div className="mt-auto border-t border-white/10 px-2 pt-4">
-          <p className="m-0 text-[0.6875rem] font-black uppercase tracking-wide text-ink-300">Perfil</p>
-          <p className="m-0 mt-0.5 text-sm font-semibold text-white">
-            {context.persona?.name ?? "—"}
-          </p>
-        </div>
-      </nav>
+              // Item sem tela ainda: visível e inativo, com o motivo. É a mesma
+              // convenção das ações bloqueadas do produto — esconder faria a
+              // navegação parecer completa.
+              if (naoPortado) {
+                return (
+                  <li key={item.label}>
+                    <span
+                      className="flex h-12 w-full cursor-default items-center gap-2.5 rounded-lg px-4 text-lg font-bold text-white/45"
+                      title={`Existe no sistema (${item.origem}) e ainda não foi portado`}
+                    >
+                      <item.Icon className="h-5 w-5 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </span>
+                  </li>
+                );
+              }
+
+              return (
+                <li key={item.label}>
+                  <a
+                    href={item.path}
+                    aria-current={atual ? "page" : undefined}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      context.navigate(item.path!);
+                    }}
+                    className={[
+                      "flex h-12 w-full items-center gap-2.5 rounded-lg px-4 text-lg font-bold text-white no-underline transition-colors",
+                      atual
+                        ? "bg-[var(--color-brand-blue-dark)]"
+                        : "hover:bg-[var(--color-brand-blue-dark)]/40",
+                    ].join(" ")}
+                  >
+                    <item.Icon className="h-5 w-5 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-[var(--border-soft)] bg-surface px-7 py-5">
-          {breadcrumb && breadcrumb.length > 0 && (
-            <nav aria-label="Trilha de navegação" className="mb-1.5">
-              <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[0.8125rem] text-[var(--fg-2)]">
-                {breadcrumb.map((crumb, index) => (
-                  <li key={crumb.label} className="flex items-center gap-1.5">
-                    {index > 0 && (
-                      <span aria-hidden="true" className="text-[var(--fg-3)]">
-                        /
-                      </span>
-                    )}
-                    {crumb.path ? (
-                      <a
-                        href={crumb.path}
-                        className="text-action underline-offset-2 hover:underline"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          context.navigate(crumb.path!);
-                        }}
-                      >
-                        {crumb.label}
-                      </a>
-                    ) : (
-                      <span>{crumb.label}</span>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
+        {surface === "backoffice" && (
+          <header className="sticky top-0 z-40 flex items-center justify-between gap-4 bg-surface px-4 py-4 shadow-[var(--shadow-main)] lg:px-8">
+            <div className="flex min-w-0 items-center gap-4">
+              <IconSidebar className="hidden h-5 w-5 shrink-0 text-[var(--color-brand-purple-dark)]/60 lg:block" />
+              {breadcrumb && breadcrumb.length > 0 && (
+                <nav aria-label="Trilha de navegação" className="min-w-0">
+                  <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[0.8125rem] text-[var(--fg-2)]">
+                    {breadcrumb.map((crumb, index) => (
+                      <li key={crumb.label} className="flex items-center gap-1.5">
+                        {index > 0 && (
+                          <span aria-hidden="true" className="text-[var(--fg-3)]">
+                            /
+                          </span>
+                        )}
+                        {crumb.path ? (
+                          <a
+                            href={crumb.path}
+                            className="text-action underline-offset-2 hover:underline"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              context.navigate(crumb.path!);
+                            }}
+                          >
+                            {crumb.label}
+                          </a>
+                        ) : (
+                          <span>{crumb.label}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
+              )}
+            </div>
 
-          <div className="flex flex-wrap items-start justify-between gap-4">
+            {/* Unidade e perfil, à direita, como no sistema: rótulo pequeno em
+                cor forte sobre o valor, e um quadrado de ícone ao lado. */}
+            <div className="flex shrink-0 items-center gap-x-4 md:gap-x-6">
+              <div className="flex items-center gap-2">
+                <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
+                  {/* Verde do sistema sobre branco: 2,81:1. Reprova AA, e é o
+                      valor do produto — achado 99. */}
+                  <span className="block text-base/4 font-black text-[var(--color-green)]">
+                    Unidade
+                  </span>
+                  Vila Aurora
+                </p>
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-green)]/20">
+                  <IconUnidades className="h-5 w-5 text-[var(--color-green)]" />
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <p className="m-0 hidden text-end text-sm md:block">
+                  <span className="block text-base/4 font-black text-[var(--color-purple)]">
+                    Perfil
+                  </span>
+                  {context.persona?.name ?? "—"}
+                </p>
+                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand-purple)]/20">
+                  <IconColaboradores className="h-5 w-5 text-[var(--color-purple)]" />
+                </span>
+              </div>
+            </div>
+          </header>
+        )}
+
+        {/* O título vive **dentro** do conteúdo, como no sistema. Antes ele
+            ficava no cabeçalho, fora do `<main>`: quem usava o atalho de pular
+            aterrissava depois dele, sem nada para se orientar. */}
+        <main id="conteudo" className="min-w-0 flex-1 px-4 py-6 lg:px-8">
+          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h1 className="m-0 text-2xl font-bold text-navy">{title}</h1>
               {subtitle && <p className="m-0 mt-1 text-sm text-[var(--fg-2)]">{subtitle}</p>}
             </div>
             {actions && <div className="flex flex-wrap items-start gap-2.5">{actions}</div>}
           </div>
-        </header>
 
-        <main id="conteudo" className="min-w-0 flex-1 px-7 py-6">
           {children}
         </main>
       </div>
