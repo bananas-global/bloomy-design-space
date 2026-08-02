@@ -366,6 +366,84 @@ test.describe("Programas", () => {
   });
 });
 
+/* ============================================================== protocolos */
+
+test.describe("Protocolos", () => {
+  test("o percentual nunca aparece sozinho: diz que é preenchimento", async ({ page }) => {
+    await page.goto(urlFor("protocols.in-progress"));
+
+    await expect(
+      page.getByText("3 de 8 itens respondidos — 38% do instrumento preenchido"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("É medida de preenchimento, não de desempenho do paciente."),
+    ).toBeVisible();
+  });
+
+  test("cada área tem progresso próprio", async ({ page }) => {
+    await page.goto(urlFor("protocols.in-progress"));
+
+    await expect(page.getByText("2 de 3 respondidos nesta área — 67%")).toBeVisible();
+    await expect(page.getByText("1 de 3 respondidos nesta área — 33%")).toBeVisible();
+    // A área ainda intocada aparece, em vez de sumir por estar vazia.
+    await expect(page.getByText("0 de 2 respondidos nesta área — 0%")).toBeVisible();
+  });
+
+  test("retomar aponta o primeiro em branco, não o próximo da lista", async ({ page }) => {
+    await page.goto(urlFor("protocols.resume"));
+
+    // Posicionado em B1, que já está respondido: retomar vai para B2.
+    await expect(page.getByRole("button", { name: "Retomar em B2" })).toBeVisible();
+    await expect(page.getByText(/área atual primeiro, depois nas seguintes/)).toBeVisible();
+  });
+
+  test("no ABLLS-R cada item tem faixa própria, e elas diferem", async ({ page }) => {
+    await page.goto(urlFor("protocols.abllsr"));
+
+    await expect(page.getByText("Resposta — faixa de 0 a 4, própria deste item").first()).toBeVisible();
+    await expect(page.getByText("Resposta — faixa de 0 a 2, própria deste item")).toBeVisible();
+
+    // A escala compartilhada não existe neste formato e não pode aparecer.
+    await expect(page.getByText("Resposta — escala do protocolo")).toHaveCount(0);
+    // Item sem pontuação diz isso, em vez de mostrar zero.
+    await expect(page.getByText("sem pontuação registrada")).toBeVisible();
+  });
+
+  test("a reavaliação sai do intervalo do instrumento", async ({ page }) => {
+    await page.goto(urlFor("protocols.finished"));
+
+    await expect(page.getByRole("heading", { name: "Próxima reavaliação" })).toBeVisible();
+    await expect(page.getByText(/reavaliação a cada 6 meses/)).toBeVisible();
+    await expect(page.getByText(/O intervalo é do instrumento, não escolha de quem aplica/)).toBeVisible();
+  });
+
+  test("a reavaliação vencida diz há quantos dias, não só que venceu", async ({ page }) => {
+    await page.goto(urlFor("protocols.reassessment-overdue"));
+
+    await expect(
+      page.getByRole("heading", { name: "Reavaliação atrasada em 10 dias" }),
+    ).toBeVisible();
+  });
+
+  test("a aplicação recém-aberta mostra zero sem esconder área nenhuma", async ({ page }) => {
+    await page.goto(urlFor("protocols.empty"));
+
+    await expect(
+      page.getByText("0 de 8 itens respondidos — 0% do instrumento preenchido"),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Retomar em A1" })).toBeVisible();
+    await expect(page.getByText(/respondidos nesta área/)).toHaveCount(3);
+  });
+
+  test("a recepção não alcança protocolos, e a tela diz quem alcança", async ({ page }) => {
+    await page.goto(urlFor("protocols.no-access"));
+
+    await expect(
+      page.getByRole("heading", { name: "Você não tem acesso a protocolos" }),
+    ).toBeVisible();
+  });
+});
+
 /* =============================================================== pacientes */
 
 test.describe("Pacientes", () => {

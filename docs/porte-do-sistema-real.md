@@ -115,6 +115,29 @@ português em lugar nenhum, nem na interface.
 
 Verde: `pnpm check` e 142 jornadas Playwright, com axe em todos os cenários.
 
+### 4. Clínico, parte 3: protocolos — `porte/clinico-protocolos`
+
+Concluída.
+
+A avaliação de onde o plano nasce. Um protocolo tem dezenas de itens e é
+aplicado ao longo de várias sessões — e é isso que transforma duas coisas que
+pareceriam detalhe de interface em regra de negócio.
+
+- **Onde a aplicação retoma.** `ProtocolNextQuestion` busca o primeiro item em
+  branco em três etapas: resto da área atual, áreas seguintes, e só então o
+  protocolo desde o começo. A terceira etapa é o que recupera item pulado lá
+  atrás; sem ela, quem voltou uma área para corrigir algo ficaria preso.
+- **O que o percentual significa.** `CalculateProtocolExecution` mede
+  preenchimento, não desempenho. São leituras opostas do mesmo número, e a
+  segunda vira conversa com a família. A tela nunca mostra o número sozinho.
+- **Os dois formatos.** No padrão, a escala de resposta é compartilhada por todo
+  o protocolo. No ABLLS-R, cada item tem faixa numérica própria — e faixas
+  diferentes convivem na mesma área.
+
+Cinco regras, sete cenários, a tela `ProtocolApplication` e dezesseis testes.
+
+Verde: `pnpm check` e 164 jornadas Playwright.
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -129,3 +152,5 @@ bugs do Design Space; são observações sobre o produto.
 | 5 | `Appointment.valid_register?/1` retorna `true` quando o texto está **vazio**. O comportamento em `Finish` está correto; o nome diz o oposto do que a função faz. | `lib/bloomy/custom_services/appointment.ex:89` |
 | 6 | `ProgramPolicy` não inclui `applicator` em nenhuma das oito ações, nem em `list`. Quem aplica o programa não tem permissão de vê-lo. | `lib/bloomy/programs/program_policy.ex` |
 | 7 | A cascata de aquisição pergunta pela negativa (`has_unaquired_step?`), então um nível **sem filhos** conta como adquirido. Um objetivo sem programas fecha sozinho. | `lib/bloomy/programs/context.ex:119` |
+| 8 | `ProtocolPolicy.can?(role, :list)` não inclui `supervisor`. Quem supervisiona o caso não alcança a avaliação que o originou — nem para leitura. | `lib/bloomy/protocols/protocol_policy.ex` |
+| 9 | Em `CalculateProtocolExecution`, a variável que guarda as questões **respondidas** se chama `unanswered_count`. A conta está certa; o nome diz o contrário. Mesma classe do achado 5. | `lib/bloomy/custom_services/calculate_protocol_execution.ex:6` |

@@ -6,6 +6,7 @@ import { AgendaDay } from "../screens/AgendaDay.js";
 import { AppointmentDetail } from "../screens/AppointmentDetail.js";
 import { SessionDetail } from "../screens/SessionDetail.js";
 import { InterventionPlanScreen } from "../screens/InterventionPlan.js";
+import { ProtocolApplication } from "../screens/ProtocolApplication.js";
 import { PatientList } from "../screens/PatientList.js";
 import { PatientDetail } from "../screens/PatientDetail.js";
 import { ClaimList } from "../screens/ClaimList.js";
@@ -38,6 +39,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients", screen: PatientList },
     { path: "/patients/:id", screen: PatientDetail },
     { path: "/patients/:id/plan", screen: InterventionPlanScreen },
+    { path: "/patients/:id/protocols/:executionId", screen: ProtocolApplication },
     { path: "/finance", screen: ClaimList },
     { path: "/finance/claims/:id", screen: ClaimDetail },
   ],

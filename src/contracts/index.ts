@@ -361,6 +361,99 @@ export type InterventionPlanData = {
 };
 
 /* ================================================================== *
+ * Protocolos — a avaliação de onde o plano nasce
+ * ================================================================== */
+
+/**
+ * Formato do protocolo, e a diferença é de escala de resposta.
+ *
+ * `default` usa uma escala compartilhada por todo o protocolo — as `answers` do
+ * `Bloomy.Protocols.Protocol`, cada uma com nome e valor. `abllsr` pontua item a
+ * item numa faixa numérica própria, configurada por questão em
+ * `QuestionConfigurations.Abllsr` com `min` e `max`.
+ *
+ * A consequência para o desenho é direta: no formato padrão, a mesma lista de
+ * opções serve a página inteira; no ABLLS-R, cada questão tem a sua faixa e o
+ * controle muda de questão para questão.
+ */
+export type ProtocolFormat = "default" | "abllsr";
+
+export type ProtocolEvaluationType = "evaluation_habilits" | "others";
+
+/** Uma opção da escala compartilhada, no formato padrão. */
+export type ProtocolAnswerOption = {
+  id: string;
+  name: string;
+  value: number;
+};
+
+export type ProtocolQuestion = {
+  id: string;
+  /** Código do item no instrumento — é por ele que a clínica se refere à questão. */
+  code: string;
+  name: string;
+  question: string;
+  /** Critério de pontuação do item. Obrigatório no monólito. */
+  criteria: string;
+  example?: string;
+  objective?: string;
+  position: number;
+  /** Faixa de pontuação do item. Só existe no formato ABLLS-R. */
+  range?: { min: number; max: number };
+  /** Resposta registrada. Ausente significa não respondida. */
+  answer?: { value: number; label?: string; at: string };
+  observation?: string;
+};
+
+/**
+ * Área do protocolo.
+ *
+ * O nome de exibição vem de `orientation`, não de um campo `name` — a `Area` do
+ * monólito não tem `name`. Reproduzido assim de propósito: quem for conferir
+ * contra o Elixir precisa achar o campo.
+ */
+export type ProtocolArea = {
+  id: string;
+  orientation: string;
+  group?: string;
+  details?: string;
+  position: number;
+  questions: ProtocolQuestion[];
+};
+
+export type Protocol = {
+  id: string;
+  name: string;
+  format: ProtocolFormat;
+  evaluationType: ProtocolEvaluationType;
+  /** Intervalo até a próxima reavaliação, em meses. Obrigatório no monólito. */
+  nextReassessmentInMonths: number;
+  explication: string;
+  /** Escala compartilhada. Vazia no formato ABLLS-R, que pontua por faixa. */
+  answers: ProtocolAnswerOption[];
+  areas: ProtocolArea[];
+  nextVersionId?: string;
+};
+
+export type ProtocolExecution = {
+  id: string;
+  protocol: Protocol;
+  patient: PatientRef;
+  startedAt: string;
+  finishedAt?: string;
+  /** Calculada na aplicação a partir de `nextReassessmentInMonths`. */
+  reassessmentDate?: string;
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+  /** Questão em foco na navegação. */
+  currentQuestionId?: string;
+};
+
+export type ProtocolExecutionData = {
+  execution: ProtocolExecution;
+};
+
+/* ================================================================== *
  * Agenda
  * ================================================================== */
 

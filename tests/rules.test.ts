@@ -9,6 +9,8 @@ import type {
   Patient,
   PlanProgram,
   PlanStep,
+  Protocol,
+  ProtocolQuestion,
   StepSessionResult,
 } from "../src/contracts/index.js";
 import { ageInYears, isMinor, TODAY } from "../src/contracts/index.js";
@@ -46,6 +48,16 @@ import {
   sessionsRemaining,
   sessionsTowardMastery,
 } from "../src/rules/programs.js";
+import {
+  answerControl,
+  areaProgress,
+  completion,
+  daysUntilReassessment,
+  isComplete,
+  neighbour,
+  nextUnanswered,
+  reassessmentDate,
+} from "../src/rules/protocols.js";
 
 /**
  * Testes das regras de negócio.
@@ -900,5 +912,202 @@ describe("superseded-version-keeps-its-history", () => {
     expect(canEditProgram({ ...base, nextVersionId: "v2" }, []).reason).toMatch(
       /não edita programas/,
     );
+  });
+});
+
+/* ============================================================== protocolos */
+
+/**
+ * A navegação do protocolo é regra de negócio porque a aplicação atravessa
+ * sessões: retomar no lugar errado é como item fica sem resposta sem ninguém
+ * notar, e o instrumento sai incompleto sem aviso.
+ */
+
+function protocolQuestion(
+  id: string,
+  position: number,
+  answered = false,
+  range?: { min: number; max: number },
+): ProtocolQuestion {
+  return {
+    id,
+    code: id.toUpperCase(),
+    name: id,
+    question: id,
+    criteria: "critério",
+    position,
+    ...(range ? { range } : {}),
+    ...(answered ? { answer: { value: 2, at: "2026-07-23T10:00:00.000-03:00" } } : {}),
+  };
+}
+
+function protocolo(overrides: Partial<Protocol> = {}): Protocol {
+  return {
+    id: "prot",
+    name: "Protocolo",
+    format: "default",
+    evaluationType: "evaluation_habilits",
+    nextReassessmentInMonths: 6,
+    explication: "explicação",
+    answers: [
+      { id: "o1", name: "Não faz", value: 1 },
+      { id: "o2", name: "Faz com ajuda", value: 2 },
+    ],
+    areas: [
+      {
+        id: "area-1",
+        orientation: "Área 1",
+        position: 1,
+        questions: [
+          protocolQuestion("a1", 1, true),
+          protocolQuestion("a2", 2, true),
+          protocolQuestion("a3", 3),
+        ],
+      },
+      {
+        id: "area-2",
+        orientation: "Área 2",
+        position: 2,
+        questions: [protocolQuestion("b1", 1), protocolQuestion("b2", 2)],
+      },
+    ],
+    ...overrides,
+  };
+}
+
+describe("protocol-resumes-at-first-unanswered", () => {
+  it("procura primeiro no resto da área atual", () => {
+    expect(nextUnanswered(protocolo(), "a1")?.id).toBe("a3");
+  });
+
+  it("passa para a próxima área quando a atual acabou", () => {
+    expect(nextUnanswered(protocolo(), "a3")?.id).toBe("b1");
+  });
+
+  it("volta ao começo para recuperar o que ficou para trás", () => {
+    // Posicionado no último item, com um buraco lá atrás: sem esta terceira
+    // etapa, quem voltou uma área para corrigir algo ficaria preso ali.
+    const comBuraco = protocolo({
+      areas: [
+        {
+          id: "area-1",
+          orientation: "Área 1",
+          position: 1,
+          questions: [protocolQuestion("a1", 1), protocolQuestion("a2", 2, true)],
+        },
+        {
+          id: "area-2",
+          orientation: "Área 2",
+          position: 2,
+          questions: [protocolQuestion("b1", 1, true)],
+        },
+      ],
+    });
+    expect(nextUnanswered(comBuraco, "b1")?.id).toBe("a1");
+  });
+
+  it("sem posição de partida, começa do primeiro em branco do protocolo", () => {
+    expect(nextUnanswered(protocolo())?.id).toBe("a3");
+  });
+
+  it("devolve indefinido quando tudo está respondido", () => {
+    const tudo = protocolo({
+      areas: [
+        {
+          id: "area-1",
+          orientation: "Área 1",
+          position: 1,
+          questions: [protocolQuestion("a1", 1, true)],
+        },
+      ],
+    });
+    expect(nextUnanswered(tudo, "a1")).toBeUndefined();
+  });
+
+  it("a navegação manual não pula respondidas — é outra coisa", () => {
+    // `next` existe para revisar: precisa passar por tudo.
+    expect(neighbour(protocolo(), "a1", "next")?.id).toBe("a2");
+    expect(neighbour(protocolo(), "a3", "next")?.id).toBe("b1");
+    expect(neighbour(protocolo(), "a1", "previous")).toBeUndefined();
+  });
+});
+
+describe("protocol-progress-is-completion-not-score", () => {
+  it("conta respondidas sobre o total de itens do instrumento", () => {
+    expect(completion(protocolo())).toEqual({ answered: 2, total: 5, percent: 40 });
+  });
+
+  it("protocolo sem itens não divide por zero", () => {
+    expect(completion(protocolo({ areas: [] }))).toEqual({ answered: 0, total: 0, percent: 0 });
+  });
+
+  it("só é completo quando há itens e todos foram respondidos", () => {
+    expect(isComplete(protocolo())).toBe(false);
+    expect(isComplete(protocolo({ areas: [] }))).toBe(false);
+  });
+});
+
+describe("protocol-area-progress-is-independent", () => {
+  it("cada área conta sobre as próprias questões", () => {
+    const [primeira, segunda] = protocolo().areas;
+    expect(areaProgress(primeira!)).toEqual({ answered: 2, total: 3, percent: 67 });
+    expect(areaProgress(segunda!)).toEqual({ answered: 0, total: 2, percent: 0 });
+  });
+});
+
+describe("answer-scale-depends-on-format", () => {
+  it("no formato padrão, a escala é a mesma para todo o protocolo", () => {
+    const control = answerControl(protocolo(), protocolQuestion("a1", 1));
+    expect(control).toEqual({
+      kind: "scale",
+      options: [
+        { id: "o1", name: "Não faz", value: 1 },
+        { id: "o2", name: "Faz com ajuda", value: 2 },
+      ],
+    });
+  });
+
+  it("no ABLLS-R, cada questão tem faixa própria", () => {
+    const abllsr = protocolo({ format: "abllsr", answers: [] });
+    expect(answerControl(abllsr, protocolQuestion("x", 1, false, { min: 0, max: 4 }))).toEqual({
+      kind: "range",
+      min: 0,
+      max: 4,
+    });
+  });
+
+  it("devolve indefinido quando o item não tem como ser respondido", () => {
+    // Melhor que uma lista vazia: força a tela a dizer que não sabe o que
+    // perguntar, em vez de desenhar um controle sem opções.
+    const abllsr = protocolo({ format: "abllsr", answers: [] });
+    expect(answerControl(abllsr, protocolQuestion("x", 1))).toBeUndefined();
+    expect(answerControl(protocolo({ answers: [] }), protocolQuestion("a1", 1))).toBeUndefined();
+  });
+});
+
+describe("reassessment-follows-the-instrument", () => {
+  it("soma os meses do instrumento à data de conclusão", () => {
+    expect(reassessmentDate("2026-07-25T11:30:00.000-03:00", 6)).toBe("2027-01-25");
+    expect(reassessmentDate("2026-01-20T11:00:00.000-03:00", 6)).toBe("2026-07-20");
+    expect(reassessmentDate("2026-02-10T09:00:00.000-03:00", 12)).toBe("2027-02-10");
+  });
+
+  it("grampeia no último dia do mês em vez de estourar para o seguinte", () => {
+    // 31 de janeiro mais um mês não é 2 ou 3 de março.
+    expect(reassessmentDate("2026-01-31T09:00:00.000-03:00", 1)).toBe("2026-02-28");
+    expect(reassessmentDate("2026-08-31T09:00:00.000-03:00", 6)).toBe("2027-02-28");
+  });
+
+  it("conta os dias que faltam, e o negativo significa atrasada", () => {
+    const base = {
+      id: "e",
+      protocol: protocolo(),
+      patient: { id: "p", name: "p", birthDate: "2019-01-01" },
+      startedAt: "2026-01-15T10:00:00.000-03:00",
+      now: "2026-07-30T09:00:00.000-03:00",
+    };
+    expect(daysUntilReassessment({ ...base, reassessmentDate: "2026-07-20" })).toBe(-10);
+    expect(daysUntilReassessment({ ...base, reassessmentDate: "2026-08-09" })).toBe(10);
+    expect(daysUntilReassessment(base)).toBeUndefined();
   });
 });

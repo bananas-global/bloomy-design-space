@@ -4,16 +4,19 @@ import { personas } from "../personas/index.js";
 import { agendaFixtures } from "../fixtures/agenda.js";
 import { sessionFixtures } from "../fixtures/session.js";
 import { programFixtures } from "../fixtures/programs.js";
+import { protocolFixtures } from "../fixtures/protocols.js";
 import { patientFixtures } from "../fixtures/patients.js";
 import { financeFixtures } from "../fixtures/finance.js";
 import { agendaRules } from "../rules/agenda.js";
 import { sessionRules } from "../rules/session.js";
 import { programRules } from "../rules/programs.js";
+import { protocolRules } from "../rules/protocols.js";
 import { patientRules } from "../rules/patients.js";
 import { financeRules } from "../rules/finance.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
 import { sessionScenarios } from "../scenarios/session.js";
 import { programScenarios } from "../scenarios/programs.js";
+import { protocolScenarios } from "../scenarios/protocols.js";
 import { patientScenarios } from "../scenarios/patients.js";
 import { financeScenarios } from "../scenarios/finance.js";
 
@@ -206,12 +209,39 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "protocols",
+    name: "Protocolos",
+    description:
+      "A avaliação de onde o plano nasce: aplicação item a item, progresso por área e reavaliação.",
+    flows: [
+      {
+        id: "apply-protocol",
+        title: "Aplicar um protocolo em várias sessões",
+        description:
+          "Da aplicação em andamento até o fechamento, com a navegação que evita item pulado.",
+        steps: [
+          { scenario: "protocols.in-progress", label: "Ver o quanto já foi respondido" },
+          {
+            scenario: "protocols.resume",
+            label: "Retomar no primeiro item em branco",
+            decision: "O instrumento usa escala compartilhada ou faixa por item?",
+            branches: {
+              "Faixa por item": "protocols.abllsr",
+              "Instrumento fechado": "protocols.finished",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
   ...agendaScenarios,
   ...sessionScenarios,
   ...programScenarios,
+  ...protocolScenarios,
   ...patientScenarios,
   ...financeScenarios,
 ];
@@ -220,6 +250,7 @@ export const fixtures: Fixture[] = [
   ...agendaFixtures,
   ...sessionFixtures,
   ...programFixtures,
+  ...protocolFixtures,
   ...patientFixtures,
   ...financeFixtures,
 ] as Fixture[];
@@ -228,6 +259,7 @@ export const rules: Rule[] = [
   ...agendaRules,
   ...sessionRules,
   ...programRules,
+  ...protocolRules,
   ...patientRules,
   ...financeRules,
 ];

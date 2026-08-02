@@ -23,13 +23,14 @@ própria.
 
 ## O que existe hoje
 
-47 cenários em cinco módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
+54 cenários em seis módulos, cobrindo sucesso, vazio, permissão, regra e exceção.
 
 | Módulo | Situações |
 | --- | --- |
 | **Agenda** | dia normal, vazia, conflito de horário, reagendamento com conflito, consulta cancelada, cancelamento exige justificativa, sem permissão para cancelar, ausência antes da tolerância, paciente ausente |
 | **Atendimento** | pronto para atendimento, sem check-in, serviço não cobrável, profissional com atendimento em aberto, em andamento, pendente de registro, aguardando quem atendeu, aguardando o supervisor, finalizado, reverter permitido, reverter bloqueado, sem permissão para reverter, aplicador só lê, supervisão entre profissionais |
 | **Programas** | plano de intervenção, sem plano, critério de domínio, linha de base, cascata de aquisição, regressão, programa incidental, versão substituída, aplicador sem acesso |
+| **Protocolos** | aplicação em andamento, retomar de onde parou, formato ABLLS-R, aplicação concluída, reavaliação atrasada, recém-aberta, recepção sem acesso |
 | **Pacientes** | lista, vazia, cadastro completo, cadastro incompleto, menor sem responsável, menor com responsável, prontuário restrito (recepção), prontuário restrito (profissional) |
 | **Financeiro** | fila de guias, vazia, fatura em análise, convênio recusado, documentos pendentes, reenvio permitido, sem permissão para reenviar |
 
@@ -71,6 +72,11 @@ Regra sem teste é frase que a engenharia reinterpreta.
 | `regression-returns-to-previous-phase` | Queda abaixo do critério de regressão devolve o passo à fase anterior. |
 | `acquisition-cascades-upward` | Passo fecha programa, que fecha objetivo, que fecha meta. |
 | `superseded-version-keeps-its-history` | Versão substituída não é apagada nem editada: as tentativas são dela. |
+| `protocol-resumes-at-first-unanswered` | Retomar vai ao primeiro item em branco: área atual, próximas, depois o começo. |
+| `protocol-progress-is-completion-not-score` | O percentual mede preenchimento, não desempenho do paciente. |
+| `protocol-area-progress-is-independent` | Cada área tem progresso próprio, contado sobre as questões dela. |
+| `answer-scale-depends-on-format` | Escala compartilhada no formato padrão; faixa por item no ABLLS-R. |
+| `reassessment-follows-the-instrument` | A data de reavaliação sai do intervalo declarado no protocolo. |
 
 ## Tokens: divergência deliberada com o produto real
 
