@@ -1147,6 +1147,30 @@ uma vez e apagar.
 1 jornada de varredura (186 cenários), 1 linha de CSS.
 
 
+### 39. Movimento reduzido — `porte/movimento`
+
+O Bloomy tem pouquíssimo movimento: três `transition-colors` e a pulsação do
+esqueleto de carregamento. Nenhum `prefers-reduced-motion` em lugar nenhum.
+
+É justamente **por ser pouco** que honrar a preferência custa quase nada — e por
+ser pouco que ninguém se lembra de fazer.
+
+O caso que importa é a pulsação, porque ela é **infinita**. Uma tela que demora a
+carregar fica piscando indefinidamente para quem tem enxaqueca ou distúrbio
+vestibular, e a pessoa não tem como parar. As transições de cor são curtas e
+inofensivas; a pulsação sem fim, não.
+
+Dois testes, e o segundo é o que impede a varredura de virar vácua: **sem a
+preferência, o esqueleto precisa continuar pulsando.** Sem essa asserção,
+apagar o `animate-pulse` faria o primeiro teste passar — o mesmo erro de medir o
+nada, agora antecipado em vez de descoberto depois.
+
+Provado por mutação: troquei a consulta de mídia por uma que nunca casa, o teste
+reprovou, restaurei.
+
+2 jornadas, 1 bloco de CSS.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são

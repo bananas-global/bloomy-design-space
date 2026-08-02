@@ -202,3 +202,20 @@ summary:focus-visible,
 #conteudo {
   overflow-wrap: break-word;
 }
+
+/* Movimento é preferência declarada, não gosto do produto.
+   O Bloomy tem pouquíssimo movimento — três transições de cor e a pulsação do
+   esqueleto de carregamento —, e é justamente por ser pouco que honrar a
+   preferência custa quase nada. A pulsação é o caso que importa: ela é
+   **infinita**, e uma tela que demora a carregar fica piscando indefinidamente
+   para quem tem enxaqueca ou distúrbio vestibular. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
