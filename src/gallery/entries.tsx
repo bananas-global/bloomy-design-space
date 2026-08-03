@@ -13,6 +13,7 @@ import { CheckboxGroup, RadioGroup, RadioSelector, Tooltip } from "../components
 import {
   DateNavigator, MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
 } from "../components/bloomy/DatePickers.js";
+import { Flash, FlashGroup, SimpleForm } from "../components/bloomy/Feedback.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -64,6 +65,25 @@ function DemoModal() {
       </Modal>
     </>
   );
+}
+
+function DemoFlash() {
+  const [visible, setVisible] = useState(false);
+  return <div><Button onClick={() => setVisible(true)}>Registrar resultado</Button>{visible && <Flash id="g-flash" kind="info" title="Sucesso!" onDismiss={() => setVisible(false)}>Programa estruturado salvo.</Flash>}</div>;
+}
+
+function DemoFlashGroup() {
+  const [connection, setConnection] = useState<"connected" | "client-error" | "server-error">("connected");
+  const [info, setInfo] = useState<ReactNode>("Programa estruturado salvo.");
+  const [error, setError] = useState<ReactNode>("Não foi possível salvar o programa.");
+  return <div className="flex flex-wrap gap-2"><Button size="small" variant="outline" onClick={() => setConnection("client-error")}>Simular internet indisponível</Button><Button size="small" variant="outline" onClick={() => setConnection("server-error")}>Simular falha do servidor</Button><FlashGroup id="g-flash-group" info={info} error={error} connection={connection} onDismiss={(kind) => { if (kind === "info") setInfo(undefined); else if (kind === "error") setError(undefined); else setConnection("connected"); }} /></div>;
+}
+
+function DemoSimpleForm() {
+  const [disabled, setDisabled] = useState(false);
+  const [changes, setChanges] = useState(0);
+  const [submits, setSubmits] = useState(0);
+  return <div className="space-y-4"><SimpleForm id="g-simple-form" name="programa" autoComplete="off" data-demo="simple-form" disabled={disabled} onChange={() => setChanges((value) => value + 1)} onSubmit={(event) => { event.preventDefault(); setSubmits((value) => value + 1); }} actions={<><Button type="button" variant="outline">Cancelar</Button><Button type="submit">Salvar</Button></>}><Input id="g-form-name" name="programa[nome]" label="Nome do programa" defaultValue="Imitação motora" /><Textarea id="g-form-objective" name="programa[objetivo]" label="Objetivo" defaultValue="Generalizar a imitação em contexto natural." /></SimpleForm><div className="flex flex-wrap items-center gap-3"><Button size="small" variant="outline" onClick={() => setDisabled((value) => !value)}>{disabled ? "Habilitar formulário" : "Desabilitar formulário"}</Button><p role="status" className="m-0 text-sm text-[var(--fg-2)]">Mudanças: {changes}. Envios: {submits}.</p></div></div>;
 }
 
 function DemoEscolhas() {
@@ -206,9 +226,9 @@ export const GALLERY: GalleryEntry[] = [
   },
   { name: "drawer_modal", origem: "lib/bloomy_web/components/core_components.ex:182", descricao: "Painel que entra pela lateral, para formulários longos." },
   { name: "modal_content", origem: "lib/bloomy_web/components/core_components.ex:286", descricao: "O miolo do diálogo, separado para reuso." },
-  { name: "flash", origem: "lib/bloomy_web/components/core_components.ex:321", descricao: "Aviso temporário de resultado de ação." },
-  { name: "flash_group", origem: "lib/bloomy_web/components/core_components.ex:360", descricao: "A pilha de avisos temporários da página." },
-  { name: "simple_form", origem: "lib/bloomy_web/components/core_components.ex:416", descricao: "Formulário com espaçamento e ações padronizados." },
+  { name: "flash", origem: "lib/bloomy_web/components/core_components.ex:321", descricao: "Aviso temporário de resultado de ação.", demos: [{ titulo: "Resultado de uma ação", nota: "O aviso é anunciado e o botão Fechar é alcançável por teclado.", render: () => <DemoFlash /> }] },
+  { name: "flash_group", origem: "lib/bloomy_web/components/core_components.ex:360", descricao: "A pilha de avisos temporários da página.", demos: [{ titulo: "Estados globais de conexão", nota: "Reproduz os avisos de cliente e servidor, normalmente controlados pela conexão do LiveView.", render: () => <DemoFlashGroup /> }] },
+  { name: "simple_form", origem: "lib/bloomy_web/components/core_components.ex:416", descricao: "Formulário com espaçamento e ações padronizados.", demos: [{ titulo: "Programa com ações e bloqueio", nota: "Desabilitar aplica o `fieldset` nativo e impede envio e mudança, como `filter_form_events/2` no original.", render: () => <DemoSimpleForm /> }] },
   { name: "link_button", origem: "lib/bloomy_web/components/core_components.ex:523", descricao: "Link com aparência de botão, para navegação." },
   { name: "copy_button", origem: "lib/bloomy_web/components/core_components.ex:570", descricao: "Botão que copia um valor para a área de transferência." },
   {
