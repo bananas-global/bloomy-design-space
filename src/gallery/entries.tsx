@@ -2,13 +2,13 @@ import { useState, type ReactNode } from "react";
 import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
-import { Table } from "../components/bloomy/Table.js";
+import { SimpleTable, Table } from "../components/bloomy/Table.js";
 import { Checkbox, FakeInput, FieldError, Input, InputSwitchCard, InputWithSelect, Label, Switch, SwitchCard, Textarea } from "../components/bloomy/Input.js";
 import {
   Avatar, Back, DescriptionList, EmptyStateCard, InsideCard,
   LoadingCard, MetaInfo, Progress, SectionHeader, TimelineList,
 } from "../components/bloomy/Layout.js";
-import { Dropdown, DropdownMenu, Modal } from "../components/bloomy/Overlay.js";
+import { DrawerModal, Dropdown, DropdownMenu, Modal, ModalContent } from "../components/bloomy/Overlay.js";
 import { CheckboxGroup, Checkgroup, FakeRadioGroup, RadioGroup, RadioSelector, Tooltip } from "../components/bloomy/Choice.js";
 import {
   DateNavigator, MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
@@ -67,6 +67,27 @@ function DemoModal() {
       </Modal>
     </>
   );
+}
+
+function DemoDrawerModal() {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  return <><Button id="g-drawer-trigger" onClick={() => setOpen(true)}>Abrir drawer</Button><DrawerModal id="g-drawer" show={open} onCancel={() => setOpen(false)} title="Inativar Paciente" target="#g-drawer-owner" triggerShow="show-drawer" placement="right" variant="medium" contentClassName="demo-drawer-content" data-demo="drawer-modal"><p id="g-drawer-description" className="mt-0">Revise o impacto na agenda antes de confirmar.</p><label htmlFor="g-drawer-reason">Motivo</label><input id="g-drawer-reason" value={reason} onChange={(event) => setReason(event.target.value)} className="mt-1 block rounded-lg border p-2" /><Button id="g-drawer-confirm" className="mt-4">Confirmar Inativação</Button></DrawerModal></>;
+}
+
+function DemoModalContent() {
+  const [open, setOpen] = useState(false);
+  const [secondary, setSecondary] = useState(true);
+  return <><Button id="g-modal-content-trigger" onClick={() => { setSecondary(true); setOpen(true); }}>Abrir conteúdo modal</Button><Modal id="g-modal-content-modal" open={open} onClose={() => setOpen(false)} title="Mapa de horas"><div id="g-modal-content-modal-description">{secondary ? <ModalContent id="g-modal-content" title="Detalhes do período" className="demo-modal-body" data-demo="modal-content" onClose={() => setSecondary(false)}><p>Horas planejadas e disponíveis do aplicador.</p><Button id="g-modal-content-action">Exportar período</Button></ModalContent> : <div><p>Tela principal do mapa de horas.</p><Button onClick={() => setSecondary(true)}>Ver detalhes</Button></div>}</div></Modal></>;
+}
+
+const SIMPLE_ROWS = [
+  { id: 31, date: "04/08/2026", planned: 8, available: 6 },
+  { id: 32, date: "05/08/2026", planned: 7, available: 7 },
+];
+
+function DemoSimpleTable() {
+  return <div data-demo="simple-table"><SimpleTable className="demo-simple-table" emptyMessage="Nenhum período"><thead><tr><th>Data</th><th>Horas planejadas</th><th>Horas disponíveis</th></tr></thead><tbody>{SIMPLE_ROWS.map((row) => <tr key={row.id} id={`g-hours-${row.id}`}><td className="date-cell">{row.date}</td><td>{row.planned} h</td><td>{row.available} h</td></tr>)}</tbody></SimpleTable></div>;
 }
 
 function DemoFlash() {
@@ -265,8 +286,8 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "drawer_modal", origem: "lib/bloomy_web/components/core_components.ex:182", descricao: "Painel que entra pela lateral, para formulários longos." },
-  { name: "modal_content", origem: "lib/bloomy_web/components/core_components.ex:286", descricao: "O miolo do diálogo, separado para reuso." },
+  { name: "drawer_modal", origem: "lib/bloomy_web/components/core_components.ex:182", descricao: "Painel que entra pela lateral, para formulários longos.", demos: [{ titulo: "Inativação com impacto na agenda", nota: "Preserva ids, largura média, posição à direita e o ciclo de foco do `focus_wrap`.", render: () => <DemoDrawerModal /> }] },
+  { name: "modal_content", origem: "lib/bloomy_web/components/core_components.ex:286", descricao: "O miolo do diálogo, separado para reuso.", demos: [{ titulo: "Tela secundária do mapa de horas", nota: "A seta retorna à tela principal; abertura e cancelamento pertencem ao Modal que o envolve.", render: () => <DemoModalContent /> }] },
   { name: "flash", origem: "lib/bloomy_web/components/core_components.ex:321", descricao: "Aviso temporário de resultado de ação.", demos: [{ titulo: "Resultado de uma ação", nota: "O aviso é anunciado e o botão Fechar é alcançável por teclado.", render: () => <DemoFlash /> }] },
   { name: "flash_group", origem: "lib/bloomy_web/components/core_components.ex:360", descricao: "A pilha de avisos temporários da página.", demos: [{ titulo: "Estados globais de conexão", nota: "Reproduz os avisos de cliente e servidor, normalmente controlados pela conexão do LiveView.", render: () => <DemoFlashGroup /> }] },
   { name: "simple_form", origem: "lib/bloomy_web/components/core_components.ex:416", descricao: "Formulário com espaçamento e ações padronizados.", demos: [{ titulo: "Programa com ações e bloqueio", nota: "Desabilitar aplica o `fieldset` nativo e impede envio e mudança, como `filter_form_events/2` no original.", render: () => <DemoSimpleForm /> }] },
@@ -445,7 +466,7 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "simple_table", origem: "lib/bloomy_web/components/core_components.ex:1703", descricao: "Tabela sem ações, para leitura." },
+  { name: "simple_table", origem: "lib/bloomy_web/components/core_components.ex:1703", descricao: "Tabela simples com marcação e estilos do relatório.", demos: [{ titulo: "Horas do profissional", render: () => <DemoSimpleTable /> }] },
   { name: "list", origem: "lib/bloomy_web/components/core_components.ex:1740", descricao: "Lista de descrição, termo e valor.",
     demos: [
       {

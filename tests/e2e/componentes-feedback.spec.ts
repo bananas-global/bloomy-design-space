@@ -5,7 +5,7 @@ test.describe("galeria — avisos e formulário simples", () => {
   test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
 
   test("conta os três portes somente com as demos completas", async ({ page }) => {
-    await expect(page.getByText("44 de 47 portados do sistema")).toBeVisible();
+    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
     await expect(page.getByRole("heading", { name: "flash", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "flash_group", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "simple_form", exact: true })).toBeVisible();

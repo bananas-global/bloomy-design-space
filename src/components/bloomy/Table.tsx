@@ -29,7 +29,7 @@ const CLASSE_TABELA = [
   "[&_thead]:border-b [&_thead]:border-[var(--color-brand-purple-dark)]/10",
   "[&_thead_th]:bg-[var(--color-brand-blue)]/20 [&_thead_th]:px-3 [&_thead_th]:py-4 [&_thead_th]:text-left [&_thead_th]:text-[var(--color-brand-purple-dark)]",
   "[&_tbody]:relative [&_tbody]:divide-y [&_tbody]:divide-[var(--color-brand-purple-dark)]/10 [&_tbody]:border-t [&_tbody]:border-[var(--color-brand-purple-dark)]/10",
-  "[&_tbody_tr]:hover:bg-[var(--color-brand-purple-dark)]/5",
+  "[&_tbody_tr]:group [&_tbody_tr]:hover:bg-[var(--color-brand-purple-dark)]/5",
   "[&_tbody_tr_td]:relative [&_tbody_tr_td]:px-3 [&_tbody_tr_td]:py-4 [&_tbody_tr_td]:text-left [&_tbody_tr_td]:text-[var(--color-brand-purple-dark)]/80",
 ].join(" ");
 
@@ -116,14 +116,17 @@ export function Table<T>({
   );
 }
 
-/** Tabela sem ações nem clique de linha, para leitura. */
+/** Tabela simples: `emptyMessage` existe no HEEx, mas é intencionalmente inerte. */
 export function SimpleTable({
   children,
   className,
+  emptyMessage = MENSAGEM_VAZIO,
 }: {
   children: ReactNode;
   className?: string;
+  emptyMessage?: string;
 }) {
+  void emptyMessage;
   return (
     <div className={[CLASSE_TABELA, className].filter(Boolean).join(" ")}>
       <table>{children}</table>

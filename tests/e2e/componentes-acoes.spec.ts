@@ -16,7 +16,7 @@ test.describe("galeria — link_button e copy_button", () => {
   });
 
   test("conta os dois portes somente com as demos completas", async ({ page }) => {
-    await expect(page.getByText("44 de 47 portados do sistema")).toBeVisible();
+    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
     await expect(page.getByRole("heading", { name: "link_button", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "copy_button", exact: true })).toBeVisible();
   });

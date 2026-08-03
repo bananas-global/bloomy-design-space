@@ -2778,6 +2778,45 @@ host e anúncio únicos, pilha persistente e fechamento individual do feedback.
 foi acrescentado.
 
 
+### 78. Drawer, conteúdo secundário e tabela simples — 47 de 47
+
+O lote final porta `drawer_modal/1`, `modal_content/1` e `simple_table/1`, fechando
+os **47 de 47** componentes de `core_components.ex`. O drawer conserva os ids
+derivados, as cinco larguras (inclusive a classe livre de `custom`), entrada por
+esquerda ou direita, cabeçalho, avatar, título ou slot customizado, conteúdo e
+atributos globais (`lib/bloomy_web/components/core_components.ex:159-279`). Os
+dois usos atuais são formulários longos de efetivação e inativação de paciente
+(`lib/bloomy_web/backoffice/live/prospect_live/components/convert_patient_drawer.ex:15-162`;
+`lib/bloomy_web/backoffice/live/patient_live/components/deactivate_patient_modal.ex:20-207`).
+
+O comportamento vem do `DrawerHook` e dos comandos `show_drawer/3` e
+`hide_drawer/3`: rolagem volta ao topo, o fundo e Escape cancelam, o corpo perde
+rolagem, o foco circula e retorna ao gatilho
+(`assets/js/hooks/drawer_hook.js:1-39`;
+`lib/bloomy_web/components/core_components.ex:1939-1975`). O porte React mantém
+esses efeitos diretamente, sem mudar o contrato do `Modal` já existente.
+
+`modal_content/1` continua sendo apenas a tela secundária do `MultiStepModal`:
+cabeçalho, título obrigatório, botão `data-close-screen`, corpo rolável, classe
+do corpo, slot e atributos globais (`lib/bloomy_web/components/core_components.ex:280-304`;
+`assets/js/hooks/multi_step_modal.js:9-23`). Não há uso real atual encontrado
+fora da definição, portanto a demo o exercita dentro do `Modal`, sem lhe inventar
+abertura ou semântica de diálogo independente.
+
+`simple_table/1` preserva somente `class`, o `empty_message` declarado mas
+não consumido, o slot livre, o invólucro, `<table>` e a longa lista de classes
+por descendente (`lib/bloomy_web/components/core_components.ex:1697-1725`).
+Seus dois usos atuais montam manualmente `thead`, `tbody`, linhas e vazio nos
+relatórios de horas e evidências
+(`lib/bloomy_web/backoffice/live/professionals/components/edit_tabs/hours_control.ex:57-108`;
+`lib/bloomy_web/backoffice/live/patient_live/components/report/health_care_schedules_modal.ex:45-74`).
+A demo preserva essa montagem manual, sem sorting,
+paginação, seleção, ids, transformação ou ações produzidos pelo componente.
+
+3 componentes portados, 3 demos determinísticas e 5 jornadas dedicadas. A
+galeria não tem mais itens pendentes.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
