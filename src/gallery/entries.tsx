@@ -3,13 +3,13 @@ import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
 import { Table } from "../components/bloomy/Table.js";
-import { Checkbox, FieldError, Input, Label, Switch, SwitchCard, Textarea } from "../components/bloomy/Input.js";
+import { Checkbox, FakeInput, FieldError, Input, InputSwitchCard, InputWithSelect, Label, Switch, SwitchCard, Textarea } from "../components/bloomy/Input.js";
 import {
   Avatar, Back, DescriptionList, EmptyStateCard, InsideCard,
   LoadingCard, MetaInfo, Progress, SectionHeader, TimelineList,
 } from "../components/bloomy/Layout.js";
 import { Dropdown, DropdownMenu, Modal } from "../components/bloomy/Overlay.js";
-import { CheckboxGroup, RadioGroup, RadioSelector, Tooltip } from "../components/bloomy/Choice.js";
+import { CheckboxGroup, Checkgroup, FakeRadioGroup, RadioGroup, RadioSelector, Tooltip } from "../components/bloomy/Choice.js";
 import {
   DateNavigator, MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
 } from "../components/bloomy/DatePickers.js";
@@ -128,6 +128,32 @@ function DemoEscolhas() {
       />
     </div>
   );
+}
+
+function DemoCincoCampos({ kind }: { kind: "input" | "checkgroup" | "fake-input" | "switch-card" | "fake-radio" }) {
+  const [frequencia, setFrequencia] = useState("3");
+  const [criterio, setCriterio] = useState("consecutive");
+  const [dias, setDias] = useState(["monday", "wednesday"]);
+  const [mostrarHorario, setMostrarHorario] = useState(false);
+  if (kind === "input") return <div id="g-input-with-select-wrapper" className="max-w-3xl space-y-8">
+      <InputWithSelect label="Critério de Avanço" textId="g-criterio-frequencia" textName="programa[mastery_frequency]" textValue={frequencia} selectId="g-criterio-tipo" selectName="programa[mastery_criteria]" selectValue={criterio} options={[{ label: "Sessões Cumulativas", value: "cumulative" }, { label: "Sessões Consecutivas", value: "consecutive" }]} onTextChange={setFrequencia} onSelectChange={setCriterio} />
+      <InputWithSelect label="Critério indisponível" textId="g-criterio-bloqueado-frequencia" textName="programa[blocked_frequency]" textValue="2" selectId="g-criterio-bloqueado-tipo" selectName="programa[blocked_criteria]" selectValue="cumulative" options={[{ label: "Sessões Cumulativas", value: "cumulative" }]} disabled textErrors={["não pode ser alterado"]} />
+    </div>;
+  if (kind === "checkgroup") return <div id="g-checkgroup-wrapper" className="max-w-3xl">
+      <Checkgroup id="g-dias" label="Atende nos dias da semana" name="unit_service_hour[service_hour][weekdays]" values={dias} onChange={setDias} innerClassName="flex-row flex-wrap" options={[{ label: "Segunda", value: "monday" }, { label: "Quarta", value: "wednesday" }, { label: "Sexta", value: "friday" }, { label: "Domingo", value: "sunday", disabled: true }]} />
+    </div>;
+  if (kind === "fake-input") return <div id="g-fake-input-wrapper" className="grid max-w-3xl gap-4 sm:grid-cols-2">
+      <FakeInput label="Paciente" value="Helena M." />
+      <FakeInput label="Unidade" labelColor="blue" value="Unidade Girassol" />
+    </div>;
+  if (kind === "switch-card") return <form id="g-input-switch-card-wrapper" className="max-w-3xl">
+      <InputSwitchCard label="Mostrar horário" active={mostrarHorario} className="max-w-48 px-3">
+        <Switch id="g-mostrar-horario" name="relatorio[show_hours]" value="true" checked={mostrarHorario} onChange={setMostrarHorario} />
+      </InputSwitchCard>
+    </form>;
+  return <div id="g-fake-radio-group-wrapper" className="max-w-3xl">
+      <FakeRadioGroup id="g-foco-terapia" label="Qual foi o Foco da Terapia na Sessão" selectedValue="habilidades-sociais" options={[{ name: "therapy_focus", value: "comunicacao", label: "Comunicação" }, { name: "therapy_focus", value: "habilidades-sociais", label: "Habilidades sociais" }, { name: "therapy_focus", value: "autonomia", label: "Autonomia" }]} />
+    </div>;
 }
 
 function DemoRangeDatePicker() {
@@ -283,11 +309,11 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "input_with_select", origem: "lib/bloomy_web/components/core_components.ex:1217", descricao: "Campo com seletor acoplado, para valor com unidade." },
-  { name: "checkgroup", origem: "lib/bloomy_web/components/core_components.ex:1253", descricao: "Grupo de caixas de seleção com rótulo comum." },
-  { name: "fake_input", origem: "lib/bloomy_web/components/core_components.ex:1269", descricao: "Campo somente-leitura com aparência de campo." },
-  { name: "input_switch_card", origem: "lib/bloomy_web/components/core_components.ex:1301", descricao: "Cartão com chave liga-desliga e descrição." },
-  { name: "fake_radio_group", origem: "lib/bloomy_web/components/core_components.ex:1332", descricao: "Grupo de opções não editável, para exibição." },
+  { name: "input_with_select", origem: "lib/bloomy_web/components/core_components.ex:1217", descricao: "Campo com seletor acoplado, para valor com unidade.", demos: [{ titulo: "Frequência e critério unidos", nota: "Os dois campos mantêm nomes e valores independentes.", render: () => <DemoCincoCampos kind="input" /> }] },
+  { name: "checkgroup", origem: "lib/bloomy_web/components/core_components.ex:1253", descricao: "Grupo de caixas de seleção com rótulo comum.", demos: [{ titulo: "Dias de atendimento", nota: "O nome-base recebe `[][]`, preservando o sufixo duplo efetivo do monólito; a correção intencional limita-se a `fieldset` e `legend`.", render: () => <DemoCincoCampos kind="checkgroup" /> }] },
+  { name: "fake_input", origem: "lib/bloomy_web/components/core_components.ex:1269", descricao: "Campo somente-leitura com aparência de campo.", demos: [{ titulo: "Dados somente para leitura", render: () => <DemoCincoCampos kind="fake-input" /> }] },
+  { name: "input_switch_card", origem: "lib/bloomy_web/components/core_components.ex:1301", descricao: "Cartão com chave liga-desliga e descrição.", demos: [{ titulo: "Estado colore o cartão", render: () => <DemoCincoCampos kind="switch-card" /> }] },
+  { name: "fake_radio_group", origem: "lib/bloomy_web/components/core_components.ex:1332", descricao: "Grupo de opções não editável, para exibição.", demos: [{ titulo: "Resposta registrada", nota: "Só a opção selecionada permanece habilitada, como no sistema.", render: () => <DemoCincoCampos kind="fake-radio" /> }] },
   { name: "radio_group", origem: "lib/bloomy_web/components/core_components.ex:1379", descricao: "Escolha única entre opções, navegável por setas.",
     demos: [{ titulo: "Opções soltas, a marcada ganha fundo", render: () => <DemoEscolhas /> }],
   },

@@ -2724,6 +2724,27 @@ não têm `alt`. O porte nomeia a imagem atual e a pré-visualização escolhida
 1 componente portado, 1 demo interativa e 1 achado.
 
 
+### 76. Cinco campos compostos e somente leitura
+
+O bloco seguinte porta `input_with_select`, `checkgroup`, `fake_input`,
+`input_switch_card` e `fake_radio_group`. As demos usam os contextos reais do
+monólito: critério de domínio, dias de atendimento da unidade, identificação
+sintética do paciente, exibição de horário no relatório e foco da terapia na
+sessão. Valores, múltipla seleção, estado desabilitado e as duas variantes de cor
+permanecem contratos dos componentes locais. No `checkgroup`, o campo resolve
+primeiro o nome-base com um `[]`; esse nome intermediário entra no id, e a
+cláusula interna acrescenta o segundo `[]` somente ao atributo `name`.
+
+O porte corrige quatro relações objetivamente ausentes ou inválidas na marcação
+original: nomes acessíveis dos dois controles acoplados, agrupamento do
+`checkgroup`, ids repetidos dos rádios falsos e nome acessível da chave dentro do
+cartão. No `checkgroup`, a correção intencional limita-se ao `fieldset` e à
+`legend`; o estranho sufixo duplo de nome e seu reflexo no id são preservados.
+Não foram adicionadas ações de produto.
+
+5 componentes portados, 5 demos interativas e 4 achados.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2843,3 +2864,7 @@ bugs do Design Space; são observações sobre o produto.
 | 110 | `date_navigator/1` sempre inicializa o Flatpickr no controle central. Quando `disable` é verdadeiro, somente `initButtons()` retorna antes de registrar os listeners das setas; o atributo `disabled` é colocado num `span`, onde é inerte. Assim, o calendário central continua abrindo e alterando a data. O Design Space diverge de propósito: desabilita os três botões de interação. | `lib/bloomy_web/components/core_components.ex:2632-2646,2682-2690,2693-2699` |
 | 111 | `flash/1` põe a ação de dispensar no contêiner inteiro, enquanto o botão “fechar” não tem ação própria e funciona apenas porque o clique propaga até a `div`. Assim, clicar no texto também apaga o aviso, e a semântica da ação fica separada do elemento nomeado. O Design Space diverge de propósito: somente o botão “Fechar”, alcançável por teclado e com foco visível, dispensa o aviso. | `lib/bloomy_web/components/core_components.ex:325-345` |
 | 112 | As duas imagens de `image_upload/1` — a pré-visualização da nova entrada e a imagem já gravada — são renderizadas sem atributo `alt`. O controle tem nome, mas o leitor de tela não recebe a identidade do conteúdo visual que será mantido ou enviado. O Design Space diverge de propósito: nomeia “Imagem atual” e a pré-visualização com o nome do arquivo. | `lib/bloomy_web/components/core_components.ex:2123-2135` |
+| 113 | `input_with_select/1` renderiza um rótulo visual sem `for` e chama os dois `input/1` sem rótulos próprios. O campo numérico e o seletor ficam sem nome acessível. O Design Space preserva o rótulo visual e diverge de propósito com nomes derivados para “valor” e “critério”. | `lib/bloomy_web/components/core_components.ex:1218-1233` |
+| 114 | Todos os usos reais de `checkgroup` passam `field`. A cláusula de `input/1` acrescenta `[]` ao nome por `multiple: true`; esse nome intermediário entra no id, e `checkgroup` acrescenta outro `[]` apenas ao atributo `name`, que termina em `[][]`. Além disso, o rótulo comum aponta para um id que nenhum controle recebe. O Design Space preserva nome, id, valor e estado efetivos, inclusive os sufixos, e diverge de propósito somente ao usar `fieldset` e `legend` para nomear o grupo. | `lib/bloomy_web/components/core_components.ex:688-697,729-746,1253-1266` |
+| 115 | `fake_radio_group/1` monta cada id com `@radio[:name]`, embora `@radio` seja a coleção completa de slots; o nome pertence a `radio[:name]`. Na prática os dois grupos usados juntos geram ids `-0`, `-1` etc. repetidos. O Design Space diverge de propósito usando o nome do slot e um id de grupo explícito. | `lib/bloomy_web/components/core_components.ex:1339-1355`; `lib/bloomy_web/backoffice/live/custom_services/update.ex:175-197` |
+| 116 | `input_switch_card/1` mostra o rótulo em um `<p>`, separado da chave recebida no slot. Nos usos reais, a chave interna não recebe `label`; “Mostrar horário” fica sem nome acessível, e “Renovação Automática” depende apenas de `title`. O Design Space diverge de propósito: `InputSwitchCard` dá id ao texto e injeta esse id como `aria-labelledby` no controle filho direto; `Switch` repassa o atributo ao checkbox. | `lib/bloomy_web/components/core_components.ex:1309-1324`; `lib/bloomy_web/backoffice/live/patient_live/components/report/new.ex:307-315`; `lib/bloomy_web/backoffice/live/patient_live/components/hour_map/agenda.ex:69-85` |

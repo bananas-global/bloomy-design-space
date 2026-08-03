@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { cloneElement, useId, type ReactElement, type ReactNode } from "react";
 import { Icon } from "../Icon.js";
 
 /**
@@ -249,12 +249,20 @@ export function Switch({
   checked,
   onChange,
   disabled,
+  name,
+  value,
+  "aria-label": ariaLabel,
+  "aria-labelledby": ariaLabelledby,
 }: {
   id?: string;
   label?: string;
   checked: boolean;
   onChange?: (marcado: boolean) => void;
   disabled?: boolean;
+  name?: string;
+  value?: string;
+  "aria-label"?: string;
+  "aria-labelledby"?: string;
 }) {
   return (
     <div className="relative">
@@ -262,12 +270,17 @@ export function Switch({
 
       <label className="inline-block">
         <div className="flex h-12 items-center">
+          {name && <input type="hidden" name={name} value="false" />}
           <input
             id={id}
             type="checkbox"
             className="peer sr-only"
             checked={checked}
             disabled={disabled}
+            name={name}
+            value={value}
+            aria-label={ariaLabel}
+            aria-labelledby={ariaLabelledby}
             onChange={(e) => onChange?.(e.target.checked)}
           />
           <div
@@ -360,4 +373,49 @@ export function SwitchCard({
       </div>
     </div>
   );
+}
+
+export type SelectOption = { label: string; value: string };
+
+/** `input_with_select/1`: dois campos unidos sob o mesmo rótulo visual. */
+export function InputWithSelect({ label, textId, textName, textValue, textErrors = [], selectId, selectName, selectValue, selectErrors = [], options, disabled = false, onTextChange, onSelectChange, className }: {
+  label?: string; textId: string; textName: string; textValue: string; selectId: string; selectName: string; selectValue: string;
+  textErrors?: string[]; selectErrors?: string[]; options: SelectOption[]; disabled?: boolean; onTextChange?: (value: string) => void; onSelectChange?: (value: string) => void; className?: string;
+}) {
+  const textErrorId = textErrors.length ? `${textId}-errors` : undefined;
+  const selectErrorId = selectErrors.length ? `${selectId}-errors` : undefined;
+  return <div className={["relative", disabled && "opacity-50", className].filter(Boolean).join(" ")}>
+    {label && <Label><span>{label}</span></Label>}
+    <div className={["relative flex w-full", label && "mt-2"].filter(Boolean).join(" ")}>
+      <div className="relative min-w-0 flex-1">
+        <input id={textId} name={textName} value={textValue} disabled={disabled} aria-label={label ? `${label}: valor` : undefined} aria-describedby={textErrorId} aria-invalid={textErrors.length ? true : undefined} onChange={(event) => onTextChange?.(event.target.value)} className={["h-12 w-full rounded-l-lg border bg-[var(--color-brand-purple-dark)]/10 px-4 text-[var(--color-brand-purple-dark)]/80 outline-hidden transition-colors focus:border-[var(--color-brand-blue)] focus:ring-0", textErrors.length ? "border-[var(--color-brand-red)]" : "border-[var(--color-brand-purple-dark)]/10"].join(" ")} />
+        {textErrors.length > 0 && <div id={textErrorId}>{textErrors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
+      </div>
+      <div className="relative min-w-0 flex-1">
+        <select id={selectId} name={selectName} value={selectValue} disabled={disabled} aria-label={label ? `${label}: critério` : undefined} aria-describedby={selectErrorId} aria-invalid={selectErrors.length ? true : undefined} onChange={(event) => onSelectChange?.(event.target.value)} className={["h-12 w-full rounded-r-lg border bg-[var(--color-brand-purple-dark)]/10 px-4 text-[var(--color-brand-purple-dark)]/80 outline-hidden transition-colors focus:border-[var(--color-brand-blue)] focus:ring-0", selectErrors.length ? "border-[var(--color-brand-red)]" : "border-[var(--color-brand-purple-dark)]/10"].join(" ")}>
+          {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+        {selectErrors.length > 0 && <div id={selectErrorId}>{selectErrors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
+      </div>
+    </div>
+  </div>;
+}
+
+/** `fake_input/1`: valor estático com a mesma caixa visual de um campo. */
+export function FakeInput({ value, label, labelColor = "default", className, ...rest }: { value: ReactNode; label?: string; labelColor?: "default" | "blue"; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
+  return <div className={className} {...rest}>
+    {label && <p className={["m-0 block text-sm/4 font-bold", labelColor === "blue" ? "text-[var(--color-brand-blue)]" : "text-[var(--color-neutral-400)]"].join(" ")}>{label}</p>}
+    <div className={["flex min-h-12 w-full items-center rounded-lg border border-[var(--color-neutral-100)] bg-[var(--color-neutral-500)]/5 px-4 font-normal leading-6 text-[var(--color-neutral-500)]", label && "mt-2"].filter(Boolean).join(" ")}>{value}</div>
+  </div>;
+}
+
+/** `input_switch_card/1`: estado do campo colore o cartão que contém a chave. */
+export function InputSwitchCard({ label, active, children, className }: { label: string; active: boolean | string; children: ReactElement<{ "aria-labelledby"?: string }>; className?: string }) {
+  const isActive = active === true || active === "on" || active === "true";
+  const generatedId = useId();
+  const labelId = `input-switch-card-${generatedId.replace(/:/g, "")}-label`;
+  const labelledBy = [children.props["aria-labelledby"], labelId].filter(Boolean).join(" ");
+  return <div className={["flex items-center justify-center gap-x-2 rounded-lg border px-2 transition-colors", isActive ? "border-[var(--color-brand-blue)]/40 bg-[var(--color-blue-light)]" : "border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/10", className].filter(Boolean).join(" ")}>
+    <p id={labelId} className="m-0 font-bold text-[var(--color-brand-purple-dark)]">{label}</p>{cloneElement(children, { "aria-labelledby": labelledBy })}
+  </div>;
 }

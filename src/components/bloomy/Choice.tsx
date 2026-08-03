@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
 import { Icon } from "../Icon.js";
-import { Label } from "./Input.js";
+import { FieldError, Label } from "./Input.js";
 
 /**
  * Escolha — espelho de `radio_group/1`, `radio_selector/1` e `checkbox_group/1`.
@@ -28,6 +28,46 @@ export type Opcao = {
   /** Bolinha vermelha com número, no canto superior esquerdo. */
   warningNumber?: number;
 };
+
+/** `checkgroup/1`: variante múltipla vertical de `input/1`. */
+export function Checkgroup({ id, label, name, values, options, errors = [], variant = "default", disabled, onChange, className, innerClassName }: {
+  id: string; label?: string; name: string; values?: string[]; options: Opcao[]; errors?: string[]; variant?: ChoiceVariant;
+  disabled?: boolean; onChange?: (values: string[]) => void; className?: string; innerClassName?: string;
+}) {
+  const selected = values ?? [];
+  const fieldName = `${name}[]`;
+  const resolvedName = `${fieldName}[]`;
+  // O wrapper original aceita `variant`, mas a cláusula interna consulta
+  // `color`; a variante é inerte. Mantemos o atributo sem inventar efeito.
+  void variant;
+  const errorId = errors.length ? `${id}-errors` : undefined;
+  const toggle = (value: string) => onChange?.(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+  return <fieldset className={["relative min-w-0 border-0 p-0", className].filter(Boolean).join(" ")} aria-describedby={errorId}>
+    {label && <legend className="text-sm/4 font-bold text-[var(--color-brand-blue)]">{label}</legend>}
+    <div className={["mt-2 flex flex-col items-start gap-2", innerClassName].filter(Boolean).join(" ")}>
+      {options.map((option) => <label key={option.value} className="inline-flex items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-neutral-900)] transition-colors has-[input:checked]:bg-[var(--color-blue-light)]">
+        <input type="checkbox" id={`${id}-${fieldName}-${option.value}`} name={resolvedName} value={option.value} checked={selected.includes(option.value)} disabled={disabled || option.disabled} onChange={() => toggle(option.value)} className="rounded border-[var(--color-neutral-100)] text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0" />
+        {option.label}
+      </label>)}
+    </div>
+    {errors.length > 0 && <div id={errorId}>{errors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
+  </fieldset>;
+}
+
+/** `fake_radio_group/1`: somente o valor atual permanece habilitado. */
+export function FakeRadioGroup({ id, label, selectedValue, options, variant = "default", className }: {
+  id: string; label?: string; selectedValue?: string; options: (Opcao & { name: string })[]; variant?: ChoiceVariant; className?: string;
+}) {
+  return <fieldset className={["min-w-0 border-0 p-0", className].filter(Boolean).join(" ")}>
+    {label && <legend className={["text-sm/4 font-bold", variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-brand-blue)]"].join(" ")}>{label}</legend>}
+    <div className="mt-2 w-full space-x-2">
+      {options.map((option, index) => <label key={`${option.name}-${option.value}`} className={["inline-flex cursor-pointer items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-neutral-900)] transition-colors", variant === "purple" ? "has-[input:checked]:bg-[var(--color-purple)]/20" : "has-[input:checked]:bg-[var(--color-blue-light)]"].join(" ")}>
+        <input type="radio" name={option.name} id={`${id}-${option.name}-${index}`} value={option.value} checked={option.value === selectedValue} disabled={option.value !== selectedValue} readOnly className={["border-[var(--color-neutral-100)] focus:ring-0", variant === "purple" ? "text-[var(--color-purple)] checked:border-[var(--color-purple)]" : "text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)]"].join(" ")} />
+        <span>{option.label}</span>
+      </label>)}
+    </div>
+  </fieldset>;
+}
 
 /** `radio_group/1`: opções soltas, a marcada ganha fundo. */
 export function RadioGroup({
