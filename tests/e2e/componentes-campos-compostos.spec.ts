@@ -5,7 +5,7 @@ test.describe("galeria — campos compostos e somente leitura", () => {
   test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
 
   test("publica os cinco portes somente com seus contratos completos", async ({ page }) => {
-    await expect(page.getByText("42 de 47 portados do sistema")).toBeVisible();
+    await expect(page.getByText("44 de 47 portados do sistema")).toBeVisible();
     for (const name of ["input_with_select", "checkgroup", "fake_input", "input_switch_card", "fake_radio_group"]) {
       await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
     }

@@ -15,6 +15,7 @@ import {
 } from "../components/bloomy/DatePickers.js";
 import { Flash, FlashGroup, SimpleForm } from "../components/bloomy/Feedback.js";
 import { ImageUpload } from "../components/bloomy/ImageUpload.js";
+import { CopyButton, LinkButton, ToastHost } from "../components/bloomy/Action.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -269,8 +270,8 @@ export const GALLERY: GalleryEntry[] = [
   { name: "flash", origem: "lib/bloomy_web/components/core_components.ex:321", descricao: "Aviso temporário de resultado de ação.", demos: [{ titulo: "Resultado de uma ação", nota: "O aviso é anunciado e o botão Fechar é alcançável por teclado.", render: () => <DemoFlash /> }] },
   { name: "flash_group", origem: "lib/bloomy_web/components/core_components.ex:360", descricao: "A pilha de avisos temporários da página.", demos: [{ titulo: "Estados globais de conexão", nota: "Reproduz os avisos de cliente e servidor, normalmente controlados pela conexão do LiveView.", render: () => <DemoFlashGroup /> }] },
   { name: "simple_form", origem: "lib/bloomy_web/components/core_components.ex:416", descricao: "Formulário com espaçamento e ações padronizados.", demos: [{ titulo: "Programa com ações e bloqueio", nota: "Desabilitar aplica o `fieldset` nativo e impede envio e mudança, como `filter_form_events/2` no original.", render: () => <DemoSimpleForm /> }] },
-  { name: "link_button", origem: "lib/bloomy_web/components/core_components.ex:523", descricao: "Link com aparência de botão, para navegação." },
-  { name: "copy_button", origem: "lib/bloomy_web/components/core_components.ex:570", descricao: "Botão que copia um valor para a área de transferência." },
+  { name: "link_button", origem: "lib/bloomy_web/components/core_components.ex:523", descricao: "Link com aparência de botão, para navegação.", demos: [{ titulo: "Navegação e atributos nativos", nota: "A versão React degrada a navegação LiveView para anchor nativo: `navigate` opcional vira `href`, preservando semântica e teclado. Todos os 27 usos reais atuais fornecem `navigate`.", render: () => <div id="g-link-buttons" className="flex flex-wrap gap-3"><LinkButton navigate="#destino-link-button" variant="outline" leftIcon="fa-arrow-left" className="max-w-fit" target="_self" rel="bookmark" type="text/html" hrefLang="pt-BR" referrerPolicy="no-referrer">Voltar para programas</LinkButton><LinkButton navigate="data:text/plain,guia-sintetica" download="guia-sintetica.txt" color="purple" rightIcon="fa-arrow-right">Baixar guia sintética</LinkButton><LinkButton id="g-link-sem-navigate">Link sem destino</LinkButton><span id="destino-link-button" tabIndex={-1}>Destino sintético</span></div> }] },
+  { name: "copy_button", origem: "lib/bloomy_web/components/core_components.ex:570", descricao: "Botão que copia um valor para a área de transferência.", demos: [{ titulo: "Links de check-in", nota: "Dois botões publicam no único ToastHost global; os avisos são persistentes e fechados individualmente.", render: () => <div id="g-copy-demo"><form id="g-copy-form"><div id="g-copy-buttons" className="flex flex-wrap items-center gap-3"><CopyButton id="g-copy-checkin" textToCopy="https://exemplo.invalid/auto-checkin/unidade-girassol" variant="tint" rightIcon="fa-link" className="block" name="link_checkin" value="unidade-girassol">Link de Checkin</CopyButton><CopyButton id="g-copy-guia" textToCopy="GUIA-SINTETICA-2026" variant="outline" form="g-copy-form">Código da guia</CopyButton><CopyButton id="g-copy-small-disabled" textToCopy="não deve copiar" size="small" color="green" disabled title="Cópia indisponível">Copiar desabilitado</CopyButton></div></form><ToastHost /></div> }] },
   {
     name: "input",
     origem: "lib/bloomy_web/components/core_components.ex:1148",

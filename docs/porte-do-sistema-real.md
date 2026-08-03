@@ -2745,6 +2745,39 @@ Não foram adicionadas ações de produto.
 5 componentes portados, 5 demos interativas e 4 achados.
 
 
+### 77. Link de ação e cópia para a área de transferência
+
+`link_button/1` aceita `navigate` opcional, as quatro variantes, três cores,
+classe e os dois ícones. O conjunto global explicitamente incluído é `download`, `hreflang`,
+`referrerpolicy`, `rel`, `target` e `type`; não há atributo próprio de tamanho,
+método ou bloqueio (`lib/bloomy_web/components/core_components.ex:511-521`). O
+porte React degrada a navegação LiveView para `<a href={navigate}>`, preservando
+a semântica e o teclado nativos. Sem `navigate`, o resultado é um `a` sem `href`
+e, portanto, sem papel nativo de link; não se inventa ação. Embora opcional no
+contrato, todos os 27 usos reais atuais fornecem `navigate`.
+
+`copy_button/1` mantém id obrigatório, `data-text`, botão de tipo fixo, quatro
+cores, dois tamanhos, variantes, ícones, classe e os atributos globais declarados
+(`lib/bloomy_web/components/core_components.ex:557-577`). O hook lê somente
+`dataset.text`, chama `navigator.clipboard.writeText(text)` sem `await` e publica
+o evento global `phx:show-toast` com `title`, `content` e `type` imediatamente,
+sem tratamento de rejeição
+(`assets/js/hooks/copy_button.js:6-15`). O evento também não informa
+`closeTime`; por isso o `ToastController` não programa remoção automática e o
+aviso fica até a ação de fechar (`assets/js/hooks/toast_controller.js:23-36`). O
+porte reproduz essa arquitetura com um único `ToastHost` no layout da demo: cada
+`CopyButton` apenas copia e dispara o evento, enquanto o host escuta globalmente,
+mantém a pilha ordenada e permite fechar cada aviso sem remover os demais.
+
+As demos usam destinos e textos sintéticos determinísticos. A jornada dedicada
+confere navegação interna por teclado, ausência de papel de link sem `navigate`,
+atributos, ícones, classes, bloqueio nativo, ordem das chamadas à Clipboard API,
+host e anúncio únicos, pilha persistente e fechamento individual do feedback.
+
+2 componentes portados e 2 demos interativas. Nenhuma ação ou estado de produto
+foi acrescentado.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
