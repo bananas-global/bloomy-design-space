@@ -2705,6 +2705,25 @@ atuais do monólito.
 3 componentes portados, 3 demos interativas e 4 achados.
 
 
+### 75. Imagem existente e substituição local
+
+`image_upload/1` mantém um contrato curto: imagem circular de 80px, ação `tint`,
+input de arquivo escondido e somente a última entrada como pré-visualização. Os
+usos de avatar aceitam `.jpg`, `.jpeg` e `.png`; quando existe uma entrada nova,
+ela prevalece sobre `previous_url`. Não há progresso, erro de upload ou lista de
+entradas nesse componente — esses estados pertencem ao uploader de documentos.
+
+O porte conserva a ordem visual e os nomes configuráveis, cria o preview com
+`URL.createObjectURL` e revoga cada URL ao substituir ou desmontar. A demo cobre
+imagem sintética existente e substituições sucessivas; a jornada aciona o seletor
+por ponteiro e teclado com PNGs determinísticos e confirma a revogação das URLs.
+
+Ao conferir a marcação apareceu um achado objetivo: as duas imagens do original
+não têm `alt`. O porte nomeia a imagem atual e a pré-visualização escolhida.
+
+1 componente portado, 1 demo interativa e 1 achado.
+
+
 ## Achados sobre o sistema real
 
 Coisas encontradas ao ler o monólito que valem conversa com o time. Não são
@@ -2823,3 +2842,4 @@ bugs do Design Space; são observações sobre o produto.
 | 109 | `switch_card/1` abre um `<label>` que contém `<.input type="switch">`; essa função abre outro `<label>` em torno do checkbox. O HTML resultante aninha elementos `label`, estrutura inválida. O Design Space não reproduz a marcação: usa contêiner clicável e associa título e descrição ao checkbox por ARIA. | `lib/bloomy_web/components/core_components.ex:2580-2593`; `lib/bloomy_web/components/core_components.ex:912-935` |
 | 110 | `date_navigator/1` sempre inicializa o Flatpickr no controle central. Quando `disable` é verdadeiro, somente `initButtons()` retorna antes de registrar os listeners das setas; o atributo `disabled` é colocado num `span`, onde é inerte. Assim, o calendário central continua abrindo e alterando a data. O Design Space diverge de propósito: desabilita os três botões de interação. | `lib/bloomy_web/components/core_components.ex:2632-2646,2682-2690,2693-2699` |
 | 111 | `flash/1` põe a ação de dispensar no contêiner inteiro, enquanto o botão “fechar” não tem ação própria e funciona apenas porque o clique propaga até a `div`. Assim, clicar no texto também apaga o aviso, e a semântica da ação fica separada do elemento nomeado. O Design Space diverge de propósito: somente o botão “Fechar”, alcançável por teclado e com foco visível, dispensa o aviso. | `lib/bloomy_web/components/core_components.ex:325-345` |
+| 112 | As duas imagens de `image_upload/1` — a pré-visualização da nova entrada e a imagem já gravada — são renderizadas sem atributo `alt`. O controle tem nome, mas o leitor de tela não recebe a identidade do conteúdo visual que será mantido ou enviado. O Design Space diverge de propósito: nomeia “Imagem atual” e a pré-visualização com o nome do arquivo. | `lib/bloomy_web/components/core_components.ex:2123-2135` |

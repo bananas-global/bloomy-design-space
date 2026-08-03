@@ -14,6 +14,7 @@ import {
   DateNavigator, MonthPicker, RangeDatePicker, RangeMonthPicker, WeekSelector,
 } from "../components/bloomy/DatePickers.js";
 import { Flash, FlashGroup, SimpleForm } from "../components/bloomy/Feedback.js";
+import { ImageUpload } from "../components/bloomy/ImageUpload.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -157,6 +158,19 @@ function DemoSwitchCard() {
 function DemoDateNavigator() {
   const [data, setData] = useState("2026-07-30");
   return <div className="space-y-3"><DateNavigator id="g-navegador-data" name="filtro[data]" date={data} onChange={setData} /><div className="flex flex-wrap gap-2"><Button size="small" variant="outline" onClick={() => setData("2024-02-28")}>Carregar limite bissexto</Button><Button size="small" variant="outline" onClick={() => setData("2025-12-31")}>Carregar fim do ano</Button><Button size="small" variant="outline" onClick={() => setData("2026-09-14")}>Carregar valor externo</Button></div><DateNavigator id="g-navegador-bloqueado" name="filtro[data_bloqueada]" date="2026-08-15" disable /></div>;
+}
+
+const EXISTING_IMAGE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' fill='%23dbf3fb'/%3E%3Ccircle cx='40' cy='30' r='13' fill='%232b235b'/%3E%3Cpath d='M16 76c2-19 12-29 24-29s22 10 24 29' fill='%232b235b'/%3E%3C/svg%3E";
+
+function DemoImageUpload() {
+  const [selected, setSelected] = useState("Nenhum arquivo novo.");
+  return (
+    <div className="space-y-4">
+      <ImageUpload id="g-image-upload" name="profissional[avatar_url]" previousUrl={EXISTING_IMAGE} onFileChange={(file) => setSelected(`${file.name} pronto para envio.`)} />
+      <p className="m-0 text-sm text-[var(--fg-2)]">{selected}</p>
+    </div>
+  );
 }
 
 export const GALLERY: GalleryEntry[] = [
@@ -523,7 +537,15 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "image_upload", origem: "lib/bloomy_web/components/core_components.ex:2114", descricao: "Envio de imagem com pré-visualização." },
+  { name: "image_upload", origem: "lib/bloomy_web/components/core_components.ex:2114", descricao: "Envio de imagem com pré-visualização.",
+    demos: [
+      {
+        titulo: "Imagem existente e substituição",
+        nota: "Aceita JPG, JPEG e PNG como os usos reais. A última escolha substitui a imagem existente.",
+        render: () => <DemoImageUpload />,
+      },
+    ],
+  },
   { name: "avatar", origem: "lib/bloomy_web/components/core_components.ex:2163", descricao: "Foto ou iniciais de uma pessoa.",
     demos: [
       {

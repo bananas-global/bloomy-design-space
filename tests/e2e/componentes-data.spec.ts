@@ -5,7 +5,7 @@ test.describe("galeria — seletores de data", () => {
   test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
 
   test("mantém os quatro portes, contratos visíveis e erros associados", async ({ page }) => {
-    await expect(page.getByText("36 de 47 portados do sistema")).toBeVisible();
+    await expect(page.getByText("37 de 47 portados do sistema")).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Período", exact: true })).toBeVisible();
     const mes = page.getByRole("combobox", { name: "Mês da avaliação" });
     await expect(mes).toHaveValue("Ago 2026");
