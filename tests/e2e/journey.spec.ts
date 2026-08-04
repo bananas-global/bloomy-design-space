@@ -3563,3 +3563,279 @@ test.describe("trocas de responsável", () => {
     await expect(page.getByText("troca feita", { exact: true })).toHaveCount(4);
   });
 });
+
+/* ============================================================ CRM de leads */
+
+test.describe("funil de leads (proposta)", () => {
+  test("o quadro nomeia quem está sem próxima ação e quem estourou o SLA", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-funnel"));
+
+    await expect(
+      page.getByRole("heading", { name: /leads ativos sem próxima ação/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /fora do SLA de primeiro contato/ }),
+    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: /na fila sem dono/ })).toBeVisible();
+  });
+
+  test("cada etapa é uma seção com a contagem no cabeçalho", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-funnel"));
+
+    await expect(page.getByRole("heading", { name: "Novo", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Qualificado", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Aguardando operadora", level: 2 })).toBeVisible();
+    // Convertido e Perdido saem da linha e continuam contados.
+    await expect(page.getByRole("heading", { name: "Saíram do funil", level: 2 })).toBeVisible();
+  });
+
+  test("a colisão do enum fica na tela, não só na documentação", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-funnel"));
+
+    await expect(
+      page.getByRole("heading", { name: /“Avaliação agendada” mudou de lugar/ }),
+    ).toBeVisible();
+    await expect(page.getByText(/etapa certa no lugar errado do funil/)).toBeVisible();
+  });
+
+  test("a saúde do follow-up é texto, e o vazio tem a mesma cor do atraso", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-no-next-action"));
+
+    // Quatro leads, todos vermelhos: três sem nenhuma tarefa e um com tarefa
+    // vencida. O rótulo é o mesmo nos quatro — é o ponto da regra.
+    await expect(page.getByText("Atrasado ou sem próxima ação")).toHaveCount(4);
+    await expect(page.getByText(/Sem próxima ação\./)).toHaveCount(3);
+  });
+
+  test("o lead em silêncio diz há quantos dias ninguém falou com a família", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-first-contact-sla"));
+
+    await expect(page.getByText(/Fora do SLA de primeiro contato: 2 dias/)).toBeVisible();
+    // O que chegou hoje e já tem tarefa não é acusado.
+    await expect(page.getByText(/Fora do SLA/)).toHaveCount(1);
+  });
+
+  test("o vazio explica o que entra no funil, sem esconder as ações", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-funnel-empty"));
+
+    await expect(page.getByText("Nenhum lead neste recorte")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Novo lead" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Importar planilha" })).toBeVisible();
+  });
+});
+
+test.describe("perfil do lead (proposta)", () => {
+  test("converter aparece indisponível com o motivo da etapa, não com uma recusa muda", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("prospects.crm-lead-profile"));
+
+    const converter = page.getByRole("button", { name: "Efetivar paciente" });
+    await expect(converter).toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByText("Realize a avaliação antes de efetivar.")).toBeVisible();
+  });
+
+  test("a timeline junta importação, ligação e mudança de etapa numa ordem só", async ({
+    page,
+  }) => {
+    await page.goto(urlFor("prospects.crm-lead-profile"));
+
+    await expect(page.getByRole("heading", { name: "Importação", level: 3 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ligação", level: 3 })).toBeVisible();
+  });
+
+  test("agendar avaliação sem qualificação lista os dados que faltam", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-advance-needs-qualification"));
+
+    const avancar = page.getByRole("button", { name: /Avançar para Qualificado/ });
+    await expect(avancar).toBeVisible();
+    // A etapa anterior passa: o lead pode circular incompleto até a avaliação.
+    await expect(avancar).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByRole("heading", { name: /Faltam 3 dados da qualificação/ })).toBeVisible();
+  });
+
+  test("o convertido leva ao paciente e recusa reabrir", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-lead-converted"));
+
+    await expect(page.getByRole("link", { name: "Abrir o cadastro do paciente" })).toBeVisible();
+    const reabrir = page.getByRole("button", { name: /Reabrir/ });
+    await expect(reabrir).toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByText(/duas verdades sobre a mesma criança/)).toBeVisible();
+  });
+
+  test("o perdido mostra o motivo junto da etapa de onde saiu, e reabre", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-reopen-lost"));
+
+    await expect(
+      page.getByRole("heading", { name: "Perdido: Operadora não atendida" }),
+    ).toBeVisible();
+    await expect(page.getByText(/Saiu do funil em Qualificado/)).toBeVisible();
+    const reabrir = page.getByRole("button", { name: /Reabrir em Em contato/ });
+    await expect(reabrir).not.toHaveAttribute("aria-disabled", "true");
+  });
+});
+
+test.describe("novo lead (proposta)", () => {
+  test("sem telefone e sem e-mail, criar fica indisponível com o motivo", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-new-lead-minimal"));
+
+    const criar = page.getByRole("button", { name: "Criar lead" });
+    await expect(criar).toHaveAttribute("aria-disabled", "true");
+    await expect(page.getByText("Informe o nome de quem entrou em contato.")).toBeVisible();
+    // E a tela diz, antes de tentar, por que um dos dois contatos é exigido.
+    await expect(
+      page.getByText(/o lead entra no funil sem jeito de sair dele/),
+    ).toBeVisible();
+  });
+
+  test("o duplicado contra lead avisa e continua deixando criar", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-duplicate-lead"));
+
+    await expect(page.getByRole("heading", { name: "Esse contato já está no funil" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Abrir o lead existente" })).toBeVisible();
+    // Aviso, não bloqueio.
+    await expect(page.getByRole("button", { name: "Criar lead" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  test("o duplicado contra paciente manda para o cadastro, não para um lead", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-duplicate-patient"));
+
+    await expect(
+      page.getByRole("heading", { name: "Esse contato não é um lead: já é paciente" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Abrir o cadastro do paciente" })).toBeVisible();
+    await expect(page.getByText(/pedido de ampliação de horas/)).toBeVisible();
+  });
+});
+
+test.describe("importação de planilha (proposta)", () => {
+  test("os contadores separam válidos, duplicados e com erro", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-import-review"));
+
+    await expect(page.getByText("Válidos 2", { exact: true })).toBeVisible();
+    await expect(page.getByText("Duplicados 3", { exact: true })).toBeVisible();
+    await expect(page.getByText("Com erro 1", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Importar 5 leads" })).toBeVisible();
+  });
+
+  test("cada duplicado diz contra quem bateu, e se é lead ou paciente", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-import-review"));
+
+    await expect(page.getByText(/paciente Arthur Teixeira, pelo telefone/)).toBeVisible();
+    await expect(page.getByText(/lead Fernanda Alves, pelo telefone/)).toBeVisible();
+  });
+
+  test("linha com erro só oferece ignorar", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-import-review"));
+
+    const acao = page.getByLabel("O que fazer com a linha 7");
+    await expect(acao.locator("option")).toHaveCount(1);
+    await expect(acao).toHaveValue("ignore");
+  });
+
+  test("o mapeamento quebrado nomeia os dois problemas e trava o avanço", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-import-invalid-mapping"));
+
+    await expect(page.getByRole("heading", { name: "O mapeamento não fecha" })).toBeVisible();
+    await expect(page.getByText(/Campo obrigatório sem coluna: Telefone/)).toBeVisible();
+    await expect(page.getByText(/Duas colunas apontam para o mesmo campo/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Importar/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  test("o histórico de lotes leva aos leads de cada importação", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-import-history"));
+
+    await expect(page.getByRole("heading", { name: /leads_unimed_jul26\.xlsx/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Ver os leads deste lote" }).first()).toBeVisible();
+  });
+});
+
+test.describe("integrações de captação (proposta)", () => {
+  test("a integração muda aparece como erro, não como um dia fraco", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-integrations"));
+
+    await expect(page.getByRole("heading", { name: /1 canal não está recebendo/ })).toBeVisible();
+    await expect(page.getByText(/Muda há \d+ h/)).toBeVisible();
+    await expect(page.getByText(/Webhook quebrado não dá erro, dá silêncio/)).toBeVisible();
+  });
+
+  test("em revisão é um estado distinto de desconectada", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-integrations"));
+
+    await expect(page.getByText("Em revisão", { exact: true })).toBeVisible();
+    await expect(page.getByText(/Aguardando a permissão do provedor/)).toBeVisible();
+  });
+
+  test("testar conexão fica indisponível sem conta conectada", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-integrations"));
+
+    await expect(page.getByText("Conecte a conta antes de testar a conexão.")).toBeVisible();
+  });
+});
+
+test.describe("painel de leads (proposta)", () => {
+  test("o funil separa quem alcançou a etapa de quem está parado nela", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-dashboard"));
+
+    await expect(page.getByText(/parados aqui/).first()).toBeVisible();
+    await expect(page.getByText(/também alcançou “Qualificado”/)).toBeVisible();
+  });
+
+  test("os motivos de perda vêm ordenados por frequência", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-dashboard"));
+
+    await expect(page.getByRole("heading", { name: "Motivos de perda" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Onde o funil vaza" })).toBeVisible();
+    await expect(page.getByText("Operadora não atendida")).toBeVisible();
+  });
+
+  test("a leitura por origem mostra entradas, conversões e taxa", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-dashboard"));
+
+    await expect(page.getByRole("columnheader", { name: "Converteram" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Taxa" })).toBeVisible();
+    await expect(page.getByText(/Origem sem paciente é vaidade/)).toBeVisible();
+  });
+
+  test("o recorte vazio diz que é filtro, e não funil despencado", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-dashboard-empty"));
+
+    await expect(page.getByText("Nenhum lead no recorte")).toBeVisible();
+    await expect(page.getByText(/Zeros e barras vazias diriam que o funil despencou/)).toBeVisible();
+  });
+});
+
+test.describe("tarefas e lista (proposta)", () => {
+  test("a fila vem em três grupos, com as atrasadas primeiro", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-tasks"));
+
+    const grupos = page.getByRole("heading", { level: 2 });
+    await expect(grupos.filter({ hasText: "Atrasadas" })).toBeVisible();
+    await expect(grupos.filter({ hasText: "Hoje" })).toBeVisible();
+    await expect(grupos.filter({ hasText: "Próximas" })).toBeVisible();
+    await expect(page.getByText(/venceu há \d+ dias?/).first()).toBeVisible();
+  });
+
+  test("concluir uma tarefa oferece registrar o que aconteceu", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-tasks"));
+
+    await expect(
+      page.getByRole("button", { name: "Concluir e registrar o que aconteceu" }).first(),
+    ).toBeVisible();
+  });
+
+  test("a lista traz as colunas que o quadro não cabe, e avisa sobre o lote", async ({ page }) => {
+    await page.goto(urlFor("prospects.crm-list"));
+
+    await expect(page.getByRole("columnheader", { name: "Próxima ação" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Tempo na etapa" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ações em massa" })).toBeVisible();
+    await expect(page.getByText(/Marcar perdido em lote continua exigindo motivo/)).toBeVisible();
+  });
+});

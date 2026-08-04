@@ -51,6 +51,14 @@ import { MeetingSummary } from "../screens/MeetingSummary.js";
 import { TissBatch } from "../screens/TissBatch.js";
 import { Distribution } from "../screens/Distribution.js";
 import { Prospects } from "../screens/Prospects.js";
+import { LeadFunnel } from "../screens/LeadFunnel.js";
+import { LeadList } from "../screens/LeadList.js";
+import { LeadProfile } from "../screens/LeadProfile.js";
+import { LeadNew } from "../screens/LeadNew.js";
+import { LeadImport } from "../screens/LeadImport.js";
+import { LeadIntegrations } from "../screens/LeadIntegrations.js";
+import { LeadDashboard } from "../screens/LeadDashboard.js";
+import { LeadTasks } from "../screens/LeadTasks.js";
 import { Reports } from "../screens/Reports.js";
 
 /**
@@ -125,6 +133,16 @@ export const productDefinition: ProductDefinition = {
     { path: "/structure", screen: guard(Structure) },
     { path: "/management", screen: guard(Management) },
     { path: "/prospects", screen: guard(Prospects) },
+    // CRM de leads — proposta. Literais antes da paramétrica: `/leads/:id`
+    // casaria com "import", "tasks" e todas as outras.
+    { path: "/leads", screen: guard(LeadFunnel) },
+    { path: "/leads/list", screen: guard(LeadList) },
+    { path: "/leads/new", screen: guard(LeadNew) },
+    { path: "/leads/import", screen: guard(LeadImport) },
+    { path: "/leads/integrations", screen: guard(LeadIntegrations) },
+    { path: "/leads/dashboard", screen: guard(LeadDashboard) },
+    { path: "/leads/tasks", screen: guard(LeadTasks) },
+    { path: "/leads/:id", screen: guard(LeadProfile) },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build

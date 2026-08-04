@@ -20,6 +20,7 @@ import { managementFixtures } from "../fixtures/management.js";
 import { hourMapFixtures } from "../fixtures/hourMap.js";
 import { chatFixtures } from "../fixtures/chat.js";
 import { prospectFixtures } from "../fixtures/prospects.js";
+import { leadFixtures } from "../fixtures/leads.js";
 import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
 import { supervisionFixtures } from "../fixtures/supervision.js";
@@ -89,6 +90,7 @@ import { managementRules } from "../rules/management.js";
 import { hourMapRules, hourMapExpiryRules } from "../rules/hourMap.js";
 import { chatRules } from "../rules/chat.js";
 import { prospectRules } from "../rules/prospects.js";
+import { leadRules } from "../rules/leads.js";
 import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
 import { supervisionRules } from "../rules/supervision.js";
@@ -113,6 +115,7 @@ import { managementScenarios } from "../scenarios/management.js";
 import { hourMapScenarios } from "../scenarios/hourMap.js";
 import { chatScenarios } from "../scenarios/chat.js";
 import { prospectScenarios } from "../scenarios/prospects.js";
+import { leadScenarios } from "../scenarios/leads.js";
 import { reportScenarios } from "../scenarios/reports.js";
 import { notificationScenarios } from "../scenarios/notifications.js";
 import { supervisionScenarios } from "../scenarios/supervision.js";
@@ -897,6 +900,82 @@ export const modules: Module[] = [
           },
         ],
       },
+      // As três jornadas abaixo descrevem o CRM **proposto**. Todos os cenários
+      // delas estão marcados como `proposed`: nada disso existe no monólito.
+      {
+        id: "work-the-lead-funnel",
+        title: "Trabalhar o funil de leads (proposta)",
+        description:
+          "Do card no quadro até a conversão, passando pelos dois estados que hoje ninguém enxerga: sem próxima ação e fora do SLA.",
+        steps: [
+          {
+            scenario: "prospects.crm-funnel",
+            label: "Ler o quadro do funil",
+            decision: "O que impede este lead de avançar?",
+            branches: {
+              "Ninguém está com ele": "prospects.crm-no-next-action",
+              "Chegou e ficou em silêncio": "prospects.crm-first-contact-sla",
+              "Falta a qualificação": "prospects.crm-advance-needs-qualification",
+              "Quero ver a conversa inteira": "prospects.crm-lead-profile",
+            },
+          },
+          {
+            scenario: "prospects.crm-lead-profile",
+            label: "Abrir o perfil e decidir a próxima ligação",
+            decision: "Como este lead sai do funil?",
+            branches: {
+              "Virou paciente": "prospects.crm-lead-converted",
+              "Foi perdido, e voltou": "prospects.crm-reopen-lost",
+            },
+          },
+        ],
+      },
+      {
+        id: "capture-leads-without-typing",
+        title: "Captar sem digitar (proposta)",
+        description:
+          "As duas portas de entrada que substituem a digitação: a planilha da operadora e os canais que mandam lead sozinhos.",
+        steps: [
+          {
+            scenario: "prospects.crm-import-review",
+            label: "Revisar a planilha antes de importar",
+            decision: "O que atrapalha a importação?",
+            branches: {
+              "As colunas não fecham": "prospects.crm-import-invalid-mapping",
+              "Quero salvar o de/para": "prospects.crm-import-mapping",
+              "De qual lote veio cada lead": "prospects.crm-import-history",
+            },
+          },
+          {
+            scenario: "prospects.crm-integrations",
+            label: "Conferir por onde os leads entram",
+            decision: "E quando alguém digita à mão?",
+            branches: {
+              "Registro rápido na recepção": "prospects.crm-new-lead-minimal",
+              "Já existe alguém com esse telefone": "prospects.crm-duplicate-lead",
+              "Na verdade já é paciente": "prospects.crm-duplicate-patient",
+            },
+          },
+        ],
+      },
+      {
+        id: "read-the-lead-funnel",
+        title: "Descobrir onde o funil vaza (proposta)",
+        description:
+          "A leitura que justifica o CRM — e a distinção entre alcançar uma etapa e estar parado nela, que decide se o painel manda consertar o que funciona.",
+        steps: [
+          {
+            scenario: "prospects.crm-dashboard",
+            label: "Ler o funil, os motivos de perda e as origens",
+            decision: "E na operação do dia?",
+            branches: {
+              "Quem eu ligo agora": "prospects.crm-tasks",
+              "Quero mexer em trinta de uma vez": "prospects.crm-list",
+              "O recorte não tem ninguém": "prospects.crm-dashboard-empty",
+            },
+          },
+        ],
+      },
     ],
   },
   {
@@ -1052,6 +1131,7 @@ export const scenarios: Scenario[] = [
   ...hourMapScenarios,
   ...chatScenarios,
   ...prospectScenarios,
+  ...leadScenarios,
   ...reportScenarios,
   ...notificationScenarios,
   ...supervisionScenarios,
@@ -1100,6 +1180,7 @@ export const fixtures: Fixture[] = [
   ...hourMapFixtures,
   ...chatFixtures,
   ...prospectFixtures,
+  ...leadFixtures,
   ...reportFixtures,
   ...notificationFixtures,
   ...supervisionFixtures,
@@ -1173,6 +1254,7 @@ export const rules: Rule[] = [
   ...hourMapExpiryRules,
   ...chatRules,
   ...prospectRules,
+  ...leadRules,
   ...reportRules,
   ...notificationRules,
   ...supervisionRules,

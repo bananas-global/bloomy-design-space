@@ -1475,6 +1475,279 @@ export type ProspectsData = {
 };
 
 /* ================================================================== *
+ * Leads — o CRM proposto, que ainda não existe no monólito
+ * ================================================================== */
+
+/**
+ * As etapas do funil **proposto**, que não são as do funil de hoje.
+ *
+ * Convivem de propósito com `FunnelStep`, e a razão é uma colisão de nome:
+ * `scheduled` significa "primeira sessão marcada" no sistema real, depois de
+ * `waiting_plan`, e "avaliação agendada" na proposta, antes de
+ * `in_avaliation`. A mesma chave, dois lugares do funil. Unificar os dois tipos
+ * apagaria a diferença — e ela é justamente o que a migração do enum precisa
+ * resolver. Ver `scheduled-means-two-places-in-the-funnel` em
+ * `src/rules/leads.ts`.
+ */
+export type LeadStep =
+  | "new"
+  | "in_contact"
+  | "qualified"
+  | "scheduled"
+  | "in_avaliation"
+  | "submitted"
+  | "waiting_plan"
+  | "converted"
+  | "lost";
+
+/**
+ * De onde o lead veio.
+ *
+ * Doze origens onde o sistema real tem três (`indication`, `search`,
+ * `others`). A diferença não é de granularidade: sem separar Google Ads de
+ * Meta Ads de indicação, não existe a pergunta "o anúncio está pagando?".
+ */
+export type LeadSource =
+  | "site"
+  | "google_ads"
+  | "meta_ads"
+  | "google_organico"
+  | "instagram"
+  | "whatsapp"
+  | "telefone"
+  | "presencial"
+  | "indicacao"
+  | "operadora"
+  | "evento"
+  | "outro";
+
+/** Obrigatório ao marcar Perdido. Sem ele, o funil não ensina nada. */
+export type LostReason =
+  | "sem_resposta"
+  | "preco"
+  | "operadora_nao_atendida"
+  | "sem_vaga_horario"
+  | "distancia"
+  | "escolheu_concorrente"
+  | "desistiu"
+  | "duplicado"
+  | "outro";
+
+export type LeadInteractionType =
+  | "ligacao"
+  | "whatsapp"
+  | "email"
+  | "visita"
+  | "nota"
+  | "proposta"
+  | "etapa"
+  | "importacao"
+  | "automatica";
+
+/**
+ * Uma linha da timeline.
+ *
+ * As visitas do modelo atual (`ProspectVisit`) viram um tipo de interação —
+ * é o que permite ler ligação, WhatsApp, proposta e visita na mesma ordem
+ * cronológica em vez de em duas listas separadas.
+ */
+export type LeadInteraction = {
+  id: string;
+  type: LeadInteractionType;
+  at: string;
+  by: string;
+  text: string;
+};
+
+/** Follow-up. Todo lead ativo deve ter uma. Lead sem tarefa é alerta. */
+export type LeadTask = {
+  id: string;
+  title: string;
+  dueAt: string;
+  assignedTo?: string;
+  done: boolean;
+};
+
+export type LeadStepChange = {
+  at: string;
+  from: LeadStep;
+  to: LeadStep;
+  by: string;
+  note?: string;
+};
+
+/**
+ * Consentimento LGPD.
+ *
+ * `basis` existe porque nem toda entrada tem aceite explícito: a planilha da
+ * operadora chega sem checkbox, e a base legal ali é a execução do
+ * procedimento a pedido do titular. Registrar qual das duas vale é o que
+ * separa uma base de leads defensável de uma lista comprada.
+ */
+export type LeadConsent = {
+  given: boolean;
+  at?: string;
+  channel?: string;
+  basis?: "consentimento" | "execucao_de_contrato";
+};
+
+export type LeadUtm = {
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  content?: string;
+};
+
+export type LeadSpecialty = {
+  name: string;
+  hoursPerWeek: number;
+};
+
+export type Lead = {
+  id: string;
+  /** Quem atende o telefone. No topo do funil, às vezes é tudo que se tem. */
+  contactName: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  region?: string;
+  /** Dados da criança só passam a ser exigidos a partir de "Avaliação agendada". */
+  childName?: string;
+  childAgeYears?: number;
+  supportLevel?: 1 | 2 | 3;
+  operator?: string;
+  unitOfInterest: string;
+  specialties: LeadSpecialty[];
+  availability: ProspectAvailability[];
+  source: LeadSource;
+  campaign?: string;
+  utm?: LeadUtm;
+  /** Responsável comercial. Ausente é uma situação real: fila sem dono. */
+  owner?: string;
+  step: LeadStep;
+  lostReason?: LostReason;
+  lostNote?: string;
+  importBatchId?: string;
+  consent: LeadConsent;
+  interactions: LeadInteraction[];
+  tasks: LeadTask[];
+  history: LeadStepChange[];
+  /** O vínculo que fecha a métrica origem → paciente. */
+  convertedPatientId?: string;
+};
+
+/* ------------------------------------------------------- importação */
+
+export type ImportField = "contactName" | "phone" | "email" | "childName" | "operator" | "ignore";
+
+export type ImportColumn = {
+  column: string;
+  sample: string;
+  suggestion: ImportField;
+};
+
+/** Uma linha crua da planilha, antes de qualquer validação. */
+export type ImportRow = {
+  line: number;
+  contactName: string;
+  phone: string;
+  email: string;
+  childName: string;
+  operator: string;
+};
+
+/** O mapeamento salvo por operadora — feito uma vez, reusado sempre. */
+export type ImportTemplate = {
+  name: string;
+  mapping: Record<string, ImportField>;
+};
+
+export type ImportPreview = {
+  fileName: string;
+  format: "CSV" | "XLSX";
+  sizeLabel: string;
+  source: string;
+  unit: string;
+  columns: ImportColumn[];
+  rows: ImportRow[];
+  templates: ImportTemplate[];
+  mapping: Record<string, ImportField>;
+};
+
+export type ImportBatch = {
+  id: string;
+  fileName: string;
+  source: string;
+  unit: string;
+  at: string;
+  by: string;
+  created: number;
+  updated: number;
+  ignored: number;
+  errors: number;
+  tasksCreated: number;
+};
+
+/* ------------------------------------------------------ integrações */
+
+export type IntegrationKind = "endpoint" | "oauth" | "sheets";
+
+export type LeadIntegration = {
+  id: string;
+  name: string;
+  kind: IntegrationKind;
+  provider?: string;
+  description: string;
+  /** Ligada pela clínica. Diferente de estar funcionando. */
+  active: boolean;
+  /** Conta OAuth conectada, quando o canal exige uma. */
+  account?: string;
+  formId?: string;
+  endpoint?: string;
+  sheetUrl?: string;
+  syncEvery?: string;
+  /** Aguardando revisão do app pelo provedor (o caso da Meta). */
+  needsReview?: boolean;
+  /** Último sinal recebido. Ausente quando nunca recebeu nada. */
+  lastSignalAt?: string;
+  recentLabel: string;
+  defaults: {
+    unit: string;
+    source: LeadSource;
+    owner?: string;
+    createTask: boolean;
+    notify: boolean;
+    captureUtm?: boolean;
+    requireConsent?: boolean;
+  };
+};
+
+export type LeadsData = {
+  leads: Lead[];
+  owners: string[];
+  operators: string[];
+  units: string[];
+  integrations: LeadIntegration[];
+  batches: ImportBatch[];
+  importPreview?: ImportPreview;
+  /**
+   * O que já foi digitado no formulário de novo lead.
+   *
+   * Declarado na fixture em vez de derivado de estado de componente: o aviso de
+   * duplicidade é uma situação do produto, e uma situação precisa ser abrível
+   * por link para virar caso verificável no handoff.
+   */
+  newLeadDraft?: { contactName: string; phone?: string; email?: string };
+  /**
+   * Pacientes já cadastrados, para o dedupe olhar além dos leads.
+   * Família que já é cliente e pede segunda especialidade não é lead novo.
+   */
+  existingPatients: { id: string; name: string; phone?: string; email?: string }[];
+  /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
+  now: string;
+};
+
+/* ================================================================== *
  * Relatórios — os documentos que saem da clínica
  * ================================================================== */
 

@@ -7343,3 +7343,371 @@ describe("trocas de responsável — o que a tela diz", () => {
     expect(minutesUntilStart(troca, "2026-07-30T10:20:00.000-03:00")).toBe(-20);
   });
 });
+
+/* ================================================================== *
+ * CRM de leads — a proposta
+ * ================================================================== */
+
+import type { Lead as LeadCrm, LeadsData as LeadsCrmData } from "../src/contracts/index.js";
+import { leadFixtures } from "../src/fixtures/leads.js";
+import {
+  breachesFirstContactSla,
+  bucketTasks,
+  bySource,
+  canAdvanceTo,
+  canConvertLead,
+  canCreateLead,
+  canMarkLost,
+  canReopen,
+  classifyImport,
+  conversionRate,
+  daysInStep,
+  findDuplicate,
+  funnelBars,
+  leadHealth,
+  leadsWithoutNextAction,
+  lostByReason,
+  lostByStep,
+  lostFromStep,
+  missingForQualification,
+  nextStep as nextLeadStep,
+  normalizePhone,
+  summarizeImport,
+  tasksIn,
+  validateMapping,
+} from "../src/rules/leads.js";
+
+const dadosLeads = (id: string): LeadsCrmData => {
+  const fixture = leadFixtures.find((item) => item.id === id);
+  if (!fixture) throw new Error(`Fixture inexistente: ${id}`);
+  return (typeof fixture.data === "function" ? fixture.data() : fixture.data) as LeadsCrmData;
+};
+
+const umLead = (id: string, fixtureId = "leads-funnel"): LeadCrm => {
+  const lead = dadosLeads(fixtureId).leads.find((item) => item.id === id);
+  if (!lead) throw new Error(`Lead inexistente na fixture: ${id}`);
+  return lead;
+};
+
+describe("lead cru — o que basta para registrar", () => {
+  it("aceita nome com telefone, e nome com e-mail", () => {
+    expect(canCreateLead({ contactName: "Ana", phone: "(11) 90000-0000" }).allowed).toBe(true);
+    expect(canCreateLead({ contactName: "Ana", email: "ana@exemplo.test" }).allowed).toBe(true);
+  });
+
+  it("recusa quem não tem como ser respondido", () => {
+    const decisao = canCreateLead({ contactName: "Ana" });
+    expect(decisao.allowed).toBe(false);
+    // O motivo diz a consequência, não só o campo que falta.
+    expect(decisao.reason).toContain("não é contatável");
+  });
+
+  it("recusa contato sem nome, mesmo com telefone", () => {
+    expect(canCreateLead({ contactName: "  ", phone: "(11) 90000-0000" }).allowed).toBe(false);
+  });
+});
+
+describe("qualificação — o que agendar uma avaliação custa", () => {
+  it("nomeia só o que falta, na ordem em que o formulário pergunta", () => {
+    // O pai passou a operadora ao perguntar o preço e nada sobre a criança.
+    expect(missingForQualification(umLead("ld-6"))).toEqual([
+      "nome da criança",
+      "idade da criança",
+      "nível de suporte",
+    ]);
+    expect(missingForQualification(umLead("ld-9"))).toEqual([]);
+  });
+
+  it("trata “Não informado” como operadora ausente", () => {
+    const lead = { ...umLead("ld-9"), operator: "Não informado" };
+    expect(missingForQualification(lead)).toEqual(["operadora"]);
+  });
+
+  it("libera as etapas anteriores e barra a partir de avaliação agendada", () => {
+    const cru = umLead("ld-6");
+    expect(canAdvanceTo(cru, "in_contact").allowed).toBe(true);
+    expect(canAdvanceTo(cru, "qualified").allowed).toBe(true);
+
+    const barrado = canAdvanceTo(cru, "scheduled");
+    expect(barrado.allowed).toBe(false);
+    expect(barrado.reason).toContain("nome da criança");
+  });
+
+  it("deixa passar quem está qualificado", () => {
+    expect(canAdvanceTo(umLead("ld-9"), "scheduled").allowed).toBe(true);
+  });
+
+  it("nunca deixa avançar para convertido nem para perdido pela linha", () => {
+    const lead = umLead("ld-9");
+    expect(canAdvanceTo(lead, "converted").allowed).toBe(false);
+    expect(canAdvanceTo(lead, "lost").allowed).toBe(false);
+    // E a linha do funil não oferece "convertido" como próximo passo.
+    expect(nextLeadStep("waiting_plan")).toBeUndefined();
+    expect(nextLeadStep("new")).toBe("in_contact");
+  });
+});
+
+describe("perda e reabertura", () => {
+  it("exige motivo para marcar perdido", () => {
+    const lead = umLead("ld-9");
+    expect(canMarkLost(lead, undefined).allowed).toBe(false);
+    expect(canMarkLost(lead, "preco").allowed).toBe(true);
+  });
+
+  it("guarda de qual etapa a perda aconteceu", () => {
+    expect(lostFromStep(umLead("ld-26"))).toBe("qualified");
+    expect(lostFromStep(umLead("ld-24"))).toBe("submitted");
+    expect(lostFromStep(umLead("ld-9"))).toBeUndefined();
+  });
+
+  it("reabre um perdido e recusa reabrir um convertido", () => {
+    expect(canReopen(umLead("ld-26")).allowed).toBe(true);
+    const convertido = canReopen(umLead("ld-22"));
+    expect(convertido.allowed).toBe(false);
+    expect(convertido.reason).toContain("duas verdades");
+  });
+});
+
+describe("conversão — a escada de motivos", () => {
+  const podeCriar = ["patients.create"];
+
+  it("recusa quem não cria paciente", () => {
+    expect(canConvertLead(umLead("ld-20"), []).allowed).toBe(false);
+  });
+
+  it("pede a qualificação antes de qualquer coisa", () => {
+    expect(canConvertLead(umLead("ld-6"), podeCriar).reason).toContain("Complete a qualificação");
+  });
+
+  // A ordem da escada é parte da regra: cada motivo é acionável na etapa dele.
+  it("diz o que fazer em cada etapa, em vez de só recusar", () => {
+    expect(canConvertLead(umLead("ld-9"), podeCriar).reason).toContain("Realize a avaliação");
+    expect(canConvertLead(umLead("ld-15"), podeCriar).reason).toContain("Conclua a avaliação");
+    expect(canConvertLead(umLead("ld-17"), podeCriar).reason).toContain("resposta da família");
+  });
+
+  it("libera em aguardando operadora, e barra quem já saiu do funil", () => {
+    expect(canConvertLead(umLead("ld-20"), podeCriar).allowed).toBe(true);
+    expect(canConvertLead(umLead("ld-22"), podeCriar).allowed).toBe(false);
+    expect(canConvertLead(umLead("ld-26"), podeCriar).reason).toContain("Reabra o funil");
+  });
+});
+
+describe("saúde do follow-up", () => {
+  const agora = dadosLeads("leads-funnel").now;
+
+  it("pinta o vazio da mesma cor do atraso", () => {
+    // Sem nenhuma tarefa aberta.
+    expect(leadHealth(umLead("ld-3"), agora)).toBe("red");
+    // Com tarefa vencida.
+    expect(leadHealth(umLead("ld-8"), agora)).toBe("red");
+  });
+
+  it("separa tarefa de hoje de tarefa futura", () => {
+    expect(leadHealth(umLead("ld-1"), agora)).toBe("amber");
+    expect(leadHealth(umLead("ld-11"), agora)).toBe("green");
+  });
+
+  it("não cobra próxima ação de quem já saiu do funil", () => {
+    expect(leadHealth(umLead("ld-22"), agora)).toBe("green");
+    expect(leadHealth(umLead("ld-25"), agora)).toBe("green");
+  });
+
+  it("lista os leads ativos sem próxima ação", () => {
+    const semAcao = leadsWithoutNextAction(dadosLeads("leads-without-next-action"));
+    expect(semAcao.map((lead) => lead.id)).toEqual(["ld-3", "ld-8", "ld-19", "ld-21"]);
+  });
+
+  it("conta os dias parados na etapa atual", () => {
+    expect(daysInStep(umLead("ld-21"), agora)).toBe(8);
+    expect(daysInStep(umLead("ld-12"), agora)).toBe(0);
+  });
+});
+
+describe("SLA de primeiro contato", () => {
+  const agora = dadosLeads("leads-funnel").now;
+
+  it("acusa o lead novo em silêncio há mais de 24 horas", () => {
+    expect(breachesFirstContactSla(umLead("ld-3"), agora)).toBe(true);
+  });
+
+  it("não conta a mensagem automática de recebimento como contato", () => {
+    // O ld-3 só tem interação do tipo automática, e ainda assim viola.
+    expect(umLead("ld-3").interactions.every((item) => item.type === "automatica")).toBe(true);
+  });
+
+  it("perdoa quem chegou hoje e quem já foi contatado", () => {
+    expect(breachesFirstContactSla(umLead("ld-1"), agora)).toBe(false);
+    expect(breachesFirstContactSla(umLead("ld-4"), agora)).toBe(false);
+  });
+
+  it("só se aplica à etapa Novo", () => {
+    expect(breachesFirstContactSla(umLead("ld-8"), agora)).toBe(false);
+  });
+});
+
+describe("dedupe", () => {
+  const dados = dadosLeads("leads-funnel");
+
+  it("normaliza telefone antes de comparar", () => {
+    expect(normalizePhone("(11) 98876-5521")).toBe("11988765521");
+  });
+
+  it("acha o lead pelo telefone e pelo e-mail", () => {
+    expect(findDuplicate(dados, { phone: "11 99123 4477" })?.name).toBe("Rafael Monteiro");
+    expect(findDuplicate(dados, { email: "RAFAEL.M@Exemplo.TEST" })?.name).toBe("Rafael Monteiro");
+  });
+
+  // A ordem importa: paciente antes de lead. O telefone abaixo existe nos dois.
+  it("reconhece paciente antes de reconhecer lead", () => {
+    const encontrado = findDuplicate(dados, { phone: "(11) 98600-7712" });
+    expect(encontrado?.kind).toBe("patient");
+    expect(encontrado?.name).toBe("Arthur Teixeira");
+  });
+
+  it("ignora o próprio lead ao editar", () => {
+    expect(findDuplicate(dados, { phone: "(11) 99123-4477" }, "ld-2")).toBeUndefined();
+  });
+
+  it("não tenta casar telefone curto demais", () => {
+    expect(findDuplicate(dados, { phone: "119" })).toBeUndefined();
+  });
+});
+
+describe("importação — mapeamento", () => {
+  const preview = dadosLeads("leads-import").importPreview!;
+  const quebrado = dadosLeads("leads-import-invalid-mapping").importPreview!;
+
+  it("aceita o mapeamento sugerido", () => {
+    expect(validateMapping(preview.columns, preview.mapping).valid).toBe(true);
+  });
+
+  it("acusa campo obrigatório sem coluna e campo com duas colunas", () => {
+    const resultado = validateMapping(quebrado.columns, quebrado.mapping);
+    expect(resultado.valid).toBe(false);
+    expect(resultado.problems.map((problem) => problem.kind).sort()).toEqual([
+      "duplicated-field",
+      "missing-required",
+    ]);
+  });
+});
+
+describe("importação — linha a linha", () => {
+  const dados = dadosLeads("leads-import");
+  const linhas = classifyImport(dados, dados.importPreview!.rows);
+
+  it("classifica as seis linhas", () => {
+    expect(linhas.map((item) => item.status)).toEqual([
+      "duplicate",
+      "duplicate",
+      "valid",
+      "valid",
+      "duplicate",
+      "error",
+    ]);
+  });
+
+  it("linha com erro só pode ser ignorada", () => {
+    const erro = linhas[5]!;
+    expect(erro.options).toEqual(["ignore"]);
+    expect(erro.decision).toBe("ignore");
+    expect(erro.problem).toBe("sem nome");
+  });
+
+  it("duplicada contra paciente diz que é paciente", () => {
+    const contraPaciente = linhas[4]!;
+    expect(contraPaciente.match?.kind).toBe("patient");
+  });
+
+  it("o padrão é atualizar duplicado, criar válido e ignorar erro", () => {
+    expect(linhas.map((item) => item.decision)).toEqual([
+      "update",
+      "update",
+      "create",
+      "create",
+      "update",
+      "ignore",
+    ]);
+  });
+
+  it("conta quantos leads vão entrar de fato", () => {
+    const resumo = summarizeImport(linhas);
+    expect(resumo).toEqual({ total: 6, valid: 2, duplicate: 3, error: 1, willImport: 5 });
+  });
+});
+
+describe("métricas do funil", () => {
+  const leads = dadosLeads("leads-funnel").leads;
+  const barras = funnelBars(leads);
+
+  it("separa quem alcançou a etapa de quem está parado nela", () => {
+    const qualificado = barras.find((barra) => barra.step === "qualified")!;
+    // Três estão parados em "Qualificado", mas quinze já passaram por ali.
+    expect(qualificado.current).toBe(3);
+    expect(qualificado.reached).toBeGreaterThan(qualificado.current);
+  });
+
+  it("a primeira etapa alcança todo mundo que não se perdeu", () => {
+    const emLinha = leads.filter((lead) => lead.step !== "lost").length;
+    expect(barras[0]!.reached).toBe(emLinha);
+    expect(barras[0]!.rate).toBe(100);
+  });
+
+  it("o alcance nunca sobe ao longo do funil", () => {
+    for (let i = 1; i < barras.length; i += 1) {
+      expect(barras[i]!.reached).toBeLessThanOrEqual(barras[i - 1]!.reached);
+    }
+  });
+
+  it("calcula a taxa de conversão sobre o total", () => {
+    // 2 convertidos em 26 leads.
+    expect(conversionRate(leads)).toBe(8);
+    expect(conversionRate([])).toBe(0);
+  });
+
+  it("agrupa as perdas por motivo e por etapa de saída", () => {
+    expect(lostByReason(leads).map((barra) => barra.reason)).toEqual([
+      "operadora_nao_atendida",
+      "preco",
+      "sem_resposta",
+    ]);
+    expect(lostByStep(leads)).toEqual([
+      { step: "in_contact", count: 1 },
+      { step: "qualified", count: 1 },
+      { step: "submitted", count: 1 },
+    ]);
+  });
+
+  it("mede cada origem pela conversão, não pelo volume", () => {
+    const origens = bySource(leads);
+    const site = origens.find((origem) => origem.source === "site")!;
+    expect(site.count).toBe(4);
+    expect(site.converted).toBe(1);
+    expect(site.rate).toBe(25);
+  });
+});
+
+describe("fila de tarefas", () => {
+  const dados = dadosLeads("leads-tasks");
+  const fila = bucketTasks(dados);
+
+  it("separa atrasadas, de hoje e próximas", () => {
+    expect(tasksIn(fila, "overdue").length).toBeGreaterThan(0);
+    expect(tasksIn(fila, "today").length).toBeGreaterThan(0);
+    expect(tasksIn(fila, "upcoming").length).toBeGreaterThan(0);
+  });
+
+  it("põe as atrasadas na frente", () => {
+    expect(fila[0]!.bucket).toBe("overdue");
+  });
+
+  it("filtra por dono quando pedido", () => {
+    const daCamila = bucketTasks(dados, "Camila Ribeiro");
+    expect(daCamila.every((item) => item.lead.owner === "Camila Ribeiro")).toBe(true);
+    expect(daCamila.length).toBeLessThan(fila.length);
+  });
+
+  it("não traz tarefa concluída", () => {
+    expect(fila.every((item) => !item.task.done)).toBe(true);
+  });
+});
