@@ -78,7 +78,7 @@ jobs:
       # Sem isso o cabeçalho da revisão mostra "development" e fica sem branch nem
       # commit, e é o commit que torna uma aprovação rastreável.
       #
-      # `VITE_VERCEL_URL` não entra: no momento do build o deploy ainda não existe.
+      # A URL do deploy não entra: no momento do build o deploy ainda não existe.
       # O motor cai para `window.location.origin` em tempo de execução e chega ao
       # mesmo resultado, então o botão de copiar link continua correto.
       # Gravado como arquivo lido pelo `vite.config.ts`, e não como variável de

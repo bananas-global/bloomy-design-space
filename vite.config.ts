@@ -22,10 +22,12 @@ import { devPort } from "./dev-port.js";
  *    Ver `docs/decisions/0002-source-mapping-no-preview.md` para o raciocínio e
  *    para como ligar em preview quando a revisão justificar.
  *
- * 3. **Variáveis de deployment.** A Vercel publica o contexto como `VERCEL_*`
- *    no build. Mapear explicitamente para `VITE_VERCEL_*` é o que garante que o
- *    motor monte o link absoluto do cenário sem domínio hardcoded, sem depender
- *    de a exposição automática de variáveis de sistema estar ligada no projeto.
+ * 3. **Variáveis de deployment.** O contexto do build chega ao produto por
+ *    `VITE_DEPLOY_*`, nome que não cita fornecedor: quem publica pode mudar sem
+ *    que o contrato com o motor mude (ADR 0007 do motor). Mapear explicitamente
+ *    é o que garante que o motor monte o link absoluto do cenário sem domínio
+ *    hardcoded, sem depender de a exposição automática de variáveis de sistema
+ *    estar ligada no projeto de quem hospeda.
  */
 
 const isDev = process.env.NODE_ENV !== "production";
@@ -45,7 +47,7 @@ const sourceMappingInBuild = process.env.DESIGN_SPACE_SOURCE_MAPPING === "1";
  *    lido aqui, em Node, é o único ponto que nada mais toca.
  *
  * 2. O `define` substitui **texto literal**. Ele funciona no código deste
- *    repositório, que escreve `import.meta.env.VITE_VERCEL_ENV` por extenso — e
+ *    repositório, que escreve `import.meta.env.VITE_DEPLOY_ENV` por extenso — e
  *    não funcionava no motor, que é uma biblioteca já compilada e lê
  *    `import.meta.env` como objeto. Por isso o produto passa o contexto ao motor
  *    explicitamente, pelo campo `deploy` da `ProductDefinition`.
@@ -66,9 +68,9 @@ function readBuildInfo(): BuildInfo {
 const buildInfo = readBuildInfo();
 
 const deployEnv = {
-  "import.meta.env.VITE_VERCEL_ENV": JSON.stringify(buildInfo.env ?? "development"),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_REF": JSON.stringify(buildInfo.ref ?? ""),
-  "import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA": JSON.stringify(buildInfo.sha ?? ""),
+  "import.meta.env.VITE_DEPLOY_ENV": JSON.stringify(buildInfo.env ?? "development"),
+  "import.meta.env.VITE_DEPLOY_BRANCH": JSON.stringify(buildInfo.ref ?? ""),
+  "import.meta.env.VITE_DEPLOY_COMMIT": JSON.stringify(buildInfo.sha ?? ""),
 };
 
 export default defineConfig({

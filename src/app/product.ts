@@ -133,9 +133,9 @@ export const productDefinition: ProductDefinition = {
   // daqui. Sem isso o cabeçalho da revisão mostra "development", sem branch nem
   // commit, e a URL de commit deixa de tornar a aprovação rastreável.
   deploy: {
-    env: import.meta.env.VITE_VERCEL_ENV,
-    branch: import.meta.env.VITE_VERCEL_GIT_COMMIT_REF,
-    commit: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA,
+    env: import.meta.env.VITE_DEPLOY_ENV,
+    branch: import.meta.env.VITE_DEPLOY_BRANCH,
+    commit: import.meta.env.VITE_DEPLOY_COMMIT,
   },
 
   theme: {
