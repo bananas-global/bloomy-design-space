@@ -418,12 +418,16 @@ test.describe("Protocolos", () => {
   test("no ABLLS-R cada item tem faixa própria, e elas diferem", async ({ page }) => {
     await page.goto(urlFor("protocols.abllsr"));
 
-    await expect(page.getByText("Resposta — faixa de 0 a 4, própria deste item").first()).toBeVisible();
-    await expect(page.getByText("Resposta — faixa de 0 a 2, própria deste item")).toBeVisible();
+    // A aplicação real mostra uma questão por vez. A3 tem faixa 0–2;
+    // voltando para A2, o mesmo painel passa a oferecer 0–4.
+    await expect(page.getByRole("group", { name: "Resposta — faixa de 0 a 2, própria deste item" })).toBeVisible();
+    await page.getByRole("button", { name: "Questão anterior" }).click();
+    await expect(page.getByRole("group", { name: "Resposta — faixa de 0 a 4, própria deste item" })).toBeVisible();
 
     // A escala compartilhada não existe neste formato e não pode aparecer.
     await expect(page.getByText("Resposta — escala do protocolo")).toHaveCount(0);
     // Item sem pontuação diz isso, em vez de mostrar zero.
+    await page.getByRole("button", { name: "Próxima questão" }).click();
     await expect(page.getByText("sem pontuação registrada")).toBeVisible();
   });
 
@@ -521,6 +525,7 @@ test.describe("Na Clínica", () => {
     await page.goto(urlFor("in-clinic.empty"));
 
     await expect(page.getByRole("heading", { name: "Ninguém na unidade agora" })).toBeVisible();
+    await page.getByRole("tab", { name: "Profissionais" }).click();
     await expect(
       page.getByText("Nenhum profissional com entrada registrada agora."),
     ).toBeVisible();

@@ -5,7 +5,6 @@ import { AppShell } from "../components/AppShell.js";
 import {
   Button,
   Card,
-  CardHeader,
   Chip,
   EmptyState,
   ErrorState,
@@ -23,6 +22,7 @@ import {
   unidentified,
   unreadCount,
 } from "../rules/notifications.js";
+import { Icon } from "../components/Icon.js";
 
 /**
  * Notificações.
@@ -73,30 +73,19 @@ export function Notifications({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <div className="mx-auto max-w-[48rem] space-y-4">
-      <Card as="section">
-        <CardHeader
-          title={
-            unread === 0
-              ? "Tudo lido"
-              : `${unread} ${unread === 1 ? "não lida" : "não lidas"}`
-          }
-          hint={`${notifications.items.length} no total`}
-        />
-        <div className="space-y-3 px-5 py-5">
+    <div className="space-y-4">
+      <Card as="section" className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h1 className="m-0 text-xl font-black text-navy">Notificações</h1><p className="m-0 mt-0.5 text-sm text-[var(--fg-2)]">{unread === 0 ? "Tudo lido" : `${unread} ${unread === 1 ? "não lida" : "não lidas"}`} · {notifications.items.length} no total</p></div>
+          <Button id="marcar-todas" variant="secondary" unavailableReason={markAll.allowed ? undefined : markAll.reason}><Icon name="fa-envelope-circle-check" /> Marcar todas como lidas</Button>
+        </div>
+        <div className="mt-4">
           {/* Lido é do vínculo, não da notificação: marcar todas age sobre as
               suas, e a frase diz isso para não parecer ação global. */}
           <p className="m-0 max-w-[64ch] text-[0.875rem] text-navy">
             Lida é uma marca sua, não da notificação. A mesma mensagem continua não lida para as
             outras pessoas que a receberam.
           </p>
-          <Button
-            id="marcar-todas"
-            variant="primary"
-            unavailableReason={markAll.allowed ? undefined : markAll.reason}
-          >
-            Marcar todas como lidas
-          </Button>
         </div>
       </Card>
 
@@ -137,11 +126,10 @@ function NotificationCard({
 
   return (
     <article
-      className={`rounded-card border px-5 py-4 ${
-        unread ? "border-pending-fg/35 bg-pending-bg" : "border-[var(--border-soft)]"
-      }`}
+      className="flex gap-2 rounded-2xl border border-[var(--border-soft)] bg-white px-5 py-4 shadow-main"
     >
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <span aria-hidden="true" className={`mt-2 h-2 w-2 shrink-0 rounded-full ${unread ? "bg-purple" : "bg-ink-100"}`} />
+      <div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="m-0 text-[0.9375rem] font-bold text-navy">{item.title}</h2>
         {/* Rótulo textual, e não só a cor de fundo: não lida é informação. */}
         <Chip tone={unread ? "pending" : "neutral"}>{unread ? "Não lida" : "Lida"}</Chip>
@@ -186,6 +174,7 @@ function NotificationCard({
           </p>
         )}
       </div>
+      </div>
     </article>
   );
 }
@@ -196,6 +185,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
       context={context}
       title="Notificações"
       breadcrumb={[{ label: "Notificações" }]}
+      showPageHeading={false}
     >
       {children}
     </AppShell>

@@ -2,6 +2,7 @@ import type { ScreenProps } from "@brucesantos/design-space";
 import type { HealthcareInvoicesData, InvoiceLine } from "../contracts/index.js";
 import { formatMoney } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { SystemCard, SystemField, SystemHeader } from "../components/SystemPage.js";
 import {
   Button,
   Card,
@@ -77,6 +78,15 @@ export function HealthcareInvoiceScreen({ context }: ScreenProps) {
   return wrap(
     context,
     <div className="space-y-4">
+      <SystemCard>
+        <SystemHeader title="Faturas" action={<Button id="nova-fatura" variant="primary">Nova Fatura <span aria-hidden="true">＋</span></Button>} />
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+          <SystemField label="Data início(Todos)" type="date" />
+          <SystemField label="Data fim(Todos)" type="date" />
+          <SystemField label="Tipo" as="select" options={["Regime atendimento", "Convênio", "Particular"]} />
+          <SystemField label="Selecione o responsável" placeholder="Buscar responsável" />
+        </div>
+      </SystemCard>
       {/* ------------------------------- as duas perdas silenciosas, no topo */}
       {withoutAgreement.length > 0 && (
         <Notice
@@ -287,6 +297,7 @@ function wrap(
       title="Fatura de convênio"
       subtitle={invoiceData?.invoice.healthCare.name}
       breadcrumb={[{ label: "Faturas" }]}
+      showPageHeading={false}
     >
       {children}
     </AppShell>

@@ -4,6 +4,7 @@ import type { Patient, PatientsData } from "../contracts/index.js";
 import { ageInYears, formatDate, isMinor } from "../contracts/index.js";
 import { canReadRecord, canSchedule, missingRequiredFields } from "../rules/patients.js";
 import { AppShell } from "../components/AppShell.js";
+import { PatientPageFrame } from "../components/PatientPageFrame.js";
 import {
   Button,
   Card,
@@ -218,8 +219,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, patien
       title={patient?.name ?? "Paciente"}
       subtitle={patient ? `Cadastro · ${patient.id}` : undefined}
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Cadastro" }]}
+      showPageHeading={false}
     >
-      {children}
+      {patient ? <PatientPageFrame patientName={patient.name} active="Dados Pessoais" secondary={["Dados Pessoais","Dados dos Responsáveis","Dados da Escola","Plano de Sáude","Relatórios","Responsáveis Clínicos","Unidades","Documentos","Resumo"]}>{children}</PatientPageFrame> : children}
     </AppShell>
   );
 }

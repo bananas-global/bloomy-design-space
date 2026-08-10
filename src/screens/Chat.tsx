@@ -3,6 +3,7 @@ import type { ScreenProps } from "@brucesantos/design-space";
 import type { ChatData, ChatMessage } from "../contracts/index.js";
 import { formatDateTime } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PatientPageFrame } from "../components/PatientPageFrame.js";
 import {
   Button,
   Card,
@@ -207,8 +208,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, chat?:
       title="Chat multidisciplinar"
       subtitle={chat?.patient.name}
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Chat" }]}
+      showPageHeading={false}
     >
-      {children}
+      {chat ? <PatientPageFrame patientName={chat.patient.name} active="Conteúdos" secondary={["Conteúdos","Feed"]}>{children}</PatientPageFrame> : children}
     </AppShell>
   );
 }

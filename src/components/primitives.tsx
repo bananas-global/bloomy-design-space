@@ -220,7 +220,7 @@ export function Card({
 }) {
   return (
     <Element
-      className={`rounded-card border border-[var(--border-soft)] bg-surface shadow-card ${className}`}
+      className={`rounded-2xl border border-[var(--border-soft)] bg-surface shadow-main ${className}`}
     >
       {children}
     </Element>

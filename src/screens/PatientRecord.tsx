@@ -2,6 +2,7 @@ import type { ScreenProps } from "@brucesantos/design-space";
 import type { PatientDocument, PatientRecord as Record } from "../contracts/index.js";
 import { formatDate, formatDateTime } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PatientPageFrame } from "../components/PatientPageFrame.js";
 import {
   Button,
   Card,
@@ -259,8 +260,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, record
       title={record?.patient.name ?? "Prontuário"}
       subtitle="Prontuário"
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Prontuário" }]}
+      showPageHeading={false}
     >
-      {children}
+      {record ? <PatientPageFrame patientName={record.patient.name} active="Evolução">{children}</PatientPageFrame> : children}
     </AppShell>
   );
 }

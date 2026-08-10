@@ -2,6 +2,7 @@ import type { ScreenProps } from "@brucesantos/design-space";
 import type { TherapyPhase, TherapyPhasesData } from "../contracts/index.js";
 import { formatDate } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PatientPageFrame } from "../components/PatientPageFrame.js";
 import {
   Card,
   CardHeader,
@@ -185,8 +186,9 @@ function wrap(
       title="Fase terapêutica"
       subtitle={phases?.patient.name}
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Fase terapêutica" }]}
+      showPageHeading={false}
     >
-      {children}
+      {phases ? <PatientPageFrame patientName={phases.patient.name} active="Plano Terapêutico" secondary={["Aquisição de Habilidades","Modulação Comportamento","Protocolos"]}>{children}</PatientPageFrame> : children}
     </AppShell>
   );
 }

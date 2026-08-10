@@ -1,6 +1,7 @@
 import type { ScreenProps } from "@brucesantos/design-space";
 import type { KioskData } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PublicPageFrame } from "../components/PublicPageFrame.js";
 import { Button, Card, ErrorState, LoadingState, Notice } from "../components/primitives.js";
 import {
   CHECKIN_STEPS,
@@ -45,7 +46,8 @@ export function Kiosk({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <div className="mx-auto max-w-[46rem] space-y-6">
+    <PublicPageFrame canReset={index > 0}>
+    <div className="space-y-6">
       {/* Progresso: três telas num fluxo que não volta precisam dizer onde se está. */}
       {kiosk.unit && (
         <ol className="m-0 flex list-none gap-2 p-0" aria-label="Etapas do check-in">
@@ -81,22 +83,20 @@ export function Kiosk({ context }: ScreenProps) {
       ) : (
         <Complete kiosk={kiosk} />
       )}
-    </div>,
+    </div>
+    </PublicPageFrame>,
     kiosk,
   );
 }
 
 function Identification() {
   return (
-    <Card className="px-8 py-8">
-      <h2 className="m-0 text-[1.625rem] font-bold text-navy">Bem-vindo</h2>
-      <p className="m-0 mt-2 max-w-[40ch] text-[1.1875rem] text-navy">
-        Digite o CPF do responsável para registrar a chegada.
-      </p>
+    <div>
+      <h2 className="m-0 mb-6 text-2xl font-extrabold text-[var(--color-brand-purple-dark)] md:text-3xl">Digite seu CPF</h2>
 
       <div className="mt-6">
         <label htmlFor="cpf" className="block text-[1.0625rem] font-semibold text-navy">
-          CPF do responsável
+          <span className="sr-only">CPF do responsável</span>
         </label>
         <input
           id="cpf"
@@ -105,16 +105,18 @@ function Identification() {
           placeholder="000.000.000-00"
           // Campo grande de propósito: quem digita está de pé, muitas vezes com
           // uma criança no colo.
-          className="mt-2 w-full max-w-[22rem] rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[1.375rem] tracking-wide text-navy"
+          className="w-full rounded-xl border-2 border-[var(--color-brand-purple-dark)] bg-white px-4 py-4 text-[1.125rem] tracking-wide text-navy"
         />
       </div>
 
-      <div className="mt-6">
+      <div className="fixed inset-x-0 bottom-0 bg-white px-8 py-6 shadow-[0_-4px_16px_rgba(43,35,91,.08)]">
+        <div className="mx-auto flex w-full max-w-5xl justify-end">
         <Button id="continuar" variant="primary" className="px-8 py-3 text-[1.125rem]">
-          Continuar
+          Próximo <span aria-hidden="true">→</span>
         </Button>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -242,6 +244,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, kiosk?
       title={kiosk?.unit ? `Bloomy ${kiosk.unit.name}` : "Bloomy"}
       subtitle="Registro de chegada"
       surface="standalone"
+      showPageHeading={false}
     >
       {children}
     </AppShell>

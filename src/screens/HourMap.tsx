@@ -2,6 +2,7 @@ import type { ScreenProps } from "@brucesantos/design-space";
 import type { HourMapData, HourMapSlot } from "../contracts/index.js";
 import { formatDate } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PatientPageFrame } from "../components/PatientPageFrame.js";
 import {
   Button,
   Card,
@@ -277,8 +278,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, mapDat
       title="Mapa de horas"
       subtitle={mapData?.map.patient.name}
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Mapa de horas" }]}
+      showPageHeading={false}
     >
-      {children}
+      {mapData ? <PatientPageFrame patientName={mapData.map.patient.name} active="Mapa de Horas" secondary={["Padrão de Agenda","Disponibilidade do Paciente"]}>{children}</PatientPageFrame> : children}
     </AppShell>
   );
 }
