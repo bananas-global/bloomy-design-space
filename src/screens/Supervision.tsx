@@ -278,6 +278,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
       title="Supervisão"
       subtitle="Uma visão da coordenação sobre quem supervisiona quem"
       breadcrumb={[{ label: "Supervisão" }]}
+      showPageHeading={false}
     >
       {children}
     </AppShell>

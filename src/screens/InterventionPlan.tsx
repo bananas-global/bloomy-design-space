@@ -26,6 +26,7 @@ import {
   regressionTarget,
   stepProgress,
 } from "../rules/programs.js";
+import { Icon } from "../components/Icon.js";
 
 /**
  * O plano de intervenção do paciente.
@@ -355,8 +356,13 @@ function wrap(
       title={planData?.plan.patient.name ?? "Plano de intervenção"}
       subtitle="Plano de Ensino Individualizado"
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Plano" }]}
+      showPageHeading={false}
     >
-      {children}
+      {planData ? <div className="space-y-5">
+        <Card className="p-5"><div className="flex flex-wrap items-center gap-4"><span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-brand-blue)]/20 text-xl font-black text-[var(--color-brand-blue-dark)]">{planData.plan.patient.name.slice(0, 1)}</span><div><h1 className="m-0 text-xl font-black text-navy">{planData.plan.patient.name}</h1><p className="m-0 text-sm text-[var(--fg-2)]">Plano de Ensino Individualizado</p></div></div><div className="-mx-5 mt-5 flex overflow-x-auto border-t border-[var(--border-soft)] px-5 pt-2"><span className="whitespace-nowrap px-4 py-3 font-bold text-[var(--fg-2)]">Dados Pessoais</span><span className="whitespace-nowrap px-4 py-3 font-bold text-[var(--fg-2)]">Anamneses</span><span className="whitespace-nowrap border-b-2 border-action px-4 py-3 font-extrabold text-action">Plano Terapêutico</span><span className="whitespace-nowrap px-4 py-3 font-bold text-[var(--fg-2)]">Mapa de Horas</span><span className="whitespace-nowrap px-4 py-3 font-bold text-[var(--fg-2)]">Atendimentos</span></div></Card>
+        <div className="flex items-center justify-between"><div><p className="m-0 text-xs font-bold uppercase text-[var(--fg-2)]">Plano Terapêutico</p><h2 className="m-0 text-2xl font-black text-navy">Aquisição de Habilidades</h2></div><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand-blue)]/20 text-[var(--color-brand-blue-dark)]"><Icon name="fa-list-check" /></span></div>
+        {children}
+      </div> : children}
     </AppShell>
   );
 }

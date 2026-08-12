@@ -21,6 +21,7 @@ import {
   remaining,
   shortfall,
 } from "../rules/authorizations.js";
+import { Icon } from "../components/Icon.js";
 
 /**
  * Central de autorizações.
@@ -78,7 +79,12 @@ export function AuthorizationHub({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <div className="space-y-4">
+    <Card className="p-5">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <button type="button" className="flex items-center gap-3 rounded-lg border border-[var(--border-strong)] bg-white px-4 py-2.5 font-bold text-navy"><Icon name="fa-calendar" /> 01/07/2026 — 31/07/2026 <Icon name="fa-chevron-down" /></button>
+        <div className="flex rounded-lg bg-[var(--color-ink-50)] p-1" role="group" aria-label="Visualização da central"><button type="button" className="rounded-md px-4 py-2 text-sm font-bold text-[var(--fg-2)]">Execução Diária Guia</button><button type="button" aria-pressed="true" className="rounded-md bg-white px-4 py-2 text-sm font-bold text-action shadow-sm">Lista de Pacientes</button></div>
+      </div>
+      <div className="space-y-4">
       {waitingClinic.length > 0 && (
         <Notice
           tone="pending"
@@ -97,7 +103,8 @@ export function AuthorizationHub({ context }: ScreenProps) {
           </li>
         ))}
       </ul>
-    </div>,
+      </div>
+    </Card>,
     hub,
   );
 }
@@ -267,6 +274,7 @@ function wrap(
           : undefined
       }
       breadcrumb={[{ label: "Central de autorizações" }]}
+      showPageHeading={false}
     >
       {children}
     </AppShell>

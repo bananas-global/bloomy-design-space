@@ -85,6 +85,7 @@ export function AppShell({
   breadcrumb,
   actions,
   surface = "backoffice",
+  showPageHeading = true,
   children,
 }: {
   context: ScenarioContext;
@@ -93,6 +94,7 @@ export function AppShell({
   breadcrumb?: { label: string; path?: string }[];
   actions?: ReactNode;
   surface?: Surface;
+  showPageHeading?: boolean;
   children: ReactNode;
 }) {
   const currentPath = typeof window === "undefined" ? "" : window.location.pathname;
@@ -279,13 +281,15 @@ export function AppShell({
             ficava no cabeçalho, fora do `<main>`: quem usava o atalho de pular
             aterrissava depois dele, sem nada para se orientar. */}
         <main id="conteudo" className="min-w-0 flex-1 px-4 py-6 lg:px-8">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="m-0 text-2xl font-bold text-navy">{title}</h1>
-              {subtitle && <p className="m-0 mt-1 text-sm text-[var(--fg-2)]">{subtitle}</p>}
+          {showPageHeading ? (
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="m-0 text-2xl font-bold text-navy">{title}</h1>
+                {subtitle && <p className="m-0 mt-1 text-sm text-[var(--fg-2)]">{subtitle}</p>}
+              </div>
+              {actions && <div className="flex flex-wrap items-start gap-2.5">{actions}</div>}
             </div>
-            {actions && <div className="flex flex-wrap items-start gap-2.5">{actions}</div>}
-          </div>
+          ) : <h1 className="sr-only">{title}</h1>}
 
           {children}
         </main>

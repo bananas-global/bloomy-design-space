@@ -34,9 +34,14 @@ export function Nps({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <div className="mx-auto max-w-[42rem] space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6 p-5">
+      <h1 className="m-0 text-3xl font-bold text-navy">Avaliação NPS</h1>
+      <h2 className="m-0 text-xl font-bold text-navy">Net Promoter Score</h2>
+      <p className="m-0 text-[var(--color-brand-purple-dark)]">
+        Por favor, responda à pergunta abaixo para avaliar o quanto você recomendaria nosso produto/serviço.
+      </p>
       {answered ? (
-        <Card className="px-8 py-8">
+        <Card className="px-5 py-5">
           <div role="status">
             <h2 className="m-0 text-[1.5rem] font-bold text-navy">Obrigado pela resposta</h2>
             {/* Mesmo agradecimento para nota 10 e para nota 4. Quem acabou de
@@ -61,20 +66,17 @@ export function Nps({ context }: ScreenProps) {
         </Card>
       ) : (
         <Card className="px-8 py-8">
-          <h2 className="m-0 text-[1.5rem] font-bold text-navy">
-            Como foi o atendimento na unidade {nps.unit.name}?
-          </h2>
-          <p className="m-0 mt-2 max-w-[46ch] text-[1.125rem] text-navy">
-            De 0 a 10, o quanto você recomendaria a Bloomy para outra família?
+          <p className="m-0 mb-4 font-semibold text-[var(--color-brand-purple-dark)]">
+            Em uma escala de 0 a 10, quão provável é que você recomende nosso produto/serviço a um amigo ou colega?
           </p>
 
           <fieldset className="m-0 mt-6 border-0 p-0">
             <legend className="sr-only">Nota de 0 a 10</legend>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid w-full grid-cols-6 overflow-hidden rounded-md border-2 border-[var(--color-brand-purple)] sm:flex">
               {Array.from({ length: 11 }, (_, value) => (
                 <label
                   key={value}
-                  className="cursor-pointer rounded-field border border-[var(--border-strong)] bg-surface px-4 py-3 text-[1.1875rem] font-semibold text-navy hover:bg-ink-50 has-[:checked]:border-action has-[:checked]:bg-action has-[:checked]:text-white"
+                  className="min-h-11 min-w-8 flex-1 cursor-pointer border border-[var(--color-brand-purple)] bg-transparent px-2 py-3 text-center text-lg font-semibold text-[var(--color-brand-purple-dark)] hover:bg-[var(--color-brand-purple)] hover:text-white has-[:checked]:bg-[var(--color-brand-purple)] has-[:checked]:text-white"
                 >
                   <input type="radio" name="nota" value={value} className="sr-only" />
                   <span aria-hidden="true">{value}</span>
@@ -85,15 +87,11 @@ export function Nps({ context }: ScreenProps) {
                 </label>
               ))}
             </div>
-            <div className="mt-2 flex justify-between text-[0.875rem] text-[var(--fg-2)]">
-              <span>0 — de jeito nenhum</span>
-              <span>10 — com certeza</span>
-            </div>
           </fieldset>
 
           <div className="mt-6">
             <label htmlFor="comentario" className="block text-[1rem] font-semibold text-navy">
-              Quer contar mais alguma coisa? <span className="font-normal">(opcional)</span>
+              O que motivou sua nota? <span className="font-normal">(opcional)</span>
             </label>
             <textarea
               id="comentario"
@@ -110,7 +108,7 @@ export function Nps({ context }: ScreenProps) {
               className="px-8 py-3 text-[1.125rem]"
               unavailableReason={submission.allowed ? undefined : submission.reason}
             >
-              Enviar
+              Enviar Avaliação
             </Button>
           </div>
         </Card>
@@ -134,6 +132,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, nps?: 
       title="Bloomy"
       subtitle={nps ? `Pesquisa de satisfação · ${nps.unit.name}` : undefined}
       surface="standalone"
+      showPageHeading={false}
     >
       {children}
     </AppShell>

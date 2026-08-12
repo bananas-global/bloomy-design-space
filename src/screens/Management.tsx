@@ -279,8 +279,9 @@ function wrap(
       title="Gerência"
       subtitle={management ? `Unidade ${management.unit.name}` : undefined}
       breadcrumb={[{ label: "Gerência" }]}
+      showPageHeading={false}
     >
-      {children}
+      <Card className="p-5"><div className="flex overflow-x-auto border-b border-[var(--border-soft)]" role="tablist" aria-label="Listas gerenciais">{["Supervisor","Aplicadores","Responsáveis Clínicos","Cadastro de Pacientes","Cadastro de Profissionais","Autorizações","Profissionais por Especialidade"].map((label, index) => <button key={label} type="button" role="tab" aria-selected={index === 0} className={`whitespace-nowrap border-b-2 px-4 py-3 font-extrabold ${index === 0 ? "border-action text-action" : "border-transparent text-[var(--fg-2)]"}`}>{label}</button>)}</div><div className="mt-5">{children}</div></Card>
     </AppShell>
   );
 }

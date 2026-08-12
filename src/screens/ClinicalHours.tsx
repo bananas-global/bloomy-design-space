@@ -282,8 +282,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
       title="Controle de horas"
       subtitle="Previsto, marcado, e quem marcou"
       breadcrumb={[{ label: "Equipe", path: "/team" }, { label: "Controle de horas" }]}
+      showPageHeading={false}
     >
-      {children}
+      <div className="space-y-4"><Card className="p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h1 className="m-0 text-xl font-black text-navy">Controle de horas de profissionais</h1><Button variant="ghost">Voltar para profissionais</Button></div><div className="grid grid-cols-1 gap-4 md:grid-cols-12"><label className="text-sm font-bold text-navy md:col-span-3">Especialidade<input disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] px-3 py-2.5" /></label><label className="text-sm font-bold text-navy md:col-span-5">Profissionais<input disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] px-3 py-2.5" /></label><label className="text-sm font-bold text-navy md:col-span-2">Mês<input disabled type="month" className="mt-1 w-full rounded-lg border border-[var(--border-strong)] px-3 py-2.5" /></label><div className="mt-auto md:col-span-2"><Button variant="primary">Processar</Button></div></div></Card>{children}</div>
     </AppShell>
   );
 }

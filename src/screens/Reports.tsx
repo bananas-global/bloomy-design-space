@@ -2,6 +2,7 @@ import type { ScreenProps } from "@brucesantos/design-space";
 import type { PatientReport, ReportsData } from "../contracts/index.js";
 import { formatDate, formatDateTime } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PatientPageFrame } from "../components/PatientPageFrame.js";
 import {
   Button,
   Card,
@@ -244,8 +245,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, report
       title="Relatórios"
       subtitle={reportsData?.reports[0]?.patientName}
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Relatórios" }]}
+      showPageHeading={false}
     >
-      {children}
+      {reportsData?.reports[0]?.patientName ? <PatientPageFrame patientName={reportsData.reports[0].patientName} active="Dados Pessoais" secondary={["Relatórios"]}>{children}</PatientPageFrame> : children}
     </AppShell>
   );
 }

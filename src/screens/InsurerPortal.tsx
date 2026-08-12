@@ -1,7 +1,9 @@
 import type { ScreenProps } from "@brucesantos/design-space";
 import type { AttendanceRow, InsurerPortalData } from "../contracts/index.js";
 import { formatDate, formatTime } from "../contracts/index.js";
+import simbolo from "../assets/bloomy-symbol-negative.svg";
 import { AppShell } from "../components/AppShell.js";
+import { Icon } from "../components/Icon.js";
 import {
   Card,
   CardHeader,
@@ -52,6 +54,57 @@ export function InsurerPortal({ context }: ScreenProps) {
   return wrap(
     context,
     <div className="space-y-4">
+      <Card as="section">
+        <div className="p-5">
+          <h2 className="m-0 text-2xl font-bold text-navy">Lista de Presença</h2>
+
+          <form className="mt-6" onSubmit={(event) => event.preventDefault()}>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <Field label="Formato">
+                <select className={fieldClass} defaultValue="schedule">
+                  <option value="schedule">Baseado em Presença</option>
+                  <option value="custom_service">Baseado em Atendimento</option>
+                </select>
+              </Field>
+
+              <Field label="Período">
+                <input
+                  className={fieldClass}
+                  type="text"
+                  defaultValue={`${br(portal.period.start)} - ${br(portal.period.end)}`}
+                  aria-label="Período"
+                />
+              </Field>
+
+              <Field label="Paciente">
+                <select className={fieldClass} defaultValue="">
+                  <option value="">Todos</option>
+                  {portal.patients.map(({ patient }) => (
+                    <option key={patient.id} value={patient.id}>{patient.name}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Unidade">
+                <input className={`${fieldClass} bg-ink-50`} value="Vila Aurora" readOnly />
+              </Field>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-action px-4 py-2 font-bold text-white hover:bg-action-hover"
+              >
+                <Icon name="fa-search" />
+                Gerar
+              </button>
+            </div>
+          </form>
+        </div>
+      </Card>
+
+      <h2 className="m-0 pt-4 text-xl font-bold text-navy">Detalhamento da situação</h2>
+
       {hidden > 0 && (
         <Notice
           tone="warn"
@@ -150,6 +203,18 @@ export function InsurerPortal({ context }: ScreenProps) {
   );
 }
 
+const fieldClass =
+  "min-h-11 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2 text-navy";
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block text-sm font-semibold text-navy">
+      <span className="mb-1.5 block">{label}</span>
+      {children}
+    </label>
+  );
+}
+
 function Metric({
   label,
   value,
@@ -232,8 +297,99 @@ function wrap(
       title={portal?.healthCare.name ?? "Portal da operadora"}
       subtitle="Conferência de atendimentos"
       surface="standalone"
+      showPageHeading={false}
     >
-      {children}
+      <HealthCareFrame portal={portal}>
+        {children}
+      </HealthCareFrame>
     </AppShell>
+  );
+}
+
+const HEALTH_CARE_NAV = [
+  { label: "Pacientes", icon: "fa-users" },
+  { label: "Atendimentos", icon: "fa-calendar-pen" },
+  { label: "Agendamentos", icon: "fa-calendar-day" },
+  { label: "Lista de Presença", icon: "fa-square-list" },
+] as const;
+
+function HealthCareFrame({
+  portal,
+  children,
+}: {
+  portal?: InsurerPortalData;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="-mx-4 -my-6 flex min-h-screen bg-app lg:-mx-8">
+      <nav
+        className="espelho-do-sistema sticky top-0 hidden h-screen w-[72px] shrink-0 flex-col bg-[var(--color-brand-blue)] p-2 md:flex"
+        aria-label="Navegação da operadora"
+      >
+        <img
+          src={simbolo}
+          alt="Bloomy"
+          className="mx-auto mb-8 mt-4 h-12 w-12"
+        />
+        <ul className="m-0 flex list-none flex-col gap-2 p-0">
+          {HEALTH_CARE_NAV.map((item) => {
+            const current = item.label === "Lista de Presença";
+            return (
+              <li key={item.label}>
+                <span
+                  className={`mx-auto flex h-12 w-12 items-center justify-center rounded-lg text-lg font-bold text-white ${current ? "bg-[var(--color-brand-blue-dark)]" : ""}`}
+                  title={item.label}
+                >
+                  <Icon name={item.icon} />
+                  <span className="sr-only">
+                    {item.label}{current ? ", página atual" : ", não portado"}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="min-w-0 flex-1">
+        <header className="sticky top-0 z-30 flex min-h-[72px] items-center justify-between bg-white px-4 py-4 shadow-main lg:px-8">
+          <button
+            type="button"
+            className="hidden h-5 w-5 items-center justify-center text-[var(--color-brand-purple-dark)]/60 md:flex"
+            aria-label="Expandir a navegação"
+          >
+            <Icon name="fa-sidebar" />
+          </button>
+
+          <div className="ml-auto flex items-center gap-x-4 md:gap-x-6">
+            <div className="flex items-center gap-2">
+              <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
+                <span className="block text-base/4 font-black text-[var(--color-green)]">Unidade</span>
+                Vila Aurora
+              </p>
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-green)]/20">
+                <Icon name="fa-hospital" className="text-[var(--color-green)]" />
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
+                <span className="block text-base/4 font-black text-[var(--color-brand-blue-dark)]">
+                  {portal?.healthCare.name ?? "Operadora"}
+                </span>
+                Bem-vindo(a)
+              </p>
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand-purple)]/20">
+                <Icon name="fa-user-tie" className="text-[var(--color-purple)]" />
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <main className="p-4 md:p-8">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }

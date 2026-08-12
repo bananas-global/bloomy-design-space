@@ -253,8 +253,9 @@ function wrap(
       title="Estrutura da unidade"
       subtitle={structure ? structure.unit.name : undefined}
       breadcrumb={[{ label: "Estrutura" }]}
+      showPageHeading={false}
     >
-      {children}
+      {structure ? <div className="space-y-4"><Card className="p-5"><div className="flex flex-wrap items-center justify-between gap-5"><div className="flex items-center gap-4"><span className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--color-brand-blue)]/20 text-2xl font-black text-[var(--color-brand-blue-dark)]">{structure.unit.name.slice(0,1)}</span><div><h1 className="m-0 text-2xl font-black text-navy">{structure.unit.name}</h1><p className="m-0 text-sm text-[var(--fg-2)]">Bloomy</p></div></div><div><strong className="block text-2xl text-action">{structure.rooms.length}</strong><span className="font-bold">Salas</span></div><div><strong className="block text-2xl text-action">{structure.services.length}</strong><span className="font-bold">Serviços</span></div></div><div className="-mx-5 mt-5 flex overflow-x-auto border-t border-[var(--border-soft)] px-5 pt-2">{["Dados da Unidade","Endereço","Pacientes","Salas","Serviços","Agenda","Limite de Agenda","Documentos"].map((label) => <span key={label} className={`whitespace-nowrap border-b-2 px-4 py-3 font-extrabold ${label === "Salas" ? "border-action text-action" : "border-transparent text-[var(--fg-2)]"}`}>{label}</span>)}</div></Card>{children}</div> : children}
     </AppShell>
   );
 }

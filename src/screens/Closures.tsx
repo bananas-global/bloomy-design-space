@@ -24,6 +24,7 @@ import {
   ownerOf,
   visibleClosures,
 } from "../rules/closures.js";
+import { Icon } from "../components/Icon.js";
 
 /**
  * Fechamentos do profissional.
@@ -333,6 +334,14 @@ function wrap(
   children: React.ReactNode,
   closuresData?: ClosuresData | null,
 ) {
+  const closures = closuresData
+    ? visibleClosures(
+        closuresData.closures,
+        context.persona?.id ?? "",
+        closuresData.currentUserId,
+      )
+    : [];
+
   return (
     <AppShell
       context={context}
@@ -343,8 +352,57 @@ function wrap(
           : undefined
       }
       breadcrumb={[{ label: "Fechamentos" }]}
+      showPageHeading={false}
     >
-      {children}
+      <div className="space-y-4">
+        <Card className="p-5">
+          <h1 className="m-0 mb-4 text-2xl font-black text-navy">Fechamento</h1>
+          {closuresData && (
+            <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {([[
+                "fa-file-signature", "Aguardando Aceite", "wait_accept",
+              ], [
+                "fa-file-exclamation", "Revisão", "revision",
+              ], [
+                "fa-cloud-upload", "Nota Fiscal Pendente", "pending_invoice",
+              ], [
+                "fa-money-bill", "Pagamento", "pay_invoice",
+              ]] as const).map(([icon, label, status]) => (
+                <div key={status} className="rounded-xl border border-[var(--border-soft)] p-4">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-brand-blue)]/20 text-[var(--color-brand-blue-dark)]"><Icon name={icon} /></span>
+                  <p className="m-0 mt-3 text-2xl font-black text-navy">{closures.filter((item) => item.status === status).length}</p>
+                  <p className="m-0 text-sm font-bold text-[var(--fg-2)]">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            {["Buscar", "Profissional", "Status", "Mês"].map((label) => (
+              <label key={label} className="text-sm font-bold text-navy">{label}<input disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2.5" /></label>
+            ))}
+          </div>
+          {closures.length > 0 && (
+            <div className="mt-4 overflow-x-auto" tabIndex={0}>
+              <table className="w-full border-collapse text-sm">
+                <thead><tr className="border-b border-[var(--border-soft)] text-left text-[var(--fg-2)]"><th className="px-3 py-3">Período</th><th className="px-3 py-3">Profissional</th><th className="px-3 py-3">Valor</th><th className="px-3 py-3">Status</th></tr></thead>
+                <tbody>{closures.map((closure) => (
+                  <tr key={closure.id} className="border-b border-[var(--border-soft)] last:border-0">
+                    <td className="px-3 py-4"><span className="block font-bold text-navy">{monthLabel(closure.month)} {closure.year}</span><span className="text-xs text-[var(--fg-2)]">competência mensal</span></td>
+                    <td className="px-3 py-4"><span className="block font-bold text-navy">{closure.professional.name}</span><span className="text-xs text-[var(--fg-2)]">{closure.professional.specialty}</span></td>
+                    <td className="px-3 py-4 font-bold text-navy">{formatMoney(closure.amountCents, context.locale)}</td>
+                    <td className="px-3 py-4"><Chip tone="neutral">{closureStatusLabel(closure.status)}</Chip></td>
+                  </tr>
+                ))}</tbody>
+              </table>
+              <p className="m-0 mt-4 text-sm text-[var(--fg-2)]">Mostrando {closures.length} de {closures.length} registros</p>
+            </div>
+          )}
+        </Card>
+        <div>
+          <h2 className="m-0 mb-3 text-lg font-black text-navy">Detalhamento da situação</h2>
+          {children}
+        </div>
+      </div>
     </AppShell>
   );
 }

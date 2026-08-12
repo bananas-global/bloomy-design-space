@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ScreenProps } from "@brucesantos/design-space";
 import type { InClinicData, PatientPresence, ProfessionalPresence } from "../contracts/index.js";
 import { formatTime } from "../contracts/index.js";
@@ -41,6 +42,9 @@ import {
  */
 export function InClinic({ context }: ScreenProps) {
   const { data, isLoading, error, locale, persona } = context;
+  const [activeTab, setActiveTab] = useState<"patients" | "professionals">(
+    visibleTabs(persona?.id ?? "").patients ? "patients" : "professionals",
+  );
 
   if (isLoading) return wrap(context, <LoadingState label="Carregando o quadro da unidade" />);
   if (error) return wrap(context, <ErrorState message={error.message} />);
@@ -74,8 +78,13 @@ export function InClinic({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <div className="space-y-4">
-      {tabs.patients && (
+    <Card className="p-5">
+      <div className="mb-6 flex border-b border-[var(--border-soft)]" role="tablist" aria-label="Na Clínica">
+        {tabs.patients && <button type="button" role="tab" aria-selected={activeTab === "patients"} onClick={() => setActiveTab("patients")} className={`border-b-2 px-5 py-3 text-lg font-extrabold ${activeTab === "patients" ? "border-action text-action" : "border-transparent text-[var(--fg-2)]"}`}>Pacientes</button>}
+        {tabs.professionals && <button type="button" role="tab" aria-selected={activeTab === "professionals"} onClick={() => setActiveTab("professionals")} className={`border-b-2 px-5 py-3 text-lg font-extrabold ${activeTab === "professionals" ? "border-action text-action" : "border-transparent text-[var(--fg-2)]"}`}>Profissionais</button>}
+      </div>
+      <div className="space-y-4">
+      {tabs.patients && activeTab === "patients" && (
         <>
           {here.length === 0 ? (
             <EmptyState
@@ -122,8 +131,8 @@ export function InClinic({ context }: ScreenProps) {
         </>
       )}
 
-      {tabs.professionals && (
-        <Card as="section">
+      {tabs.professionals && activeTab === "professionals" && (
+        <section>
           <CardHeader
             title="Profissionais na unidade"
             hint={`${staff.length} ${staff.length === 1 ? "profissional presente" : "profissionais presentes"}`}
@@ -146,9 +155,10 @@ export function InClinic({ context }: ScreenProps) {
               </ul>
             )}
           </div>
-        </Card>
+        </section>
       )}
-    </div>,
+      </div>
+    </Card>,
     clinic,
   );
 }

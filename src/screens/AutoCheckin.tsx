@@ -2,6 +2,7 @@ import type { AutoCheckinData, CheckinArrival } from "../contracts/index.js";
 import type { ScreenProps } from "@brucesantos/design-space";
 import { formatDate } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
+import { PublicPageFrame } from "../components/PublicPageFrame.js";
 import {
   Card,
   CardHeader,
@@ -218,8 +219,10 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
       title="Auto check-in no totem"
       subtitle="Duas funções com o mesmo nome, e a tela usa a errada"
       breadcrumb={[{ label: "Público", path: "/public" }, { label: "Auto check-in" }]}
+      surface="standalone"
+      showPageHeading={false}
     >
-      {children}
+      <PublicPageFrame>{children}</PublicPageFrame>
     </AppShell>
   );
 }
