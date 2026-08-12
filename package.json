@@ -32,7 +32,7 @@
     "axe-core": "^4.10.3",
     "feedback-collector": "^0.1.1",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5.8.3",
+    "typescript": "^7.0.2",
     "vite": "^7.0.0",
     "vitest": "^3.2.4"
   },
