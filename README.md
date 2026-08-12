@@ -24,7 +24,7 @@ própria.
 
 ## O que existe hoje
 
-150 cenários em vinte módulos, cobrindo sucesso, vazio, permissão, regra e
+275 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
 exceção.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
@@ -53,6 +53,10 @@ em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 | **Faturas** | pronta para fechar, as duas perdas silenciosas, faltam identificadores, nada atendido, lote já gerado, operadora sem códigos TISS, operação sem acesso |
 | **Fechamentos** | o mês etapa por etapa, aguardando aceite, invisível em conferência, nota é do profissional, bloqueada para outros, contrato sem nota, pagar sem comprovante, pagar com comprovante, pago congelado, vazio |
 | **Autorizações** | central, vazia, autorizada com saldo, pacote esgotado trava tudo, capitation não multiplica, validade vencida, autorizada parcialmente, erro de sincronização, aguardando documentação, recepção sem acesso |
+| **Notificações** | quatro avisos do sistema, aviso sem destino, destino que não abre, informação exposta no texto, tudo lido, nenhuma notificação |
+| **Supervisão** | janela de trinta dias, assinaturas paradas, supervisor sem acesso, vínculo recém-criado, janela futura, nenhum atendimento |
+| **Mapa da unidade** | semana por profissional, agenda indefinida, horário omitido, simultaneidade, eixo do paciente, People sem acesso |
+| **Controle de horas** | semana, arredondamento incorreto, localização ausente, saída anterior à entrada, previsão sem fim, paginação, leitura sem correção, vazio |
 
 O módulo **Atendimento** é o que descreve o produto de verdade: o Bloomy é um
 sistema de terapia ABA para autismo, e a sessão — com programas, tentativas,

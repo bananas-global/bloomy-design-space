@@ -45,7 +45,7 @@ assumir que deve reescrever os componentes React em Phoenix.
 https://bloomy-design-space-<hash>-<escopo>.vercel.app/sessions/atd-8801?scenario=session.pending-supervisor
 
 Commit: <sha completo>
-Status do cenário: em revisão
+Status do cenário: aprovado
 
 ## Persona e permissões
 Supervisor · papel por unidade, `custom_services.edit`, `professionals.list`
