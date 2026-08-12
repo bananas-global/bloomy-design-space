@@ -329,8 +329,9 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
       title="Mapa da unidade"
       subtitle="Onde cabe mais alguém"
       breadcrumb={[{ label: "Mapa da unidade" }]}
+      showPageHeading={false}
     >
-      {children}
+      <div className="space-y-4"><Card className="p-5"><div className="flex flex-wrap items-end justify-between gap-4"><p className="m-0 text-lg font-bold uppercase text-navy">Mapa da Unidades</p><button type="button" className="rounded-lg border border-[var(--border-strong)] px-4 py-2.5 font-bold text-navy">Semana atual</button><div className="flex gap-2"><div className="flex rounded-lg bg-ink-50 p-1"><button className="rounded-md bg-white px-3 py-2 text-action shadow-sm">Semana</button><button className="rounded-md px-3 py-2 text-[var(--fg-2)]">Dia</button></div><div className="flex rounded-lg bg-ink-50 p-1">{AXES.map((axis) => <button key={axis} className={`rounded-md px-3 py-2 text-sm font-bold ${axis === "unit" ? "bg-white text-action shadow-sm" : "text-[var(--fg-2)]"}`}>{axisLabel(axis)}</button>)}</div></div></div></Card>{children}</div>
     </AppShell>
   );
 }

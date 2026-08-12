@@ -68,7 +68,7 @@ export const protocolScenarios: Scenario[] = [
       "`QuestionConfigurations.Abllsr` guarda `min` e `max` por questão. O protocolo não tem escala compartilhada.",
     ],
     expected: [
-      "Cada item mostra a própria faixa, e duas faixas diferentes convivem na mesma área.",
+      "Ao navegar entre itens da mesma área, cada questão mostra a própria faixa — A3 oferece 0–2 e A2 oferece 0–4.",
       "A tela não exibe a escala compartilhada, porque neste formato ela não existe.",
       "Item sem pontuação diz que está sem pontuação, em vez de mostrar zero.",
     ],

@@ -62,7 +62,8 @@ export function PatientDeactivation({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <div className="mx-auto max-w-[52rem] space-y-4">
+    <Card className="mx-auto max-w-[52rem] space-y-4 p-6">
+      <div className="border-b border-[var(--border-soft)] pb-4"><h1 className="m-0 text-xl font-black text-navy">Desativar/Reativar Paciente</h1><p className="m-0 mt-1 text-sm text-[var(--fg-2)]">{impact.patient.name}</p></div>
       {/* Os números antes da confirmação, e não depois dela. */}
       <Notice tone="danger" title="O que esta ação vai fazer">
         <ul className="m-0 list-disc space-y-1 pl-5">
@@ -194,7 +195,7 @@ export function PatientDeactivation({ context }: ScreenProps) {
       <Button id="inativar" variant="danger">
         Inativar {impact.patient.name}
       </Button>
-    </div>,
+    </Card>,
   );
 }
 
@@ -204,6 +205,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
       context={context}
       title="Inativar paciente"
       breadcrumb={[{ label: "Pacientes", path: "/patients" }, { label: "Inativar" }]}
+      showPageHeading={false}
     >
       {children}
     </AppShell>

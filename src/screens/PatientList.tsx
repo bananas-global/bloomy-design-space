@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { ScreenProps } from "@brucesantos/design-space";
 import type { Patient, PatientsData } from "../contracts/index.js";
 import { ageInYears, isMinor } from "../contracts/index.js";
@@ -5,11 +6,13 @@ import { missingRequiredFields } from "../rules/patients.js";
 import { AppShell } from "../components/AppShell.js";
 import {
   Card,
+  Button,
   Chip,
   EmptyState,
   ErrorState,
   LoadingState,
 } from "../components/primitives.js";
+import { Icon } from "../components/Icon.js";
 
 /**
  * Lista de pacientes.
@@ -20,6 +23,9 @@ import {
  */
 export function PatientList({ context }: ScreenProps) {
   const { data, isLoading, error, can } = context;
+  const patients = (data as PatientsData | null)?.patients ?? [];
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => patients.filter((patient) => patient.name.toLocaleLowerCase("pt-BR").includes(query.toLocaleLowerCase("pt-BR"))), [patients, query]);
 
   if (isLoading) return wrap(context, <LoadingState label="Carregando pacientes" />);
   if (error) return wrap(context, <ErrorState message={error.message} />);
@@ -34,8 +40,6 @@ export function PatientList({ context }: ScreenProps) {
     );
   }
 
-  const patients = (data as PatientsData | null)?.patients ?? [];
-
   if (patients.length === 0) {
     return wrap(
       context,
@@ -48,7 +52,21 @@ export function PatientList({ context }: ScreenProps) {
 
   return wrap(
     context,
-    <Card className="overflow-hidden p-0">
+    <Card className="overflow-hidden p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="m-0 text-2xl font-black text-navy">Pacientes</h2>
+        {context.can("patients.create") && <Button variant="primary">Novo Paciente <Icon name="fa-plus" /></Button>}
+      </div>
+      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <label className="text-sm font-bold text-navy">Buscar
+          <span className="mt-1 flex items-center rounded-lg border border-[var(--border-strong)] bg-white px-3"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Nome, Apelido, Código" className="min-w-0 flex-1 border-0 bg-transparent py-2.5 font-normal outline-none" /><Icon name="fa-search" className="text-[var(--fg-2)]" /></span>
+        </label>
+        <label className="text-sm font-bold text-navy">Telefone<input disabled placeholder="Telefone" className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2.5 font-normal" /></label>
+        <label className="text-sm font-bold text-navy">Mapa de Horas<select disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2.5 font-normal"><option>Selecione o status</option></select></label>
+        <label className="text-sm font-bold text-navy">Operadoras<select disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2.5 font-normal"><option>Selecione a operadora</option></select></label>
+        <label className="text-sm font-bold text-navy">Status<select disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2.5 font-normal"><option>Selecione o status</option></select></label>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-[var(--border-soft)]">
       <table className="w-full border-collapse text-[0.9375rem]">
         <caption className="sr-only">Pacientes da unidade e situação do cadastro</caption>
         <thead>
@@ -71,7 +89,7 @@ export function PatientList({ context }: ScreenProps) {
           </tr>
         </thead>
         <tbody>
-          {patients.map((patient) => (
+          {filtered.map((patient) => (
             <PatientRow
               key={patient.id}
               patient={patient}
@@ -80,6 +98,8 @@ export function PatientList({ context }: ScreenProps) {
           ))}
         </tbody>
       </table>
+      </div>
+      <p className="m-0 mt-4 text-sm text-[var(--fg-2)]">{filtered.length} {filtered.length === 1 ? "paciente" : "pacientes"}</p>
     </Card>,
   );
 }
@@ -156,7 +176,7 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode) {
     <AppShell
       context={context}
       title="Pacientes"
-      subtitle="Cadastros da unidade e o que falta em cada um"
+      showPageHeading={false}
     >
       {children}
     </AppShell>

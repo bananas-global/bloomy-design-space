@@ -23,6 +23,7 @@ import {
   requiresSupervisorSignature,
   TBD_REQUIRED,
 } from "../rules/team.js";
+import { Icon } from "../components/Icon.js";
 
 /**
  * Equipe.
@@ -291,8 +292,22 @@ function wrap(context: ScreenProps["context"], children: React.ReactNode, team?:
           : undefined
       }
       breadcrumb={[{ label: "Equipe" }]}
+      showPageHeading={false}
     >
-      {children}
+      <div className="space-y-4">
+        <Card className="p-5"><div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h1 className="m-0 text-2xl font-black text-navy">Profissionais</h1><div className="flex flex-wrap gap-2"><Button><Icon name="fa-file-chart-column" /> Controle de horas</Button><Button variant="primary">Novo profissional <Icon name="fa-plus" /></Button></div></div><div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">{["Nome/Conselho","Especialidade","Contato","Perfil","Status"].map((label) => <label key={label} className="text-sm font-bold text-navy">{label}<input disabled className="mt-1 w-full rounded-lg border border-[var(--border-strong)] bg-white px-3 py-2.5" /></label>)}</div>
+        {team && team.members.length > 0 && <div className="mt-4 overflow-x-auto" tabIndex={0}><table className="w-full border-collapse text-sm"><thead><tr className="border-b border-[var(--border-soft)] text-left text-[var(--fg-2)]"><th className="w-8 px-3 py-3"><span className="sr-only">Status</span></th><th className="px-3 py-3">Nome</th><th className="px-3 py-3">Especialidade</th><th className="px-3 py-3">Conselho</th><th className="px-3 py-3">Tipo</th><th className="px-3 py-3">Formação em Saúde</th></tr></thead><tbody>{team.members.map((member) => <tr key={member.id} className="border-b border-[var(--border-soft)] last:border-0"><td className="px-3 py-4"><span className={`block h-2.5 w-2.5 rounded-full ${member.active ? "bg-ok-fg" : "bg-[var(--fg-3)]"}`}><span className="sr-only">{member.active ? "Ativo" : "Inativo"}</span></span></td><td className="px-3 py-4 font-bold text-navy">{member.name}{member.tbd && <span className="ml-2 rounded bg-warn-bg px-2 py-1 text-xs text-warn-fg">TBD</span>}</td><td className="px-3 py-4"><Chip tone="info">{member.specialty}</Chip></td><td className="px-3 py-4 text-navy">{member.specialtyRegister ?? "—"}</td><td className="px-3 py-4 text-navy">{member.professionalTypes.map(professionalTypeLabel).join(", ") || "—"}</td><td className="px-3 py-4 text-navy">{member.healthFormation ?? "—"}</td></tr>)}</tbody></table><p className="m-0 mt-4 text-sm text-[var(--fg-2)]">Mostrando {team.members.length} de {team.members.length} registros</p></div>}
+        </Card>
+        <div><h2 className="m-0 mb-3 text-lg font-black text-navy">Detalhamento da situação</h2>{children}</div>
+      </div>
     </AppShell>
   );
+}
+
+function professionalTypeLabel(type: string): string {
+  return {
+    therapeutic_companion: "Terapeuta",
+    supervisor: "Supervisor",
+    specialist: "Especialista",
+  }[type] ?? type.replaceAll("_", " ");
 }

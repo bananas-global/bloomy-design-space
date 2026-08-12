@@ -483,8 +483,12 @@ function wrap(
       // Bloomy real é da agenda do dia que se chega ao atendimento, e inventar
       // aqui uma listagem que o produto não tem seria descrever outra coisa.
       breadcrumb={[{ label: "Agenda", path: "/agenda" }, { label: "Atendimento" }]}
+      showPageHeading={false}
     >
-      {children}
+      {clinical ? <div className="space-y-4">
+        <Card className="overflow-hidden p-0"><div className="flex overflow-x-auto border-b border-[var(--border-soft)] px-4 pt-1"><span className="whitespace-nowrap border-b-2 border-action px-4 py-3 text-lg font-extrabold text-action">Registro da sessão</span><span className="whitespace-nowrap px-4 py-3 text-lg font-bold text-[var(--fg-2)]">Aplicação de Programas</span><span className="whitespace-nowrap px-4 py-3 text-lg font-bold text-[var(--fg-2)]">Aplicação dos Protocolos</span><span className="whitespace-nowrap px-4 py-3 text-lg font-bold text-[var(--fg-2)]">Feed</span></div><div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"><div><p className="m-0 text-xs font-bold uppercase text-[var(--fg-2)]">Atendimento</p><h1 className="m-0 text-xl font-black text-navy">{clinical.session.patient?.name ?? "Atendimento entre profissionais"}</h1><p className="m-0 text-sm text-[var(--fg-2)]">{clinical.session.service.name}</p></div><ScheduleStatusChip status={clinical.session.status} /></div></Card>
+        {children}
+      </div> : children}
     </AppShell>
   );
 }
