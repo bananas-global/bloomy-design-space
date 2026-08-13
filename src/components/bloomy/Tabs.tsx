@@ -321,7 +321,7 @@ export function LazyTabs<T extends string>({
   }
 
   const topButtonClasses = [
-    "relative cursor-pointer whitespace-nowrap rounded-md py-4 font-bold transition-all",
+    "relative cursor-pointer whitespace-nowrap rounded-md py-4 font-bold transition-colors",
     "text-[var(--color-neutral-400)] data-[active=true]:text-[var(--color-brand-blue-dark)]",
     "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
     "disabled:cursor-not-allowed disabled:opacity-50",
