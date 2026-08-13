@@ -26,13 +26,16 @@ assumir que deve reescrever os componentes React em Phoenix.
 
 1. **URL de commit** do cenário, não a de branch. A URL de branch muda de conteúdo
    a cada push, então uma aprovação registrada nela não é uma aprovação.
-2. **Id do cenário**, para que a conversa aponte para a mesma situação.
-3. **Regras** que governam a situação, com id. A implementação de referência está
+2. **Componentes usados pela mudança**, autorizados no próprio link com um
+   `allowComponent` para cada componente. O recorte de handoff usa allowlists
+   independentes: permitir o cenário não permite seus componentes automaticamente.
+3. **Id do cenário**, para que a conversa aponte para a mesma situação.
+4. **Regras** que governam a situação, com id. A implementação de referência está
    em `src/rules/` e o teste em `tests/rules.test.ts` — cada teste é um critério
    de aceite executável.
-4. **Critérios de aceite**, que vêm de `expected` no cenário.
-5. **Estados alcançáveis** e como abrir cada um por URL.
-6. **Contrato de acessibilidade**: cobertura de teclado, nível de contraste e os
+5. **Critérios de aceite**, que vêm de `expected` no cenário.
+6. **Estados alcançáveis** e como abrir cada um por URL.
+7. **Contrato de acessibilidade**: cobertura de teclado, nível de contraste e os
    eventos que precisam ser anunciados.
 
 ## Modelo

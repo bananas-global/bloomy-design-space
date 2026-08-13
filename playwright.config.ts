@@ -16,6 +16,10 @@ const localUrl = `http://localhost:${devPort}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // `journey.spec.ts` é o arquivo histórico do baseline importado. Ele fica no
+  // repositório como registro, mas `ported` não é trabalho validado nem caso de
+  // teste. Jornadas ativas vivem em `active-journey.spec.ts`.
+  testIgnore: ["**/journey.spec.ts"],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

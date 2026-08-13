@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { scenarios } from "../../src/app/catalog.js";
+import { activeScenarios as scenarios } from "./active-scenarios.js";
 
 /**
  * `prefers-reduced-motion`.
@@ -13,9 +13,8 @@ import { scenarios } from "../../src/app/catalog.js";
  * carregar fica piscando indefinidamente para quem tem enxaqueca ou distúrbio
  * vestibular, e a pessoa não tem como parar.
  */
-// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
-// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
-// caber em 30s seria medir menos para aprovar mais.
+// A varredura percorre apenas o trabalho ativo. Referências `ported` não são
+// casos de teste.
 test.setTimeout(180_000);
 
 test.describe("movimento", () => {

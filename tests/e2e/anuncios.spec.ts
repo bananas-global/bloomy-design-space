@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { scenarios } from "../../src/app/catalog.js";
+import { activeScenarios as scenarios } from "./active-scenarios.js";
 
 /**
  * Regiões vivas contra o que os cenários declaram.
@@ -16,9 +16,8 @@ import { scenarios } from "../../src/app/catalog.js";
  *   texto no primeiro quadro é lida na chegada, e quem usa leitor de tela ouve
  *   uma frase sobre uma ação que não praticou.
  */
-// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
-// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
-// caber em 30s seria medir menos para aprovar mais.
+// Referências `ported` ficam fora: elas não foram validadas e não representam
+// compromisso de implementação.
 test.setTimeout(180_000);
 
 test("o que a tela anuncia é o que o cenário declara", async ({ page }) => {

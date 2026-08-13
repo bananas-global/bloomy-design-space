@@ -279,7 +279,7 @@ const groupedNavigationApproved: Scenario = {
   },
   status: "approved",
   approvedAt: {
-    url: "https://bloomy-design-space-1fl24nbrk-vectorspace.vercel.app/management?scenario=management.grouped-navigation&persona=coordinator&fixture=management-grouped-navigation&viewport=desktop&handoff=1&allowScenario=management.grouped-navigation",
+    url: "https://bloomy-design-space-1fl24nbrk-vectorspace.vercel.app/management?scenario=management.grouped-navigation&persona=coordinator&fixture=management-grouped-navigation&viewport=desktop&handoff=1&allowScenario=management.grouped-navigation&allowComponent=core.lazy-tabs",
     commit: "c55259f2ad5162181044f93360e1b43fabe0f0ed",
     date: "2026-08-13",
   },

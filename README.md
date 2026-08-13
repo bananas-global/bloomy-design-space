@@ -71,6 +71,10 @@ cenário; só depois da validação de negócio pode chegar a `approved`. Listas
 gerenciais concluiu esse caminho com um único cenário aprovado para reorganizar
 a navegação.
 
+Referência `ported` é arquivo histórico e **não entra na suíte automatizada**.
+Playwright, axe e as varreduras de layout percorrem somente cenários de trabalho
+ativo; componentes continuam com testes próprios.
+
 ## Regras implementadas
 
 Toda regra tem implementação em `src/rules/` e teste em `tests/rules.test.ts`.
@@ -215,12 +219,10 @@ O que quebra o build de propósito:
   qualquer aviso acumulado.
 - **Contraste dos tokens.** Par abaixo do alvo, ou com margem menor que 0.1 —
   aprovado por 4.5 exato não sobrevive ao próximo ajuste.
-- **Axe, violação séria ou crítica.** Por cenário, nos 24, na mesma jornada
+- **Axe, violação séria ou crítica.** Por cenário ativo, na mesma jornada
   Playwright.
 - **Regras de negócio.** 30 testes cobrindo fronteiras: a tolerância exata dos 15
   minutos, sobreposição que só encosta na borda, menor que fez 18 anos.
-
-Estado atual: 45 testes unitários, 75 jornadas Playwright.
 
 Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo
 tecnicamente presente mas sem sentido e fluxo impossível de completar com leitor
@@ -276,9 +278,9 @@ token — então qualquer pessoa com push no repositório dispara um preview, e 
 continua sem consumir assento.
 
 O que o workflow faz, em ordem: typecheck e testes (falha barata, antes de gastar um
-deploy), build no runner do GitHub, publica só o resultado na Vercel, e roda a
-jornada Playwright com axe **contra a URL recém-publicada**. O link aparece no resumo
-da execução.
+deploy), build no runner do GitHub, publica só o resultado na Vercel, e roda
+Playwright com axe **somente no trabalho ativo e nos componentes**, contra a URL
+recém-publicada. O link aparece no resumo da execução.
 
 Se o workflow parar de rodar, nada é publicado. É deslocamento de responsabilidade,
 não redundância.
