@@ -27,7 +27,7 @@ export const overdueScenarios: Scenario[] = [
       notes:
         "As duas contas aparecem como etiquetas de texto lado a lado, nunca só por cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`overdued_for_coordinator` usa `start_time < now` e exclui `pending_supervisor_signature`.",
       "Cinco atendimentos, de 3 a 60 horas em aberto.",
@@ -50,7 +50,7 @@ export const overdueScenarios: Scenario[] = [
     fixture: "overdue-as-everyone-else",
     rules: ["overdue-means-two-different-things"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`overdued` usa uma janela de 48 horas e inclui as quatro situações abertas."],
     expected: [
       "A mesma fixture produz uma lista diferente.",
@@ -72,7 +72,7 @@ export const overdueScenarios: Scenario[] = [
       "the-supervisor-list-is-about-a-different-thing",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`supervisor_query` une duas consultas: a do próprio supervisor com `start_time < now`, a dos colegas da unidade com 48 horas.",
       "As duas olham `status in [:scheduled, :incomplete]` — agendamento que não virou atendimento.",
@@ -93,7 +93,7 @@ export const overdueScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "overdue-in-agreement",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhuma divergência é apontada.",
       "A definição em vigor continua declarada — isso não depende de haver conflito.",

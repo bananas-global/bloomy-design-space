@@ -22,7 +22,7 @@ export const tissBatchScenarios: Scenario[] = [
       contrast: "AA",
       notes: "Cada desfecho tem etiqueta em texto; a cor acompanha, nunca substitui.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Tiss.Workers.TissBatch` roda com `max_attempts: 1`.",
       "Um `rescue` devolve `:discard` para qualquer exceção.",
@@ -45,7 +45,7 @@ export const tissBatchScenarios: Scenario[] = [
     fixture: "tiss-batch-mixed",
     rules: ["refusal-and-crash-log-the-same-string"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`{:error, _reason}` descarta o motivo e devolve “Erro ao gerar o xml”.",
       "O `rescue` devolve a mesma string.",
@@ -65,7 +65,7 @@ export const tissBatchScenarios: Scenario[] = [
     persona: "operation",
     fixture: "tiss-batch-all-sent",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de perda aparece.",
       "Nenhuma tentativa é marcada como não reenviável.",

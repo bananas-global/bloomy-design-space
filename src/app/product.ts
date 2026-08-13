@@ -2,6 +2,7 @@ import type { ProductDefinition } from "@brucesantos/design-space";
 
 import { fixtures, modules, personas, rules, scenarios } from "./catalog.js";
 import { guard } from "../components/ScreenBoundary.js";
+import { COMPONENT_PREVIEWS } from "../gallery/entries.js";
 import { contrastPairs } from "../tokens/contrast.js";
 import { AgendaDay } from "../screens/AgendaDay.js";
 import { AppointmentDetail } from "../screens/AppointmentDetail.js";
@@ -41,7 +42,6 @@ import { AuthorizationRenewal } from "../screens/AuthorizationRenewal.js";
 import { FieldOrdering } from "../screens/FieldOrdering.js";
 import { DeactivationDate } from "../screens/DeactivationDate.js";
 import { AutoCheckin } from "../screens/AutoCheckin.js";
-import { Gallery } from "../screens/Gallery.js";
 import { Handover } from "../screens/Handover.js";
 import { PatientScope } from "../screens/PatientScope.js";
 import { PlanSignature } from "../screens/PlanSignature.js";
@@ -78,6 +78,7 @@ export const productDefinition: ProductDefinition = {
   personas,
   fixtures,
   rules,
+  components: COMPONENT_PREVIEWS,
 
   // Sem rota para `/`: a raiz é o mapa de situações do motor, que é a entrada
   // certa para quem recebe o link sem contexto.
@@ -115,8 +116,6 @@ export const productDefinition: ProductDefinition = {
     { path: "/guardian/plan-signature", screen: guard(PlanSignature) },
     { path: "/team/patient-scope", screen: guard(PatientScope) },
     { path: "/agenda/handovers", screen: guard(Handover) },
-    // A galeria não é uma situação do produto: é a referência de componentes.
-    { path: "/componentes", screen: guard(Gallery) },
     { path: "/sessions/meeting-summary", screen: guard(MeetingSummary) },
     { path: "/closures/tiss-batch", screen: guard(TissBatch) },
     { path: "/authorizations/distribution", screen: guard(Distribution) },

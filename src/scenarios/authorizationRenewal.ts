@@ -24,7 +24,7 @@ export const authorizationRenewalScenarios: Scenario[] = [
       contrast: "AA",
       notes: "Saldo e renovação automática são etiquetas de texto distintas, nunca só cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`PatientAuthorization` tem `has_many :authorizations` e nenhuma quantidade.",
       "O worker estende `duration_end_at` três meses à frente, e só isso.",
@@ -46,7 +46,7 @@ export const authorizationRenewalScenarios: Scenario[] = [
     persona: "operation",
     fixture: "authorization-renewal-all-with-balance",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de renovação vazia aparece.",
       "As linhas continuam dizendo que a renovação não acrescenta sessão.",

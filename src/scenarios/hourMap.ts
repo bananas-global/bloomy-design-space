@@ -22,7 +22,7 @@ export const hourMapScenarios: Scenario[] = [
       "auto-renew-off-is-invisible",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`hour_map_status=expiring` procura mapa ativo terminando em sete dias sem sucessor.",
       "Este mapa termina em 04/08, não renova sozinho e não tem sucessor.",
@@ -44,7 +44,7 @@ export const hourMapScenarios: Scenario[] = [
     fixture: "hour-map-expiring-with-successor",
     rules: ["auto-renew-off-is-invisible"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["O mesmo vencimento, com um mapa começando depois."],
     expected: [
       "A tela afirma que a semana continua, em vez de calar.",
@@ -67,7 +67,7 @@ export const hourMapScenarios: Scenario[] = [
       notes:
         "Cada horário é um item de lista com o que falta em texto. O resumo vem antes da grade, na ordem de leitura.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Seis horários: três limpos, um sem profissional, um sem sala e um sem os dois.",
     ],
@@ -88,7 +88,7 @@ export const hourMapScenarios: Scenario[] = [
     fixture: "hour-map-with-conflicts",
     rules: ["no-agenda-is-not-a-clash"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Sexta-feira sem agenda padrão cadastrada para a profissional."],
     expected: [
       "A mensagem diz que é cadastro faltando, e não horário ocupado.",
@@ -106,7 +106,7 @@ export const hourMapScenarios: Scenario[] = [
     fixture: "hour-map-with-conflicts",
     rules: ["conflict-family-decides-what-is-lost", "hour-map-generates-with-holes"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Profissional em bloqueio de agenda e sala bloqueada no mesmo horário."],
     expected: [
       "Os dois conflitos aparecem listados, cada um com o seu responsável.",
@@ -122,7 +122,7 @@ export const hourMapScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "hour-map-clean",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Nenhum aviso de horário incompleto aparece.",
       "Aplicar está disponível.",
@@ -140,7 +140,7 @@ export const hourMapScenarios: Scenario[] = [
     fixture: "hour-map-applied",
     rules: ["applied-map-is-not-redrawn"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Editar aparece indisponível, explicando que agendamentos já existem.",
       "Aplicar aparece indisponível, dizendo que já foi aplicado.",
@@ -157,7 +157,7 @@ export const hourMapScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "hour-map-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica o que o mapa é: dia, horário, especialidade e, quando dá, profissional e sala.",
     ],

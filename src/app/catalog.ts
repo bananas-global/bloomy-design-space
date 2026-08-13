@@ -900,8 +900,9 @@ export const modules: Module[] = [
           },
         ],
       },
-      // As três jornadas abaixo descrevem o CRM **proposto**. Todos os cenários
-      // delas estão marcados como `proposed`: nada disso existe no monólito.
+      // As três jornadas abaixo descrevem o CRM **proposto**, mas hoje pertencem
+      // ao baseline `ported`: nada disso existe no monólito nem está em trabalho
+      // ativo.
       {
         id: "work-the-lead-funnel",
         title: "Trabalhar o funil de leads (proposta)",

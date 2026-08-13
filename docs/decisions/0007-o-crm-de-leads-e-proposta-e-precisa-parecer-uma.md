@@ -3,6 +3,11 @@
 **Data:** 2026-08-03
 **Situação:** aceita
 
+> Atualização de 2026-08-12: a proposta continua sendo proposta no conteúdo,
+> mas seu estado de ciclo de vida passou a `ported` junto com todo o baseline
+> anterior. A decisão sobre a fila ativa está em
+> [`0010-cenarios-portados-nao-sao-trabalho-ativo.md`](0010-cenarios-portados-nao-sao-trabalho-ativo.md).
+
 ## Contexto
 
 O Bloomy tem hoje uma feature de Leads em `/backoffice/visitas`, no módulo

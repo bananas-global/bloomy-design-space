@@ -21,7 +21,7 @@ export const planSignatureScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O estado de cada aceite é dito em palavras na etiqueta.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`BehaviorInterventionPlans.accept/3` grava `signed_at: Date.utc_today()`.",
       "O aceite chega pela API do portal do responsável.",
@@ -44,7 +44,7 @@ export const planSignatureScenarios: Scenario[] = [
     fixture: "plan-signature-evening",
     rules: ["the-signature-can-predate-nothing-and-postdate-the-plan"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Um plano termina em 30/07 e o responsável assina às 23h20 desse dia.",
       "O carimbo cai em 31/07.",
@@ -65,7 +65,7 @@ export const planSignatureScenarios: Scenario[] = [
     persona: "clinic_admin",
     fixture: "plan-signature-daytime",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aceite aparece com data trocada.",
       "As duas datas continuam sendo mostradas, iguais.",

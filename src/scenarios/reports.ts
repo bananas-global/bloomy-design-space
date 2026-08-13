@@ -23,7 +23,7 @@ export const reportScenarios: Scenario[] = [
       notes:
         "Cada relatório é um artigo com heading próprio. Levar ou não conteúdo clínico tem rótulo textual.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro documentos com destinos diferentes: empregador, operadora e família."],
     expected: [
       "Cada relatório diz para onde o documento vai.",
@@ -42,7 +42,7 @@ export const reportScenarios: Scenario[] = [
     fixture: "reports-declaration-incomplete",
     rules: ["attendance-declaration-carries-no-clinical-content"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Falta o horário de saída e o nome do responsável."],
     expected: [
       "Os campos que faltam aparecem nomeados, e marcados na ficha.",
@@ -60,7 +60,7 @@ export const reportScenarios: Scenario[] = [
     fixture: "reports-declaration-with-clinical",
     rules: ["attendance-declaration-carries-no-clinical-content"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O campo `content` de `Reports.Report` aceita texto em qualquer tipo, sem validação.",
     ],
@@ -81,7 +81,7 @@ export const reportScenarios: Scenario[] = [
     fixture: "reports-issuing-without-reading",
     rules: ["issuing-does-not-check-reading"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`generate_report` inclui `attendant`; `see_clinic_overview` o exclui por lista negativa.",
       "O formulário do monólito não filtra o tipo de relatório por papel.",
@@ -102,7 +102,7 @@ export const reportScenarios: Scenario[] = [
     fixture: "reports-generated",
     rules: ["generated-report-is-frozen"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Editar aparece indisponível, explicando que o documento já saiu.",
       "Gerar PDF de novo também fica indisponível.",
@@ -118,7 +118,7 @@ export const reportScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "reports-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: ["A tela nomeia os tipos de documento que a clínica emite."],
     tags: ["vazio"],
   },

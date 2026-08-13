@@ -26,7 +26,7 @@ export const absenceOriginScenarios: Scenario[] = [
       contrast: "AA",
       notes: "A origem aparece como etiqueta de texto em cada linha, nunca só por cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O filtro `absence` soma `:missed` e `:cancelled`.",
       "`MarkDelayedSchedulesAsMissedWorker` converte agendamentos parados há sete dias, com motivo `:delay`.",
@@ -49,7 +49,7 @@ export const absenceOriginScenarios: Scenario[] = [
     persona: "clinic_admin",
     fixture: "absence-origin-all-observed",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de mistura aparece.",
       "Nenhuma conversão automática é apontada.",

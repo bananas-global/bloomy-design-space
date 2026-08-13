@@ -8,7 +8,7 @@ const PNG_1X1 = Buffer.from(
 
 const png = (name: string) => ({ name, mimeType: "image/png", buffer: PNG_1X1 });
 
-test.describe("galeria — image_upload", () => {
+test.describe("catálogo — image_upload", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       const originalCreate = URL.createObjectURL.bind(URL);
@@ -27,7 +27,7 @@ test.describe("galeria — image_upload", () => {
         originalRevoke(url);
       };
     });
-    await page.goto("/componentes");
+    await page.goto("/?component=core.image-upload");
   });
 
   test("preserva contrato, aciona o seletor por ponteiro e anuncia a seleção", async ({ page }) => {
@@ -90,18 +90,15 @@ test.describe("galeria — image_upload", () => {
     const activeUrl = await wrapper.getByRole("img").getAttribute("src");
     expect(activeUrl).toMatch(/^blob:/);
 
-    const navLink = page.locator('nav[aria-label="Navegação principal"] a[href]').first();
-    const targetPath = await navLink.getAttribute("href");
-    expect(targetPath).toBeTruthy();
-    await navLink.click();
-    await expect(page).toHaveURL(new RegExp(`${targetPath}$`));
+    await page.getByRole("button", { name: /^avatar\b/ }).click();
+    await expect(page).toHaveURL(/component=core\.avatar/);
     const afterUnmount = await page.evaluate(() =>
       (window as typeof window & { __imageUploadUrls: { revoked: string[] } }).__imageUploadUrls,
     );
     expect(afterUnmount.revoked).toContain(activeUrl);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/componentes$/);
+    await expect(page).toHaveURL(/component=core\.image-upload/);
     await expect(page.locator("#g-image-upload-wrapper").getByRole("img")).toHaveAttribute("src", previousUrl ?? "");
     await expect(page.locator("#g-image-upload-wrapper").getByRole("img")).toHaveAttribute("alt", "Imagem atual");
   });

@@ -23,7 +23,7 @@ export const managementScenarios: Scenario[] = [
       notes:
         "Cada frente é um item de lista com contagem, título e responsável em texto. Cor não carrega informação sozinha.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro frentes com pendência, na unidade Pinheiros."],
     expected: [
       "Cada frente mostra a contagem, o título e de quem é.",
@@ -42,7 +42,7 @@ export const managementScenarios: Scenario[] = [
     fixture: "management-reports-overdue",
     rules: ["report-urgency-depends-on-requester"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Um relatório pedido pela operadora atrasado há 9 dias, e um pedido pela família há 14.",
     ],
@@ -63,7 +63,7 @@ export const managementScenarios: Scenario[] = [
     fixture: "management-mentorship-gap",
     rules: ["applicator-without-supervisor-cannot-close"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Um aplicador sem vínculo de supervisão, e uma supervisora sem nenhum supervisionado.",
     ],
@@ -83,7 +83,7 @@ export const managementScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "management-clear",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela afirma que as quatro frentes estão em dia, nomeando-as.",
       "Nada de contagem zerada empilhada: o vazio é uma frase, não quatro zeros.",
@@ -98,7 +98,7 @@ export const managementScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "management-monday",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`ManagementPolicy.can?(role, :list)` é de admin, admin de clínica e coordenação."],
     expected: ["A tela nomeia quem alcança a gerência.", "O bloqueio é de permissão, não de dado."],
     tags: ["permissão", "exceção"],

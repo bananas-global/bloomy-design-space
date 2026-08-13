@@ -28,7 +28,7 @@ export const authorizationScenarios: Scenario[] = [
       notes:
         "Cada autorização é um artigo com heading próprio. A situação tem rótulo textual, e a cor não carrega informação sozinha.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Onze autorizações de julho, cobrindo as dez situações do produto."],
     expected: [
       "A fila ordena por quem age em seguida: clínica, solicitante, convênio.",
@@ -46,7 +46,7 @@ export const authorizationScenarios: Scenario[] = [
     persona: "operation",
     fixture: "authorizations-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: ["A tela explica o que aparece aqui, e em que ordem."],
     tags: ["vazio"],
   },
@@ -59,7 +59,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-with-balance",
     rules: ["authorization-availability-needs-all-three"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Autorizada, dentro da validade, com nove de dezesseis sessões consumidas."],
     expected: [
       "A tela afirma que serve para agendar hoje.",
@@ -77,7 +77,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-one-package-exhausted",
     rules: ["authorization-availability-needs-all-three"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Psicologia esgotou em 8 de 8; fonoaudiologia tem 2 de 4 consumidas.",
       "`Availability` exige saldo em todos os pacotes, não em algum.",
@@ -99,7 +99,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-capitation",
     rules: ["capitation-ignores-quantity"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quantidade 3 e máximo mensal 12. O teto continua 12."],
     expected: [
       "O teto exibido é 12, e não 36.",
@@ -117,7 +117,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-expired",
     rules: ["authorization-availability-needs-all-three"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Janela de junho, saldo de 3 em 16, e a data de referência é 30 de julho."],
     expected: [
       "A validade aparece marcada como vencida, com quantos dias.",
@@ -136,7 +136,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-partial",
     rules: ["partial-authorization-is-not-authorization"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Pedidas 16 sessões, o convênio liberou 8."],
     expected: [
       "A diferença aparece em número, no título do aviso.",
@@ -155,7 +155,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-sync-error",
     rules: ["sync-error-is-not-denial"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Certificado expirado e timeout de elegibilidade na comunicação."],
     expected: [
       "A tela diz que a integração falhou e que reenviar resolve.",
@@ -174,7 +174,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorization-waiting-documentation",
     rules: ["pending-status-names-who-acts-next"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Convênio pediu relatório de evolução e cópia do plano terapêutico."],
     expected: [
       "A tela diz que a ação é da operação e que é o que destrava.",
@@ -193,7 +193,7 @@ export const authorizationScenarios: Scenario[] = [
     fixture: "authorizations-queue",
     rules: ["only-admin-edits-authorization"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`view_authorization_hub` é de admin, admin de clínica e operação. A recepção não tem.",
     ],

@@ -23,7 +23,7 @@ export const unitMapScenarios: Scenario[] = [
       notes:
         "A grade é uma tabela com cabeçalhos de linha e coluna e `caption`. Cada célula tem texto ou rótulo acessível — a cor nunca é o único sinal. A grade rola dentro de si, e nunca a página.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Unidade aberta das 08h às 18h30.",
       "Três profissionais: uma com agenda cheia, uma sem agenda nenhuma e um com agenda vazia.",
@@ -45,7 +45,7 @@ export const unitMapScenarios: Scenario[] = [
     fixture: "unit-map-week",
     rules: ["no-agenda-is-not-zero-occupancy", "people-cannot-see-the-map-they-cause"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`calculate_occupancy(_items, [])` devolve 0 no sistema real.",
       "Iara não tem hora de agenda padrão em dia nenhum; Renato tem a semana definida e vazia.",
@@ -67,7 +67,7 @@ export const unitMapScenarios: Scenario[] = [
     fixture: "unit-map-lost-hour",
     rules: ["unit-hours-drop-the-last-partial-hour"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`unit_hours = start_at.hour..(end_at.hour - 1)`.",
       "A unidade fecha às 18h30, então o mapa vai até as 17h.",
@@ -90,7 +90,7 @@ export const unitMapScenarios: Scenario[] = [
     fixture: "unit-map-crowded-hour",
     rules: ["occupancy-counts-hours-touched"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quarta às 14h tem três atendimentos na mesma sala."],
     expected: [
       "A célula mostra “3×”, e não um marcador único.",
@@ -109,7 +109,7 @@ export const unitMapScenarios: Scenario[] = [
     fixture: "unit-map-by-patient",
     rules: ["the-axis-decides-the-question"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "No sistema real, os botões de semana e dia ficam desabilitados nos eixos de paciente e unidade.",
       "Nenhuma explicação acompanha a desabilitação.",
@@ -131,7 +131,7 @@ export const unitMapScenarios: Scenario[] = [
     fixture: "unit-map-as-people",
     rules: ["people-cannot-see-the-map-they-cause"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`UnitMapPolicy.can?(role, :show)` não inclui `people` nem `operation`.",
     ],

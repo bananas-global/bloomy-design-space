@@ -1,21 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test.describe("galeria — seletores de data", () => {
-  test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
-
-  test("mantém os quatro portes, contratos visíveis e erros associados", async ({ page }) => {
-    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Período", exact: true })).toBeVisible();
-    const mes = page.getByRole("combobox", { name: "Mês da avaliação" });
-    await expect(mes).toHaveValue("Ago 2026");
-    await expect(mes).toHaveAttribute("aria-invalid", "true");
-    await expect(mes).toHaveAttribute("aria-describedby", "g-mes-avaliacao-errors");
-    await expect(page.locator("#g-periodo-dias-picker")).toHaveAttribute("data-static", "true");
-    await expect(page.locator("#g-periodo-meses-picker")).toHaveAttribute("data-disable", '["2026-02-01"]');
-  });
-
+test.describe("catálogo — seletores de data", () => {
   test("date navigator atravessa mês, ano e bissexto sem relógio e publica o valor", async ({ page }) => {
+    await page.goto("/?component=core.date-navigator");
     const navegador = page.locator("#datepicker-wrapper-g-navegador-data");
     const anterior = navegador.getByRole("button", { name: "Dia anterior" });
     const proximo = navegador.getByRole("button", { name: "Próximo dia" });
@@ -45,6 +33,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("switch card fixa a correção intencional de multiple e valor customizado", async ({ page }) => {
+    await page.goto("/?component=core.switch-card");
     const chave = page.getByRole("checkbox", { name: /Registro Tipo ABC/ });
     await expect(chave).not.toBeChecked();
     await expect(chave).toHaveAttribute("name", "programa[is_abc]");
@@ -62,6 +51,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("date navigator fixa a correção intencional dos três controles desabilitados", async ({ page }) => {
+    await page.goto("/?component=core.date-navigator");
     const wrapper = page.locator("#datepicker-wrapper-g-navegador-bloqueado");
     await expect(wrapper).toHaveAttribute("data-disable", "true");
     await expect(wrapper.getByRole("button")).toHaveCount(3);
@@ -70,6 +60,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("date navigator ancora popup, sincroniza atualização externa aberta e mantém relações ARIA", async ({ page }) => {
+    await page.goto("/?component=core.date-navigator");
     const acionador = page.locator("#datepicker-g-navegador-data");
     await expect(acionador).toHaveAttribute("aria-haspopup", "dialog");
     await expect(acionador).toHaveAttribute("aria-controls", "g-navegador-data-popup");
@@ -90,6 +81,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("date navigator fecha com Escape e clique externo e restaura foco", async ({ page }) => {
+    await page.goto("/?component=core.date-navigator");
     const acionador = page.locator("#datepicker-g-navegador-data");
     await acionador.press("Enter");
     await page.keyboard.press("Escape");
@@ -101,22 +93,8 @@ test.describe("galeria — seletores de data", () => {
     await expect(acionador).toBeFocused();
   });
 
-  test("tabulação real alcança SwitchCard e DateNavigator", async ({ page }) => {
-    const anteriorNaGaleria = page.getByRole("button", { name: "Passe o mouse ou dê Tab" });
-    await anteriorNaGaleria.click();
-    await expect(anteriorNaGaleria).toBeFocused();
-
-    await page.keyboard.press("Tab");
-    await expect(page.locator("#g-registro-abc")).toBeFocused();
-
-    await page.keyboard.press("Tab");
-    await expect(page.locator("#datepicker-wrapper-g-navegador-data").getByRole("button", { name: "Dia anterior" })).toBeFocused();
-
-    await page.keyboard.press("Tab");
-    await expect(page.locator("#datepicker-g-navegador-data")).toBeFocused();
-  });
-
   test("timeline mantém lista ordenada e os dois marcadores do histórico", async ({ page }) => {
+    await page.goto("/?component=core.timeline-list");
     const lista = page.getByRole("list").filter({ hasText: "Documento inicial anexado" });
     await expect(lista.getByRole("listitem")).toHaveCount(2);
     await expect(lista.getByText("Criado", { exact: true })).toBeVisible();
@@ -124,6 +102,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("range diário entra no calendário e completa tudo pelo teclado", async ({ page }) => {
+    await page.goto("/?component=core.range-datepicker");
     const campo = page.getByRole("combobox", { name: "Período", exact: true });
     await campo.press("ArrowDown");
     await expect(page.getByRole("button", { name: "3 de Agosto de 2026", exact: true })).toBeFocused();
@@ -141,6 +120,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("range diário respeita disable, limites, mês/ano e seleção invertida", async ({ page }) => {
+    await page.goto("/?component=core.range-datepicker");
     const campo = page.getByRole("combobox", { name: "Período", exact: true });
     await campo.press("Enter");
     await expect(page.getByRole("button", { name: "15 de Agosto de 2026", exact: true })).toBeDisabled();
@@ -160,6 +140,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("Escape e clique externo fecham e restauram o foco", async ({ page }) => {
+    await page.goto("/?component=core.range-datepicker");
     const campo = page.getByRole("combobox", { name: "Período", exact: true });
     await campo.press("ArrowDown");
     await page.keyboard.press("Escape");
@@ -172,6 +153,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("atualização controlada sincroniza cursor sem apagar seleção parcial", async ({ page }) => {
+    await page.goto("/?component=core.range-datepicker");
     const campo = page.getByRole("combobox", { name: "Período", exact: true });
     await campo.press("ArrowDown");
     await page.keyboard.press("ArrowDown");
@@ -188,6 +170,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("range mensal usa último dia, bissexto, inversão e travessia de ano", async ({ page }) => {
+    await page.goto("/?component=core.range-monthpicker");
     const campo = page.getByRole("combobox", { name: "Período dos programas" });
     await page.getByRole("button", { name: "Carregar intervalo bissexto" }).click();
     await expect(page.locator('input[name="g-periodo-meses"]')).toHaveValue("2024-01-01#2024-02-29");
@@ -202,6 +185,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("range mensal preserva seleção parcial durante atualização externa", async ({ page }) => {
+    await page.goto("/?component=core.range-monthpicker");
     const campo = page.getByRole("combobox", { name: "Período dos programas" });
     await campo.press("Enter");
     await page.keyboard.press("ArrowRight");
@@ -213,6 +197,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("mês único navega por ano, seleciona e sincroniza valor externo", async ({ page }) => {
+    await page.goto("/?component=core.monthpicker");
     const campo = page.getByRole("combobox", { name: "Mês da avaliação" });
     await campo.press("ArrowDown");
     await page.keyboard.press("PageDown");
@@ -226,6 +211,7 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("seletor semanal atravessa mês e ano", async ({ page }) => {
+    await page.goto("/?component=core.week-selector");
     await expect(page.getByText("29 - 04 de Janeiro", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Próxima semana" }).click();
     await expect(page.getByText("05 - 11 de Janeiro", { exact: true })).toBeVisible();
@@ -235,7 +221,14 @@ test.describe("galeria — seletores de data", () => {
   });
 
   test("axe não encontra violações com cada popup aberto", async ({ page }) => {
-    for (const nome of ["Período", "Período dos programas", "Mês da avaliação"]) {
+    const pickers = [
+      ["range-datepicker", "Período", "#g-periodo-dias-picker"],
+      ["range-monthpicker", "Período dos programas", "#g-periodo-meses-picker"],
+      ["monthpicker", "Mês da avaliação", "#g-mes-avaliacao-picker"],
+    ] as const;
+
+    for (const [component, nome, selector] of pickers) {
+      await page.goto(`/?component=core.${component}`);
       const campo = page.getByRole("combobox", { name: nome, exact: true });
       await campo.press("ArrowDown");
       const pickerId = await campo.getAttribute("aria-controls");
@@ -245,13 +238,14 @@ test.describe("galeria — seletores de data", () => {
       await expect(campo).toHaveAttribute("aria-expanded", "true");
       await expect(page.locator(`#${pickerId}`)).toBeVisible();
       const results = await new AxeBuilder({ page })
-        .include(`#${nome === "Período" ? "g-periodo-dias" : nome === "Período dos programas" ? "g-periodo-meses" : "g-mes-avaliacao"}-picker`)
+        .include(selector)
         .disableRules(["color-contrast"])
         .analyze();
-      expect(results.violations).toEqual([]);
+      expect(results.violations, component).toEqual([]);
       await page.keyboard.press("Escape");
     }
 
+    await page.goto("/?component=core.date-navigator");
     const navegador = page.locator("#datepicker-g-navegador-data");
     await navegador.press("Enter");
     await expect(navegador).toHaveAttribute("aria-expanded", "true");

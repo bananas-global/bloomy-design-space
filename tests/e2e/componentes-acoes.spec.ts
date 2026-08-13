@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test.describe("galeria — link_button e copy_button", () => {
+test.describe("catálogo — link_button e copy_button", () => {
   test.beforeEach(async ({ context, page }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.addInitScript(() => {
@@ -12,16 +12,10 @@ test.describe("galeria — link_button e copy_button", () => {
         value: { writeText: async (text: string) => { copies.push(text); } },
       });
     });
-    await page.goto("/componentes");
-  });
-
-  test("conta os dois portes somente com as demos completas", async ({ page }) => {
-    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "link_button", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "copy_button", exact: true })).toBeVisible();
   });
 
   test("link_button preserva destino, rest, variante, classes e ícones", async ({ page }) => {
+    await page.goto("/?component=core.link-button");
     const back = page.getByRole("link", { name: "Voltar para programas" });
     await expect(back).toHaveAttribute("href", "#destino-link-button");
     await expect(back).toHaveAttribute("target", "_self");
@@ -46,12 +40,14 @@ test.describe("galeria — link_button e copy_button", () => {
   });
 
   test("navega por teclado sem sair da suíte", async ({ page }) => {
+    await page.goto("/?component=core.link-button");
     const link = page.getByRole("link", { name: "Voltar para programas" });
     await link.press("Enter");
-    await expect(page).toHaveURL(/\/componentes#destino-link-button$/);
+    await expect(page).toHaveURL(/component=core\.link-button#destino-link-button$/);
   });
 
   test("copy_button agrega cópias alternadas em uma pilha global persistente", async ({ page }) => {
+    await page.goto("/?component=core.copy-button");
     const checkin = page.getByRole("button", { name: "Link de Checkin" });
     const guia = page.getByRole("button", { name: "Código da guia" });
     const checkinText = "https://exemplo.invalid/auto-checkin/unidade-girassol";
@@ -87,6 +83,7 @@ test.describe("galeria — link_button e copy_button", () => {
   });
 
   test("disabled, tamanho pequeno e ausência de cópia ficam nativos", async ({ page }) => {
+    await page.goto("/?component=core.copy-button");
     const disabled = page.getByRole("button", { name: "Copiar desabilitado" });
     await expect(disabled).toBeDisabled();
     await expect(disabled).toHaveAttribute("title", "Cópia indisponível");
@@ -98,6 +95,7 @@ test.describe("galeria — link_button e copy_button", () => {
   });
 
   test("publica sucesso imediatamente sem inventar estado para rejeição assíncrona", async ({ page }) => {
+    await page.goto("/?component=core.copy-button");
     await page.evaluate(() => {
       window.addEventListener("unhandledrejection", (event) => event.preventDefault());
       Object.defineProperty(navigator, "clipboard", {
@@ -112,9 +110,16 @@ test.describe("galeria — link_button e copy_button", () => {
   });
 
   test("não introduz violações estruturais ou relações ARIA quebradas", async ({ page }) => {
-    await page.getByRole("button", { name: "Link de Checkin" }).press("Enter");
-    const results = await new AxeBuilder({ page })
+    await page.goto("/?component=core.link-button");
+    let results = await new AxeBuilder({ page })
       .include("#g-link-buttons")
+      .disableRules(["color-contrast"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await page.goto("/?component=core.copy-button");
+    await page.getByRole("button", { name: "Link de Checkin" }).press("Enter");
+    results = await new AxeBuilder({ page })
       .include("#g-copy-buttons")
       .include("[data-toast-host]")
       .disableRules(["color-contrast"])

@@ -27,7 +27,7 @@ export const guardianPortalScenarios: Scenario[] = [
       notes:
         "Corpo maior que o das telas internas. Cada seção é uma região com heading próprio, e o horário cancelado tem rótulo textual além da cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Dois filhos em atendimento, um plano esperando aceite, um horário cancelado."],
     expected: [
       "Os próximos atendimentos aparecem em ordem, com profissional e unidade.",
@@ -46,7 +46,7 @@ export const guardianPortalScenarios: Scenario[] = [
     fixture: "guardian-plan-pending",
     rules: ["plan-acceptance-records-who-when-and-what"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Plano do segundo semestre, dentro da vigência, ainda sem aceite."],
     expected: [
       "As metas e os objetivos aparecem por extenso, na linguagem da devolutiva.",
@@ -64,7 +64,7 @@ export const guardianPortalScenarios: Scenario[] = [
     fixture: "guardian-plan-accepted",
     rules: ["plan-acceptance-records-who-when-and-what", "plans-cannot-overlap-for-a-patient"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A assinatura e a data aparecem para a própria família.",
       "O campo de assinatura não aparece de novo: não há o que assinar duas vezes.",
@@ -82,7 +82,7 @@ export const guardianPortalScenarios: Scenario[] = [
     fixture: "guardian-plan-expired",
     rules: ["expired-plan-cannot-be-accepted"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Vigência encerrada em 31/12/2025, sem aceite."],
     expected: [
       "Aceitar aparece indisponível, com a data em que a vigência terminou.",
@@ -101,7 +101,7 @@ export const guardianPortalScenarios: Scenario[] = [
     fixture: "guardian-plan-other-family",
     rules: ["plan-is-visible-only-to-its-guardian"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`get_for_legal_guardian!` escopa por vínculo. O plano é de paciente de outra responsável.",
     ],
@@ -122,7 +122,7 @@ export const guardianPortalScenarios: Scenario[] = [
     fixture: "guardian-terms-missing",
     rules: ["terms-acceptance-records-context"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A tela diz quais três dados são guardados.",
       "E diz para que servem: registro do aceite, não acompanhamento de navegação.",
@@ -137,7 +137,7 @@ export const guardianPortalScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "guardian-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A agenda vazia diz que a clínica entra em contato.",
       "A ausência de plano explica que ele nasce da avaliação inicial.",

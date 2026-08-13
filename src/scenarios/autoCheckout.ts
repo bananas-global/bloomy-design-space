@@ -23,7 +23,7 @@ export const autoCheckoutScenarios: Scenario[] = [
       notes:
         "A duração aparece em texto, em dias quando passa de um — “2136 horas” obrigaria quem lê a dividir de cabeça.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`AutoCheckout` seleciona `is_nil(sr.checkout_at)` sem qualquer filtro de data.",
       "Três check-ins de hoje e três esquecidos, o mais antigo de 02/05.",
@@ -43,7 +43,7 @@ export const autoCheckoutScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "auto-checkout-only-today",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de presença absurda aparece.",
       "A tela diz que nestas a rotina não inventa duração nenhuma.",
@@ -60,7 +60,7 @@ export const autoCheckoutScenarios: Scenario[] = [
     fixture: "auto-checkout-already-closed",
     rules: ["the-system-signs-its-own-checkout"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["A rotina grava `checkout_done_by: \"system\"`."],
     expected: [
       "Cada registro fechado diz quem o fechou, em texto.",

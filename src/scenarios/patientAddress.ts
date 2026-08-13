@@ -24,7 +24,7 @@ export const patientAddressScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O desfecho de cada cadastro é dito em palavras na etiqueta, não pela cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`maybe_cast_address/2` casa a associação só quando `attrs[\"address\"][\"zip_code\"] !== \"\"`.",
       "Um cadastro rural preencheu rua, bairro, número, cidade e estado, e deixou o CEP em branco.",
@@ -46,7 +46,7 @@ export const patientAddressScenarios: Scenario[] = [
     fixture: "patient-address-mixed",
     rules: ["an-edit-that-blanks-the-zip-code-changes-nothing"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Pular `cast_assoc` não apaga a associação existente: ela fica intacta.",
       "Alguém corrigiu a rua e apagou o CEP no mesmo envio.",
@@ -68,7 +68,7 @@ export const patientAddressScenarios: Scenario[] = [
     fixture: "patient-address-mixed",
     rules: ["the-error-that-would-explain-it-never-runs"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O cadastro de endereço exige `zip_code` e confere o formato.",
       "A guarda impede esse cadastro de rodar exatamente quando ele reclamaria.",
@@ -89,7 +89,7 @@ export const patientAddressScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "patient-address-mixed",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "O cadastro sem nenhum campo de endereço aparece como salvo, e não como perda.",
       "A tela diz que essa é a necessidade que a guarda atende.",
@@ -104,7 +104,7 @@ export const patientAddressScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "patient-address-all-with-zip",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de perda aparece.",
       "Todos os cadastros terminam com o endereço gravado.",

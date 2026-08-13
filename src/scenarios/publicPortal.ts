@@ -27,7 +27,7 @@ export const publicPortalScenarios: Scenario[] = [
       notes:
         "O progresso é uma lista ordenada com `aria-current`. O campo tem rótulo associado e teclado numérico. Corpo de texto maior que o das telas internas, de propósito.",
     },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A etapa atual é anunciada, com posição no total.",
       "O campo de CPF tem rótulo visível e alvo grande.",
@@ -45,7 +45,7 @@ export const publicPortalScenarios: Scenario[] = [
     fixture: "kiosk-invalid-cpf",
     rules: ["kiosk-distinguishes-three-failures"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["kiosk.error"] },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A mensagem diz que os números não fecham, e não que o CPF não existe.",
       "A saída oferecida é digitar de novo.",
@@ -62,7 +62,7 @@ export const publicPortalScenarios: Scenario[] = [
     fixture: "kiosk-guardian-not-found",
     rules: ["kiosk-distinguishes-three-failures"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["kiosk.error"] },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A mensagem afirma que o CPF está correto e que falta cadastro.",
       "A saída oferecida é falar com a recepção, e a tela diz que resolve rápido.",
@@ -79,7 +79,7 @@ export const publicPortalScenarios: Scenario[] = [
     fixture: "kiosk-select-patient",
     rules: ["kiosk-lists-only-today-and-unstarted"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Dois pacientes agendados hoje; um já com check-in aberto."],
     expected: [
       "Cada paciente mostra os horários de hoje.",
@@ -98,7 +98,7 @@ export const publicPortalScenarios: Scenario[] = [
     fixture: "kiosk-no-patients",
     rules: ["kiosk-lists-only-today-and-unstarted"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["kiosk.no-patients"] },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A mensagem levanta as duas hipóteses: outro dia, ou outra unidade.",
       "A saída é falar com a recepção.",
@@ -113,7 +113,7 @@ export const publicPortalScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "kiosk-complete",
     a11y: { keyboard: "full", contrast: "AA", announces: ["kiosk.registered"] },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A confirmação diz que a equipe já sabe da chegada.",
       "A tela diz o que fazer agora: aguardar na recepção.",
@@ -130,7 +130,7 @@ export const publicPortalScenarios: Scenario[] = [
     fixture: "kiosk-unit-not-found",
     rules: ["kiosk-distinguishes-three-failures", "kiosk-never-goes-back"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A mensagem menciona o QR Code, que é como a pessoa chegou ali.",
       "As etapas não aparecem: não há fluxo a percorrer sem unidade.",
@@ -152,7 +152,7 @@ export const publicPortalScenarios: Scenario[] = [
       notes:
         "A escala é um fieldset com legend e onze rádios, não onze botões soltos: as setas percorrem as notas e a escolha é uma só.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Convite enviado, ainda sem resposta."],
     expected: [
       "Os extremos da escala são nomeados em texto, não só por número.",
@@ -170,7 +170,7 @@ export const publicPortalScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "nps-low-rating",
     a11y: { keyboard: "full", contrast: "AA", announces: ["nps.received"] },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Nota 4, com comentário sobre dificuldade de horário."],
     expected: [
       "O agradecimento é o mesmo que o de uma nota alta.",

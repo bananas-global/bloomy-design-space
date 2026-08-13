@@ -21,7 +21,7 @@ export const teamScenarios: Scenario[] = [
       contrast: "AA",
       notes: "Cada profissional é um artigo com heading próprio. Contrato e supervisão são seções com heading de nível 3.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro profissionais e um espaço reservado, com contratos dos dois tipos."],
     expected: [
       "Cada profissional mostra especialidade, registro de conselho e situação.",
@@ -40,7 +40,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-supervised",
     rules: ["supervision-link-defines-second-signature", "one-supervision-link-per-pair"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`need_supervisor_signature` é campo de `Professionals.Internship`, e não do agendamento.",
     ],
@@ -61,7 +61,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-tbd",
     rules: ["tbd-professional-is-a-placeholder"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`@tbd_required_fields` tem dois campos; `@full_required_fields` tem dez."],
     expected: [
       "O cadastro aparece marcado como a definir.",
@@ -79,7 +79,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-incomplete",
     rules: ["tbd-professional-is-a-placeholder"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "O aviso conta quantos campos faltam e os nomeia.",
       "A diferença com o cadastro a definir fica evidente ao abrir os dois.",
@@ -96,7 +96,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-contract-incomplete",
     rules: ["contract-type-decides-required-rates"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Remuneração por hora exige as três taxas maiores que zero. Falta a hora administrativa especial.",
     ],
@@ -117,7 +117,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-roster",
     rules: ["contract-type-decides-required-rates"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`validate_by_type` passa `allow_zero?` verdadeiro só para a hora administrativa em remuneração fixa.",
     ],
@@ -137,7 +137,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-no-invoice-contract",
     rules: ["contract-decides-invoice-requirement"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`issue_invoice` do contrato ativo é falso."],
     expected: [
       "A seção “o que este cadastro decide” diz que o fechamento pula as etapas de nota.",
@@ -155,7 +155,7 @@ export const teamScenarios: Scenario[] = [
     fixture: "team-deactivation-without-date",
     rules: ["deactivation-needs-a-date"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Desativar aparece indisponível, pedindo a data.",
       "O motivo explica o que a data separa, e não apenas que é obrigatória.",
@@ -170,7 +170,7 @@ export const teamScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "team-roster",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ProfessionalPolicy.can?(role, :list)` é de admin, admin de clínica, recepção, coordenação e People.",
     ],
@@ -188,7 +188,7 @@ export const teamScenarios: Scenario[] = [
     persona: "people",
     fixture: "team-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: ["A tela explica o que aparece aqui depois do primeiro vínculo."],
     tags: ["vazio"],
   },

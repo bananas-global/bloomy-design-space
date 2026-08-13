@@ -1,17 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test.describe("galeria — avisos e formulário simples", () => {
-  test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
-
-  test("conta os três portes somente com as demos completas", async ({ page }) => {
-    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "flash", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "flash_group", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "simple_form", exact: true })).toBeVisible();
-  });
-
+test.describe("catálogo — avisos e formulário simples", () => {
   test("flash anuncia, recebe foco real por Tab e fecha pelo controle nomeado", async ({ page }) => {
+    await page.goto("/?component=core.flash");
     const trigger = page.getByRole("button", { name: "Registrar resultado" });
     await trigger.click();
     const alert = page.locator("#g-flash");
@@ -24,6 +16,7 @@ test.describe("galeria — avisos e formulário simples", () => {
   });
 
   test("flash_group mantém os quatro IDs canônicos e alterna os nós de conexão", async ({ page }) => {
+    await page.goto("/?component=core.flash-group");
     const group = page.locator("#g-flash-group");
     const infoAlert = group.locator("#flash-info");
     const errorAlert = group.locator("#flash-error");
@@ -59,6 +52,7 @@ test.describe("galeria — avisos e formulário simples", () => {
   });
 
   test("simple_form envia habilitado e bloqueia campos e envio quando desabilitado", async ({ page }) => {
+    await page.goto("/?component=core.simple-form");
     const form = page.locator("#g-simple-form");
     const status = page.getByRole("status").filter({ hasText: /Mudanças/ });
     await expect(form).toHaveAttribute("name", "programa");
@@ -86,11 +80,24 @@ test.describe("galeria — avisos e formulário simples", () => {
   });
 
   test("não introduz violações automáticas nas três demos", async ({ page }) => {
+    await page.goto("/?component=core.flash");
     await page.getByRole("button", { name: "Registrar resultado" }).click();
-    await page.getByRole("button", { name: "Simular internet indisponível" }).click();
-    const results = await new AxeBuilder({ page })
+    let results = await new AxeBuilder({ page })
       .include("#g-flash")
+      .disableRules(["color-contrast"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await page.goto("/?component=core.flash-group");
+    await page.getByRole("button", { name: "Simular internet indisponível" }).click();
+    results = await new AxeBuilder({ page })
       .include("#g-flash-group")
+      .disableRules(["color-contrast"])
+      .analyze();
+    expect(results.violations).toEqual([]);
+
+    await page.goto("/?component=core.simple-form");
+    results = await new AxeBuilder({ page })
       .include("#g-simple-form")
       // Contraste é dívida conhecida dos tokens espelhados; este teste protege estrutura e relações ARIA.
       .disableRules(["color-contrast"])

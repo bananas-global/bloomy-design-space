@@ -22,7 +22,7 @@ export const meetingSummaryScenarios: Scenario[] = [
       contrast: "AA",
       notes: "A autoria do texto é dita em palavras na etiqueta, não só pela cor dela.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`mark_comments_as_unreviewed` põe `comments_reviewed: false` ao criar um comentário.",
       "O cron `0 3 * * *` grava o resumo novo em `appointment.content`.",
@@ -49,7 +49,7 @@ export const meetingSummaryScenarios: Scenario[] = [
       "the-regeneration-queue-has-no-bound",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Uma falha deixa `comments_reviewed` como estava, então o registro volta à fila.",
       "`Enum.each` descarta o resultado de cada geração.",
@@ -77,7 +77,7 @@ export const meetingSummaryScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O conteúdo bruto é exibido como texto e nunca interpretado.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O conteúdo do comentário é interpolado entre `<conteudo>` e `</conteudo>`, sem escape.",
       "Um comentário fecha a etiqueta e escreve depois dela.",
@@ -99,7 +99,7 @@ export const meetingSummaryScenarios: Scenario[] = [
     fixture: "meeting-summary-already-generated",
     rules: ["comment-text-becomes-model-instruction", "reviewed-means-a-machine-read-it"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A marca de revisão já voltou para `true` e o texto foi gerado pela rotina.",
       "O comentário que fecha a etiqueta estava no pedido que produziu esse texto.",
@@ -123,7 +123,7 @@ export const meetingSummaryScenarios: Scenario[] = [
       "one-record-without-an-appointment-stops-the-night",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Create.create_appointment/1` descarta o resultado do insert e devolve sucesso.",
       "A rotina lê `custom_service.appointment.id` sem conferir nulo.",
@@ -146,7 +146,7 @@ export const meetingSummaryScenarios: Scenario[] = [
     persona: "operation",
     fixture: "meeting-summary-settled",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso aparece.",
       "A fila diz explicitamente que a rotina não terá o que fazer.",
@@ -161,7 +161,7 @@ export const meetingSummaryScenarios: Scenario[] = [
     persona: "operation",
     fixture: "meeting-summary-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: ["O vazio diz que o resumo é montado de madrugada a partir dos comentários."],
     tags: ["vazio"],
   },

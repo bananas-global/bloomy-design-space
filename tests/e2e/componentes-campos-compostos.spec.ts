@@ -1,17 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test.describe("galeria — campos compostos e somente leitura", () => {
-  test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
-
-  test("publica os cinco portes somente com seus contratos completos", async ({ page }) => {
-    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
-    for (const name of ["input_with_select", "checkgroup", "fake_input", "input_switch_card", "fake_radio_group"]) {
-      await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
-    }
-  });
-
+test.describe("catálogo — campos compostos e somente leitura", () => {
   test("input_with_select preserva ids, nomes, valores, opções e tabulação", async ({ page }) => {
+    await page.goto("/?component=core.input-with-select");
     const value = page.getByRole("textbox", { name: "Critério de Avanço: valor" });
     const criterion = page.getByRole("combobox", { name: "Critério de Avanço: critério" });
     await expect(value).toHaveAttribute("id", "g-criterio-frequencia");
@@ -33,6 +25,7 @@ test.describe("galeria — campos compostos e somente leitura", () => {
   });
 
   test("checkgroup envia array, alterna por teclado e mantém grupo nomeado", async ({ page }) => {
+    await page.goto("/?component=core.checkgroup");
     const group = page.getByRole("group", { name: "Atende nos dias da semana" });
     const monday = group.getByRole("checkbox", { name: "Segunda" });
     const wednesday = group.getByRole("checkbox", { name: "Quarta" });
@@ -52,6 +45,7 @@ test.describe("galeria — campos compostos e somente leitura", () => {
   });
 
   test("fake_input permanece estático e conserva as duas cores de rótulo", async ({ page }) => {
+    await page.goto("/?component=core.fake-input");
     const wrapper = page.locator("#g-fake-input-wrapper");
     await expect(wrapper.getByText("Helena M.", { exact: true })).toBeVisible();
     await expect(wrapper.getByText("Unidade Girassol", { exact: true })).toBeVisible();
@@ -61,6 +55,7 @@ test.describe("galeria — campos compostos e somente leitura", () => {
   });
 
   test("input_switch_card alterna pela chave real e mantém nome e valor", async ({ page }) => {
+    await page.goto("/?component=core.input-switch-card");
     const wrapper = page.locator("#g-input-switch-card-wrapper");
     const toggle = wrapper.getByRole("checkbox", { name: "Mostrar horário" });
     const label = wrapper.getByText("Mostrar horário", { exact: true });
@@ -81,6 +76,7 @@ test.describe("galeria — campos compostos e somente leitura", () => {
   });
 
   test("fake_radio_group mantém só a resposta selecionada habilitada e ids únicos", async ({ page }) => {
+    await page.goto("/?component=core.fake-radio-group");
     const group = page.getByRole("group", { name: "Qual foi o Foco da Terapia na Sessão" });
     const radios = group.getByRole("radio");
     await expect(radios).toHaveCount(3);
@@ -94,14 +90,21 @@ test.describe("galeria — campos compostos e somente leitura", () => {
   });
 
   test("não introduz violações estruturais ou relações ARIA quebradas", async ({ page }) => {
-    const results = await new AxeBuilder({ page })
-      .include("#g-input-with-select-wrapper")
-      .include("#g-checkgroup-wrapper")
-      .include("#g-fake-input-wrapper")
-      .include("#g-input-switch-card-wrapper")
-      .include("#g-fake-radio-group-wrapper")
-      .disableRules(["color-contrast"])
-      .analyze();
-    expect(results.violations).toEqual([]);
+    const previews = [
+      ["input-with-select", "#g-input-with-select-wrapper"],
+      ["checkgroup", "#g-checkgroup-wrapper"],
+      ["fake-input", "#g-fake-input-wrapper"],
+      ["input-switch-card", "#g-input-switch-card-wrapper"],
+      ["fake-radio-group", "#g-fake-radio-group-wrapper"],
+    ] as const;
+
+    for (const [component, selector] of previews) {
+      await page.goto(`/?component=core.${component}`);
+      const results = await new AxeBuilder({ page })
+        .include(selector)
+        .disableRules(["color-contrast"])
+        .analyze();
+      expect(results.violations, component).toEqual([]);
+    }
   });
 });

@@ -24,7 +24,7 @@ export const autoCheckinScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O desfecho de cada chegada é dito em palavras na etiqueta.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A busca da tela usa `Date.utc_today()`; a clínica é UTC−3.",
       "Duas famílias chegam às 21h15 e às 22h10 com atendimento marcado para o mesmo dia.",
@@ -46,7 +46,7 @@ export const autoCheckinScenarios: Scenario[] = [
     fixture: "auto-checkin-evening",
     rules: ["two-functions-with-one-name-disagree-about-today"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Checkin.get_scheduled_patients/1` usa `DateTime.now!(\"America/Sao_Paulo\")`.",
       "`get_scheduled_patients/3` do passo de seleção usa `Date.utc_today()`.",
@@ -69,7 +69,7 @@ export const autoCheckinScenarios: Scenario[] = [
     fixture: "auto-checkin-evening",
     rules: ["the-window-also-lets-tomorrow-check-in"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A busca da tela já procura o dia seguinte depois das 21h.",
       "Uma família passa às 22h40 com atendimento marcado para amanhã de manhã.",
@@ -90,7 +90,7 @@ export const autoCheckinScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "auto-checkin-evening",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A chegada cujo atendimento é de outro dia aparece recusada, e não como engano.",
       "A tela diz que o problema não é recusar, é recusar quem tem consulta.",
@@ -105,7 +105,7 @@ export const autoCheckinScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "auto-checkin-daytime",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhuma família aparece recusada por engano.",
       "A recusa correta permanece.",

@@ -22,7 +22,7 @@ export const patientScenarios: Scenario[] = [
       contrast: "AA",
       notes: "A situação do cadastro tem rótulo e a pendência é nomeada na própria linha.",
     },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Cada linha diz se o cadastro está completo e, se não, o que falta.",
       "Prontuário restrito é sinalizado na lista, não só no detalhe.",
@@ -37,7 +37,7 @@ export const patientScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "patients-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: ["A tela explica de onde vêm os cadastros."],
     tags: ["vazio"],
   },
@@ -49,7 +49,7 @@ export const patientScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "patients-roster",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     actions: ["Agendar atendimento"],
     expected: [
       "Agendar está disponível.",
@@ -67,7 +67,7 @@ export const patientScenarios: Scenario[] = [
     fixture: "patients-roster",
     rules: ["incomplete-registration-blocks-scheduling"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Cadastro sem CPF e sem convênio."],
     expected: [
       "O aviso nomeia os campos que faltam, não diz apenas «cadastro incompleto».",
@@ -86,7 +86,7 @@ export const patientScenarios: Scenario[] = [
     fixture: "patients-roster",
     rules: ["minor-requires-guardian", "incomplete-registration-blocks-scheduling"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Paciente de 14 anos, cadastro sem responsável legal."],
     expected: [
       "O aviso explica que consentimento e cobrança dependem do responsável.",
@@ -105,7 +105,7 @@ export const patientScenarios: Scenario[] = [
     fixture: "patients-roster",
     rules: ["minor-requires-guardian"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Os dados do responsável aparecem completos.",
       "Agendar está disponível.",
@@ -123,7 +123,7 @@ export const patientScenarios: Scenario[] = [
     fixture: "patients-roster",
     rules: ["restricted-record-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Prontuário restrito a pedido da paciente."],
     expected: [
       "A existência da restrição é visível, com a nota que a explica.",
@@ -141,7 +141,7 @@ export const patientScenarios: Scenario[] = [
     fixture: "patients-roster",
     rules: ["restricted-record-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "O conteúdo do prontuário fica disponível.",
       "Agendar fica indisponível: este perfil lê, não opera a agenda.",

@@ -3,11 +3,11 @@ import type { Scenario } from "@brucesantos/design-space";
 /**
  * Cenários do CRM de leads **proposto**.
  *
- * Todos com `status: "proposed"`, e a marca é deliberada: o resto deste
- * repositório descreve o Bloomy que roda hoje, traduzido do monólito. Isto aqui
- * é a extensão desenhada para aposentar o CRM externo e as planilhas do Drive,
- * e não tem uma linha de Elixir por trás ainda. Misturar as duas coisas sem
- * marca tornaria a especificação impossível de conferir contra a realidade.
+ * A proposta continua identificada no conteúdo, mas seu estado de ciclo de vida
+ * é `ported`: ela faz parte do baseline exploratório anterior, não da fila de
+ * trabalho ativo que começa agora. Isto aqui é a extensão desenhada para
+ * aposentar o CRM externo e as planilhas do Drive, e não tem uma linha de Elixir
+ * por trás ainda.
  *
  * Convivem com os cinco cenários de `prospects.ts`, que descrevem
  * `/backoffice/visitas` como ele é. Dois deles são exatamente o que esta
@@ -35,7 +35,7 @@ export const leadScenarios: Scenario[] = [
       notes:
         "Cada coluna é uma região com heading próprio e contagem no rótulo. O semáforo de follow-up tem texto, não só cor — e mover de etapa é possível pelo seletor de etapa do card, não só arrastando.",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Vinte e seis leads distribuídos pelas sete etapas em linha, mais convertidos e perdidos.",
       "Quatro deles sem próxima ação.",
@@ -57,7 +57,7 @@ export const leadScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "leads-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica o que entra no funil e como um lead chega até ele.",
       "As ações de criar lead e importar planilha continuam disponíveis.",
@@ -77,7 +77,7 @@ export const leadScenarios: Scenario[] = [
       keyboard: "full",
       contrast: "AA",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Dois leads sem nenhuma tarefa aberta e dois com tarefa vencida.",
     ],
@@ -98,7 +98,7 @@ export const leadScenarios: Scenario[] = [
     fixture: "leads-sla-breach",
     rules: ["first-contact-has-twenty-four-hours"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Lead de Instagram parado em “Novo” desde 28/07, sem dono e sem nenhuma interação humana.",
       "Interação automática de recebimento não conta como contato.",
@@ -120,7 +120,7 @@ export const leadScenarios: Scenario[] = [
     fixture: "leads-needs-qualification",
     rules: ["qualification-is-what-scheduling-an-evaluation-costs"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Pai ligou perguntando valores e não passou nome, idade nem nível de suporte da criança.",
     ],
@@ -148,7 +148,7 @@ export const leadScenarios: Scenario[] = [
       notes:
         "A timeline é uma lista com heading por item. Os atalhos de WhatsApp e ligação são links reais, não ícones sem nome acessível.",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Lead importado da planilha da Unimed em 18/07, qualificado por telefone no dia seguinte.",
     ],
@@ -173,7 +173,7 @@ export const leadScenarios: Scenario[] = [
       "a-lost-lead-reopens-a-converted-one-does-not",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Um aviso no topo leva ao cadastro do paciente que este lead originou.",
       "Reabrir aparece indisponível, explicando que criaria duas verdades sobre a mesma criança.",
@@ -194,7 +194,7 @@ export const leadScenarios: Scenario[] = [
       "lost-requires-a-reason-or-the-funnel-teaches-nothing",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: ["Perdido em 21/07 na qualificação, por operadora não atendida."],
     expected: [
       "O motivo da perda aparece junto da etapa de onde o lead saiu.",
@@ -220,7 +220,7 @@ export const leadScenarios: Scenario[] = [
       notes:
         "Os campos além do mínimo ficam numa seção expansível, e o botão de criar não depende de abri-la.",
     },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Só nome e um meio de contato são obrigatórios.",
       "Criar fica indisponível enquanto faltar telefone e e-mail, dizendo que sem os dois o lead não é contatável.",
@@ -242,7 +242,7 @@ export const leadScenarios: Scenario[] = [
       contrast: "AA",
       announces: ["O aviso de duplicidade, assim que o telefone completo é digitado."],
     },
-    status: "proposed",
+    status: "ported",
     expected: [
       "O aviso aparece junto do campo, nomeando o lead existente e por qual dado bateu.",
       "Há um caminho direto para abrir o lead encontrado.",
@@ -264,7 +264,7 @@ export const leadScenarios: Scenario[] = [
       contrast: "AA",
       announces: ["O aviso de que o contato pertence a um paciente, e não a outro lead."],
     },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "O telefone digitado pertence ao responsável de um paciente ativo.",
     ],
@@ -291,7 +291,7 @@ export const leadScenarios: Scenario[] = [
       contrast: "AA",
       notes: "Cada seletor de coluna tem rótulo com o nome da coluna e uma amostra do conteúdo.",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: ["Planilha da Unimed com seis colunas e seis linhas."],
     expected: [
       "As colunas vêm pré-mapeadas por sugestão, e a sugestão é identificada como tal.",
@@ -310,7 +310,7 @@ export const leadScenarios: Scenario[] = [
     fixture: "leads-import-invalid-mapping",
     rules: ["the-column-mapping-is-made-once-per-operator"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Telefone não mapeado, e duas colunas apontando para o nome do responsável.",
     ],
@@ -336,7 +336,7 @@ export const leadScenarios: Scenario[] = [
       notes:
         "A tabela tem cabeçalho de linha e coluna, e o estado de cada linha é texto na célula, não só cor de fundo.",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Seis linhas: três válidas, duas duplicadas — uma contra lead, outra contra paciente — e uma sem nome com telefone impossível.",
     ],
@@ -358,7 +358,7 @@ export const leadScenarios: Scenario[] = [
     fixture: "leads-import",
     rules: ["the-import-decides-row-by-row"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Cada lote mostra arquivo, quem importou, quando, e as quatro contagens.",
       "Há um caminho para ver só os leads de um lote.",
@@ -382,7 +382,7 @@ export const leadScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O estado de cada integração é texto no cartão, não um ponto colorido.",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "Formulário do site e Google Ads recebendo; Meta aguardando revisão do app; planilha do Drive sem leitura desde ontem.",
     ],
@@ -414,7 +414,7 @@ export const leadScenarios: Scenario[] = [
       notes:
         "Cada barra tem o número por extenso ao lado. O gráfico é uma tabela de valores antes de ser um desenho.",
     },
-    status: "proposed",
+    status: "ported",
     preconditions: ["Vinte e seis leads, dois convertidos e três perdidos por motivos diferentes."],
     expected: [
       "O funil mostra quantos alcançaram cada etapa, e a conversão em relação à etapa anterior.",
@@ -432,7 +432,7 @@ export const leadScenarios: Scenario[] = [
     persona: "clinic_admin",
     fixture: "leads-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela diz que não há leads no recorte, em vez de mostrar zeros e barras vazias.",
       "Os filtros continuam alcançáveis para desfazer o recorte.",
@@ -455,7 +455,7 @@ export const leadScenarios: Scenario[] = [
       contrast: "AA",
       notes: "Os três grupos são regiões com heading. Concluir é um controle por tarefa, alcançável por teclado.",
     },
-    status: "proposed",
+    status: "ported",
     expected: [
       "As tarefas aparecem em três grupos: atrasadas, de hoje e próximas, nessa ordem.",
       "Cada tarefa mostra o lead ao lado, com a etapa em que ele está.",
@@ -481,7 +481,7 @@ export const leadScenarios: Scenario[] = [
       notes:
         "A tabela tem cabeçalho associado, e cada caixa de seleção tem nome acessível com o contato que ela seleciona.",
     },
-    status: "proposed",
+    status: "ported",
     expected: [
       "As colunas incluem origem, operadora, dono, próxima ação e tempo na etapa.",
       "A seleção múltipla habilita atribuir dono, mudar etapa e marcar perdido em lote.",

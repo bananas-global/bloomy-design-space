@@ -21,7 +21,7 @@ export const fieldOrderingScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O veredito e a incoerência dele são ditos em palavras, e não por cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Bloomy.Helpers.trim_changed_fields/1` é a última etapa de 123 changesets.",
       "O código da pesquisa exige exatamente 5 caracteres e foi colado com um espaço no fim.",
@@ -43,7 +43,7 @@ export const fieldOrderingScenarios: Scenario[] = [
     fixture: "field-ordering-both-directions",
     rules: ["approved-on-characters-that-vanish"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Um código de três caracteres foi enviado com dois espaços no fim.",
       "A validação de tamanho exato roda antes da limpeza.",
@@ -65,7 +65,7 @@ export const fieldOrderingScenarios: Scenario[] = [
     fixture: "field-ordering-both-directions",
     rules: ["the-correct-order-already-exists-in-the-repo"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O nome do ponto de atendimento normaliza com `update_change` antes do `validate_format`.",
     ],
@@ -84,7 +84,7 @@ export const fieldOrderingScenarios: Scenario[] = [
     persona: "admin",
     fixture: "field-ordering-all-coherent",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum dos dois avisos aparece.",
       "Nenhum campo é marcado como incoerente.",

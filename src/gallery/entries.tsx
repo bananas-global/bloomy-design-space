@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import type { ComponentPreview, ComponentPreviewProps } from "@brucesantos/design-space";
 import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
@@ -24,8 +25,9 @@ import { CopyButton, LinkButton, ToastHost } from "../components/bloomy/Action.j
  * ordem em que aparecem lá. Cada entrada carrega o arquivo e a linha de origem,
  * conferidos pelo mesmo script que valida as citações do log.
  *
- * Os pendentes ficam na lista de propósito, como os itens de menu ainda não
- * portados: um índice que só mostra o que já existe não serve para planejar.
+ * Apenas entradas com demonstração entram no catálogo visual do motor. Hoje as
+ * 47 têm preview; se uma futura entrada ainda não tiver, permanece nesta fonte
+ * até existir algo real para o motor renderizar.
  */
 
 export type GalleryEntry = {
@@ -37,6 +39,42 @@ export type GalleryEntry = {
   /** Demonstrações, quando portado. */
   demos?: { titulo: string; nota?: string; render: () => ReactNode }[];
 };
+
+type GalleryEntryPreviewProps = {
+  entry: GalleryEntry;
+  demoId?: string;
+};
+
+/**
+ * Demonstrações de uma entrada da galeria.
+ *
+ * Cada demonstração vira uma fixture do catálogo do motor. O preview recebe o
+ * id resolvido, mas o conteúdo continua pertencendo ao produto.
+ */
+function GalleryEntryPreview({ entry, demoId }: GalleryEntryPreviewProps) {
+  const demos = demoId
+    ? entry.demos?.filter((demo, index) => fixtureIdFor(demo.titulo, index) === demoId)
+    : entry.demos;
+
+  return (
+    <div className="space-y-6">
+      {demos?.map((demo) => (
+        <div key={demo.titulo}>
+          <h3 className="m-0 mb-1 text-[0.9375rem] font-bold text-navy">{demo.titulo}</h3>
+          {demo.nota && (
+            <p className="m-0 mb-3 text-[0.8125rem] text-[var(--fg-2)]">{demo.nota}</p>
+          )}
+          <div className="rounded-field border border-[var(--border-soft)] bg-app px-4 py-4">
+            {demo.render()}
+          </div>
+        </div>
+      ))}
+      <p className="m-0 text-[0.75rem] text-[var(--fg-3)]">
+        Origem: <span className="font-mono">{entry.origem}</span>
+      </p>
+    </div>
+  );
+}
 
 const CORES = ["blue", "red", "green", "purple", "yellow"] as const;
 const VARIANTES = ["default", "outline", "tint", "ghost"] as const;
@@ -727,4 +765,71 @@ export const GALLERY: GalleryEntry[] = [
 ];
 
 export const portados = () => GALLERY.filter((e) => e.demos !== undefined);
-export const pendentes = () => GALLERY.filter((e) => e.demos === undefined);
+
+type GalleryFixtureData = {
+  demoId: string;
+};
+
+function fixtureIdFor(title: string, index: number) {
+  return (
+    title
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || `exemplo-${index + 1}`
+  );
+}
+
+/**
+ * Catálogo que alimenta a aba `Componentes` do motor.
+ *
+ * Só uma entrada com demonstração pode ser aberta como preview. Os pendentes
+ * continuam visíveis na página completa, mas não fingem ser uma composição
+ * navegável. Hoje os 47 componentes estão portados.
+ */
+export const COMPONENT_PREVIEWS: ComponentPreview[] = portados().map((entry) => {
+  const fixtures = (entry.demos ?? []).map((demo, index) => {
+    const demoId = fixtureIdFor(demo.titulo, index);
+    return {
+      id: demoId,
+      label: demo.titulo,
+      description: demo.nota,
+      data: { demoId },
+    };
+  });
+
+  function Preview({ data }: ComponentPreviewProps) {
+    const demoId = (data as GalleryFixtureData | undefined)?.demoId ?? fixtures[0]?.id;
+
+    return (
+      <main className="min-h-full bg-app px-6 py-8 text-navy">
+        <div className="mx-auto max-w-[64rem]">
+          <header className="mb-5">
+            <p className="m-0 mb-1 text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-[var(--fg-3)]">
+              Core components
+            </p>
+            <h1 className="m-0 text-[1.5rem] font-bold">{entry.name}</h1>
+            <p className="m-0 mt-1 text-[0.875rem] text-[var(--fg-2)]">{entry.descricao}</p>
+          </header>
+          <section
+            aria-label={`Demonstrações de ${entry.name}`}
+            className="rounded-card border border-[var(--border-soft)] bg-white px-5 py-5 shadow-card"
+          >
+            <GalleryEntryPreview entry={entry} demoId={demoId} />
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  return {
+    id: `core.${entry.name.replaceAll("_", "-")}`,
+    name: entry.name,
+    group: "Core components",
+    description: entry.descricao,
+    preview: Preview,
+    fixtures,
+    defaultFixture: fixtures[0]?.id,
+  };
+});

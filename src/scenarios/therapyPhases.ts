@@ -24,7 +24,7 @@ export const therapyPhaseScenarios: Scenario[] = [
       notes:
         "O percurso é uma lista ordenada; etapa atual e etapas concluídas têm prefixo em texto acessível, não só peso de fonte.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`TherapyPhase` pertence a paciente e especialidade, com seis etapas.",
       "Uma das fases foi gravada sem especialidade — o changeset não a exige.",
@@ -46,7 +46,7 @@ export const therapyPhaseScenarios: Scenario[] = [
     fixture: "therapy-phases-all-beginning",
     rules: ["phase-defaults-to-the-beginning"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`step` tem `default: :ambiance` e nenhuma validação."],
     expected: [
       "Cada fase em ambientação recebe a ressalva, junto da etapa.",
@@ -63,7 +63,7 @@ export const therapyPhaseScenarios: Scenario[] = [
     persona: "specialist",
     fixture: "therapy-phases-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela nomeia as especialidades em que há atendimento e não há fase.",
       "E explica que a fase é por especialidade, com percursos independentes.",
@@ -80,7 +80,7 @@ export const therapyPhaseScenarios: Scenario[] = [
     fixture: "deactivation-today",
     rules: ["deactivating-cancels-every-future-appointment", "deactivation-cut-is-utc-midnight"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ChangePatientStatus` cancela agendamentos num `update_all`, encerra mapas em vigor e desliga a renovação de todos.",
       "Existe um atendimento em 02/08 às 21h30, véspera do corte.",
@@ -102,7 +102,7 @@ export const therapyPhaseScenarios: Scenario[] = [
     fixture: "deactivation-today",
     rules: ["deactivation-cut-is-utc-midnight"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O corte é `DateTime.new!(deactivation_date, ~T[00:00:00], \"Etc/UTC\")`.",
       "Em Brasília, isso é 21h do dia anterior.",
@@ -124,7 +124,7 @@ export const therapyPhaseScenarios: Scenario[] = [
     fixture: "deactivation-by-worker",
     rules: ["the-unattended-path-destroys-more", "the-bond-carries-clinical-context"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`DeactivatePatientWorker` faz `Repo.delete_all` nos vínculos profissional–paciente.",
       "`ChangePatientStatus`, o caminho manual, não os toca.",
@@ -147,7 +147,7 @@ export const therapyPhaseScenarios: Scenario[] = [
     fixture: "deactivation-scheduled",
     rules: ["scheduled-deactivation-destroys-now"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`set_status/2` mantém `active? = true` quando a data de inativação é futura.",
       "`deactivate_patient_callbacks/3` roda sempre que há data, futura ou não.",

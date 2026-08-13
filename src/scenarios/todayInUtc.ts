@@ -22,7 +22,7 @@ export const todayInUtcScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O estado de cada superfície é dito em palavras na etiqueta.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Date.utc_today()` aparece 205 vezes fora de worker, em 133 arquivos.",
       "`CalendarHelper.local_timezone/0` existe e é usado 104 vezes.",
@@ -45,7 +45,7 @@ export const todayInUtcScenarios: Scenario[] = [
     fixture: "today-in-utc-window-open",
     rules: ["the-form-refuses-to-let-you-pick-today"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O campo de data de encerramento do mapa de horas usa hoje como mínimo.",
       "A guarda de reversão compara a data do atendimento com hoje.",
@@ -67,7 +67,7 @@ export const todayInUtcScenarios: Scenario[] = [
     fixture: "today-in-utc-window-open",
     rules: ["age-is-days-divided-by-365"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A idade é `floor(Date.diff(hoje, nascimento) / 365)`, em oito telas.",
       "A criança faz treze anos em 02/08.",
@@ -88,7 +88,7 @@ export const todayInUtcScenarios: Scenario[] = [
     persona: "admin",
     fixture: "today-in-utc-window-closed",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A tela diz que as duas datas concordam agora.",
       "Nenhuma superfície é marcada como errando.",

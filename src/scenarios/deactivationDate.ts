@@ -21,7 +21,7 @@ export const deactivationDateScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O veredito de cada tentativa é dito em palavras na etiqueta.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Date.utc_today()` mede o dia em UTC; a clínica está em UTC−3 o ano inteiro.",
       "Duas tentativas foram enviadas às 21h40 e às 22h05 com a data do próprio dia.",
@@ -47,7 +47,7 @@ export const deactivationDateScenarios: Scenario[] = [
       "the-two-defects-cover-each-other",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`user.roles` é uma lista de átomos e a validação compara com o texto `\"admin\"`.",
       "No login, `\"admin\" in user.roles` é falso pelo mesmo motivo.",
@@ -70,7 +70,7 @@ export const deactivationDateScenarios: Scenario[] = [
     fixture: "deactivation-date-exemption-alive",
     rules: ["the-two-defects-cover-each-other"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["O papel chega como texto, e a comparação da validação passa a funcionar."],
     expected: [
       "A tentativa do administrador é aceita, com a exceção marcada.",
@@ -87,7 +87,7 @@ export const deactivationDateScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "deactivation-date-daytime",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de recusa pelo relógio aparece.",
       "A data que de fato passou continua recusada.",

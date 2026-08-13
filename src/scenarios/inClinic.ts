@@ -23,7 +23,7 @@ export const inClinicScenarios: Scenario[] = [
       notes:
         "Cada paciente é um heading de nível 3, para navegação por estrutura. A situação de cada agendamento tem rótulo textual.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Relógio da situação em 09:40, entre o agendamento das 09:00 e o das 10:00.",
       "O Théo chegou antes do horário; a Isadora, depois.",
@@ -46,7 +46,7 @@ export const inClinicScenarios: Scenario[] = [
     fixture: "in-clinic-nothing-ready",
     rules: ["checkout-returns-schedules-to-scheduled"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Paciente com check-in às 09:30 e nenhum agendamento no dia."],
     expected: [
       "A tela destaca o paciente presente sem atendimento pronto, com aviso próprio.",
@@ -63,7 +63,7 @@ export const inClinicScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "in-clinic-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica que o paciente aparece assim que a recepção registrar o check-in.",
       "A seção de profissionais diz que ninguém tem entrada registrada, em vez de sumir.",
@@ -80,7 +80,7 @@ export const inClinicScenarios: Scenario[] = [
     fixture: "in-clinic-morning",
     rules: ["in-clinic-tabs-follow-role"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A aba de profissionais é escondida de especialista, supervisor e terapeuta no `InClinicLive`.",
     ],
@@ -101,7 +101,7 @@ export const inClinicScenarios: Scenario[] = [
     fixture: "in-clinic-morning",
     rules: ["in-clinic-tabs-follow-role"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`InClinicLive` esconde a aba de pacientes de `people`."],
     expected: [
       "A seção de pacientes não aparece.",

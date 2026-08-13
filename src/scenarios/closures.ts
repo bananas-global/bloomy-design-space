@@ -23,7 +23,7 @@ export const closureScenarios: Scenario[] = [
       notes:
         "A trilha das sete etapas é uma lista ordenada com `aria-current` na etapa vigente. Cada etapa tem posição e situação anunciadas por texto.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Julho de 2026 em sete pontos do processo, mais um junho já pago."],
     expected: [
       "Cada fechamento diz de que lado está a bola antes de mostrar o valor.",
@@ -41,7 +41,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closure-wait-accept",
     rules: ["closure-hands-over-at-each-stage"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["A Marina abrindo o próprio fechamento de julho, já enviado para aceite."],
     expected: [
       "A tela diz que a ação é dela, nomeando as duas saídas: aceitar ou pedir revisão.",
@@ -59,7 +59,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closures-all-stages",
     rules: ["closure-is-invisible-until-sent"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ClosurePolicy.scope/2` filtra por `user_id` e exclui os que estão em Fechamento.",
       "A pessoa logada não é dona de nenhum dos fechamentos da fixture.",
@@ -80,7 +80,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closure-pending-invoice-owner",
     rules: ["invoice-belongs-to-the-professional"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["A Marina logada, olhando o próprio fechamento pendente de nota."],
     expected: [
       "Anexar nota fiscal está disponível.",
@@ -97,7 +97,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closure-pending-invoice-other",
     rules: ["invoice-belongs-to-the-professional"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["O mesmo fechamento, com outro usuário logado."],
     expected: [
       "Anexar nota fiscal aparece indisponível, mesmo para o admin.",
@@ -114,7 +114,7 @@ export const closureScenarios: Scenario[] = [
     persona: "people",
     fixture: "closure-no-invoice-contract",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Contrato do mês com `issue_invoice` falso."],
     expected: [
       "As duas etapas de nota fiscal aparecem riscadas na trilha, em vez de sumirem.",
@@ -133,7 +133,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closure-pay-without-proof",
     rules: ["payment-proof-belongs-to-the-clinic"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Aprovado, nota validada, comprovante ainda não anexado."],
     expected: [
       "Confirmar pagamento aparece indisponível, dizendo que falta o comprovante.",
@@ -151,7 +151,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closure-pay-with-proof",
     rules: ["payment-proof-belongs-to-the-clinic"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Confirmar pagamento está disponível.",
       "O comprovante aparece com nome do arquivo e data de anexo.",
@@ -168,7 +168,7 @@ export const closureScenarios: Scenario[] = [
     fixture: "closure-paid",
     rules: ["paid-closure-is-frozen", "closure-status-moves-backward-only"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`can_interact?/2` devolve falso para Pago sem olhar o papel, e as quatro funções de anexo têm cláusula própria para ele.",
     ],
@@ -187,7 +187,7 @@ export const closureScenarios: Scenario[] = [
     persona: "people",
     fixture: "closures-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica que os fechamentos nascem na virada do mês, um por contrato ativo.",
     ],

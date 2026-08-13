@@ -25,7 +25,7 @@ export const distributionScenarios: Scenario[] = [
       contrast: "AA",
       notes: "Com guia e sem guia são etiquetas de texto, nunca só cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Distributor.distribute/2` ordena os atendimentos por `start_time` e consome os pacotes.",
       "`skipped_schedule_ids` é acumulado e devolvido no resultado.",
@@ -47,7 +47,7 @@ export const distributionScenarios: Scenario[] = [
     persona: "operation",
     fixture: "distribution-balance-enough",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum atendimento aparece sem guia.",
       "Nenhum aviso sobre o relógio aparece.",

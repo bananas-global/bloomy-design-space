@@ -24,8 +24,10 @@ própria.
 
 ## O que existe hoje
 
-275 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
-exceção.
+274 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
+exceção. Todos formam uma **referência portada e ainda não validada**: ajudam a
+consultar o que já foi levantado, mas não pertencem à fila de trabalho ativo e
+não representam compromisso de implementação.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
 porte — o que foi traduzido de onde, e treze achados sobre o sistema real — está
@@ -63,9 +65,10 @@ sistema de terapia ABA para autismo, e a sessão — com programas, tentativas,
 evolução e cadeia de assinatura — é onde isso aparece. O porte do sistema real
 está registrado em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 
-Nenhum está com status `aprovado` ainda. A aprovação depende de revisar com uma
-pessoa de negócio pelo link público — e marcar antes disso seria tratar
-comentário como decisão.
+Todos estão com status `ported` (**Portado — não validado**). Quando um cenário
+entrar no fluxo real de design, ele deve ser promovido para `proposed` ou
+substituído por um novo cenário; só depois da validação de negócio pode chegar a
+`approved`. A referência portada permanece acessível sem poluir a fila ativa.
 
 ## Regras implementadas
 

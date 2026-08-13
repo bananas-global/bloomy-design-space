@@ -24,7 +24,7 @@ export const notificationScenarios: Scenario[] = [
       notes:
         "Não lida tem rótulo textual além da cor de fundo. Cada notificação é um `article` com título de nível 2.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Quatro notificações, uma de cada chamada real de `Notify.notify/4`.",
       "Três não lidas; a menção do chat já foi lida em 27/07.",
@@ -46,7 +46,7 @@ export const notificationScenarios: Scenario[] = [
     fixture: "notifications-unread",
     rules: ["notification-may-lead-nowhere", "transferred-without-saying-which"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`AssumeSchedule` passa `\"\"` como `on_click_url` nas três notificações que envia.",
       "String vazia é truthy em Elixir: renderizada como link, ela é clicável.",
@@ -68,7 +68,7 @@ export const notificationScenarios: Scenario[] = [
     fixture: "notifications-link-does-not-open",
     rules: ["notification-may-lead-nowhere"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A única URL real do sistema é `/backoffice/pacientes/:id/editar?message=:id`.",
       "Ela abre o cadastro do paciente, e não o chat de onde a menção saiu.",
@@ -90,7 +90,7 @@ export const notificationScenarios: Scenario[] = [
     fixture: "notifications-unread",
     rules: ["notification-carries-what-the-screen-would-check"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O template de `AssumeSchedule` interpola nome do paciente, especialidade, serviço e sala.",
       "Não há campo, tipo nem referência — só texto.",
@@ -110,7 +110,7 @@ export const notificationScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "notifications-all-read",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "“Marcar todas como lidas” fica visível e desabilitado, com o motivo.",
       "O cabeçalho diz “Tudo lido” em vez de mostrar zero.",
@@ -127,7 +127,7 @@ export const notificationScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "notifications-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela lista as quatro situações que geram aviso.",
       "E diz que o resto do produto ainda não notifica nada.",

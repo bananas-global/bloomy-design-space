@@ -21,7 +21,7 @@ export const patientScopeScenarios: Scenario[] = [
       contrast: "AA",
       notes: "O alcance de cada papel é dito em palavras na etiqueta, não por cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`PatientPolicy.scope/2` casa cláusulas na ordem em que estão escritas.",
       "`supervisor` aparece na cláusula por unidade e, depois, numa lista por agendas.",
@@ -43,7 +43,7 @@ export const patientScopeScenarios: Scenario[] = [
     fixture: "patient-scope-all-roles",
     rules: ["seeing-nothing-is-written-as-an-impossible-condition"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["O papel de pessoas é escopado com uma busca por identificador nulo."],
     expected: [
       "A tela diz que o resultado está certo e a intenção precisa ser deduzida.",
@@ -61,7 +61,7 @@ export const patientScopeScenarios: Scenario[] = [
     fixture: "patient-scope-all-roles",
     rules: ["an-unknown-role-raises-instead-of-seeing-everything"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Não há cláusula final em `PatientPolicy.scope/2`."],
     expected: [
       "O caso aparece com tom de acerto, e não de defeito.",
@@ -78,7 +78,7 @@ export const patientScopeScenarios: Scenario[] = [
     persona: "admin",
     fixture: "patient-scope-no-contradiction",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "O aviso de contradição não aparece.",
       "O alcance da supervisão continua sendo o da unidade.",

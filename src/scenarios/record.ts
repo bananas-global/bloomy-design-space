@@ -27,7 +27,7 @@ export const recordScenarios: Scenario[] = [
       notes:
         "Cada documento é um item de lista com ação própria. Tipo e validade têm rótulo textual, não só cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro documentos dos três tipos, anamnese finalizada."],
     expected: [
       "Documento pessoal e administrativo aparecem listados, com a abertura indisponível.",
@@ -46,7 +46,7 @@ export const recordScenarios: Scenario[] = [
     fixture: "record-complete",
     rules: ["only-clinical-documents-are-visible"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`PatientPolicy.can?/3` só tem cláusula permissiva para `:clinical`; os outros caem no `false` final.",
     ],
@@ -67,7 +67,7 @@ export const recordScenarios: Scenario[] = [
     fixture: "record-documents-expiring",
     rules: ["documents-warn-before-expiring"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Laudo a 13 dias do vencimento com aviso de 60 dias; carteirinha a 6 dias com aviso de 15; autorização já vencida.",
     ],
@@ -88,7 +88,7 @@ export const recordScenarios: Scenario[] = [
     fixture: "record-anamnese-incomplete",
     rules: ["anamnese-cannot-finish-incomplete"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Dois dos quatro campos de comportamento em branco — um deles preenchido só com espaços.",
       "`keep_pending_until_required_fields/1` devolve o status para pendente dentro do changeset, sem erro.",
@@ -110,7 +110,7 @@ export const recordScenarios: Scenario[] = [
     fixture: "record-absence-alerts",
     rules: ["absence-alerts-are-per-patient"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro faltas seguidas contra limite de três; sete no período contra seis."],
     expected: [
       "Cada critério estourado vira uma linha do aviso, com o número e o limite.",
@@ -129,7 +129,7 @@ export const recordScenarios: Scenario[] = [
     fixture: "record-no-criteria",
     rules: ["absence-alerts-are-per-patient"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "Nenhum alerta de falta é emitido.",
       "A tela diz que não há critério configurado, e que não existe padrão da clínica.",
@@ -144,7 +144,7 @@ export const recordScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "record-complete",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`patients.see_clinic_overview` exclui `operation` e `attendant` por lista negativa.",
     ],

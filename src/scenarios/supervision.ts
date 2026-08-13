@@ -24,7 +24,7 @@ export const supervisionScenarios: Scenario[] = [
       notes:
         "O estado da supervisão tem rótulo textual além da cor. O período é anunciado por extenso, não só pelas duas datas.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Date.shift(Date.utc_today(), day: -30)` monta o intervalo inicial.",
       "Na data de referência do Design Space, isso é 30/06 a 30/07.",
@@ -46,7 +46,7 @@ export const supervisionScenarios: Scenario[] = [
     fixture: "supervision-default-period",
     rules: ["supervision-table-omits-supervision"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "A tabela real mostra serviço, profissional, paciente, sala, horário e situação.",
       "Nenhuma dessas colunas diz se a segunda assinatura está pendente.",
@@ -68,7 +68,7 @@ export const supervisionScenarios: Scenario[] = [
     fixture: "supervision-as-supervisor",
     rules: ["supervision-screen-is-not-for-the-supervisor"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ProfessionalPolicy.can?(role, :list_supervisor)` lista admin, clinic_admin e coordinator.",
       "O papel `supervisor` não está na lista.",
@@ -90,7 +90,7 @@ export const supervisionScenarios: Scenario[] = [
     fixture: "supervision-supervisor-without-links",
     rules: ["supervisor-is-derived-from-links"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`load_professionals/2` força `has_supervisor_internships: true`.",
       "Iara tem o papel de supervisor e nenhum supervisionado.",
@@ -111,7 +111,7 @@ export const supervisionScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "supervision-forward-period",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: ["O período foi trocado à mão para 30/07 a 14/08."],
     expected: [
       "A tela diz que este período alcança o que ainda vai acontecer.",
@@ -128,7 +128,7 @@ export const supervisionScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "supervision-empty-period",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela diz que nada dos supervisionados desta pessoa caiu na janela.",
       "E sugere o próximo passo: ampliar o período ou olhar para a frente.",

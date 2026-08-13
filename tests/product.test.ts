@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { assertValidProduct, validateProduct } from "@brucesantos/design-space/testing";
+import {
+  assertValidProduct,
+  scenariosUnderTest,
+  validateProduct,
+} from "@brucesantos/design-space/testing";
 import { productDefinition } from "../src/app/product.js";
 
 /**
@@ -31,6 +35,30 @@ describe("contrato de cenário", () => {
       .filter((scenario) => (scenario.expected?.length ?? 0) === 0)
       .map((scenario) => scenario.id);
     expect(without).toEqual([]);
+  });
+
+  it("mantém o baseline inteiro como referência portada, fora do trabalho ativo", () => {
+    expect(productDefinition.scenarios).toHaveLength(274);
+    expect(new Set(productDefinition.scenarios.map((scenario) => scenario.status))).toEqual(
+      new Set(["ported"]),
+    );
+    expect(scenariosUnderTest(productDefinition)).toEqual([]);
+  });
+
+  it("expõe os 47 componentes portados no catálogo visual do motor", () => {
+    const components = productDefinition.components ?? [];
+    expect(components).toHaveLength(47);
+    expect(new Set(components.map((component) => component.id)).size).toBe(components.length);
+    expect(components.every((component) => component.id.startsWith("core."))).toBe(true);
+    expect(components.every((component) => component.group === "Core components")).toBe(true);
+    expect(components.every((component) => typeof component.preview === "function")).toBe(true);
+    expect(components.every((component) => (component.fixtures?.length ?? 0) > 0)).toBe(true);
+    expect(
+      components.every((component) =>
+        component.fixtures?.some((fixture) => fixture.id === component.defaultFixture),
+      ),
+    ).toBe(true);
+    expect(productDefinition.routes.some((route) => route.path === "/componentes")).toBe(false);
   });
 
   it("cobre sucesso, vazio, permissão, regra e exceção nos três módulos", () => {

@@ -25,7 +25,7 @@ export const newAppointmentScenarios: Scenario[] = [
       notes:
         "A lista de impedimentos é ordenada (`ol`), porque a ordem é informação. Cada item tem rótulo textual além da cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ScheduleVerification` compõe sete verificadores e usa `Enum.find_value`.",
       "Este horário falha em quatro deles ao mesmo tempo.",
@@ -47,7 +47,7 @@ export const newAppointmentScenarios: Scenario[] = [
     fixture: "new-appointment-inactive-professional",
     rules: ["impediment-order-is-code-order"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`VerifyProfessionalActive` é o primeiro do array de verificadores."],
     expected: [
       "A frase é a do sistema real, com o nome dentro.",
@@ -66,7 +66,7 @@ export const newAppointmentScenarios: Scenario[] = [
     fixture: "new-appointment-room-has-room",
     rules: ["room-capacity-is-not-one"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`VerifyRoomAvailability` compara `room.capacity <= schedule_count`."],
     expected: [
       "A sala mostra ocupação contra capacidade, e não só um nome.",
@@ -85,7 +85,7 @@ export const newAppointmentScenarios: Scenario[] = [
     fixture: "new-appointment-therapeutic-companion",
     rules: ["room-is-not-verified-outside-the-clinic"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`VerifyRoomAvailability` só roda quando `schedule_type != :at`."],
     expected: [
       "A tela diz que a verificação de sala não rodou, e por quê.",
@@ -103,7 +103,7 @@ export const newAppointmentScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "new-appointment-clear",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela lista as sete verificações que passaram.",
       "Marcar atendimento fica disponível.",

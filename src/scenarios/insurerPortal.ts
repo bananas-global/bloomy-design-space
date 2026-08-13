@@ -27,7 +27,7 @@ export const insurerPortalScenarios: Scenario[] = [
       notes:
         "A lista é uma tabela com `caption` e cabeçalhos de coluna. A situação tem rótulo textual e um motivo escrito quando não foi prestado.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Sete linhas em julho: três realizadas, uma falta, um cancelamento e dois atendimentos que ainda não fecharam.",
     ],
@@ -48,7 +48,7 @@ export const insurerPortalScenarios: Scenario[] = [
     fixture: "insurer-pending-closure",
     rules: ["attendance-list-counts-only-what-happened"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Duas linhas pendentes de assinatura: uma de quem atendeu, uma do supervisor."],
     expected: [
       "A tela afirma que os atendimentos aconteceram e ainda não fecharam.",
@@ -67,7 +67,7 @@ export const insurerPortalScenarios: Scenario[] = [
     fixture: "insurer-hidden-incomplete",
     rules: ["incomplete-schedules-are-hidden-from-the-insurer"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`SchedulePolicy.scope/2` filtra `status != :incomplete` para o usuário de operadora, sem sinalizar.",
     ],
@@ -88,7 +88,7 @@ export const insurerPortalScenarios: Scenario[] = [
     fixture: "insurer-attendance",
     rules: ["insurer-sees-attendance-not-clinical-record", "insurer-sees-only-its-own-beneficiaries"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A tela lista por extenso o que não acompanha a cobrança.",
       "A justificativa é dita: o conteúdo clínico é do paciente e da clínica.",
@@ -104,7 +104,7 @@ export const insurerPortalScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "insurer-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A lista explica que não houve atendimento de beneficiário no período.",
       "Os totais aparecem zerados, em vez de a seção sumir.",

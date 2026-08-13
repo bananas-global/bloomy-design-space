@@ -1,16 +1,9 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test.describe("galeria — drawer_modal, modal_content e simple_table", () => {
-  test.beforeEach(async ({ page }) => { await page.goto("/componentes"); });
-
-  test("fecha a contagem final somente com os três portes completos", async ({ page }) => {
-    await expect(page.getByText("47 de 47 portados do sistema")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Ainda não portados" })).toBeVisible();
-    await expect(page.getByText("0 componentes", { exact: true })).toBeVisible();
-  });
-
+test.describe("catálogo — drawer_modal, modal_content e simple_table", () => {
   test("drawer preserva contrato, prende foco e cancela por Escape, fundo e botão", async ({ page }) => {
+    await page.goto("/?component=core.drawer-modal");
     const trigger = page.locator("#g-drawer-trigger");
     await trigger.click();
     const drawer = page.locator("#g-drawer");
@@ -55,6 +48,7 @@ test.describe("galeria — drawer_modal, modal_content e simple_table", () => {
   });
 
   test("modal_content mantém divisões, slots e retorno da tela e do diálogo", async ({ page }) => {
+    await page.goto("/?component=core.modal-content");
     const trigger = page.locator("#g-modal-content-trigger");
     await trigger.click();
     const modal = page.locator("#g-modal-content-modal");
@@ -81,6 +75,7 @@ test.describe("galeria — drawer_modal, modal_content e simple_table", () => {
   });
 
   test("simple_table preserva invólucro, slot livre e marcação manual", async ({ page }) => {
+    await page.goto("/?component=core.simple-table");
     const wrapper = page.locator('[data-demo="simple-table"]');
     const table = wrapper.getByRole("table");
     await expect(table.locator("..")).toHaveClass(/demo-simple-table/);
@@ -93,14 +88,19 @@ test.describe("galeria — drawer_modal, modal_content e simple_table", () => {
   });
 
   test("não introduz violações estruturais nas três demos", async ({ page }) => {
+    await page.goto("/?component=core.drawer-modal");
     await page.locator("#g-drawer-trigger").click();
     let results = await new AxeBuilder({ page }).include("#g-drawer").disableRules(["color-contrast"]).analyze();
     expect(results.violations).toEqual([]);
     await page.keyboard.press("Escape");
+
+    await page.goto("/?component=core.modal-content");
     await page.locator("#g-modal-content-trigger").click();
     results = await new AxeBuilder({ page }).include("#g-modal-content-modal").disableRules(["color-contrast"]).analyze();
     expect(results.violations).toEqual([]);
     await page.keyboard.press("Escape");
+
+    await page.goto("/?component=core.simple-table");
     results = await new AxeBuilder({ page }).include('[data-demo="simple-table"]').disableRules(["color-contrast"]).analyze();
     expect(results.violations).toEqual([]);
   });

@@ -8,10 +8,9 @@ import type { Scenario } from "@brucesantos/design-space";
  * aparece na clínica todo dia às sete da manhã e por isso não é um caso de
  * borda.
  *
- * Nenhum destes está `approved` ainda. A aprovação depende de revisar com uma
- * pessoa de negócio pelo link público, que é o passo 6 da sequência de execução —
- * e marcar como aprovado antes disso seria exatamente o "comentário virar
- * decisão" que o documento lista como risco.
+ * Estes cenários pertencem ao baseline portado: ainda não foram validados com
+ * uma pessoa de negócio e não representam trabalho ativo. Quando um deles entrar
+ * no fluxo real de design, deve ser revisado e promovido individualmente.
  */
 export const agendaScenarios: Scenario[] = [
   {
@@ -27,7 +26,7 @@ export const agendaScenarios: Scenario[] = [
       notes:
         "Tabela com cabeçalho de coluna e de linha; a situação de cada atendimento tem rótulo textual, nunca só cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Seis atendimentos marcados, do finalizado ao agendado."],
     actions: ["Abrir um atendimento"],
     expected: [
@@ -47,7 +46,7 @@ export const agendaScenarios: Scenario[] = [
     fixture: "agenda-absence-and-cancellation",
     rules: ["the-absence-filter-counts-cancellations", "three-filters-ask-the-same-question"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O filtro `absence` de `ScheduleFilters` seleciona `status in [:missed, :cancelled]`.",
       "Uma ausência e dois cancelamentos no mesmo dia, os dois avisados antes.",
@@ -67,7 +66,7 @@ export const agendaScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "agenda-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: ["A tela explica que não há atendimento e o que faz aparecer conteúdo."],
     tags: ["vazio"],
   },
@@ -86,7 +85,7 @@ export const agendaScenarios: Scenario[] = [
       notes:
         "O conflito é sinalizado por texto na linha e por aviso no topo, não apenas pelo fundo vermelho.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Encaixe por urgência às 10:15 sobrepõe consulta confirmada das 10:00, mesma profissional.",
     ],
@@ -111,7 +110,7 @@ export const agendaScenarios: Scenario[] = [
       announces: ["reschedule.availability"],
       notes: "O aviso de disponibilidade do horário é uma região live junto do campo.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Atendimento em conflito aberto, com permissão de reagendar."],
     actions: ["Escolher novo horário", "Confirmar reagendamento"],
     expected: [
@@ -130,7 +129,7 @@ export const agendaScenarios: Scenario[] = [
     fixture: "agenda-cancelled",
     rules: ["cancel-requires-reason", "cancel-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["appointment.cancelled"] },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Atendimento cancelado com justificativa, autoria e horário registrados."],
     expected: [
       "A justificativa, quem cancelou e quando aparecem na tela.",
@@ -152,7 +151,7 @@ export const agendaScenarios: Scenario[] = [
       announces: ["appointment.cancelled"],
       notes: "O campo de justificativa tem rótulo associado e a exigência está escrita, não só no `required`.",
     },
-    status: "in-review",
+    status: "ported",
     actions: ["Cancelar atendimento", "Escrever justificativa", "Confirmar"],
     expected: [
       "Confirmar fica indisponível enquanto a justificativa estiver vazia.",
@@ -170,7 +169,7 @@ export const agendaScenarios: Scenario[] = [
     fixture: "agenda-day",
     rules: ["cancel-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "No Bloomy real, `SchedulePolicy.can?/2` dá cancelamento a coordenador, admin e recepção — e não a quem atende.",
     ],
@@ -191,7 +190,7 @@ export const agendaScenarios: Scenario[] = [
     fixture: "agenda-no-show-window",
     rules: ["no-show-after-tolerance"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Atendimento das 09:30 com o relógio da situação em 09:38."],
     expected: [
       "Registrar ausência fica indisponível.",
@@ -208,7 +207,7 @@ export const agendaScenarios: Scenario[] = [
     fixture: "agenda-no-show-elapsed",
     rules: ["no-show-after-tolerance"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["appointment.no-show"] },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Tolerância vencida e ausência já registrada, relógio em 10:05."],
     expected: [
       "A ausência aparece com aviso explicando que reverter exige novo agendamento.",

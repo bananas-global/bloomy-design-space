@@ -52,7 +52,7 @@ correspondência:
 - estrutura: `/structure/fields`, `/structure/today`;
 - equipe: `/team/patient-scope`;
 - público: `/public/auto-checkin` (diagnóstico da divergência de fuso);
-- utilitário: `/componentes`.
+- utilitário: catálogo `Componentes` do motor, com preview e fixture por deep link.
 
 ## Superfícies sem frontend correspondente neste checkout
 

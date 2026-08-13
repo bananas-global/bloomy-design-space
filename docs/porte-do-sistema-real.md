@@ -2642,7 +2642,7 @@ meus quatorze viviam num arquivo só, sem lugar para olhar, e o sistema tem
 invenção com nomes meus.
 
 A galeria veio primeiro, a pedido dele, e foi a decisão certa: ela é onde eu
-comparo cada peça com o original enquanto porto. Está em `/componentes`, lista
+comparo cada peça com o original enquanto porto. Na época ficou em `/componentes`; desde o motor 0.4, seu conteúdo vive na aba `Componentes`. Ela lista
 os 47 na ordem do arquivo, e **mantém os pendentes visíveis** com a descrição do
 que resolvem. Um índice que só mostra o que já existe não serve para planejar.
 

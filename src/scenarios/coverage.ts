@@ -22,7 +22,7 @@ export const coverageScenarios: Scenario[] = [
       notes:
         "Cada estado tem etiqueta em texto; a cor acompanha, nunca substitui. A correção sugerida vem em negrito, não só em vermelho.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O filtro `health_care` casa `(início <= hoje e fim >= hoje)` ou `(início nulo e fim nulo)`.",
       "As quatro combinações possíveis de datas estão presentes.",
@@ -42,7 +42,7 @@ export const coverageScenarios: Scenario[] = [
     persona: "operation",
     fixture: "coverage-all-well-formed",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de plano invisível aparece.",
       "Nenhuma correção é sugerida — as situações restantes são legítimas.",

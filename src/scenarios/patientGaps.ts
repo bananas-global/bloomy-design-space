@@ -23,7 +23,7 @@ export const patientGapScenarios: Scenario[] = [
       notes:
         "Cada paciente é um `article` com título de nível 3. A lacuna mais grave tem cor e vem primeira na lista — nunca só a cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`PatientFilters` aceita `missing=plan|unit|hour_map|support_level` e `missing_any=true` — os nomes ficam aqui, e não na frase que a pessoa lê.",
       "Seis pacientes com combinações diferentes das quatro ausências.",
@@ -45,7 +45,7 @@ export const patientGapScenarios: Scenario[] = [
     fixture: "patient-gaps-mixed",
     rules: ["these-gaps-block-nothing"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Nenhum dos quatro filtros participa de qualquer verificação de agendamento."],
     expected: [
       "A tela afirma que o paciente é atendido normalmente com as quatro em aberto.",
@@ -64,7 +64,7 @@ export const patientGapScenarios: Scenario[] = [
     fixture: "patient-gaps-clinical-only",
     rules: ["the-four-gaps-have-different-weights"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O nível de suporte vive no perfil TEA do resumo clínico, como inteiro de 1 a 3.",
       "Uma das pacientes está há mais de um ano em atendimento sem ele.",
@@ -85,7 +85,7 @@ export const patientGapScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "patient-gaps-none",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela diz quantos pacientes ativos foram conferidos.",
       "E lembra que nenhuma das quatro ausências bloqueia atendimento.",

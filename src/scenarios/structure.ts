@@ -27,7 +27,7 @@ export const structureScenarios: Scenario[] = [
       notes:
         "Cada serviço é um artigo com heading próprio. Sala inativa e tipo de sala têm rótulo textual além da cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro salas, cinco serviços e quatro bloqueios de três origens diferentes."],
     expected: [
       "Cada sala mostra tipo, capacidade e se está ativa.",
@@ -46,7 +46,7 @@ export const structureScenarios: Scenario[] = [
     fixture: "structure-no-room-for-service",
     rules: ["room-capacity-limits-the-session", "service-decides-which-rooms-serve"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["A única sala de motricidade da unidade está inativa desde 14/07."],
     expected: [
       "O aviso diz que é falta de sala, e não erro de cadastro.",
@@ -65,7 +65,7 @@ export const structureScenarios: Scenario[] = [
     fixture: "structure-impossible-service",
     rules: ["service-without-room-type-is-a-contradiction"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Serviço com `needs_room` verdadeiro e `room_types` vazio."],
     expected: [
       "O aviso separa este caso do de falta de sala.",
@@ -84,7 +84,7 @@ export const structureScenarios: Scenario[] = [
     fixture: "structure-blockings",
     rules: ["three-scopes-of-blocking"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Feriado no calendário, unidade fechada para almoço, e duas ausências de profissional.",
     ],
@@ -105,7 +105,7 @@ export const structureScenarios: Scenario[] = [
     fixture: "structure-unit",
     rules: ["not-chargeable-service-skips-checkin"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Devolutiva à família com `not_chargeable` verdadeiro."],
     expected: [
       "O serviço aparece marcado como não cobrável.",
@@ -121,7 +121,7 @@ export const structureScenarios: Scenario[] = [
     persona: "admin",
     fixture: "structure-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica que sala e serviço são o que a agenda precisa para marcar algo.",
     ],

@@ -24,7 +24,7 @@ export const protocolScenarios: Scenario[] = [
       notes:
         "Cada área é uma região com heading próprio. A escala de resposta é um fieldset com legend, não um grupo de botões soltos.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Três de oito itens respondidos, espalhados por duas das três áreas."],
     expected: [
       "O percentual vem acompanhado da palavra “preenchido”, e a tela diz que não é desempenho.",
@@ -43,7 +43,7 @@ export const protocolScenarios: Scenario[] = [
     fixture: "protocol-resume",
     rules: ["protocol-resumes-at-first-unanswered"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Navegação posicionada em B1, que já está respondido. B2 e B3 estão em branco.",
     ],
@@ -63,7 +63,7 @@ export const protocolScenarios: Scenario[] = [
     fixture: "protocol-abllsr",
     rules: ["answer-scale-depends-on-format"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`QuestionConfigurations.Abllsr` guarda `min` e `max` por questão. O protocolo não tem escala compartilhada.",
     ],
@@ -83,7 +83,7 @@ export const protocolScenarios: Scenario[] = [
     fixture: "protocol-finished",
     rules: ["reassessment-follows-the-instrument"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Instrumento inteiro respondido, fechado em 25 de julho de 2026."],
     expected: [
       "A tela confirma que todos os itens foram respondidos, com a data.",
@@ -102,7 +102,7 @@ export const protocolScenarios: Scenario[] = [
     fixture: "protocol-reassessment-overdue",
     rules: ["reassessment-follows-the-instrument"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Aplicação de janeiro, reavaliação prevista para 20 de julho de 2026.",
       "A persona é o coordenador e não o supervisor porque `ProtocolPolicy.can?(role, :list)` não inclui `supervisor` — quem supervisiona o caso não alcança a avaliação que o originou.",
@@ -121,7 +121,7 @@ export const protocolScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "protocol-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "O progresso é zero e a tela continua dizendo que é preenchimento.",
       "Retomar aponta para o primeiro item do protocolo.",
@@ -137,7 +137,7 @@ export const protocolScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "protocol-in-progress",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ProtocolPolicy.can?(role, :list)` inclui admin, admin de clínica, coordenador, terapeuta e especialista — e deixa de fora recepção, operação, people, aplicador e supervisor.",
     ],

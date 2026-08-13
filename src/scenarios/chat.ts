@@ -24,7 +24,7 @@ export const chatScenarios: Scenario[] = [
       notes:
         "A conversa é uma lista ordenada em ordem cronológica. Menção ao usuário atual tem rótulo textual além da cor.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Quatro pessoas de especialidades diferentes, entre 27 e 29 de julho."],
     expected: [
       "Cada mensagem mostra o papel de quem escreveu, e não só o nome.",
@@ -43,7 +43,7 @@ export const chatScenarios: Scenario[] = [
     fixture: "chat-week",
     rules: ["chat-messages-are-permanent"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["O schema de `Message` não tem campo de edição nem de exclusão."],
     expected: [
       "A frase sobre permanência fica ao lado do campo, associada por `aria-describedby`.",
@@ -62,7 +62,7 @@ export const chatScenarios: Scenario[] = [
     fixture: "chat-mention-without-access",
     rules: ["mention-notifies-but-does-not-grant"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ChatPolicy.can?(role, :show)` não inclui recepção, operação nem People.",
       "A conversa já tem uma menção à recepcionista, feita antes.",
@@ -84,7 +84,7 @@ export const chatScenarios: Scenario[] = [
     fixture: "chat-as-applicator",
     rules: ["chat-is-the-applicators-only-written-channel"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O aplicador não alcança programa, protocolo nem prontuário, e alcança o chat.",
     ],
@@ -103,7 +103,7 @@ export const chatScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "chat-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica que ali se registra observação e se combina conduta.",
       "E que é consultável meses depois.",

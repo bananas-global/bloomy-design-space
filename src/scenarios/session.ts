@@ -26,7 +26,7 @@ export const sessionScenarios: Scenario[] = [
       contrast: "AA",
       notes: "A situação do agendamento é lida antes das ações, por heading da região de aviso.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Théo fez check-in às 13:51. O atendimento é das 14h e a Marina está livre."],
     actions: ["Iniciar atendimento"],
     expected: [
@@ -46,7 +46,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-no-checkin",
     rules: ["session-requires-checkin"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Serviço cobrável, agendamento ainda em Agendado, sem registro de chegada na recepção.",
     ],
@@ -67,7 +67,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-not-chargeable",
     rules: ["session-requires-checkin"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Devolutiva à família, serviço não cobrável, sem check-in registrado."],
     expected: [
       "Iniciar atendimento está disponível mesmo sem check-in.",
@@ -85,7 +85,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-professional-busy",
     rules: ["one-open-session-per-professional"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Théo fez check-in, mas a Marina não finalizou o atendimento das 13h com a Isadora.",
     ],
@@ -109,7 +109,7 @@ export const sessionScenarios: Scenario[] = [
       notes:
         "Cada tentativa tem rótulo textual completo para leitor de tela: acerto ou erro, e se houve ajuda. A cor é redundante.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Em sessão às 14:25, seis tentativas marcadas em dois programas."],
     expected: [
       "Cada programa mostra seus passos, a fase de cada passo e quantas tentativas faltam para a meta.",
@@ -128,7 +128,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-pending-register",
     rules: ["empty-register-blocks-signature"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Atendimento finalizado às 15h com a evolução em branco."],
     expected: [
       "A tela diz que falta escrever a evolução, no lugar de dizer apenas que está pendente.",
@@ -146,7 +146,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-pending-signature",
     rules: ["owner-signs-before-supervisor"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["session.signed"] },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Evolução escrita. Falta a assinatura da Marina, responsável pelo atendimento."],
     actions: ["Assinar como responsável"],
     expected: [
@@ -166,7 +166,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-pending-supervisor",
     rules: ["owner-signs-before-supervisor"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["session.signed"] },
-    status: "in-review",
+    status: "ported",
     preconditions: ["A Marina assinou às 15:12. O atendimento exige segunda assinatura, da Clara."],
     expected: [
       "A assinatura já feita aparece com autoria e horário.",
@@ -183,7 +183,7 @@ export const sessionScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "session-finished",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["As duas assinaturas no lugar."],
     expected: [
       "Nenhum aviso de pendência aparece.",
@@ -202,7 +202,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-revertible",
     rules: ["revert-requires-clean-session", "revert-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA", announces: ["session.reverted"] },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Em andamento há três minutos, sem nenhuma tentativa marcada."],
     actions: ["Reverter atendimento"],
     expected: [
@@ -222,7 +222,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-running",
     rules: ["revert-requires-clean-session"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Seis tentativas já registradas em dois programas."],
     expected: [
       "Reverter aparece desabilitado, contando quantas tentativas seriam apagadas.",
@@ -239,7 +239,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-revertible",
     rules: ["revert-requires-permission"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["`custom_services.revert` é de admin e coordenador. A terapeuta não tem."],
     expected: [
       "Reverter aparece desabilitado, dizendo a quem pedir.",
@@ -256,7 +256,7 @@ export const sessionScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "session-ready",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Nenhuma das vinte e seis policies dá escrita ao aplicador: nem `custom_services.edit`, nem `clinical_summaries.create`.",
     ],
@@ -277,7 +277,7 @@ export const sessionScenarios: Scenario[] = [
     fixture: "session-professional-meeting",
     rules: ["session-requires-checkin", "empty-register-blocks-signature"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Reunião de supervisão entre a Marina e a Clara. `schedule_type` é profissional.",
     ],

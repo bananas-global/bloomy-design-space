@@ -29,7 +29,7 @@ export const programScenarios: Scenario[] = [
       notes:
         "Meta, objetivo e programa são headings de níveis distintos, para navegação por estrutura. O histórico de sessões tem rótulo textual completo.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Duas metas ativas, com programa em linha de base, em intervenção, adquirido, incidental e uma versão substituída.",
     ],
@@ -48,7 +48,7 @@ export const programScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "plan-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica que o plano nasce de uma avaliação, em vez de dizer apenas que está vazio.",
     ],
@@ -64,7 +64,7 @@ export const programScenarios: Scenario[] = [
     fixture: "plan-full",
     rules: ["mastery-closes-phase", "consecutive-differs-from-cumulative"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Passo em intervenção com critério de 80% em 3 sessões consecutivas, e duas seguidas já no alvo.",
     ],
@@ -86,7 +86,7 @@ export const programScenarios: Scenario[] = [
     fixture: "plan-full",
     rules: ["baseline-has-no-performance-target"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Bloomy.Programs.PhaseConfiguration` força `mastery_performance` a zero na linha de base.",
     ],
@@ -106,7 +106,7 @@ export const programScenarios: Scenario[] = [
     fixture: "plan-cascade",
     rules: ["acquisition-cascades-upward"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O último passo do único programa do único objetivo da meta, a uma sessão do domínio.",
     ],
@@ -126,7 +126,7 @@ export const programScenarios: Scenario[] = [
     fixture: "plan-regression",
     rules: ["regression-returns-to-previous-phase"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Passo que estava em 95% caiu para 60% e 55%. O critério de regressão é abaixo de 70% em duas seguidas.",
     ],
@@ -146,7 +146,7 @@ export const programScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "plan-full",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O monólito só exige `phase_configuration` em programa estruturado; o incidental não tem.",
     ],
@@ -166,7 +166,7 @@ export const programScenarios: Scenario[] = [
     fixture: "plan-superseded",
     rules: ["superseded-version-keeps-its-history"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Imitação motora grossa em duas versões: a antiga com critério de 70%, a vigente com 80%.",
     ],
@@ -186,7 +186,7 @@ export const programScenarios: Scenario[] = [
     persona: "applicator",
     fixture: "plan-full",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: [
       "`ProgramPolicy` não inclui `applicator` em nenhuma das oito ações, nem em `list`.",
     ],

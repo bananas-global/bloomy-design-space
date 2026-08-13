@@ -21,7 +21,7 @@ export const invoiceScenarios: Scenario[] = [
       contrast: "AA",
       notes: "As linhas são uma lista com heading próprio. Valor por sessão e total têm texto, não só posição.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Duas autorizações atendidas, com acordo ativo, e os três identificadores preenchidos."],
     expected: [
       "Cada linha mostra sessões realizadas sobre autorizadas, preço por sessão e total.",
@@ -43,7 +43,7 @@ export const invoiceScenarios: Scenario[] = [
       "authorization-without-agreement-is-worth-zero",
     ],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Uma autorização com zero atendimentos, descartada antes da soma.",
       "Uma atendida cujo pacote não tem acordo ativo, somada como `0.0`.",
@@ -65,7 +65,7 @@ export const invoiceScenarios: Scenario[] = [
     fixture: "invoice-missing-fields",
     rules: ["invoice-needs-number-protocol-igdr"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Número preenchido; protocolo e IGDR em branco."],
     expected: [
       "Fechar aparece indisponível, nomeando os dois campos que faltam.",
@@ -82,7 +82,7 @@ export const invoiceScenarios: Scenario[] = [
     fixture: "invoice-nothing-executed",
     rules: ["invoice-includes-only-executed-authorizations"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A lista faturada explica que nenhuma autorização teve atendimento.",
       "Fechar aparece indisponível pelo mesmo motivo.",
@@ -99,7 +99,7 @@ export const invoiceScenarios: Scenario[] = [
     fixture: "invoice-generated",
     rules: ["generated-invoice-is-final"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A fatura aparece marcada como lote gerado.",
       "Fechar de novo fica indisponível, dizendo que a divergência só apareceria na glosa.",
@@ -116,7 +116,7 @@ export const invoiceScenarios: Scenario[] = [
     persona: "admin",
     fixture: "invoice-health-care-incomplete",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`provider_code` e `requester_code` são opcionais no changeset de `HealthCare` e obrigatórios no lote.",
     ],
@@ -136,7 +136,7 @@ export const invoiceScenarios: Scenario[] = [
     persona: "operation",
     fixture: "invoice-ready",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`HealthcareInvoicePolicy.can?(role, :list)` é de admin e admin de clínica. `operation` cria e edita a operadora, e não vê a fatura dela.",
     ],

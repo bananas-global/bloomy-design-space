@@ -23,7 +23,7 @@ export const prospectScenarios: Scenario[] = [
       notes:
         "Cada contato é um artigo com heading próprio. Tempo parado e passo têm rótulo textual, não só posição.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Seis famílias, duas perdidas em passos diferentes e uma parada há dois meses.",
     ],
@@ -44,7 +44,7 @@ export const prospectScenarios: Scenario[] = [
     fixture: "prospects-stalled",
     rules: ["step-history-explains-the-funnel"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Aguardando plano desde 20 de maio."],
     expected: [
       "O aviso do topo nomeia quem está parado há mais de 30 dias.",
@@ -63,7 +63,7 @@ export const prospectScenarios: Scenario[] = [
     fixture: "prospects-ready-to-convert",
     rules: ["conversion-needs-more-than-the-visit-collected"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ConvertToPatientParams` exige data de nascimento e sexo da criança, e data de nascimento, estado civil e relação do responsável.",
       "`Prospects.LegalGuardian` guarda apenas nome, CPF, e-mail e telefone.",
@@ -85,7 +85,7 @@ export const prospectScenarios: Scenario[] = [
     fixture: "prospects-no-availability",
     rules: ["availability-is-what-makes-the-first-schedule-possible"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     expected: [
       "A ausência de janela aparece destacada no cartão.",
       "Marcar primeira sessão fica indisponível, explicando o custo de perseguir depois.",
@@ -100,7 +100,7 @@ export const prospectScenarios: Scenario[] = [
     persona: "attendant",
     fixture: "prospects-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela explica que ali ficam as famílias que ainda não viraram paciente.",
     ],

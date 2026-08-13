@@ -23,7 +23,7 @@ export const clinicalHourScenarios: Scenario[] = [
       notes:
         "Os números do dia são uma lista de descrição. Faixa invertida tem cor e sinal de menos — a cor nunca sozinha.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: ["Cinco dias, cada um com um problema diferente."],
     expected: [
       "Cada dia compara previsto com trabalhado, e mostra o valor diário.",
@@ -42,7 +42,7 @@ export const clinicalHourScenarios: Scenario[] = [
     fixture: "clinical-hours-truncation",
     rules: ["expected-hours-truncate-downwards"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`Enum.sum_by(...) |> div(3600)` trunca a soma em segundos.",
       "`expected_hours` é uma coluna inteira: 7,5 não caberia nela de qualquer forma.",
@@ -64,7 +64,7 @@ export const clinicalHourScenarios: Scenario[] = [
     fixture: "clinical-hours-unverified",
     rules: ["verification-is-optional-and-silent"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`maybe_create_log` só grava quando latitude e longitude vêm preenchidas.",
       "O resultado de `Repo.insert` é descartado: falha na gravação também passa em silêncio.",
@@ -86,7 +86,7 @@ export const clinicalHourScenarios: Scenario[] = [
     fixture: "clinical-hours-reversed",
     rules: ["checkout-before-checkin-is-accepted"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ClinicHour.changeset` exige início e fim, e nunca os compara.",
       "A faixa das 17h às 13h foi digitada no escritório, a partir da folha de ponto.",
@@ -108,7 +108,7 @@ export const clinicalHourScenarios: Scenario[] = [
     fixture: "clinical-hours-incomplete-expected",
     rules: ["expected-hour-without-end-breaks-the-sum"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ExpectedClinicHour.changeset` valida só `start_at`.",
       "`RecalculateExpectedHours` faz `Time.diff(end_at, start_at)` sem checar nulo.",
@@ -130,7 +130,7 @@ export const clinicalHourScenarios: Scenario[] = [
     fixture: "clinical-hours-month",
     rules: ["page-size-decides-what-can-be-compared"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`ClinicalHourRecord` declara `default_limit: 5` no Flop.",
       "O período tem vinte e dois dias úteis.",
@@ -150,7 +150,7 @@ export const clinicalHourScenarios: Scenario[] = [
     persona: "therapeutic_companion",
     fixture: "clinical-hours-week",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Corrigir um registro fica visível e desabilitado.",
       "O motivo nomeia os perfis que corrigem, incluindo o aplicativo.",
@@ -165,7 +165,7 @@ export const clinicalHourScenarios: Scenario[] = [
     persona: "people",
     fixture: "clinical-hours-empty",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "A tela diz que cada dia trabalhado vira um registro.",
       "E que o primeiro aparece depois do primeiro check-in.",

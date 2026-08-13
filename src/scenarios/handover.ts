@@ -21,7 +21,7 @@ export const handoverScenarios: Scenario[] = [
       contrast: "AA",
       notes: "A troca e o aviso são duas etiquetas em texto, e não uma cor só.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "O ramo que recusa devolve `{:error, ...}` sem `Repo.rollback`.",
       "Duas trocas caem nesse ramo porque o anterior já foi avisado hoje.",
@@ -43,7 +43,7 @@ export const handoverScenarios: Scenario[] = [
     fixture: "handover-with-silence",
     rules: ["the-error-branch-of-the-caller-is-unreachable"],
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "Não há `Repo.rollback` em nenhum ponto do módulo.",
       "`Repo.transaction` devolve `{:ok, valor}`, e a tela casa `{:ok, _result}`.",
@@ -63,7 +63,7 @@ export const handoverScenarios: Scenario[] = [
     persona: "coordinator",
     fixture: "handover-all-notified",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     expected: [
       "Nenhum aviso de silêncio aparece.",
       "Todas as trocas mostram o anterior como avisado.",

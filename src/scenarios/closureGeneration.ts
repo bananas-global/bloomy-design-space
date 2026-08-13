@@ -26,7 +26,7 @@ export const closureGenerationScenarios: Scenario[] = [
       notes:
         "Cada profissional tem etiqueta em texto dizendo se foi pulado, se falhou ou se gerou — três estados, três frases.",
     },
-    status: "in-review",
+    status: "ported",
     preconditions: [
       "`GenerateMonthlyClosuresWorker` filtra `p.status == true` na hora em que roda.",
       "`DeactivateProfessionalWorker` gera o fechamento do mês da data de desativação.",
@@ -49,7 +49,7 @@ export const closureGenerationScenarios: Scenario[] = [
     persona: "clinic_admin",
     fixture: "closure-generation-clean",
     a11y: { keyboard: "full", contrast: "AA" },
-    status: "proposed",
+    status: "ported",
     preconditions: ["Todos ativos, nenhuma falha, worker rodando às 06h UTC."],
     expected: [
       "Nenhum dos dois avisos aparece.",
