@@ -4,7 +4,7 @@ import type { Scenario } from "@brucesantos/design-space";
  * Cenários da gerência.
  *
  * O sistema real tem onze listas planas. Elas permanecem como referência
- * portada; a única mudança proposta deste módulo é reorganizar sua navegação.
+ * portada; a única mudança aprovada deste módulo é reorganizar sua navegação.
  */
 const legacyManagementScenarios: Scenario[] = [
   {
@@ -265,7 +265,7 @@ const managementListReferences: Scenario[] = (
   tags: ["lista", "referência-portada", scenario.group.toLowerCase()],
 }));
 
-const groupedNavigationProposal: Scenario = {
+const groupedNavigationApproved: Scenario = {
   id: "management.grouped-navigation",
   title: "Reorganizar as abas das Listas gerenciais",
   intent: "Trocar as onze abas planas por quatro grupos sem alterar o conteúdo das listas.",
@@ -277,7 +277,12 @@ const groupedNavigationProposal: Scenario = {
     contrast: "AA",
     notes: "Grupos e itens são operáveis por teclado; a seleção é indicada por texto e semântica, além da cor.",
   },
-  status: "proposed",
+  status: "approved",
+  approvedAt: {
+    url: "https://bloomy-design-space-1fl24nbrk-vectorspace.vercel.app/management?scenario=management.grouped-navigation&persona=coordinator&fixture=management-grouped-navigation&viewport=desktop&handoff=1&allowScenario=management.grouped-navigation",
+    commit: "c55259f2ad5162181044f93360e1b43fabe0f0ed",
+    date: "2026-08-13",
+  },
   permissions: ["management.list"],
   preconditions: [
     "As onze listas gerenciais existentes continuam disponíveis e sem mudança de conteúdo.",
@@ -298,5 +303,5 @@ const groupedNavigationProposal: Scenario = {
 export const managementScenarios: Scenario[] = [
   ...legacyManagementScenarios,
   ...managementListReferences,
-  groupedNavigationProposal,
+  groupedNavigationApproved,
 ];

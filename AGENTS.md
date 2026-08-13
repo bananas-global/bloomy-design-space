@@ -28,7 +28,7 @@ não validada e sem compromisso de implementação. Não os promova em massa. Qu
 um tema entrar no trabalho real, crie ou revise apenas o cenário que delimita a
 mudança e só então use `proposed`, seguindo o ciclo normal até aprovação e
 implementação. Em Listas gerenciais, por exemplo, as onze listas são `ported` e
-somente a reorganização da navegação é `proposed`.
+somente a reorganização da navegação é `approved`.
 
 ## Comandos
 

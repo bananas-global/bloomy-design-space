@@ -26,7 +26,7 @@ própria.
 
 286 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
 exceção. Desses, 285 formam a **referência portada e ainda não validada**; a única
-mudança proposta reorganiza as abas de Listas gerenciais sem alterar o conteúdo
+mudança aprovada reorganiza as abas de Listas gerenciais sem alterar o conteúdo
 das onze listas existentes.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
@@ -68,8 +68,8 @@ está registrado em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real
 O baseline de 285 está com status `ported` (**Portado — não validado**). Quando
 um tema entra no fluxo real de design, ele passa para `proposed` ou ganha um novo
 cenário; só depois da validação de negócio pode chegar a `approved`. Listas
-gerenciais está nesse caminho com um único cenário proposto para reorganizar a
-navegação.
+gerenciais concluiu esse caminho com um único cenário aprovado para reorganizar
+a navegação.
 
 ## Regras implementadas
 

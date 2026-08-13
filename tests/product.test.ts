@@ -37,19 +37,26 @@ describe("contrato de cenário", () => {
     expect(without).toEqual([]);
   });
 
-  it("separa as referências portadas da única mudança proposta de Listas gerenciais", () => {
+  it("separa as referências portadas da única mudança aprovada de Listas gerenciais", () => {
     expect(productDefinition.scenarios).toHaveLength(286);
     expect(productDefinition.scenarios.filter((scenario) => scenario.status === "ported")).toHaveLength(285);
     const proposed = productDefinition.scenarios.filter((scenario) => scenario.status === "proposed");
-    expect(proposed.map((scenario) => scenario.id)).toEqual(["management.grouped-navigation"]);
+    expect(proposed).toEqual([]);
     const approved = productDefinition.scenarios.filter((scenario) => scenario.status === "approved");
-    expect(approved).toEqual([]);
-    expect(proposed[0]?.permissions).toEqual(["management.list"]);
-    expect(proposed[0]?.tags).not.toContain("aprovado");
-    expect(proposed[0]?.expected).toContain(
+    expect(approved.map((scenario) => scenario.id)).toEqual(["management.grouped-navigation"]);
+    expect(approved[0]?.approvedAt).toEqual({
+      url: "https://bloomy-design-space-1fl24nbrk-vectorspace.vercel.app/management?scenario=management.grouped-navigation&persona=coordinator&fixture=management-grouped-navigation&viewport=desktop&handoff=1&allowScenario=management.grouped-navigation",
+      commit: "c55259f2ad5162181044f93360e1b43fabe0f0ed",
+      date: "2026-08-13",
+    });
+    expect(approved[0]?.permissions).toEqual(["management.list"]);
+    expect(approved[0]?.tags).not.toContain("aprovado");
+    expect(approved[0]?.expected).toContain(
       "Selecionar um item abre a lista já existente; filtros, tabelas, ações, regras e permissões não fazem parte desta entrega.",
     );
-    expect(scenariosUnderTest(productDefinition)).toEqual([]);
+    expect(scenariosUnderTest(productDefinition).map((scenario) => scenario.id)).toEqual([
+      "management.grouped-navigation",
+    ]);
   });
 
   it("expõe os 47 componentes centrais, button_tabs e lazy_tabs no catálogo visual do motor", () => {

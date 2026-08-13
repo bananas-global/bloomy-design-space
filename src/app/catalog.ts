@@ -804,7 +804,7 @@ export const modules: Module[] = [
     id: "management",
     name: "Listas gerenciais",
     description:
-      "Proposta de reorganização da navegação das onze listas existentes, sem mudar seu conteúdo.",
+      "Reorganização aprovada da navegação das onze listas existentes, sem mudar seu conteúdo.",
     flows: [
       {
         id: "reorganize-management-tabs",
@@ -813,7 +813,7 @@ export const modules: Module[] = [
         steps: [
           {
             scenario: "management.grouped-navigation",
-            label: "Consultar a navegação proposta",
+            label: "Consultar a navegação aprovada",
           },
         ],
       },

@@ -1,7 +1,7 @@
 # 0013 — Listas gerenciais agrupam as filas por contexto
 
 **Data:** 2026-08-13
-**Situação:** proposta
+**Situação:** aprovada
 
 ## Contexto
 
@@ -57,5 +57,5 @@ existente e não devem ser reinterpretados ou alterados por esta entrega.
   texto e semântica, não apenas cor.
 - `lazy_tabs` passa a fazer parte do catálogo executável de componentes com o
   nome e a origem usados pelo monólito.
-- A proposta muda a arquitetura da informação, não a implementação das
+- A decisão muda a arquitetura da informação, não a implementação das
   regras, filtros, tabelas ou permissões de cada lista.
