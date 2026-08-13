@@ -37,17 +37,24 @@ describe("contrato de cenário", () => {
     expect(without).toEqual([]);
   });
 
-  it("mantém o baseline inteiro como referência portada, fora do trabalho ativo", () => {
-    expect(productDefinition.scenarios).toHaveLength(274);
-    expect(new Set(productDefinition.scenarios.map((scenario) => scenario.status))).toEqual(
-      new Set(["ported"]),
+  it("separa as referências portadas da única mudança proposta de Listas gerenciais", () => {
+    expect(productDefinition.scenarios).toHaveLength(286);
+    expect(productDefinition.scenarios.filter((scenario) => scenario.status === "ported")).toHaveLength(285);
+    const proposed = productDefinition.scenarios.filter((scenario) => scenario.status === "proposed");
+    expect(proposed.map((scenario) => scenario.id)).toEqual(["management.grouped-navigation"]);
+    const approved = productDefinition.scenarios.filter((scenario) => scenario.status === "approved");
+    expect(approved).toEqual([]);
+    expect(proposed[0]?.permissions).toEqual(["management.list"]);
+    expect(proposed[0]?.tags).not.toContain("aprovado");
+    expect(proposed[0]?.expected).toContain(
+      "Selecionar um item abre a lista já existente; filtros, tabelas, ações, regras e permissões não fazem parte desta entrega.",
     );
     expect(scenariosUnderTest(productDefinition)).toEqual([]);
   });
 
-  it("expõe os 47 componentes portados no catálogo visual do motor", () => {
+  it("expõe os 47 componentes centrais, button_tabs e lazy_tabs no catálogo visual do motor", () => {
     const components = productDefinition.components ?? [];
-    expect(components).toHaveLength(47);
+    expect(components).toHaveLength(49);
     expect(new Set(components.map((component) => component.id)).size).toBe(components.length);
     expect(components.every((component) => component.id.startsWith("core."))).toBe(true);
     expect(components.every((component) => component.group === "Core components")).toBe(true);

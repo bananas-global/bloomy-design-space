@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
 import { fixtures, scenarios } from "../../src/app/catalog.js";
 
+const portedScenarios = scenarios.filter((scenario) => scenario.status === "ported");
+const activeScenarios = scenarios.filter((scenario) => scenario.status !== "ported");
+
 /**
  * Navegar **dentro** do app, sem recarregar.
  *
@@ -35,7 +38,7 @@ test("clicar por todas as situações não apaga a tela", async ({ page }) => {
   // A varredura ativa explicitamente as referências portadas. No uso normal,
   // elas ficam fora do trabalho ativo; aqui precisamos alcançar o catálogo
   // inteiro para continuar protegendo a navegação entre telas.
-  expect(total).toBe(scenarios.length);
+  expect(total).toBe(portedScenarios.length);
 
   const quebradas: string[] = [];
 
@@ -65,24 +68,23 @@ test("referências portadas vivem numa visão separada e reproduzível", async (
   await page.goto("/");
   const sidebar = page.getByRole("navigation", { name: "Cenários do produto" });
 
-  await expect(sidebar.getByText("Não há cenários no trabalho ativo.")).toBeVisible();
-  await expect(page.locator("button.ds-scenario")).toHaveCount(0);
-  await expect(page.locator(".ds-module")).toHaveCount(0);
+  await expect(page.locator("button.ds-scenario")).toHaveCount(activeScenarios.length);
+  await expect(page.locator(".ds-module")).toHaveCount(1);
 
-  await sidebar.getByRole("button", { name: "Ver 274 referências portadas" }).click();
+  await sidebar.getByRole("button", { name: "Ver 285 referências portadas" }).click();
 
   await expect(page).toHaveURL(/view=ported/);
-  await expect(sidebar.getByRole("heading", { name: "Referências portadas · 274" })).toBeVisible();
-  await expect(page.locator("button.ds-scenario")).toHaveCount(scenarios.length);
+  await expect(sidebar.getByRole("heading", { name: "Referências portadas · 285" })).toBeVisible();
+  await expect(page.locator("button.ds-scenario")).toHaveCount(portedScenarios.length);
 
   await page.reload();
-  await expect(sidebar.getByRole("heading", { name: "Referências portadas · 274" })).toBeVisible();
-  await expect(page.locator("button.ds-scenario")).toHaveCount(scenarios.length);
+  await expect(sidebar.getByRole("heading", { name: "Referências portadas · 285" })).toBeVisible();
+  await expect(page.locator("button.ds-scenario")).toHaveCount(portedScenarios.length);
 
   await sidebar.getByRole("button", { name: "Voltar ao trabalho ativo" }).click();
   await expect(page).not.toHaveURL(/view=ported/);
-  await expect(sidebar.getByText("Não há cenários no trabalho ativo.")).toBeVisible();
-  await expect(page.locator(".ds-module")).toHaveCount(0);
+  await expect(page.locator("button.ds-scenario")).toHaveCount(activeScenarios.length);
+  await expect(page.locator(".ds-module")).toHaveCount(1);
 });
 
 /**

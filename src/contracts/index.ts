@@ -1292,12 +1292,128 @@ export type PatientWithoutOwner = {
   sinceDate: string;
 };
 
+/** As onze listas que existem em `/backoffice/gerencia`. */
+export type ManagementTab =
+  | "supervisors"
+  | "applicators"
+  | "clinical-owners"
+  | "patient-registration"
+  | "professional-registration"
+  | "authorizations"
+  | "professionals-by-specialty"
+  | "hour-maps"
+  | "report-control"
+  | "absences"
+  | "intervention-plans";
+
+export type ManagementPerson = {
+  id: string;
+  name: string;
+  specialty?: string;
+  active: boolean;
+  initials: string;
+};
+
+export type ManagementPatient = {
+  id: string;
+  name: string;
+  active: boolean;
+  initials: string;
+};
+
+export type ManagementSupervisorRow = {
+  professional: ManagementPerson;
+  applicatorCount: number;
+};
+
+export type ManagementApplicatorRow = {
+  id: string;
+  professional: ManagementPerson;
+  supervisor: ManagementPerson;
+  needsSupervisorSignature: boolean;
+};
+
+export type ManagementClinicalOwnerRow = {
+  patient: ManagementPatient;
+  responsible?: ManagementPerson;
+};
+
+export type ManagementRegistrationRow = {
+  person: ManagementPerson | ManagementPatient;
+  specialty?: string;
+  missing: string[];
+};
+
+export type ManagementAuthorizationRow = {
+  id: string;
+  patient: ManagementPatient;
+  durationEndAt: string;
+  status: "active" | "expired";
+};
+
+export type ManagementSpecialtyRow = {
+  specialty: string;
+  total: number;
+  coordinators: number;
+  supervisors: number;
+  therapists: number;
+  applicators: number;
+  trainees: number;
+};
+
+export type ManagementHourMapRow = {
+  id: string;
+  patient: ManagementPatient;
+  durationStartAt?: string;
+  durationEndAt?: string;
+  weeklyHours?: number;
+  status?: "Em vigência" | "Aguardando" | "Encerrado" | "Pendente" | "Cancelado";
+};
+
+export type ManagementAbsenceRow = {
+  professional: ManagementPerson;
+  missingDays: number;
+  missingHours: number;
+  presencePercentage: number;
+};
+
+export type ManagementInterventionPlanRow = {
+  id: string;
+  patient: ManagementPatient;
+  startAt: string;
+  endAt: string;
+  createdBy: ManagementPerson;
+  signedBy?: { name: string; phone: string; initials: string };
+  status: "active" | "pending" | "expired";
+};
+
+export type ManagementLists = {
+  supervisors: ManagementSupervisorRow[];
+  applicators: ManagementApplicatorRow[];
+  clinicalOwners: ManagementClinicalOwnerRow[];
+  patientRegistration: ManagementRegistrationRow[];
+  professionalRegistration: ManagementRegistrationRow[];
+  authorizations: ManagementAuthorizationRow[];
+  professionalsBySpecialty: ManagementSpecialtyRow[];
+  hourMaps: ManagementHourMapRow[];
+  reportControls: ReportControl[];
+  absences: ManagementAbsenceRow[];
+  interventionPlans: ManagementInterventionPlanRow[];
+};
+
 export type ManagementData = {
   unit: Unit;
   reports: ReportControl[];
   mentorshipGaps: MentorshipGap[];
   incompleteProfessionals: IncompleteProfessional[];
   patientsWithoutOwner: PatientWithoutOwner[];
+  /**
+   * Conteúdo fiel das onze abas do sistema. Ausente nas fixtures históricas do
+   * baseline portado; presente nos cenários ativos de Listas gerenciais.
+   */
+  lists?: ManagementLists;
+  /** Aba aberta pelo deep link do cenário. */
+  activeTab?: ManagementTab;
   /** Instante de referência da situação. Fixture não olha o relógio (§15.1). */
   now: string;
 };

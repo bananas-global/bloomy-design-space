@@ -3,11 +3,10 @@ import type { Scenario } from "@brucesantos/design-space";
 /**
  * Cenários da gerência.
  *
- * A tela real tem nove abas e é fácil lê-la como painel de indicadores. Estes
- * cenários existem para fixar a outra leitura: cada aba é uma fila de trabalho,
- * com dono e com consequência para o que fica parado.
+ * O sistema real tem onze listas planas. Elas permanecem como referência
+ * portada; a única mudança proposta deste módulo é reorganizar sua navegação.
  */
-export const managementScenarios: Scenario[] = [
+const legacyManagementScenarios: Scenario[] = [
   {
     id: "management.monday",
     title: "Segunda de manhã",
@@ -103,4 +102,201 @@ export const managementScenarios: Scenario[] = [
     expected: ["A tela nomeia quem alcança a gerência.", "O bloqueio é de permissão, não de dado."],
     tags: ["permissão", "exceção"],
   },
+];
+
+type ActiveManagementScenario = {
+  id: string;
+  title: string;
+  group: string;
+  fixture: string;
+  intent: string;
+  expected: string[];
+};
+
+const managementListReferences: Scenario[] = (
+  [
+    {
+      id: "management.supervisors",
+      title: "Supervisores",
+      group: "Assistencial",
+      fixture: "management-supervisors",
+      intent: "Consultar supervisores e coordenadores e ajustar quem está vinculado a cada um.",
+      expected: [
+        "A lista começa filtrada por profissionais ativos.",
+        "Cada linha mostra especialidade e quantidade de aplicadores.",
+        "Editar Aplicadores abre o vínculo sem sair da lista.",
+      ],
+    },
+    {
+      id: "management.applicators",
+      title: "Aplicadores",
+      group: "Assistencial",
+      fixture: "management-applicators",
+      intent: "Conferir quem supervisiona cada aplicador e se o vínculo exige segunda assinatura.",
+      expected: [
+        "Aplicador e supervisor aparecem lado a lado.",
+        "A coluna Assina informa Sim ou Não em texto.",
+        "Editar supervisor mantém visível a escolha de segunda assinatura.",
+      ],
+    },
+    {
+      id: "management.clinical-owners",
+      title: "Responsáveis Clínicos",
+      group: "Assistencial",
+      fixture: "management-clinical-owners",
+      intent: "Encontrar pacientes sem responsável clínico e corrigir o vínculo.",
+      expected: [
+        "Paciente, responsável e especialidade aparecem na mesma linha.",
+        "Ausência de responsável é mostrada com traço, como no sistema.",
+        "Editar responsáveis abre o formulário do paciente selecionado.",
+      ],
+    },
+    {
+      id: "management.patient-registration",
+      title: "Cadastro de Pacientes",
+      group: "Operação",
+      fixture: "management-patient-registration",
+      intent: "Localizar pacientes sem plano, unidade, nível de suporte ou mapa de horas.",
+      expected: [
+        "Os itens faltantes aparecem como etiquetas vermelhas.",
+        "É possível filtrar por um item faltante específico.",
+        "A ação leva ao cadastro do paciente.",
+      ],
+    },
+    {
+      id: "management.professional-registration",
+      title: "Cadastro de Profissionais",
+      group: "Operação",
+      fixture: "management-professional-registration",
+      intent: "Localizar profissionais sem unidade, escala ativa ou contrato vigente.",
+      expected: [
+        "Profissional e especialidade identificam cada linha.",
+        "As pendências aparecem como etiquetas vermelhas.",
+        "A busca combina com especialidade, item faltante e status.",
+      ],
+    },
+    {
+      id: "management.authorizations",
+      title: "Autorizações",
+      group: "Operação",
+      fixture: "management-authorizations",
+      intent: "Separar autorizações em vigência das que já venceram.",
+      expected: [
+        "A lista mostra paciente, data de vencimento e status.",
+        "Em Vigência e Vencido aparecem em texto além da cor.",
+        "A busca por paciente pode ser combinada ao status.",
+      ],
+    },
+    {
+      id: "management.professionals-by-specialty",
+      title: "Profissionais por Especialidade",
+      group: "Relatórios",
+      fixture: "management-professionals-by-specialty",
+      intent: "Comparar a composição da equipe em cada especialidade.",
+      expected: [
+        "A tabela separa total, coordenadores, supervisores, terapeutas, aplicadores e profissionais em formação.",
+        "O filtro reduz a tabela a uma especialidade.",
+      ],
+    },
+    {
+      id: "management.hour-maps",
+      title: "Mapa de Horas",
+      group: "Agenda",
+      fixture: "management-hour-maps",
+      intent: "Encontrar pacientes sem padrão e acompanhar a vigência dos mapas existentes.",
+      expected: [
+        "A visão inicial usa Sem padrão, como no sistema.",
+        "Cada mapa mostra vigência, horas semanais e status quando esses dados existem.",
+        "Paciente e período podem refinar a lista.",
+      ],
+    },
+    {
+      id: "management.report-control",
+      title: "Controle de relatórios",
+      group: "Relatórios",
+      fixture: "management-report-control",
+      intent: "Solicitar e acompanhar relatórios por paciente, profissional, prazo e status.",
+      expected: [
+        "A tabela mostra tipo, solicitante, profissional, prazo e status.",
+        "Prazo vencido permanece identificado em texto e estilo.",
+        "Solicitar relatório abre o formulário sem sair da lista.",
+      ],
+    },
+    {
+      id: "management.absences",
+      title: "Faltas Profissionais",
+      group: "Agenda",
+      fixture: "management-absences",
+      intent: "Acompanhar dias e horas de falta e a presença no período selecionado.",
+      expected: [
+        "O período inicial cobre noventa dias determinísticos da fixture.",
+        "Cada profissional mostra dias, horas e percentual de presença.",
+        "A faixa de presença é compreensível sem depender apenas da cor.",
+      ],
+    },
+    {
+      id: "management.intervention-plans",
+      title: "Planos terapêuticos",
+      group: "Assistencial",
+      fixture: "management-intervention-plans",
+      intent: "Acompanhar planos de intervenção comportamental vigentes, pendentes e expirados.",
+      expected: [
+        "Paciente, vigência, autoria, responsável legal e status aparecem na mesma linha.",
+        "Plano sem assinatura mostra traço no lugar de uma pessoa inexistente.",
+        "Vigente, Pendente e Expirado aparecem em texto.",
+      ],
+    },
+  ] satisfies ActiveManagementScenario[]
+).map((scenario) => ({
+  id: scenario.id,
+  title: scenario.title,
+  intent: scenario.intent,
+  route: "/management",
+  persona: "coordinator",
+  fixture: scenario.fixture,
+  a11y: {
+    keyboard: "full",
+    contrast: "AA",
+    notes: "Filtros, ações e diálogos têm nome acessível; situação não depende só de cor.",
+  },
+  status: "ported",
+  preconditions: ["Unidade Pinheiros selecionada.", "A pessoa tem `management.list`."],
+  expected: scenario.expected,
+  tags: ["lista", "referência-portada", scenario.group.toLowerCase()],
+}));
+
+const groupedNavigationProposal: Scenario = {
+  id: "management.grouped-navigation",
+  title: "Reorganizar as abas das Listas gerenciais",
+  intent: "Trocar as onze abas planas por quatro grupos sem alterar o conteúdo das listas.",
+  route: "/management",
+  persona: "coordinator",
+  fixture: "management-grouped-navigation",
+  a11y: {
+    keyboard: "full",
+    contrast: "AA",
+    notes: "Grupos e itens são operáveis por teclado; a seleção é indicada por texto e semântica, além da cor.",
+  },
+  status: "proposed",
+  permissions: ["management.list"],
+  preconditions: [
+    "As onze listas gerenciais existentes continuam disponíveis e sem mudança de conteúdo.",
+    "A pessoa tem `management.list`.",
+  ],
+  expected: [
+    "A navegação mostra somente Operação, Agenda, Assistencial e Relatórios no primeiro nível.",
+    "Operação contém Cadastro de Pacientes, Cadastro de Profissionais e Autorizações.",
+    "Agenda contém Mapa de Horas e Faltas Profissionais.",
+    "Assistencial contém Supervisores, Aplicadores, Responsáveis Clínicos e Planos terapêuticos.",
+    "Relatórios contém Profissionais por Especialidade e Controle de Relatórios.",
+    "Documentação não aparece nesta entrega.",
+    "Selecionar um item abre a lista já existente; filtros, tabelas, ações, regras e permissões não fazem parte desta entrega.",
+  ],
+  tags: ["navegação", "trabalho-ativo"],
+};
+
+export const managementScenarios: Scenario[] = [
+  ...legacyManagementScenarios,
+  ...managementListReferences,
+  groupedNavigationProposal,
 ];

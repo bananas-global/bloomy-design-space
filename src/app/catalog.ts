@@ -802,24 +802,18 @@ export const modules: Module[] = [
   },
   {
     id: "management",
-    name: "Gerência",
+    name: "Listas gerenciais",
     description:
-      "As filas de trabalho da coordenação — cada uma com um dono e uma consequência para o que fica parado.",
+      "Proposta de reorganização da navegação das onze listas existentes, sem mudar seu conteúdo.",
     flows: [
       {
-        id: "work-the-queues",
-        title: "Trabalhar as pendências da semana",
-        description:
-          "Da visão das frentes até as duas que custam mais caro paradas.",
+        id: "reorganize-management-tabs",
+        title: "Reorganizar as abas",
+        description: "Agrupar as onze abas atuais por contexto de trabalho.",
         steps: [
           {
-            scenario: "management.monday",
-            label: "Ver o que está pendente",
-            decision: "Qual frente custa mais cara parada?",
-            branches: {
-              "Relatório da operadora": "management.reports-by-consequence",
-              "Aplicador sem supervisor": "management.mentorship-gap",
-            },
+            scenario: "management.grouped-navigation",
+            label: "Consultar a navegação proposta",
           },
         ],
       },

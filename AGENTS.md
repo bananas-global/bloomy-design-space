@@ -23,10 +23,12 @@ O conteúdo aqui foi portado do monólito em 2026-08-01/02. O log do porte, com 
 que foi traduzido de onde e treze achados sobre o sistema real, está em
 [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 
-Os 274 cenários desse baseline usam `status: "ported"`: são referência importada,
+Os 285 cenários desse baseline usam `status: "ported"`: são referência importada,
 não validada e sem compromisso de implementação. Não os promova em massa. Quando
-um tema entrar no trabalho real, crie ou revise o cenário correspondente e só
-então use `proposed`, seguindo o ciclo normal até aprovação e implementação.
+um tema entrar no trabalho real, crie ou revise apenas o cenário que delimita a
+mudança e só então use `proposed`, seguindo o ciclo normal até aprovação e
+implementação. Em Listas gerenciais, por exemplo, as onze listas são `ported` e
+somente a reorganização da navegação é `proposed`.
 
 ## Comandos
 

@@ -1,4 +1,14 @@
-import { cloneElement, useId, type ReactElement, type ReactNode } from "react";
+import {
+  cloneElement,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { Icon } from "../Icon.js";
 
 /**
@@ -377,13 +387,265 @@ export function SwitchCard({
 
 export type SelectOption = { label: string; value: string };
 
+/**
+ * A cláusula `input/1` com `type="select"` usa o `CustomSelectComponent` do
+ * sistema: gatilho próprio, opções flutuantes e seleção visível com check.
+ * Não é um `<select>` nativo estilizado.
+ */
+export function Select({
+  id: providedId,
+  name,
+  label,
+  ariaLabel,
+  prompt = "Selecione uma opção",
+  value = "",
+  options,
+  disabled = false,
+  clear = true,
+  errors = [],
+  className,
+  inputClassName,
+  onChange,
+}: {
+  id?: string;
+  name?: string;
+  label?: string;
+  ariaLabel?: string;
+  prompt?: string;
+  value?: string;
+  options: SelectOption[];
+  disabled?: boolean;
+  clear?: boolean;
+  errors?: string[];
+  className?: string;
+  inputClassName?: string;
+  onChange?: (value: string) => void;
+}) {
+  const generatedId = useId();
+  const id = providedId ?? `select-${generatedId.replace(/:/g, "")}`;
+  const triggerId = `${id}-trigger`;
+  const listboxId = `${id}-options`;
+  const errorId = errors.length > 0 ? `${id}-errors` : undefined;
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: 256 });
+  const selectedIndex = options.findIndex((option) => option.value === value);
+  const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
+
+  function positionMenu() {
+    const button = trigger.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const menuHeight = Math.min(menu.current?.offsetHeight ?? 256, 256);
+    const below = window.innerHeight - rect.bottom - 16;
+    const above = rect.top - 16;
+    const opensAbove = below < Math.min(menuHeight, 192) && above > below;
+    const top = opensAbove ? Math.max(16, rect.top - menuHeight - 4) : rect.bottom + 4;
+    const left = Math.min(Math.max(16, rect.left), Math.max(16, window.innerWidth - rect.width - 16));
+
+    setPosition({
+      left,
+      top,
+      width: rect.width,
+      maxHeight: Math.max(96, opensAbove ? above - 4 : below),
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (open) positionMenu();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!root.current?.contains(target) && !menu.current?.contains(target)) setOpen(false);
+    };
+    const reposition = () => positionMenu();
+
+    document.addEventListener("pointerdown", closeOutside);
+    window.addEventListener("resize", reposition);
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [open]);
+
+  function openMenu() {
+    if (disabled) return;
+    setHighlighted(selectedIndex >= 0 ? selectedIndex : -1);
+    setOpen(true);
+  }
+
+  function choose(option: SelectOption) {
+    onChange?.(option.value);
+    setOpen(false);
+    setHighlighted(-1);
+    trigger.current?.focus();
+  }
+
+  function keyboard(event: KeyboardEvent<HTMLButtonElement>) {
+    if (!open) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openMenu();
+      }
+      return;
+    }
+
+    if (event.key === "Escape" || event.key === "Tab") {
+      if (event.key === "Escape") event.preventDefault();
+      setOpen(false);
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const next =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? options.length - 1
+            : Math.min(
+                Math.max(highlighted + (event.key === "ArrowDown" ? 1 : -1), 0),
+                options.length - 1,
+              );
+      setHighlighted(next);
+      menu.current?.querySelector<HTMLElement>(`[data-option-index="${next}"]`)?.scrollIntoView({ block: "nearest" });
+      return;
+    }
+
+    if (event.key === "Enter" && highlighted >= 0) {
+      event.preventDefault();
+      const option = options[highlighted];
+      if (option) choose(option);
+    }
+  }
+
+  return (
+    <div ref={root} id={id} className={["relative", disabled && "cursor-not-allowed opacity-60", className].filter(Boolean).join(" ")}>
+      {label && <Label htmlFor={triggerId}>{label}</Label>}
+
+      <div className={["relative w-full", label && "mt-2"].filter(Boolean).join(" ")}>
+        <button
+          ref={trigger}
+          id={triggerId}
+          type="button"
+          role="combobox"
+          aria-label={ariaLabel}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-activedescendant={open && highlighted >= 0 ? `${id}-option-${highlighted}` : undefined}
+          aria-describedby={errorId}
+          aria-invalid={errors.length > 0 || undefined}
+          data-open={open}
+          data-container
+          data-value={value}
+          disabled={disabled}
+          onClick={() => open ? setOpen(false) : openMenu()}
+          onKeyDown={keyboard}
+          className={[
+            "group flex h-12 w-full cursor-pointer items-center justify-between overflow-hidden rounded-lg border px-4 text-left",
+            "border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/10",
+            "data-[open=true]:border-[var(--color-brand-blue)]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
+            "disabled:cursor-not-allowed",
+            clear && selected && "pr-20",
+            inputClassName,
+          ].filter(Boolean).join(" ")}
+        >
+          <span className={["truncate font-normal", selected ? "text-[var(--color-brand-purple-dark)]/80" : "text-[var(--color-brand-purple-dark)]/60"].join(" ")}>
+            {selected?.label ?? prompt}
+          </span>
+        </button>
+
+        <Icon
+          name="fa-chevron-down"
+          className={[
+            "pointer-events-none absolute right-4 top-1/2 -translate-y-1/2",
+            open ? "text-[var(--color-brand-blue)]" : "text-[var(--color-brand-purple-dark)]/40",
+          ].join(" ")}
+        />
+
+        {clear && selected && !disabled && (
+          <button
+            type="button"
+            title="Limpar seleção"
+            aria-label={`Limpar ${label ?? "seleção"}`}
+            onClick={() => {
+              onChange?.("");
+              setOpen(false);
+              trigger.current?.focus();
+            }}
+            className="absolute right-10 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--color-brand-red)] transition-colors hover:bg-[var(--color-brand-purple-dark)]/10 focus-visible:outline-2 focus-visible:outline-[var(--color-action)]"
+          >
+            <Icon name="fa-times" />
+          </button>
+        )}
+
+        <input type="hidden" name={name} value={value} />
+      </div>
+
+      {open && (
+        <div
+          ref={menu}
+          data-options-container
+          className="fixed z-[9999] overflow-hidden rounded-lg border border-[var(--color-neutral-100)] bg-white shadow"
+          style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}
+        >
+          <ul id={listboxId} role="listbox" aria-label={label ?? ariaLabel} className="thin-scrollbar m-0 max-h-64 list-none overflow-y-auto p-4">
+            {options.length === 0 && <li className="bg-white px-4 py-2 text-center text-[var(--color-blue-dark)]/80">Nenhuma opção encontrada</li>}
+            {options.map((option, index) => {
+              const isSelected = option.value === value;
+              const isHighlighted = index === highlighted;
+              return (
+                <li
+                  key={option.value}
+                  id={`${id}-option-${index}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  data-option-index={index}
+                  data-options
+                  data-highlighted={isHighlighted || undefined}
+                  onPointerMove={() => setHighlighted(index)}
+                  onClick={() => choose(option)}
+                  className={[
+                    "flex cursor-pointer items-center justify-between rounded-lg px-4 py-2 font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
+                    isSelected || isHighlighted ? "bg-[var(--color-brand-purple-dark)]/10" : "bg-white hover:bg-[var(--color-brand-purple-dark)]/5",
+                  ].join(" ")}
+                >
+                  <span>{option.label}</span>
+                  {isSelected && <Icon name="fa-check" />}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {errors.length > 0 && (
+        <div id={errorId}>
+          {errors.map((message) => <FieldError key={message} className="absolute -bottom-6 font-normal leading-none" message={message} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** `input_with_select/1`: dois campos unidos sob o mesmo rótulo visual. */
 export function InputWithSelect({ label, textId, textName, textValue, textErrors = [], selectId, selectName, selectValue, selectErrors = [], options, disabled = false, onTextChange, onSelectChange, className }: {
   label?: string; textId: string; textName: string; textValue: string; selectId: string; selectName: string; selectValue: string;
   textErrors?: string[]; selectErrors?: string[]; options: SelectOption[]; disabled?: boolean; onTextChange?: (value: string) => void; onSelectChange?: (value: string) => void; className?: string;
 }) {
   const textErrorId = textErrors.length ? `${textId}-errors` : undefined;
-  const selectErrorId = selectErrors.length ? `${selectId}-errors` : undefined;
   return <div className={["relative", disabled && "opacity-50", className].filter(Boolean).join(" ")}>
     {label && <Label><span>{label}</span></Label>}
     <div className={["relative flex w-full", label && "mt-2"].filter(Boolean).join(" ")}>
@@ -392,10 +654,7 @@ export function InputWithSelect({ label, textId, textName, textValue, textErrors
         {textErrors.length > 0 && <div id={textErrorId}>{textErrors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
       </div>
       <div className="relative min-w-0 flex-1">
-        <select id={selectId} name={selectName} value={selectValue} disabled={disabled} aria-label={label ? `${label}: critério` : undefined} aria-describedby={selectErrorId} aria-invalid={selectErrors.length ? true : undefined} onChange={(event) => onSelectChange?.(event.target.value)} className={["h-12 w-full rounded-r-lg border bg-[var(--color-brand-purple-dark)]/10 px-4 text-[var(--color-brand-purple-dark)]/80 outline-hidden transition-colors focus:border-[var(--color-brand-blue)] focus:ring-0", selectErrors.length ? "border-[var(--color-brand-red)]" : "border-[var(--color-brand-purple-dark)]/10"].join(" ")}>
-          {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-        </select>
-        {selectErrors.length > 0 && <div id={selectErrorId}>{selectErrors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
+        <Select id={selectId} name={selectName} value={selectValue} disabled={disabled} ariaLabel={label ? `${label}: critério` : undefined} errors={selectErrors} options={options} clear={false} inputClassName="rounded-l-none" onChange={onSelectChange} />
       </div>
     </div>
   </div>;

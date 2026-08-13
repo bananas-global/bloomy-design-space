@@ -130,6 +130,7 @@
   --color-fuchsia: #c62d9a;
 
   --shadow-main: 2px 2px 12px 0px rgba(0, 0, 0, 0.04);
+  --shadow-top-inset: inset 0px 6px 0px 0px currentColor;
 
   /* Ação: o azul do CTA e do link. Escurecido a partir do
      `--brand-blue-dark` original (#4094bb, 3.40:1) até passar AA nas duas
@@ -174,6 +175,27 @@
   /* ---------------------------------------------------------- sombras */
   --shadow-card: 2px 2px 12px 0 rgb(0 0 0 / 0.04);
   --shadow-panel: 0 14px 14px 0 rgb(43 35 91 / 0.1);
+}
+
+/* Barra fina usada pelo `button_tabs` do sistema real. */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: rgb(240, 240, 240);
+  border-radius: 16px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(187, 187, 187);
+  border: 2px solid rgb(240, 240, 240);
+  border-radius: 16px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #999;
 }
 
 :root {
