@@ -29,6 +29,12 @@ const EXCECOES = [
     arquivo: "src/screens/Management.tsx",
     porque: "fecha um diálogo de edição sem salvar; não cancela nenhum registro",
   },
+  {
+    trecho: "Cancelar",
+    arquivo: "src/screens/ProfessionalDocuments.tsx",
+    porque:
+      "fecha o formulário de documento e o diálogo de exportação sem salvar; não cancela documento nem compartilhamento",
+  },
 ];
 
 const arquivos = readdirSync("src/screens")

@@ -215,6 +215,12 @@ export function Textarea({
  *
  * O rótulo inteiro é a área clicável, e ganha fundo azul quando marcado —
  * `has-[input:checked]:bg-brand-blue/20`. É seleção que se vê de longe.
+ *
+ * **Correção intencional do Design Space:** a caixa recebe 24px. Sem tamanho
+ * declarado, o navegador desenha 13×13 — abaixo do mínimo de alvo da WCAG 2.5.8,
+ * e a área grande do rótulo não resolve isso para quem mira a caixa. O original
+ * não declara tamanho; aqui ele é declarado, e a varredura de toque fixa a
+ * medida.
  */
 export function Checkbox({
   id,
@@ -234,7 +240,7 @@ export function Checkbox({
         <input
           type="checkbox"
           id={id}
-          className="rounded border-2 border-[var(--color-brand-purple-dark)]/10 text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0"
+          className="h-6 w-6 shrink-0 rounded border-2 border-[var(--color-brand-purple-dark)]/10 text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0"
           {...rest}
         />
         {label}

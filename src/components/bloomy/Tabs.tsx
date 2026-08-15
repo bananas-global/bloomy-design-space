@@ -123,7 +123,7 @@ export function ButtonTabs<T extends string>({
               disabled={tab.disabled}
               onClick={() => onChange(tab.id)}
               className={[
-                "relative cursor-pointer whitespace-nowrap rounded-md font-bold text-[var(--color-brand-purple-dark)]/60 transition-all",
+                "relative cursor-pointer whitespace-nowrap rounded-md font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
                 "disabled:cursor-not-allowed disabled:text-[var(--color-neutral-300)]",
                 size === "normal" ? "px-4 py-2.5 text-lg" : "px-2 py-1.5 text-base",
