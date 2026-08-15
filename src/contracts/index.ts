@@ -2820,3 +2820,220 @@ export interface Handover {
 export interface HandoverData {
   handovers: Handover[];
 }
+
+/* ================================================================== *
+ * Documentação — a pasta que decide quem pode atender por qual convênio
+ * ================================================================== */
+
+/**
+ * O escopo do documento decide quem o mantém.
+ *
+ * Os três escopos existem no mesmo painel e **não** têm o mesmo dono. O escopo
+ * profissional é do próprio cadastro do profissional, e é o único que a
+ * operadora enxerga. Interno e ocupacional são da clínica: contrato, termos e
+ * ASO nunca são compartilhados com convênio, e por isso não entram em nenhuma
+ * conta de credenciamento.
+ */
+export type DocumentScope = "professional" | "internal" | "occupational" | "unit";
+
+/**
+ * Situação de um documento.
+ *
+ * Seis valores, e nenhum deles é armazenado: todos saem da validade contra a
+ * data de referência. Guardar a situação criaria o pior defeito possível numa
+ * pasta de documentos — um papel vencido que continua dizendo "válido" porque
+ * ninguém rodou o recálculo.
+ *
+ * `no_expiry` é separado de `valid` de propósito. Os dois são aceitáveis, mas
+ * só um deles volta a exigir atenção algum dia, e a diferença muda o que a
+ * pessoa faz com a linha.
+ */
+export type DocumentState =
+  | "valid"
+  | "no_expiry"
+  | "expiring"
+  | "expired"
+  | "missing"
+  | "waived";
+
+/**
+ * Um tipo de documento do catálogo.
+ *
+ * `standard` e `required` são coisas diferentes e é fácil confundi-las.
+ * `standard` diz que o tipo **aparece como lacuna** mesmo sem arquivo — a pasta
+ * mostra o buraco. `required` diz que ele **conta na completude**. Há tipo
+ * padrão que não é obrigatório (a carteirinha do conselho aparece vazia e não
+ * derruba o percentual) e o contrário não existe.
+ */
+export interface DocumentType {
+  id: string;
+  scope: DocumentScope;
+  /** Nome por extenso, o que a pessoa lê no formulário. */
+  name: string;
+  /** Abreviação para cabeçalho de matriz, onde não cabe o nome. */
+  short: string;
+  standard: boolean;
+  required: boolean;
+  /** Se falso, um documento deste tipo nunca vence. */
+  expires: boolean;
+  icon: string;
+  hint: string;
+}
+
+/** A operadora, do ponto de vista do credenciamento. */
+export interface DocumentInsurer {
+  id: string;
+  name: string;
+  /** `particular` não credencia ninguém e não recebe documento. */
+  kind: "health_care" | "particular";
+  /** Tipos exigidos por esta operadora para credenciar um profissional. */
+  requires: string[];
+}
+
+/**
+ * Um documento do profissional.
+ *
+ * `file` ausente é o estado que mais engana: a linha existe, o tipo está
+ * escolhido, a validade está preenchida — e não há papel nenhum. Um documento
+ * sem arquivo não satisfaz exigência de operadora e não entra em exportação.
+ */
+export interface ProfessionalDocument {
+  id: string;
+  typeId: string;
+  name: string;
+  /** Número de inscrição ou do próprio documento, quando o tipo tem um. */
+  number?: string;
+  /** Nome do arquivo anexado. Ausente significa que não há anexo. */
+  file?: string;
+  updatedAt: string;
+  /** Ausente significa que o documento não vence. */
+  validUntil?: string;
+  /** Carga horária, quando o tipo é curso de ABA. */
+  hours?: number;
+  /** Abordagem certificada, quando o tipo é formação especial. */
+  training?: string;
+  /** Dispensado para este profissional: sai da conta de completude. */
+  waived?: boolean;
+  /** Com quais operadoras este documento foi compartilhado, e quando. */
+  sharedWith: { insurerId: string; at: string }[];
+}
+
+/**
+ * Situação do credenciamento de um profissional numa operadora.
+ *
+ * Três destes quatro são derivados dos documentos compartilhados. O quarto,
+ * `decredentialed`, é o único que uma pessoa digita — e é o único que o
+ * recálculo não pode desfazer.
+ */
+export type CredentialStatus =
+  | "not_credentialed"
+  | "in_credentialing"
+  | "credentialed"
+  | "decredentialed";
+
+export interface CredentialLink {
+  professionalId: string;
+  insurerId: string;
+  status: CredentialStatus;
+  /** Data em que o primeiro documento foi compartilhado. */
+  since: string;
+  /** Decisão registrada por uma pessoa. Blinda o vínculo do recálculo. */
+  manual: boolean;
+}
+
+/** O profissional, do ponto de vista da pasta de documentos. */
+export interface DocumentSubject {
+  id: string;
+  name: string;
+  specialty: string;
+  council?: string;
+  active: boolean;
+  /** Data de saída marcada. Presente e futura significa "em inativação". */
+  deactivationDate?: string;
+}
+
+/** A aba Documentos de um profissional. */
+export interface ProfessionalDocumentsData {
+  now: string;
+  professional: DocumentSubject;
+  documents: ProfessionalDocument[];
+  insurers: DocumentInsurer[];
+  links: CredentialLink[];
+}
+
+/** Uma linha da matriz de documentação da equipe. */
+export interface TeamDocumentationRow {
+  professional: DocumentSubject;
+  documents: ProfessionalDocument[];
+  links: CredentialLink[];
+}
+
+export interface TeamDocumentationData {
+  now: string;
+  rows: TeamDocumentationRow[];
+  insurers: DocumentInsurer[];
+}
+
+/**
+ * Um documento da unidade.
+ *
+ * `validFrom` não existe no documento do profissional e existe aqui porque
+ * alvará e licença são emitidos antes de passarem a valer. Sem esse campo, um
+ * documento que só vale no mês que vem aparece como se já valesse.
+ */
+export interface UnitDocument {
+  id: string;
+  typeId: string;
+  name: string;
+  responsible: string;
+  validFrom?: string;
+  validUntil?: string;
+  updatedAt: string;
+  file?: string;
+  sharedWith: string[];
+}
+
+export interface UnitDocumentsData {
+  now: string;
+  unit: Unit;
+  city: string;
+  documents: UnitDocument[];
+  insurers: DocumentInsurer[];
+}
+
+/**
+ * Um paciente em atendimento com quem está saindo.
+ *
+ * A inativação de um profissional não é um campo de status: é a transferência
+ * desta lista. Enquanto ela não tiver destino, não há o que confirmar.
+ */
+export interface CaseloadEntry {
+  patientId: string;
+  patientName: string;
+  specialty: string;
+  weeklyHours: number;
+  monthlySessions: number;
+  unitName: string;
+}
+
+export interface DeactivationSubstitute {
+  id: string;
+  name: string;
+  specialty: string;
+  active: boolean;
+  /** Já tem saída marcada: não pode receber caseload de quem está saindo. */
+  deactivationDate?: string;
+}
+
+export interface ProfessionalDeactivationData {
+  now: string;
+  professional: DocumentSubject;
+  caseload: CaseloadEntry[];
+  substitutes: DeactivationSubstitute[];
+  /** Atendimentos já marcados depois da data de saída escolhida. */
+  scheduledAfter: number;
+  /** Atendimentos entre hoje e a data de saída. */
+  scheduledUntil: number;
+  /** Períodos que este profissional ocupa na escala de salas. */
+  roomPeriods: number;
+}

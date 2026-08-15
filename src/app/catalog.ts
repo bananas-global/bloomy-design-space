@@ -11,6 +11,12 @@ import { authorizationFixtures } from "../fixtures/authorizations.js";
 import { closureFixtures } from "../fixtures/closures.js";
 import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
+import {
+  professionalDocumentFixtures,
+  teamDocumentationFixtures,
+  unitDocumentFixtures,
+} from "../fixtures/documents.js";
+import { professionalDeactivationFixtures } from "../fixtures/professionalDeactivation.js";
 import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
@@ -81,6 +87,8 @@ import { authorizationRules, authorizationRenewalRules } from "../rules/authoriz
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
 import { teamRules } from "../rules/team.js";
+import { documentRules } from "../rules/documents.js";
+import { professionalDeactivationRules } from "../rules/professionalDeactivation.js";
 import { publicPortalRules } from "../rules/publicPortal.js";
 import { guardianPortalRules } from "../rules/guardianPortal.js";
 import { insurerPortalRules } from "../rules/insurerPortal.js";
@@ -106,6 +114,7 @@ import { authorizationScenarios } from "../scenarios/authorizations.js";
 import { closureScenarios } from "../scenarios/closures.js";
 import { invoiceScenarios } from "../scenarios/invoices.js";
 import { teamScenarios } from "../scenarios/team.js";
+import { documentScenarios } from "../scenarios/documents.js";
 import { publicPortalScenarios } from "../scenarios/publicPortal.js";
 import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
 import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
@@ -663,6 +672,60 @@ export const modules: Module[] = [
           },
         ],
       },
+      {
+        id: "keep-the-folder-in-order",
+        title: "Manter a documentação em dia",
+        description:
+          "O que faz alguém deixar de poder atender por um convênio — e por que três das quatro causas não parecem documentação.",
+        steps: [
+          { scenario: "team.docs-folder", label: "Abrir a pasta do profissional" },
+          {
+            scenario: "team.docs-expired-drops-credentialing",
+            label: "Ver o credenciamento cair sozinho",
+            decision: "Por que esta operadora não aceita mais este profissional?",
+            branches: {
+              "Um registro existe e não tem arquivo": "team.docs-registered-without-file",
+              "A operadora fechou o vínculo à mão": "team.docs-decredentialed-stays-closed",
+              "O documento só está perto de vencer": "team.docs-expiring-still-counts",
+              "É particular, e não credencia ninguém": "team.docs-particular-has-no-credentialing",
+            },
+          },
+        ],
+      },
+      {
+        id: "work-the-queue",
+        title: "Descobrir por quem começar",
+        description:
+          "Uma pasta por pessoa responde o que falta. A matriz responde a pergunta da segunda de manhã.",
+        steps: [
+          {
+            scenario: "team.docs-team-matrix",
+            label: "Ver a equipe ordenada por severidade",
+            decision: "Esta pendência é mesmo pendência?",
+            branches: {
+              "Foi dispensada, e sai da conta": "team.docs-waived-leaves-the-count",
+              "Quem atende não alcança esta tela": "team.docs-no-access",
+            },
+          },
+        ],
+      },
+      {
+        id: "deactivate-a-professional",
+        title: "Inativar um profissional",
+        description:
+          "A saída que deixa paciente sem responsável — a única etapa que não pode ser resolvida depois.",
+        steps: [
+          {
+            scenario: "team.deactivation-needs-a-destination",
+            label: "Marcar a saída e transferir o caseload",
+            decision: "E se a transferência não for o caminho?",
+            branches: {
+              "Cancelar as sessões": "team.deactivation-cancels-instead",
+              "Só mudar a data já marcada": "team.deactivation-edit-keeps-the-reason",
+            },
+          },
+        ],
+      },
     ],
   },
   {
@@ -768,6 +831,24 @@ export const modules: Module[] = [
               "Nenhuma sala do tipo": "structure.no-room-for-service",
               "Cadastro contraditório": "structure.impossible-service",
               "Horário bloqueado": "structure.blockings",
+            },
+          },
+        ],
+      },
+      {
+        id: "keep-the-unit-licensed",
+        title: "Manter a unidade licenciada",
+        description:
+          "Doze documentos, um só conjunto para todas as operadoras — e a conta que não perdoa o décimo segundo.",
+        steps: [
+          {
+            scenario: "structure.docs-unit-folder",
+            label: "Abrir a pasta da unidade",
+            decision: "O que segura o credenciamento desta unidade?",
+            branches: {
+              "Um documento venceu": "structure.docs-unit-credentialing-blocked",
+              "Um documento nunca foi anexado": "structure.docs-unit-missing-slot",
+              "A unidade acabou de abrir": "structure.docs-unit-empty",
             },
           },
         ],
@@ -1117,6 +1198,7 @@ export const scenarios: Scenario[] = [
   ...closureScenarios,
   ...invoiceScenarios,
   ...teamScenarios,
+  ...documentScenarios,
   ...publicPortalScenarios,
   ...guardianPortalScenarios,
   ...insurerPortalScenarios,
@@ -1165,6 +1247,10 @@ export const fixtures: Fixture[] = [
   ...closureFixtures,
   ...invoiceFixtures,
   ...teamFixtures,
+  ...professionalDocumentFixtures,
+  ...teamDocumentationFixtures,
+  ...unitDocumentFixtures,
+  ...professionalDeactivationFixtures,
   ...publicPortalFixtures,
   ...npsFixtures,
   ...guardianPortalFixtures,
@@ -1239,6 +1325,8 @@ export const rules: Rule[] = [
   ...closureRules,
   ...invoiceRules,
   ...teamRules,
+  ...documentRules,
+  ...professionalDeactivationRules,
   ...publicPortalRules,
   ...guardianPortalRules,
   ...insurerPortalRules,

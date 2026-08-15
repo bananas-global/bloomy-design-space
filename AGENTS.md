@@ -31,6 +31,13 @@ mudança e só então use `proposed`, seguindo o ciclo normal até aprovação e
 implementação. Em Listas gerenciais, por exemplo, as onze listas são `ported` e
 somente a reorganização da navegação é `approved`.
 
+A **documentação** — pasta do profissional, credenciamento em operadoras,
+documentação da equipe, inativação de profissional e pasta da unidade — são
+dezoito cenários `in-review`, reconstruídos a partir de um protótipo do Claude
+Design com os componentes do sistema. A decisão, com as três divergências da
+proposta que foram resolvidas e não reproduzidas, está em
+`docs/decisions/0014-documentacao-e-consequencia-e-nao-campo.md`.
+
 ## Comandos
 
 ```bash

@@ -24,10 +24,12 @@ própria.
 
 ## O que existe hoje
 
-286 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
-exceção. Desses, 285 formam a **referência portada e ainda não validada**; a única
+304 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
+exceção. Desses, 285 formam a **referência portada e ainda não validada**; uma
 mudança aprovada reorganiza as abas de Listas gerenciais sem alterar o conteúdo
-das onze listas existentes.
+das onze listas existentes; e dezoito são a **documentação, em revisão** —
+pasta do profissional, credenciamento em operadoras, documentação da equipe,
+inativação de profissional e pasta da unidade.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
 porte — o que foi traduzido de onde, e treze achados sobre o sistema real — está
@@ -69,7 +71,9 @@ O baseline de 285 está com status `ported` (**Portado — não validado**). Qua
 um tema entra no fluxo real de design, ele passa para `proposed` ou ganha um novo
 cenário; só depois da validação de negócio pode chegar a `approved`. Listas
 gerenciais concluiu esse caminho com um único cenário aprovado para reorganizar
-a navegação.
+a navegação. A documentação está em `in-review`, aguardando validação de
+negócio — a decisão está em
+[`docs/decisions/0014-documentacao-e-consequencia-e-nao-campo.md`](docs/decisions/0014-documentacao-e-consequencia-e-nao-campo.md).
 
 Referência `ported` é arquivo histórico e **não entra na suíte automatizada**.
 Playwright, axe e as varreduras de layout percorrem somente cenários de trabalho

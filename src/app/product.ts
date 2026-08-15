@@ -60,6 +60,10 @@ import { LeadIntegrations } from "../screens/LeadIntegrations.js";
 import { LeadDashboard } from "../screens/LeadDashboard.js";
 import { LeadTasks } from "../screens/LeadTasks.js";
 import { Reports } from "../screens/Reports.js";
+import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
+import { TeamDocumentation } from "../screens/TeamDocumentation.js";
+import { ProfessionalDeactivation } from "../screens/ProfessionalDeactivation.js";
+import { UnitDocuments } from "../screens/UnitDocuments.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -114,7 +118,6 @@ export const productDefinition: ProductDefinition = {
     { path: "/structure/today", screen: guard(TodayInUtc) },
     { path: "/public/auto-checkin", screen: guard(AutoCheckin) },
     { path: "/guardian/plan-signature", screen: guard(PlanSignature) },
-    { path: "/team/patient-scope", screen: guard(PatientScope) },
     { path: "/agenda/handovers", screen: guard(Handover) },
     { path: "/sessions/meeting-summary", screen: guard(MeetingSummary) },
     { path: "/closures/tiss-batch", screen: guard(TissBatch) },
@@ -124,7 +127,13 @@ export const productDefinition: ProductDefinition = {
     { path: "/authorizations", screen: guard(AuthorizationHub) },
     { path: "/closures", screen: guard(Closures) },
     { path: "/invoices/:id", screen: guard(HealthcareInvoiceScreen) },
+    // Literais antes da paramétrica, como em `/patients`.
+    { path: "/team/documentation", screen: guard(TeamDocumentation) },
+    { path: "/team/patient-scope", screen: guard(PatientScope) },
+    { path: "/team/:id/documents", screen: guard(ProfessionalDocuments) },
+    { path: "/team/:id/deactivate", screen: guard(ProfessionalDeactivation) },
     { path: "/team", screen: guard(Team) },
+    { path: "/structure/documents", screen: guard(UnitDocuments) },
     { path: "/kiosk", screen: guard(Kiosk) },
     { path: "/nps", screen: guard(Nps) },
     { path: "/guardian", screen: guard(GuardianPortal) },
