@@ -388,7 +388,7 @@ function wrap(
         inativacao ? `Inativar ${inativacao.professional.name}` : "Inativar profissional"
       }
       breadcrumb={[
-        { label: "Equipe", path: "/team" },
+        { label: "Profissionais", path: "/team" },
         { label: inativacao?.professional.name ?? "Profissional" },
         { label: "Inativação" },
       ]}

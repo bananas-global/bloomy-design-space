@@ -426,6 +426,14 @@ export const INSURERS: DocumentInsurer[] = [
 /* ============================================================== pessoas */
 
 const marina: DocumentSubject = {
+  types: ["Terapeuta", "Aplicador"],
+  formation: "Psicologia (CRP)",
+  phone: "(11) 99873-9084",
+  email: "marina.okabe@bloomy.com.br",
+  patients: 3,
+  weeklyHours: 30,
+  occupancy: "10.0",
+  absences: 0,
   id: "prof-marina",
   name: "Marina Okabe",
   specialty: "Aplicador ABA",
@@ -434,6 +442,14 @@ const marina: DocumentSubject = {
 };
 
 const clara: DocumentSubject = {
+  types: ["Supervisor", "Especialista"],
+  formation: "Psicologia (CRP)",
+  phone: "(11) 99873-1120",
+  email: "clara.vidigal@bloomy.com.br",
+  patients: 6,
+  weeklyHours: 24,
+  occupancy: "62.0",
+  absences: 1,
   id: "prof-clara",
   name: "Clara Vidigal",
   specialty: "Psicologia",
@@ -442,6 +458,14 @@ const clara: DocumentSubject = {
 };
 
 const rui: DocumentSubject = {
+  types: ["Especialista"],
+  formation: "Fonoaudiologia (CRF)",
+  phone: "(11) 99873-4471",
+  email: "rui.sampaio@bloomy.com.br",
+  patients: 4,
+  weeklyHours: 20,
+  occupancy: "48.0",
+  absences: 0,
   id: "prof-rui",
   name: "Rui Sampaio Neto",
   specialty: "Fonoaudiologia",
@@ -450,6 +474,14 @@ const rui: DocumentSubject = {
 };
 
 const helena: DocumentSubject = {
+  types: ["Terapeuta"],
+  formation: "Terapia Ocupacional (CREFITO)",
+  phone: "(11) 99873-2205",
+  email: "helena.braga@bloomy.com.br",
+  patients: 2,
+  weeklyHours: 16,
+  occupancy: "33.0",
+  absences: 2,
   id: "prof-incompleto",
   name: "Helena Braga",
   specialty: "Terapia Ocupacional",
@@ -458,6 +490,14 @@ const helena: DocumentSubject = {
 };
 
 const denise: DocumentSubject = {
+  types: ["Terapeuta"],
+  formation: "Outros",
+  phone: "(11) 99873-7788",
+  email: "denise.portela@bloomy.com.br",
+  patients: 3,
+  weeklyHours: 12,
+  occupancy: "25.0",
+  absences: 0,
   id: "prof-saindo",
   name: "Denise Portela",
   specialty: "Musicoterapia",

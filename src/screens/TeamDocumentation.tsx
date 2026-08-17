@@ -6,9 +6,11 @@ import type {
   TeamDocumentationData,
   TeamDocumentationRow,
 } from "../contracts/index.js";
+import { formatDate } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
 import { Icon } from "../components/Icon.js";
 import { EmptyState, ErrorState, LoadingState } from "../components/primitives.js";
+import { Button } from "../components/bloomy/Button.js";
 import { Card } from "../components/bloomy/Card.js";
 import { EmptyStateCard, Progress, SectionHeader } from "../components/bloomy/Layout.js";
 import { Tag } from "../components/bloomy/Tag.js";
@@ -16,7 +18,9 @@ import {
   INTERNAL_DOCUMENT_TYPES,
   PROFESSIONAL_DOCUMENT_TYPES,
 } from "../fixtures/documents.js";
+import { professionalStatus } from "../rules/professionalDeactivation.js";
 import {
+  daysUntil,
   completeness,
   credentialStatus,
   documentState,
@@ -141,6 +145,48 @@ function Rollup({
   );
 }
 
+function Nome({
+  pessoa,
+  hoje,
+  locale,
+}: {
+  pessoa: TeamDocumentationRow["professional"];
+  hoje: string;
+  locale: string | undefined;
+}) {
+  const situacao = professionalStatus(pessoa, hoje);
+  const dias = pessoa.deactivationDate ? daysUntil(pessoa.deactivationDate, hoje) : undefined;
+
+  return (
+    <div className="flex items-start gap-2">
+      <span
+        aria-hidden="true"
+        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+          situacao === "active"
+            ? "bg-[var(--color-brand-green)]"
+            : situacao === "deactivating"
+              ? "bg-[var(--color-brand-orange)]"
+              : "bg-[var(--color-red)]"
+        }`}
+      />
+      <span className="min-w-0">
+        {pessoa.name}
+        {pessoa.tbd && <Etiqueta item="TBD" variant="yellow" className="ml-2" />}
+        {situacao === "deactivating" && pessoa.deactivationDate && (
+          <span className="block text-sm font-normal text-[var(--color-orange-dark)]">
+            <Icon name="fa-arrow-right-from-bracket" className="mr-1" />
+            Em inativação · sai {formatDate(pessoa.deactivationDate, locale)} ·{" "}
+            {dias === 0 ? "hoje" : `${dias} ${dias === 1 ? "dia" : "dias"}`}
+          </span>
+        )}
+        {situacao === "inactive" && (
+          <span className="block text-sm font-normal text-[var(--fg-2)]">Inativo</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 function Conteudo({
   context,
   documentacao,
@@ -149,6 +195,7 @@ function Conteudo({
   documentacao: TeamDocumentationData;
 }) {
   const hoje = documentacao.now.slice(0, 10);
+  const [visao, setVisao] = useState<"lista" | "docs">("docs");
   const [filtro, setFiltro] = useState("");
 
   const linhas = useMemo(() => {
@@ -173,7 +220,15 @@ function Conteudo({
       <SectionHeader
         variant="default"
         actions={
-          <Toggle ativo="docs" pendencias={comPendencia} />
+          <div className="flex flex-wrap items-center gap-3">
+            <Toggle ativo={visao} pendencias={comPendencia} onChange={setVisao} />
+            <Button className="espelho-do-sistema" variant="tint" rightIcon="fa-file-arrow-down">
+              Controle de horas
+            </Button>
+            <Button className="espelho-do-sistema" rightIcon="fa-plus">
+              Novo profissional
+            </Button>
+          </div>
         }
       >
         Profissionais
@@ -183,7 +238,11 @@ function Conteudo({
         type="search"
         value={filtro}
         onChange={(event) => setFiltro(event.target.value)}
-        placeholder="Filtrar por nome, especialidade, situação do documento ou categoria (Profissional, Interno, Ocupacional, Operadoras)"
+        placeholder={
+          visao === "docs"
+            ? "Filtrar por nome, especialidade, situação do documento ou categoria (Profissional, Interno, Ocupacional, Operadoras)"
+            : "Filtrar por nome, conselho, especialidade, tipo, formação ou status — Enter para fixar"
+        }
         aria-label="Filtrar a documentação da equipe"
         className="w-full rounded-lg border border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/5 px-4 py-3 text-sm text-[var(--color-brand-purple-dark)] placeholder:text-[var(--fg-2)]"
       />
@@ -193,13 +252,24 @@ function Conteudo({
           <thead>
             <tr className="border-b border-[var(--color-brand-purple-dark)]/10 text-left">
               <th className="px-3 py-3">Nome</th>
-              <th className="px-3 py-3">Completude</th>
-              {ESCOPOS.map((escopo) => (
-                <th key={escopo.id} className="px-3 py-3">
-                  {escopo.label}
-                </th>
-              ))}
-              <th className="px-3 py-3">Operadoras</th>
+              {visao === "lista" ? (
+                <>
+                  <th className="px-3 py-3">Especialidade</th>
+                  <th className="px-3 py-3">Conselho</th>
+                  <th className="px-3 py-3">Tipo</th>
+                  <th className="px-3 py-3">Formação em Saúde</th>
+                </>
+              ) : (
+                <>
+                  <th className="px-3 py-3">Completude</th>
+                  {ESCOPOS.map((escopo) => (
+                    <th key={escopo.id} className="px-3 py-3">
+                      {escopo.label}
+                    </th>
+                  ))}
+                  <th className="px-3 py-3">Operadoras</th>
+                </>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -226,12 +296,28 @@ function Conteudo({
                   className="border-b border-[var(--color-brand-purple-dark)]/10 last:border-0"
                 >
                   <th scope="row" className="px-3 py-4 text-left font-bold text-[var(--color-brand-purple-dark)]">
-                    {linha.professional.name}
-                    <span className="block text-sm font-normal text-[var(--fg-2)]">
-                      {linha.professional.specialty}
-                    </span>
+                    <Nome pessoa={linha.professional} hoje={hoje} locale={context.locale} />
                   </th>
 
+                  {visao === "lista" ? (
+                    <>
+                      <td className="px-3 py-4">
+                        <Etiqueta item={linha.professional.specialty} variant="light-blue" />
+                      </td>
+                      <td className="px-3 py-4">{linha.professional.council ?? "—"}</td>
+                      <td className="px-3 py-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(linha.professional.types ?? []).map((tipo) => (
+                            <Etiqueta key={tipo} item={tipo} variant="light-blue" />
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <Etiqueta item={linha.professional.formation ?? "Outros"} variant="light-blue" />
+                      </td>
+                    </>
+                  ) : (
+                  <>
                   <td className="w-40 px-3 py-4">
                     <span className="sr-only">
                       {completude.met} de {completude.required} obrigatórios cumpridos
@@ -270,6 +356,8 @@ function Conteudo({
                       )}
                     </div>
                   </td>
+                  </>
+                  )}
                 </tr>
               );
             })}
@@ -294,9 +382,11 @@ function Conteudo({
 export function Toggle({
   ativo,
   pendencias,
+  onChange,
 }: {
   ativo: "lista" | "docs";
   pendencias?: number;
+  onChange?: (visao: "lista" | "docs") => void;
 }) {
   const base =
     "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors";
@@ -307,9 +397,10 @@ export function Toggle({
       role="group"
       aria-label="Visualização da lista"
     >
-      <a
-        href="/team"
-        aria-current={ativo === "lista" ? "page" : undefined}
+      <button
+        type="button"
+        onClick={() => onChange?.("lista")}
+        aria-pressed={ativo === "lista"}
         className={`${base} ${
           ativo === "lista"
             ? "bg-white text-[var(--color-brand-purple-dark)] shadow-[var(--shadow-main)]"
@@ -318,10 +409,11 @@ export function Toggle({
       >
         <Icon name="fa-users" />
         Profissionais
-      </a>
-      <a
-        href="/team/documentation"
-        aria-current={ativo === "docs" ? "page" : undefined}
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange?.("docs")}
+        aria-pressed={ativo === "docs"}
         className={`${base} ${
           ativo === "docs"
             ? "bg-white text-[var(--color-brand-purple-dark)] shadow-[var(--shadow-main)]"
@@ -335,7 +427,7 @@ export function Toggle({
             {pendencias}
           </span>
         )}
-      </a>
+      </button>
     </div>
   );
 }
@@ -354,7 +446,7 @@ function wrap(
           ? `${documentacao.rows.length} ${documentacao.rows.length === 1 ? "profissional" : "profissionais"}`
           : undefined
       }
-      breadcrumb={[{ label: "Equipe", path: "/team" }, { label: "Documentação" }]}
+      breadcrumb={[{ label: "Profissionais", path: "/team" }, { label: "Documentação" }]}
       showPageHeading={false}
     >
       {children}

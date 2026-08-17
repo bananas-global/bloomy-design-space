@@ -650,7 +650,7 @@ export const modules: Module[] = [
   },
   {
     id: "team",
-    name: "Equipe",
+    name: "Profissionais",
     description:
       "Quem trabalha na clínica — e as decisões deste cadastro que aparecem no atendimento e no fechamento.",
     flows: [
@@ -709,19 +709,6 @@ export const modules: Module[] = [
         ],
       },
       {
-        id: "insurer-side",
-        title: "Ver a documentação pelo lado da operadora",
-        description: "A mesma pasta, com a pergunta invertida: quem desta clínica eu aceito.",
-        steps: [
-          {
-            scenario: "insurer.docs-professionals",
-            label: "Abrir a ficha da operadora",
-            decision: "E as unidades?",
-            branches: { "Credenciamento por endereço": "insurer.docs-units" },
-          },
-        ],
-      },
-      {
         id: "deactivate-a-professional",
         title: "Inativar um profissional",
         description:
@@ -735,6 +722,27 @@ export const modules: Module[] = [
               "Cancelar as sessões": "team.deactivation-cancels-instead",
               "Só mudar a data já marcada": "team.deactivation-edit-keeps-the-reason",
             },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "health-cares",
+    name: "Operadoras",
+    description:
+      "O convênio pelo lado da clínica: quem está credenciado, o que falta e quais unidades ele aceita.",
+    flows: [
+      {
+        id: "who-the-insurer-accepts",
+        title: "Ver quem a operadora aceita",
+        description: "A mesma pasta de documentos, com a pergunta invertida.",
+        steps: [
+          {
+            scenario: "health-cares.docs-professionals",
+            label: "Abrir a ficha da operadora",
+            decision: "E as unidades?",
+            branches: { "Credenciamento por endereço": "health-cares.docs-units" },
           },
         ],
       },
@@ -825,7 +833,7 @@ export const modules: Module[] = [
   },
   {
     id: "structure",
-    name: "Estrutura",
+    name: "Unidades",
     description:
       "Salas, serviços e bloqueios: a camada física que a agenda esbarra e que nenhuma tela de agendamento mostra.",
     flows: [

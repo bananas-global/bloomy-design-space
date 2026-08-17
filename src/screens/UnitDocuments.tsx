@@ -411,7 +411,7 @@ function wrap(
       context={context}
       title={pasta ? `Documentos · ${pasta.unit.name}` : "Documentos da unidade"}
       subtitle={pasta?.city}
-      breadcrumb={[{ label: "Estrutura", path: "/structure" }, { label: "Documentos" }]}
+      breadcrumb={[{ label: "Unidades", path: "/structure" }, { label: "Documentos" }]}
       showPageHeading={false}
     >
       {children}

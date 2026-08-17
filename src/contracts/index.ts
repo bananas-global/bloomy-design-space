@@ -2947,6 +2947,18 @@ export interface DocumentSubject {
   name: string;
   specialty: string;
   council?: string;
+  /** Papéis por unidade, como aparecem na coluna Tipo. */
+  types?: string[];
+  /** Formação em saúde, com o conselho entre parênteses. */
+  formation?: string;
+  phone?: string;
+  email?: string;
+  patients?: number;
+  weeklyHours?: number;
+  occupancy?: string;
+  absences?: number;
+  /** Espaço reservado na agenda. */
+  tbd?: boolean;
   active: boolean;
   /** Data de saída marcada. Presente e futura significa "em inativação". */
   deactivationDate?: string;

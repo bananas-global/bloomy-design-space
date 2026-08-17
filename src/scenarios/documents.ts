@@ -252,7 +252,7 @@ export const documentScenarios: Scenario[] = [
     tags: ["exceção"],
   },
   {
-    id: "insurer.docs-professionals",
+    id: "health-cares.docs-professionals",
     title: "A clínica vista pela operadora",
     intent:
       "Mostrar quem a operadora aceita hoje, quem falta documento e quais unidades ela credencia.",
@@ -268,7 +268,7 @@ export const documentScenarios: Scenario[] = [
     tags: ["lista"],
   },
   {
-    id: "insurer.docs-units",
+    id: "health-cares.docs-units",
     title: "As unidades que a operadora credencia",
     intent: "Ver o credenciamento pelo endereço, e não pela pessoa.",
     route: "/insurers/bradesco/documents",
@@ -276,8 +276,11 @@ export const documentScenarios: Scenario[] = [
     fixture: "docs-insurer-bradesco",
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    expected: ["Cada unidade mostra documentos compartilhados, pendências e credenciamento."],
-    tags: ["lista"],
+    expected: [
+      "Cada unidade mostra documentos compartilhados, pendências e credenciamento.",
+      "Unidade sem nenhum documento compartilhado aparece como não credenciada, e não como pendente.",
+    ],
+    tags: ["lista", "exceção"],
   },
   {
     id: "structure.docs-unit-folder",

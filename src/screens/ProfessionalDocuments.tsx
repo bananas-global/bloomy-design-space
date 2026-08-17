@@ -14,10 +14,9 @@ import { EmptyState, ErrorState, LoadingState } from "../components/primitives.j
 import { Button } from "../components/bloomy/Button.js";
 import { Card } from "../components/bloomy/Card.js";
 import { Checkbox, Input, Select } from "../components/bloomy/Input.js";
-import { EmptyStateCard, SectionHeader } from "../components/bloomy/Layout.js";
+import { Avatar, EmptyStateCard, SectionHeader } from "../components/bloomy/Layout.js";
 import { DrawerModal, Modal } from "../components/bloomy/Overlay.js";
 import { Table, type Coluna } from "../components/bloomy/Table.js";
-import { ButtonTabs } from "../components/bloomy/Tabs.js";
 import { Tag } from "../components/bloomy/Tag.js";
 import { PROFESSIONAL_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
@@ -35,6 +34,7 @@ import {
   isTypeLocked,
   missingForInsurer,
 } from "../rules/documents.js";
+import { professionalStatus } from "../rules/professionalDeactivation.js";
 
 /**
  * A pasta de documentos de um profissional.
@@ -218,6 +218,7 @@ function Conteudo({
   return wrap(
     context,
     <div className="space-y-6">
+      <CabecalhoDoPerfil pessoa={pasta.professional} hoje={hoje} locale={locale} />
       <AbasDoPerfil />
 
       <Card className="space-y-6">
@@ -367,40 +368,121 @@ function Conteudo({
 /* ================================================================= abas */
 
 /**
- * As abas do perfil, com o recorte desta entrega dito por extenso.
+ * Cabeçalho do perfil: avatar, nome, badges e a linha de metadados.
  *
- * Renderizar só a aba especificada esconderia a arquitetura da informação de
- * quem vai implementar; renderizar as outras como se funcionassem seria mentira.
- * Elas aparecem inativas, e a nota diz por quê.
+ * É o que diz ao desenvolvedor onde a aba mora — sem ele, a tela de documentos
+ * flutua e ninguém sabe de quem ela é.
  */
-function AbasDoPerfil() {
+function CabecalhoDoPerfil({
+  pessoa,
+  hoje,
+  locale,
+}: {
+  pessoa: ProfessionalDocumentsData["professional"];
+  hoje: string;
+  locale: string | undefined;
+}) {
+  const situacao = professionalStatus(pessoa, hoje);
+
+  const badge =
+    situacao === "inactive"
+      ? { item: "Inativo", variant: "red" as const, icon: "fa-circle-xmark" }
+      : situacao === "deactivating" && pessoa.deactivationDate
+        ? {
+            item: `Inativação em ${formatDate(pessoa.deactivationDate, locale)}`,
+            variant: "yellow" as const,
+            icon: "fa-clock",
+          }
+        : { item: "Ativo", variant: "green" as const, icon: "fa-circle-check" };
+
+  const meta = [
+    pessoa.phone && { icon: "fa-phone", texto: pessoa.phone },
+    pessoa.email && { icon: "fa-envelope", texto: pessoa.email },
+    { icon: "fa-users", texto: `${pessoa.patients ?? 0} pacientes` },
+    { icon: "fa-clock", texto: `${pessoa.weeklyHours ?? 0}h semanais` },
+    { icon: "fa-chart-pie", texto: `${pessoa.occupancy ?? "0.0"}% de ocupação` },
+    { icon: "fa-calendar-xmark", texto: `${pessoa.absences ?? 0} faltas` },
+  ].filter(Boolean) as { icon: string; texto: string }[];
+
   return (
-    <div>
-      <ButtonTabs
-        className="espelho-do-sistema"
-        id="abas-do-profissional"
-        label="Perfil do profissional"
-        value="documents"
-        onChange={() => undefined}
-        tabs={[
-          { id: "personal", label: "Dados Pessoais", disabled: true },
-          { id: "units", label: "Unidades", disabled: true },
-          { id: "agenda", label: "Escala", disabled: true },
-          { id: "services", label: "Serviços", disabled: true },
-          { id: "blockings", label: "Bloqueios", disabled: true },
-          { id: "hired", label: "Contratação", disabled: true },
-          { id: "appointments", label: "Atendimentos", disabled: true },
-          { id: "bond", label: "Vínculo", disabled: true },
-          { id: "documents", label: "Documentos" },
-          { id: "hours", label: "Controle de Horas", disabled: true },
-          { id: "presence", label: "Controle de Presença", disabled: true },
-        ]}
-      >
-        <p className="m-0 text-sm text-[var(--fg-2)]">
-          Esta entrega especifica apenas a aba Documentos. As demais são as abas existentes do
-          perfil e aparecem aqui para preservar a ordem, sem mudança de comportamento.
-        </p>
-      </ButtonTabs>
+    <Card className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Avatar title={pessoa.name} size="large" />
+          <div>
+            <h1 className="m-0 text-2xl font-bold text-[var(--color-brand-purple-dark)]">
+              {pessoa.name}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Etiqueta item={badge.item} variant={badge.variant} icon={badge.icon} />
+              <Etiqueta item={pessoa.specialty} variant="light-blue" icon="fa-stethoscope" />
+              {pessoa.council && <Etiqueta item={pessoa.council} variant="brand" />}
+            </div>
+          </div>
+        </div>
+        <Button className="espelho-do-sistema" variant="ghost" aria-label="Mais ações">
+          <Icon name="fa-ellipsis-vertical" />
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--fg-2)]">
+        {meta.map((item) => (
+          <span key={item.texto}>
+            <Icon name={item.icon} className="mr-2" />
+            {item.texto}
+          </span>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+/** As abas do perfil, sublinhadas como no sistema. */
+function AbasDoPerfil() {
+  const abas = [
+    "Dados Pessoais",
+    "Unidades",
+    "Escala",
+    "Serviços",
+    "Bloqueios",
+    "Contratação",
+    "Atendimentos",
+    "Vínculo",
+    "Documentos",
+    "Controle de Horas",
+    "Controle de Presença",
+  ];
+
+  return (
+    <div className="border-b border-[var(--color-brand-purple-dark)]/10">
+      <div className="flex gap-6 overflow-x-auto" role="tablist" aria-label="Perfil do profissional">
+        {abas.map((aba) => {
+          const ativa = aba === "Documentos";
+          return (
+            <button
+              key={aba}
+              type="button"
+              role="tab"
+              aria-selected={ativa}
+              disabled={!ativa}
+              className={[
+                "whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-bold transition-colors",
+                ativa
+                  ? "border-[var(--color-brand-blue)] text-[var(--color-brand-blue-dark)]"
+                  : "border-transparent text-[var(--fg-2)]",
+              ].join(" ")}
+            >
+              {aba}
+              {(aba === "Dados Pessoais" || aba === "Vínculo") && (
+                <Icon name="fa-chevron-down" className="ml-2 text-xs" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+      <p className="m-0 pt-3 text-sm text-[var(--fg-2)]">
+        Esta entrega especifica apenas a aba Documentos. As demais são as abas existentes do perfil.
+      </p>
     </div>
   );
 }
@@ -1100,7 +1182,7 @@ function wrap(
           : undefined
       }
       breadcrumb={[
-        { label: "Equipe", path: "/team" },
+        { label: "Profissionais", path: "/team" },
         { label: pasta?.professional.name ?? "Profissional" },
         { label: "Documentos" },
       ]}
