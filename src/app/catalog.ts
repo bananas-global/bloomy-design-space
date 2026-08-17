@@ -675,55 +675,17 @@ export const modules: Module[] = [
         id: "keep-the-folder-in-order",
         title: "Manter a documentação em dia",
         description:
-          "O que faz alguém deixar de poder atender por um convênio — e por que três das quatro causas não parecem documentação.",
+          "Da pasta de uma pessoa à fila da equipe inteira. As variações de cada tela ficam no seletor de dados.",
         steps: [
           { scenario: "team.docs-folder", label: "Abrir a pasta do profissional" },
-          {
-            scenario: "team.docs-expired-drops-credentialing",
-            label: "Ver o credenciamento cair sozinho",
-            decision: "Por que esta operadora não aceita mais este profissional?",
-            branches: {
-              "Um registro existe e não tem arquivo": "team.docs-registered-without-file",
-              "A operadora fechou o vínculo à mão": "team.docs-decredentialed-stays-closed",
-              "O documento só está perto de vencer": "team.docs-expiring-still-counts",
-              "É particular, e não credencia ninguém": "team.docs-particular-has-no-credentialing",
-            },
-          },
-        ],
-      },
-      {
-        id: "work-the-queue",
-        title: "Descobrir por quem começar",
-        description:
-          "Uma pasta por pessoa responde o que falta. A matriz responde a pergunta da segunda de manhã.",
-        steps: [
-          {
-            scenario: "team.docs-team-matrix",
-            label: "Ver a documentação da equipe",
-            decision: "Esta pendência é mesmo pendência?",
-            branches: {
-              "Foi dispensada, e sai da conta": "team.docs-waived-leaves-the-count",
-              "Quem atende não alcança esta tela": "team.docs-no-access",
-            },
-          },
+          { scenario: "team.docs-team-matrix", label: "Ver a documentação da equipe" },
         ],
       },
       {
         id: "deactivate-a-professional",
         title: "Inativar um profissional",
-        description:
-          "A saída que deixa paciente sem responsável — a única etapa que não pode ser resolvida depois.",
-        steps: [
-          {
-            scenario: "team.deactivation-needs-a-destination",
-            label: "Marcar a saída e transferir o caseload",
-            decision: "E se a transferência não for o caminho?",
-            branches: {
-              "Cancelar as sessões": "team.deactivation-cancels-instead",
-              "Só mudar a data já marcada": "team.deactivation-edit-keeps-the-reason",
-            },
-          },
-        ],
+        description: "A saída que deixa paciente sem responsável.",
+        steps: [{ scenario: "team.deactivation", label: "Marcar a saída e definir o destino" }],
       },
     ],
   },
@@ -737,14 +699,7 @@ export const modules: Module[] = [
         id: "who-the-insurer-accepts",
         title: "Ver quem a operadora aceita",
         description: "A mesma pasta de documentos, com a pergunta invertida.",
-        steps: [
-          {
-            scenario: "health-cares.docs-professionals",
-            label: "Abrir a ficha da operadora",
-            decision: "E as unidades?",
-            branches: { "Credenciamento por endereço": "health-cares.docs-units" },
-          },
-        ],
+        steps: [{ scenario: "health-cares.docs", label: "Abrir a ficha da operadora" }],
       },
     ],
   },
@@ -861,16 +816,7 @@ export const modules: Module[] = [
         description:
           "Doze documentos, um só conjunto para todas as operadoras — e a conta que não perdoa o décimo segundo.",
         steps: [
-          {
-            scenario: "structure.docs-unit-folder",
-            label: "Abrir a pasta da unidade",
-            decision: "O que segura o credenciamento desta unidade?",
-            branches: {
-              "Um documento venceu": "structure.docs-unit-credentialing-blocked",
-              "Um documento nunca foi anexado": "structure.docs-unit-missing-slot",
-              "A unidade acabou de abrir": "structure.docs-unit-empty",
-            },
-          },
+          { scenario: "structure.docs-unit", label: "Abrir a pasta da unidade" },
         ],
       },
     ],

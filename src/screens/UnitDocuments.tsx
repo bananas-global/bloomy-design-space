@@ -83,6 +83,16 @@ export function UnitDocuments({ context }: ScreenProps) {
  * `espelho-do-sistema` é como este repositório marca o que é cópia fiel para que
  * a varredura de acessibilidade não a leia como defeito desta entrega.
  */
+/** Selo "Padrão" dos cartões: cadeado antes do texto, com gap. */
+function SeloPadrao({ item = "Padrão" }: { item?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-purple-dark)]/10 px-2.5 py-0.5 text-sm font-bold text-[var(--fg-2)]">
+      <Icon name="fa-lock" type="solid" className="text-xs" />
+      {item}
+    </span>
+  );
+}
+
 function Etiqueta(props: React.ComponentProps<typeof Tag>) {
   return (
     <Tag
@@ -190,11 +200,9 @@ function Conteudo({
         <div>
           <p className="m-0 font-bold text-[var(--color-brand-purple-dark)]">
             {linha.nome}
-            {linha.standard ? (
-              <Etiqueta item="Padrão" variant="light-blue" className="ml-2" icon="fa-lock" />
-            ) : (
-              <Etiqueta item="Adicional" variant="brand" className="ml-2" />
-            )}
+            <span className="ml-2">
+              {linha.standard ? <SeloPadrao /> : <Etiqueta item="Adicional" variant="brand" />}
+            </span>
           </p>
           <p className="m-0 text-sm">
             <Icon name={hasFile(linha.doc) ? "fa-file-pdf" : "fa-file"} className="mr-2" />

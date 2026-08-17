@@ -17,6 +17,7 @@ import { Checkbox, Input, Select } from "../components/bloomy/Input.js";
 import { Avatar, EmptyStateCard, SectionHeader } from "../components/bloomy/Layout.js";
 import { DrawerModal, Modal } from "../components/bloomy/Overlay.js";
 import { Table, type Coluna } from "../components/bloomy/Table.js";
+import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
 import { Tag } from "../components/bloomy/Tag.js";
 import { PROFESSIONAL_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
@@ -219,7 +220,6 @@ function Conteudo({
     context,
     <div className="space-y-6">
       <CabecalhoDoPerfil pessoa={pasta.professional} hoje={hoje} locale={locale} />
-      <AbasDoPerfil />
 
       <Card className="space-y-6">
         <SectionHeader
@@ -373,6 +373,59 @@ function Conteudo({
  * É o que diz ao desenvolvedor onde a aba mora — sem ele, a tela de documentos
  * flutua e ninguém sabe de quem ela é.
  */
+/**
+ * Badge do cabeçalho do perfil.
+ *
+ * Não é `tag/1`: aquele é retangular e cola o ícone no texto. O cabeçalho do
+ * perfil usa pílula com ícone separado — `pc2-badge` no protótipo.
+ */
+/** Selo "Padrão" dos cartões: cadeado antes do texto, com gap. */
+function SeloPadrao() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-purple-dark)]/10 px-2.5 py-0.5 text-sm font-bold text-[var(--fg-2)]">
+      <Icon name="fa-lock" type="solid" className="text-xs" />
+      Padrão
+    </span>
+  );
+}
+
+/** Duas iniciais, como no cabeçalho do sistema. */
+function iniciais(nome: string): string {
+  return nome
+    .split(" ")
+    .filter((parte) => parte.length > 2)
+    .slice(0, 2)
+    .map((parte) => parte[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+function BadgeDoPerfil({
+  item,
+  tom,
+  icon,
+}: {
+  item: string;
+  tom: "green" | "red" | "yellow" | "blue" | "neutral";
+  icon?: string;
+}) {
+  const cores = {
+    green: "bg-[var(--color-brand-green)]/20 text-[var(--color-brand-green-dark)]",
+    red: "bg-[var(--color-red-light)] text-[var(--color-danger-fg)]",
+    yellow: "bg-[var(--color-yellow)]/20 text-[var(--color-yellow-dark)]",
+    blue: "bg-[var(--color-blue-light)] text-[var(--color-blue-dark)]",
+    neutral: "bg-[var(--color-brand-purple-dark)]/10 text-[var(--fg-2)]",
+  }[tom];
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${cores}`}
+    >
+      {item}
+      {icon && <Icon name={icon} />}
+    </span>
+  );
+}
+
 function CabecalhoDoPerfil({
   pessoa,
   hoje,
@@ -386,14 +439,14 @@ function CabecalhoDoPerfil({
 
   const badge =
     situacao === "inactive"
-      ? { item: "Inativo", variant: "red" as const, icon: "fa-circle-xmark" }
+      ? { item: "Inativo", tom: "red" as const, icon: "fa-circle-xmark" }
       : situacao === "deactivating" && pessoa.deactivationDate
         ? {
             item: `Inativação em ${formatDate(pessoa.deactivationDate, locale)}`,
-            variant: "yellow" as const,
+            tom: "yellow" as const,
             icon: "fa-clock",
           }
-        : { item: "Ativo", variant: "green" as const, icon: "fa-circle-check" };
+        : { item: "Ativo", tom: "green" as const, icon: "fa-circle-check" };
 
   const meta = [
     pessoa.phone && { icon: "fa-phone", texto: pessoa.phone },
@@ -408,15 +461,25 @@ function CabecalhoDoPerfil({
     <Card className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar title={pessoa.name} size="large" />
+          <div className="relative flex-shrink-0">
+            <Avatar
+              title={pessoa.name}
+              size="extra_large"
+              className="bg-[linear-gradient(135deg,#58bada,#7459e4)]"
+            />
+            <span className="absolute inset-0 flex items-center justify-center text-3xl font-extrabold text-white">
+              {iniciais(pessoa.name)}
+            </span>
+          </div>
           <div>
-            <h1 className="m-0 text-2xl font-bold text-[var(--color-brand-purple-dark)]">
+            <h2 className="m-0 text-[1.75rem] font-extrabold leading-tight text-[var(--color-brand-purple-dark)]">
               {pessoa.name}
-            </h1>
+            </h2>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Etiqueta item={badge.item} variant={badge.variant} icon={badge.icon} />
-              <Etiqueta item={pessoa.specialty} variant="light-blue" icon="fa-stethoscope" />
-              {pessoa.council && <Etiqueta item={pessoa.council} variant="brand" />}
+              <BadgeDoPerfil item={badge.item} tom={badge.tom} icon={badge.icon} />
+              <BadgeDoPerfil item={pessoa.specialty} tom="blue" icon="fa-stethoscope" />
+              {pessoa.council && <BadgeDoPerfil item={pessoa.council} tom="neutral" icon="fa-pen-to-square" />}
+              {pessoa.tbd && <BadgeDoPerfil item="TBD" tom="yellow" icon="fa-user-clock" />}
             </div>
           </div>
         </div>
@@ -425,7 +488,7 @@ function CabecalhoDoPerfil({
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--fg-2)]">
+      <div className="flex flex-wrap gap-x-[22px] gap-y-2 text-base text-[var(--fg-2)]">
         {meta.map((item) => (
           <span key={item.texto}>
             <Icon name={item.icon} className="mr-2" />
@@ -433,59 +496,58 @@ function CabecalhoDoPerfil({
           </span>
         ))}
       </div>
+
+      {/* A barra de abas mora no mesmo cartão do cabeçalho, colada nele. */}
+      <LazyTabs
+        className="espelho-do-sistema -mx-6 -mb-6 border-t border-[var(--color-brand-purple-dark)]/10 px-6"
+        id="abas-do-profissional"
+        label="Perfil do profissional"
+        tabs={ABAS}
+        value="documents"
+        onChange={() => undefined}
+        panelClassName="hidden"
+      >
+        {null}
+      </LazyTabs>
     </Card>
   );
 }
 
-/** As abas do perfil, sublinhadas como no sistema. */
-function AbasDoPerfil() {
-  const abas = [
-    "Dados Pessoais",
-    "Unidades",
-    "Escala",
-    "Serviços",
-    "Bloqueios",
-    "Contratação",
-    "Atendimentos",
-    "Vínculo",
-    "Documentos",
-    "Controle de Horas",
-    "Controle de Presença",
-  ];
-
-  return (
-    <div className="border-b border-[var(--color-brand-purple-dark)]/10">
-      <div className="flex gap-6 overflow-x-auto" role="tablist" aria-label="Perfil do profissional">
-        {abas.map((aba) => {
-          const ativa = aba === "Documentos";
-          return (
-            <button
-              key={aba}
-              type="button"
-              role="tab"
-              aria-selected={ativa}
-              disabled={!ativa}
-              className={[
-                "whitespace-nowrap border-b-2 px-1 pb-3 text-sm font-bold transition-colors",
-                ativa
-                  ? "border-[var(--color-brand-blue)] text-[var(--color-brand-blue-dark)]"
-                  : "border-transparent text-[var(--fg-2)]",
-              ].join(" ")}
-            >
-              {aba}
-              {(aba === "Dados Pessoais" || aba === "Vínculo") && (
-                <Icon name="fa-chevron-down" className="ml-2 text-xs" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-      <p className="m-0 pt-3 text-sm text-[var(--fg-2)]">
-        Esta entrega especifica apenas a aba Documentos. As demais são as abas existentes do perfil.
-      </p>
-    </div>
-  );
-}
+/**
+ * As abas do perfil.
+ *
+ * `lazy_tabs/1`, o mesmo componente do perfil do paciente e das listas
+ * gerenciais — é ele que traz os dois grupos com menu, Dados Pessoais e Vínculo.
+ */
+const ABAS: LazyTabEntry<string>[] = [
+  {
+    id: "personal",
+    label: "Dados Pessoais",
+    tabs: [
+      { id: "personal_info", label: "Dados Pessoais", disabled: true },
+      { id: "professional_data", label: "Dados Profissionais", disabled: true },
+      { id: "address", label: "Endereço", disabled: true },
+      { id: "company_info", label: "Dados PJ", disabled: true },
+    ],
+  },
+  { id: "units", label: "Unidades", disabled: true },
+  { id: "standard_agenda", label: "Escala", disabled: true },
+  { id: "services", label: "Serviços", disabled: true },
+  { id: "schedule_blockings", label: "Bloqueios", disabled: true },
+  { id: "hired_professionals", label: "Contratação", disabled: true },
+  { id: "appointments", label: "Atendimentos", disabled: true },
+  {
+    id: "bond",
+    label: "Vínculo",
+    tabs: [
+      { id: "patients", label: "Responsável Clínico", disabled: true },
+      { id: "supervisorship", label: "Supervisão", disabled: true },
+    ],
+  },
+  { id: "documents", label: "Documentos" },
+  { id: "hours_control", label: "Controle de Horas", disabled: true },
+  { id: "presence_control", label: "Controle de Presença", disabled: true },
+];
 
 /* ============================================================== cartões */
 
@@ -521,9 +583,7 @@ function Cartoes({
                   className="text-xl text-[var(--color-brand-blue)]"
                 />
                 <div className="flex flex-wrap justify-end gap-1.5">
-                  {linha.standard && (
-                    <Etiqueta item="Padrão" variant="light-blue" icon="fa-lock" title="Tipo padrão: o slot aparece mesmo sem arquivo" />
-                  )}
+                  {linha.standard && <SeloPadrao />}
                   <EtiquetaSituacao state={estado} days={dias} />
                 </div>
               </div>
@@ -633,7 +693,7 @@ function Tabela({
         <div>
           <p className="m-0 font-bold text-[var(--color-brand-purple-dark)]">
             {linha.doc?.name ?? linha.type.name}
-            {linha.standard && <Etiqueta item="Padrão" variant="light-blue" className="ml-2" icon="fa-lock" />}
+            {linha.standard && <span className="ml-2"><SeloPadrao /></span>}
           </p>
           <p className="m-0 text-sm">
             <Icon name={hasFile(linha.doc) ? "fa-file-pdf" : "fa-file"} className="mr-2" />
