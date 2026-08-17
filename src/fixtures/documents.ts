@@ -6,6 +6,7 @@ import type {
   DocumentType,
   ProfessionalDocument,
   ProfessionalDocumentsData,
+  InsurerDocumentsData,
   TeamDocumentationData,
   UnitDocument,
   UnitDocumentsData,
@@ -1113,6 +1114,34 @@ export const unitDocumentFixtures: Fixture<UnitDocumentsData>[] = [
     },
   },
 ];
+
+export const insurerDocumentFixtures: Fixture<InsurerDocumentsData>[] = INSURERS.filter(
+  (insurer) => insurer.kind !== "particular",
+).map((insurer) => ({
+  id: `docs-insurer-${insurer.id}`,
+  label: `Documentos · ${insurer.name}`,
+  description: `A clínica vista pela ${insurer.name}: quem está credenciado, quem falta documento e quais unidades ela aceita.`,
+  data: {
+    now: NOW,
+    insurer,
+    ans: { unimed: "339679", bradesco: "005711", sulamerica: "006246", cassi: "346659", porto: "417530" }[insurer.id],
+    professionals: [
+      { professional: rui, documents: documentosRui, links: vinculos.filter((l) => l.professionalId === "prof-rui") },
+      { professional: helena, documents: documentosHelena, links: [] },
+      {
+        professional: clara,
+        documents: documentosClaraCompletosPorto,
+        links: [...vinculos.filter((l) => l.professionalId === "prof-clara"), descredenciada],
+      },
+      { professional: marina, documents: documentosMarina, links: vinculos.filter((l) => l.professionalId === "prof-marina") },
+      { professional: denise, documents: documentosDenise, links: [] },
+    ],
+    units: [
+      { unit: unidade, city: "São Paulo", documents: documentosUnidade },
+      { unit: { id: "unit-aurora", name: "Unidade Aurora" }, city: "Campinas", documents: [] },
+    ],
+  },
+}));
 
 export const documentIds = {
   hoje: HOJE,

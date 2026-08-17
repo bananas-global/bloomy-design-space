@@ -71,9 +71,7 @@ O baseline de 285 está com status `ported` (**Portado — não validado**). Qua
 um tema entra no fluxo real de design, ele passa para `proposed` ou ganha um novo
 cenário; só depois da validação de negócio pode chegar a `approved`. Listas
 gerenciais concluiu esse caminho com um único cenário aprovado para reorganizar
-a navegação. A documentação está em `in-review`, aguardando validação de
-negócio — a decisão está em
-[`docs/decisions/0014-documentacao-e-consequencia-e-nao-campo.md`](docs/decisions/0014-documentacao-e-consequencia-e-nao-campo.md).
+a navegação.
 
 Referência `ported` é arquivo histórico e **não entra na suíte automatizada**.
 Playwright, axe e as varreduras de layout percorrem somente cenários de trabalho

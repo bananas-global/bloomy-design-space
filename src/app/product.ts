@@ -64,6 +64,7 @@ import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
 import { TeamDocumentation } from "../screens/TeamDocumentation.js";
 import { ProfessionalDeactivation } from "../screens/ProfessionalDeactivation.js";
 import { UnitDocuments } from "../screens/UnitDocuments.js";
+import { InsurerDocuments } from "../screens/InsurerDocuments.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -134,6 +135,7 @@ export const productDefinition: ProductDefinition = {
     { path: "/team/:id/deactivate", screen: guard(ProfessionalDeactivation) },
     { path: "/team", screen: guard(Team) },
     { path: "/structure/documents", screen: guard(UnitDocuments) },
+    { path: "/insurers/:id/documents", screen: guard(InsurerDocuments) },
     { path: "/kiosk", screen: guard(Kiosk) },
     { path: "/nps", screen: guard(Nps) },
     { path: "/guardian", screen: guard(GuardianPortal) },

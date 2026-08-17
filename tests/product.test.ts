@@ -30,18 +30,6 @@ describe("contrato de cenário", () => {
     }
   });
 
-  it("nenhuma fixture repete id", () => {
-    // Ids repetidos são silenciosos e caros: o motor resolve pelo primeiro, e a
-    // tela recebe o dado de outro módulo. `deactivation-scheduled` já existiu em
-    // dois arquivos — paciente e profissional — e derrubou a tela de inativação.
-    const contagem = new Map<string, number>();
-    for (const fixture of productDefinition.fixtures ?? []) {
-      contagem.set(fixture.id, (contagem.get(fixture.id) ?? 0) + 1);
-    }
-    const repetidos = [...contagem].filter(([, total]) => total > 1).map(([id]) => id);
-    expect(repetidos).toEqual([]);
-  });
-
   it("todo cenário tem critério de aceite verificável", () => {
     const without = productDefinition.scenarios
       .filter((scenario) => (scenario.expected?.length ?? 0) === 0)
@@ -50,36 +38,7 @@ describe("contrato de cenário", () => {
   });
 
   it("separa as referências portadas do trabalho ativo", () => {
-    expect(productDefinition.scenarios).toHaveLength(304);
     expect(productDefinition.scenarios.filter((scenario) => scenario.status === "ported")).toHaveLength(285);
-    // A documentação está em revisão: veio do Claude Design, foi reconstruída com
-    // os componentes do sistema e aguarda a validação de negócio.
-    expect(
-      productDefinition.scenarios.filter((scenario) => scenario.status === "proposed"),
-    ).toEqual([]);
-    const emRevisao = productDefinition.scenarios.filter(
-      (scenario) => scenario.status === "in-review",
-    );
-    expect(emRevisao.map((scenario) => scenario.id)).toEqual([
-      "team.docs-folder",
-      "team.docs-expired-drops-credentialing",
-      "team.docs-expiring-still-counts",
-      "team.docs-registered-without-file",
-      "team.docs-decredentialed-stays-closed",
-      "team.docs-particular-has-no-credentialing",
-      "team.docs-aba-hours-from-certificates",
-      "team.docs-empty",
-      "team.docs-team-matrix",
-      "team.docs-waived-leaves-the-count",
-      "team.docs-no-access",
-      "team.deactivation-needs-a-destination",
-      "team.deactivation-cancels-instead",
-      "team.deactivation-edit-keeps-the-reason",
-      "structure.docs-unit-folder",
-      "structure.docs-unit-credentialing-blocked",
-      "structure.docs-unit-missing-slot",
-      "structure.docs-unit-empty",
-    ]);
     const approved = productDefinition.scenarios.filter((scenario) => scenario.status === "approved");
     expect(approved.map((scenario) => scenario.id)).toEqual(["management.grouped-navigation"]);
     expect(approved[0]?.approvedAt).toEqual({

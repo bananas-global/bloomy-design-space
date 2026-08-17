@@ -1,4 +1,3 @@
-import type { Rule } from "@brucesantos/design-space";
 import type {
   CredentialLink,
   CredentialStatus,
@@ -28,88 +27,6 @@ import type {
  * A única exceção é o descredenciamento manual, e ela existe porque a assimetria
  * é real: anexar um papel novo não desfaz uma decisão que a operadora tomou.
  */
-export const documentRules: Rule[] = [
-  {
-    id: "document-state-comes-from-validity",
-    statement:
-      "A situação de um documento é sempre calculada da validade contra a data de referência, e nunca gravada. Documento sem data de validade não vence; documento dispensado sai da conta antes de a data ser olhada.",
-    rationale:
-      "Situação gravada é situação que envelhece errado: o papel vence e a tela continua dizendo válido porque ninguém rodou o recálculo. Numa pasta de documentos esse é o defeito mais caro possível — a clínica descobre pela glosa da operadora.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "warning-window-is-thirty-days",
-    statement:
-      "Um documento entra em “a vencer” trinta dias antes da data de validade, no escopo do profissional e no da unidade.",
-    rationale:
-      "Trinta dias é o menor prazo em que dá para pedir segunda via de conselho, agendar dedetização ou renovar alvará. Duas janelas diferentes para o mesmo conceito fariam a mesma pessoa ver o mesmo documento como urgente numa tela e tranquilo na outra.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "mandatory-documents-decide-completeness",
-    statement:
-      "A completude conta apenas os documentos obrigatórios não dispensados. Um obrigatório a vencer ainda conta como cumprido; só ausente e vencido derrubam o percentual.",
-    rationale:
-      "O percentual responde “esta pessoa pode atender hoje”, e não “esta pasta está bonita”. Um documento que vence em três semanas ainda autoriza o atendimento de amanhã — tratá-lo como falta faria a coordenação perseguir o percentual em vez da pendência.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "credentialing-is-derived",
-    statement:
-      "O credenciamento de um profissional numa operadora é derivado dos documentos exigidos que estão compartilhados e válidos. Compartilhar o primeiro documento cria o vínculo em credenciamento; completar as exigências o torna credenciado; perder qualquer uma o devolve a credenciamento.",
-    rationale:
-      "É o mesmo cálculo que a operadora faz do lado dela. Deixar o status ser digitado criaria a divergência que ninguém percebe até a glosa: a clínica marcando “credenciado” enquanto o convênio recusa a guia por documento vencido.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "expired-document-does-not-credential",
-    statement:
-      "Um documento exigido que existe mas está vencido conta como faltante para a operadora. Um documento a vencer ainda satisfaz a exigência.",
-    rationale:
-      "Vencido e ausente têm a mesma consequência do lado do convênio — a guia é recusada nos dois casos. Separá-los na tela ajuda a clínica a saber o que fazer; somá-los no cálculo é o que mantém o status honesto.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "manual-decredentialing-does-not-self-revert",
-    statement:
-      "Descredenciar é decisão registrada por uma pessoa, e o recálculo não a desfaz. Nenhum documento novo reativa sozinho um vínculo descredenciado: só a reabertura explícita, que o devolve a em credenciamento.",
-    rationale:
-      "A operadora descredencia por auditoria, por fim de contrato, por decisão comercial — nada disso é consertado anexando um papel. Um vínculo que voltasse a “credenciado” porque alguém subiu um currículo faria a clínica agendar em cima de um convênio que já disse não.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "document-requires-a-file",
-    statement:
-      "Um documento sem arquivo anexado não satisfaz exigência de operadora, não pode ser compartilhado e não entra em exportação — mesmo que tipo, nome e validade estejam preenchidos.",
-    rationale:
-      "O que a operadora audita é o papel, não o registro. Uma linha preenchida sem anexo é a pior forma de pendência porque parece resolvida na tela e falha no único momento em que importa.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "standard-slot-comes-from-the-type",
-    statement:
-      "O encaixe de um documento no slot padrão vem do tipo declarado no cadastro. Documento de tipo padrão tem o tipo travado na edição, e renomear um documento nunca muda o slot que ele ocupa.",
-    rationale:
-      "A alternativa — reconhecer o slot pelo nome — faz um documento sair do lugar quando alguém corrige uma palavra do título, reabrindo uma pendência que estava resolvida. O nome é do usuário; a classificação é do sistema.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "aba-hours-come-from-certificates",
-    statement:
-      "A carga horária em ABA de um profissional é a soma das horas dos certificados anexados. O valor do cadastro só vale enquanto não houver nenhum certificado.",
-    rationale:
-      "É a única das duas fontes que tem comprovação atrás. Deixar o número do cadastro prevalecer permitiria declarar formação avançada sem um certificado sequer — exatamente o que a supervisão precisa distinguir ao montar a escala.",
-    source: "src/rules/documents.ts",
-  },
-  {
-    id: "unit-credentialing-needs-every-standard-document",
-    statement:
-      "Uma unidade só fica credenciada numa operadora quando todos os documentos padrão da unidade existem, estão válidos e estão compartilhados com ela. Documento adicional compartilhado não reduz pendência.",
-    rationale:
-      "A operadora credencia o endereço, não a papelada avulsa: faltando o AVCB, não importa quantos outros laudos foram enviados. A conta é diferente da do profissional porque ali a exigência varia por convênio, e aqui o conjunto é o mesmo para todos.",
-    source: "src/rules/documents.ts",
-  },
-];
 
 /* ============================================================= o relógio */
 

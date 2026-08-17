@@ -22,18 +22,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-marina/documents",
     persona: "people",
     fixture: "docs-professional-complete",
-    rules: ["document-state-comes-from-validity", "warning-window-is-thirty-days"],
-    a11y: {
-      keyboard: "full",
-      contrast: "AA",
-      notes:
-        "A situação de cada documento é texto, e não só cor. Alternar entre cartões e tabela não muda o conteúdo lido, só o arranjo.",
-    },
+    a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "Sete tipos padrão aparecem sempre, com ou sem arquivo.",
-      "A quitação do conselho da Marina venceu em 31/03 e nenhuma operadora a exige.",
-    ],
     expected: [
       "Os sete tipos padrão aparecem, e os que não têm arquivo aparecem como lacuna.",
       "A quitação vencida aparece em vermelho mesmo sem derrubar credenciamento nenhum.",
@@ -50,13 +40,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-rui/documents",
     persona: "people",
     fixture: "docs-professional-expired-blocks",
-    rules: ["credentialing-is-derived", "expired-document-does-not-credential"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "O registro no conselho do Rui venceu em 30/06.",
-      "A Unimed exige formação, conselho, identidade e currículo. Os quatro estão compartilhados.",
-    ],
     expected: [
       "A Unimed aparece como Em credenciamento, e não como Credenciado.",
       "A tela nomeia o documento que causou a queda, e não apenas que há pendência.",
@@ -72,10 +57,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-clara/documents",
     persona: "coordinator",
     fixture: "docs-professional-expiring",
-    rules: ["warning-window-is-thirty-days", "mandatory-documents-decide-completeness"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: ["O registro da Clara vence em 20/08, dentro dos trinta dias."],
     expected: [
       "O documento aparece como a vencer, com a contagem de dias.",
       "A SulAmérica continua credenciada: a exigência está satisfeita.",
@@ -91,10 +74,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-incompleto/documents",
     persona: "people",
     fixture: "docs-professional-no-file",
-    rules: ["document-requires-a-file"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: ["O diploma da Helena tem registro e não tem anexo."],
     expected: [
       "A linha diz “sem arquivo anexado”, e não aparece como cumprida.",
       "Compartilhar fica visível e indisponível, com o motivo por extenso.",
@@ -110,13 +91,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-clara/documents",
     persona: "people",
     fixture: "docs-professional-decredentialed",
-    rules: ["manual-decredentialing-does-not-self-revert", "credentialing-is-derived"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "A Porto Seguro exige formação, conselho e certidão criminal. Os três estão compartilhados e válidos.",
-      "O vínculo foi descredenciado à mão em 20/01.",
-    ],
     expected: [
       "A Porto Seguro aparece como Descredenciada, sem pendência de documento.",
       "A tela explica que reabrir é uma ação, e não uma consequência.",
@@ -132,7 +108,6 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-marina/documents",
     persona: "people",
     fixture: "docs-professional-complete",
-    rules: ["credentialing-is-derived"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [
@@ -149,10 +124,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-marina/documents",
     persona: "coordinator",
     fixture: "docs-professional-complete",
-    rules: ["aba-hours-come-from-certificates"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: ["Dois certificados anexados: 180h e 60h."],
     expected: [
       "A tela mostra 240h, somadas dos certificados.",
       "A faixa aparece como Intermediária, com o limiar dito.",
@@ -183,18 +156,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/documentation",
     persona: "people",
     fixture: "docs-team-matrix",
-    rules: ["mandatory-documents-decide-completeness", "document-state-comes-from-validity"],
-    a11y: {
-      keyboard: "full",
-      contrast: "AA",
-      notes:
-        "Cada célula da matriz é um botão com nome acessível que diz tipo e situação. A matriz rola na horizontal dentro da própria região.",
-    },
+    a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "Cinco profissionais, com uma pendência de cada tipo.",
-      "A ordem de severidade é vencido, ausente, a vencer, aguardando vigência, dispensado, em dia.",
-    ],
     expected: [
       "Quem tem documento vencido aparece primeiro.",
       "A completude conta só os obrigatórios não dispensados.",
@@ -211,13 +174,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/documentation",
     persona: "people",
     fixture: "docs-team-matrix",
-    rules: ["mandatory-documents-decide-completeness", "document-state-comes-from-validity"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "O contrato PJ da Denise está dispensado: musicoterapia é contratada por RPA nesta unidade.",
-      "O documento dispensado tem data de validade vencida.",
-    ],
     expected: [
       "A célula aparece como Dispensado, e não como Vencido.",
       "A completude dela não considera esse obrigatório.",
@@ -234,9 +192,6 @@ export const documentScenarios: Scenario[] = [
     fixture: "docs-team-matrix",
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "A documentação usa `professionals.edit` — a policy do cadastro a que a pasta pertence, e não uma permissão nova.",
-    ],
     expected: [
       "A tela nomeia quem alcança a matriz: admin, admin de clínica, coordenação e People.",
       "O bloqueio é de permissão, não de dado.",
@@ -252,22 +207,8 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-saindo/deactivate",
     persona: "people",
     fixture: "professional-deactivation-caseload",
-    rules: [
-      "professional-deactivation-is-scheduled",
-      "caseload-needs-a-destination",
-      "substitute-must-outlast-the-transfer",
-    ],
-    a11y: {
-      keyboard: "full",
-      contrast: "AA",
-      notes:
-        "A recusa da confirmação é lida no foco do botão, por `aria-describedby` — convenção da decisão 0003. Não há região viva: o motivo já está associado ao controle.",
-    },
+    a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "Três pacientes em atendimento com a Denise.",
-      "Um dos substitutos da mesma especialidade já tem saída marcada.",
-    ],
     expected: [
       "Confirmar fica visível e indisponível enquanto houver paciente sem destino.",
       "O motivo diz quantos faltam e o que acontece se ficarem assim.",
@@ -284,7 +225,6 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-saindo/deactivate",
     persona: "people",
     fixture: "professional-deactivation-caseload",
-    rules: ["caseload-needs-a-destination"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [
@@ -302,16 +242,42 @@ export const documentScenarios: Scenario[] = [
     route: "/team/prof-saindo/deactivate",
     persona: "people",
     fixture: "professional-deactivation-scheduled",
-    rules: ["deactivation-reason-is-required-once", "professional-deactivation-is-scheduled"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: ["A saída da Denise já está marcada para 28/08."],
     expected: [
       "A tela abre no modo de edição, dizendo quantos dias faltam.",
       "O motivo não é pedido de novo.",
       "Cancelar a inativação é uma ação disponível, e devolve o cadastro a ativo.",
     ],
     tags: ["exceção"],
+  },
+  {
+    id: "insurer.docs-professionals",
+    title: "A clínica vista pela operadora",
+    intent:
+      "Mostrar quem a operadora aceita hoje, quem falta documento e quais unidades ela credencia.",
+    route: "/insurers/unimed/documents",
+    persona: "admin",
+    fixture: "docs-insurer-unimed",
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    expected: [
+      "A tabela traz carga em ABA, formações especiais e credenciamento por profissional.",
+      "O escopo alterna entre Profissionais e Unidades sem sair da aba.",
+    ],
+    tags: ["lista"],
+  },
+  {
+    id: "insurer.docs-units",
+    title: "As unidades que a operadora credencia",
+    intent: "Ver o credenciamento pelo endereço, e não pela pessoa.",
+    route: "/insurers/bradesco/documents",
+    persona: "admin",
+    fixture: "docs-insurer-bradesco",
+    a11y: { keyboard: "full", contrast: "AA" },
+    status: "in-review",
+    expected: ["Cada unidade mostra documentos compartilhados, pendências e credenciamento."],
+    tags: ["lista"],
   },
   {
     id: "structure.docs-unit-folder",
@@ -321,17 +287,8 @@ export const documentScenarios: Scenario[] = [
     route: "/structure/documents",
     persona: "operation",
     fixture: "docs-unit-blocked",
-    rules: [
-      "document-state-comes-from-validity",
-      "warning-window-is-thirty-days",
-      "standard-slot-comes-from-the-type",
-    ],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: [
-      "Doze documentos padrão, iguais para todas as operadoras.",
-      "A licença sanitária foi emitida e começa a valer em 01/08.",
-    ],
     expected: [
       "A licença que ainda não entrou em vigência aparece como Aguardando vigência, e não como válida.",
       "O CNES aparece como sem validade, e não como pendente.",
@@ -348,13 +305,8 @@ export const documentScenarios: Scenario[] = [
     route: "/structure/documents",
     persona: "operation",
     fixture: "docs-unit-blocked",
-    rules: [
-      "unit-credentialing-needs-every-standard-document",
-      "expired-document-does-not-credential",
-    ],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: ["O AVCB venceu em 10/07 e está compartilhado com as duas operadoras."],
     expected: [
       "As duas operadoras aparecem como Em credenciamento.",
       "A tela nomeia o AVCB como a pendência, e não mostra apenas um contador.",
@@ -370,10 +322,8 @@ export const documentScenarios: Scenario[] = [
     route: "/structure/documents",
     persona: "operation",
     fixture: "docs-unit-missing-slot",
-    rules: ["standard-slot-comes-from-the-type", "unit-credentialing-needs-every-standard-document"],
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
-    preconditions: ["O contrato de locação nunca foi anexado."],
     expected: [
       "A locação aparece como lacuna, com o que se espera dela.",
       "A ação disponível ali é anexar, e não editar.",

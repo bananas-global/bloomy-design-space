@@ -387,10 +387,13 @@ function AbasDoPerfil() {
           { id: "units", label: "Unidades", disabled: true },
           { id: "agenda", label: "Escala", disabled: true },
           { id: "services", label: "Serviços", disabled: true },
+          { id: "blockings", label: "Bloqueios", disabled: true },
           { id: "hired", label: "Contratação", disabled: true },
           { id: "appointments", label: "Atendimentos", disabled: true },
+          { id: "bond", label: "Vínculo", disabled: true },
           { id: "documents", label: "Documentos" },
           { id: "hours", label: "Controle de Horas", disabled: true },
+          { id: "presence", label: "Controle de Presença", disabled: true },
         ]}
       >
         <p className="m-0 text-sm text-[var(--fg-2)]">

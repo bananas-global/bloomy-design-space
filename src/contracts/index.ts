@@ -3037,3 +3037,17 @@ export interface ProfessionalDeactivationData {
   /** Períodos que este profissional ocupa na escala de salas. */
   roomPeriods: number;
 }
+
+/** A ficha da operadora, do ponto de vista dos documentos. */
+export interface InsurerDocumentsData {
+  now: string;
+  insurer: DocumentInsurer;
+  /** Registro ANS, para o cabeçalho da ficha. */
+  ans?: string;
+  professionals: TeamDocumentationRow[];
+  units: {
+    unit: Unit;
+    city: string;
+    documents: UnitDocument[];
+  }[];
+}

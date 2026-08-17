@@ -12,6 +12,7 @@ import { closureFixtures } from "../fixtures/closures.js";
 import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
 import {
+  insurerDocumentFixtures,
   professionalDocumentFixtures,
   teamDocumentationFixtures,
   unitDocumentFixtures,
@@ -87,8 +88,6 @@ import { authorizationRules, authorizationRenewalRules } from "../rules/authoriz
 import { closureRules } from "../rules/closures.js";
 import { invoiceRules } from "../rules/invoices.js";
 import { teamRules } from "../rules/team.js";
-import { documentRules } from "../rules/documents.js";
-import { professionalDeactivationRules } from "../rules/professionalDeactivation.js";
 import { publicPortalRules } from "../rules/publicPortal.js";
 import { guardianPortalRules } from "../rules/guardianPortal.js";
 import { insurerPortalRules } from "../rules/insurerPortal.js";
@@ -700,12 +699,25 @@ export const modules: Module[] = [
         steps: [
           {
             scenario: "team.docs-team-matrix",
-            label: "Ver a equipe ordenada por severidade",
+            label: "Ver a documentação da equipe",
             decision: "Esta pendência é mesmo pendência?",
             branches: {
               "Foi dispensada, e sai da conta": "team.docs-waived-leaves-the-count",
               "Quem atende não alcança esta tela": "team.docs-no-access",
             },
+          },
+        ],
+      },
+      {
+        id: "insurer-side",
+        title: "Ver a documentação pelo lado da operadora",
+        description: "A mesma pasta, com a pergunta invertida: quem desta clínica eu aceito.",
+        steps: [
+          {
+            scenario: "insurer.docs-professionals",
+            label: "Abrir a ficha da operadora",
+            decision: "E as unidades?",
+            branches: { "Credenciamento por endereço": "insurer.docs-units" },
           },
         ],
       },
@@ -1248,6 +1260,7 @@ export const fixtures: Fixture[] = [
   ...invoiceFixtures,
   ...teamFixtures,
   ...professionalDocumentFixtures,
+  ...insurerDocumentFixtures,
   ...teamDocumentationFixtures,
   ...unitDocumentFixtures,
   ...professionalDeactivationFixtures,
@@ -1325,8 +1338,6 @@ export const rules: Rule[] = [
   ...closureRules,
   ...invoiceRules,
   ...teamRules,
-  ...documentRules,
-  ...professionalDeactivationRules,
   ...publicPortalRules,
   ...guardianPortalRules,
   ...insurerPortalRules,

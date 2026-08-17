@@ -1,4 +1,3 @@
-import type { Rule } from "@brucesantos/design-space";
 import type {
   CaseloadEntry,
   DeactivationSubstitute,
@@ -20,40 +19,6 @@ import { daysUntil } from "./documents.js";
  * data, o cadastro entra em “em inativação”, e o intervalo até lá é o tempo que
  * a coordenação tem para transferir.
  */
-export const professionalDeactivationRules: Rule[] = [
-  {
-    id: "professional-deactivation-is-scheduled",
-    statement:
-      "Inativar um profissional é marcar uma data de saída a partir de hoje. Entre a marcação e a data, o cadastro fica em inativação: continua na agenda, aparece marcado nas listas e ordenado à frente dos demais.",
-    rationale:
-      "Uma saída que vale no mesmo instante cancela atendimentos que já estão combinados com as famílias. O período de inativação existe para que a transferência aconteça antes de alguém ficar sem terapeuta, e não depois.",
-    source: "src/rules/professionalDeactivation.ts",
-  },
-  {
-    id: "caseload-needs-a-destination",
-    statement:
-      "Com pacientes em atendimento, a inativação só é confirmada depois que cada um tem destino: um profissional substituto ou o cancelamento explícito das sessões.",
-    rationale:
-      "É a única etapa que não pode ser resolvida depois. Um paciente sem responsável não aparece em fila nenhuma — ele simplesmente deixa de ser atendido, e a clínica descobre pela falta.",
-    source: "src/rules/professionalDeactivation.ts",
-  },
-  {
-    id: "substitute-must-outlast-the-transfer",
-    statement:
-      "Só pode receber caseload quem está ativo e sem data de saída marcada.",
-    rationale:
-      "Transferir pacientes para quem também está de saída apenas adia o problema para uma semana em que ninguém vai lembrar de olhar. O sistema conhece as duas datas e é o único que pode impedir isso na hora.",
-    source: "src/rules/professionalDeactivation.ts",
-  },
-  {
-    id: "deactivation-reason-is-required-once",
-    statement:
-      "O motivo é obrigatório ao marcar a inativação e não é pedido de novo ao mudar a data ou ao reativar.",
-    rationale:
-      "O motivo explica a saída, não a data. Pedi-lo outra vez numa correção de dois dias transforma um ajuste trivial num formulário, e a resposta que se obtém é a que estava lá antes.",
-    source: "src/rules/professionalDeactivation.ts",
-  },
-];
 
 type Decision = { allowed: boolean; reason?: string };
 
