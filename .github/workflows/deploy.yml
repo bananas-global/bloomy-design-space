@@ -105,7 +105,13 @@ jobs:
 
       - name: Publicar
         id: deploy
-        run: echo "url=$(vercel deploy --prebuilt ${{ steps.ambiente.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }})" >> "$GITHUB_OUTPUT"
+        run: |
+          url="$(vercel deploy --prebuilt ${{ steps.ambiente.outputs.flag }} --token=${{ secrets.VERCEL_TOKEN }})"
+          if [ -z "$url" ]; then
+            echo "A Vercel não retornou a URL do deployment." >&2
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
 
       - name: Instalar navegador
         run: pnpm exec playwright install --with-deps chromium
