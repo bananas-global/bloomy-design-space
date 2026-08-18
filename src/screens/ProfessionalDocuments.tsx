@@ -21,11 +21,8 @@ import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
 import { Tag } from "../components/bloomy/Tag.js";
 import { PROFESSIONAL_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
-  abaBand,
-  abaHours,
   canExport,
   canShare,
-  completeness,
   credentialStatus,
   credentialStatusLabel,
   daysUntil,
@@ -172,8 +169,10 @@ function EtiquetaSituacao({ state, days }: { state: DocumentState; days?: number
   return <Etiqueta item={documentStateLabel(state, days)} variant={TOM[state]} />;
 }
 
-function br(iso: string | undefined, locale: string | undefined): string {
-  return iso ? formatDate(iso, locale) : "—";
+/** dd/mm/aaaa — o formato da tabela. `formatDate` do produto escreve o mês por extenso. */
+function br(iso: string | undefined): string {
+  if (!iso) return "—";
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 }
 
 /* =============================================================== conteúdo */
@@ -207,13 +206,7 @@ function Conteudo({
     vencido: pasta.documents.filter((doc) => documentState(doc, hoje) === "expired").length,
   };
 
-  const completude = completeness(
-    pasta.documents,
-    PROFESSIONAL_DOCUMENT_TYPES,
-    hoje,
-  );
 
-  const horas = abaHours(pasta.documents);
   const exportacao = canExport(pasta.documents);
 
   return wrap(
@@ -224,7 +217,6 @@ function Conteudo({
       <Card className="space-y-6">
         <SectionHeader
           variant="small"
-          subtitle={`${completude.met} de ${completude.required} documentos obrigatórios cumpridos · ${completude.percent}% de completude`}
           actions={
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex gap-1 rounded-lg bg-[var(--color-brand-purple-dark)]/5 p-1" role="group" aria-label="Visualização">
@@ -242,7 +234,7 @@ function Conteudo({
                     ].join(" ")}
                   >
                     <Icon name={modo === "cards" ? "fa-grip" : "fa-list"} className="mr-2" />
-                    {modo === "cards" ? "Cartões" : "Tabela"}
+                    {modo === "cards" ? "Cards" : "Tabela"}
                   </button>
                 ))}
               </div>
@@ -290,20 +282,10 @@ function Conteudo({
 
         <div className="flex flex-wrap gap-2">
           <Etiqueta item={`${contagem.pendente} ${contagem.pendente === 1 ? "pendente" : "pendentes"}`} variant="yellow" />
-          <Etiqueta item={`${contagem.valido} ${contagem.valido === 1 ? "em ordem" : "em ordem"}`} variant="green" />
+          <Etiqueta item={`${contagem.valido} ${contagem.valido === 1 ? "ativo" : "ativos"}`} variant="green" />
           <Etiqueta item={`${contagem.aVencer} a vencer`} variant="orange" />
-          <Etiqueta item={`${contagem.vencido} ${contagem.vencido === 1 ? "vencido" : "vencidos"}`} variant="red" />
+          <Etiqueta item={`${contagem.vencido} ${contagem.vencido === 1 ? "expirado" : "expirados"}`} variant="red" />
         </div>
-
-        {horas > 0 && (
-          <p className="m-0 text-sm text-[var(--fg-2)]">
-            <Icon name="fa-brain" className="mr-2" />
-            {horas}h de cursos em ABA, somadas dos certificados anexados · faixa {abaBand(horas)}.{" "}
-            <span className="text-[var(--fg-2)]">
-              O valor do cadastro só valeria se não houvesse certificado nenhum.
-            </span>
-          </p>
-        )}
 
         {linhas.length === 0 ? (
           <EmptyStateCard icon="fa-folder-open" text="Nenhum documento cadastrado">
@@ -314,7 +296,6 @@ function Conteudo({
             linhas={linhas}
             insurers={pasta.insurers}
             hoje={hoje}
-            locale={locale}
             podeEditar={podeEditar}
             onEditar={setEditando}
           />
@@ -323,7 +304,6 @@ function Conteudo({
             linhas={linhas}
             insurers={pasta.insurers}
             hoje={hoje}
-            locale={locale}
             podeEditar={podeEditar}
             onEditar={setEditando}
           />
@@ -333,7 +313,6 @@ function Conteudo({
       <Credenciamento
         pasta={pasta}
         hoje={hoje}
-        locale={locale}
         permissions={permissions}
         onAviso={setAviso}
       />
@@ -356,7 +335,6 @@ function Conteudo({
       <ExportarAgrupado
         open={exportando}
         documents={pasta.documents}
-        locale={locale}
         hoje={hoje}
         onClose={() => setExportando(false)}
       />
@@ -555,14 +533,12 @@ function Cartoes({
   linhas,
   insurers,
   hoje,
-  locale,
   podeEditar,
   onEditar,
 }: {
   linhas: Linha[];
   insurers: DocumentInsurer[];
   hoje: string;
-  locale: string | undefined;
   podeEditar: boolean;
   onEditar: (linha: Linha) => void;
 }) {
@@ -609,9 +585,9 @@ function Cartoes({
                     )}
                   </p>
                   <p className="m-0">
-                    atualizado em {br(linha.doc.updatedAt, locale)}
+                    atualizado em {br(linha.doc.updatedAt)}
                     {linha.doc.validUntil
-                      ? ` · válido até ${br(linha.doc.validUntil, locale)}`
+                      ? ` · válido até ${br(linha.doc.validUntil)}`
                       : " · sem validade"}
                   </p>
                   {linha.doc.hours !== undefined && (
@@ -637,7 +613,7 @@ function Cartoes({
                           key={share.insurerId}
                           item={nomeDaOperadora(insurers, share.insurerId)}
                           variant="light-blue"
-                          title={`compartilhado em ${br(share.at, locale)}`}
+                          title={`compartilhado em ${br(share.at)}`}
                         />
                       ))
                     )}
@@ -675,14 +651,12 @@ function Tabela({
   linhas,
   insurers,
   hoje,
-  locale,
   podeEditar,
   onEditar,
 }: {
   linhas: Linha[];
   insurers: DocumentInsurer[];
   hoje: string;
-  locale: string | undefined;
   podeEditar: boolean;
   onEditar: (linha: Linha) => void;
 }) {
@@ -703,14 +677,14 @@ function Tabela({
       ),
     },
     { label: "Nº", render: (linha) => linha.doc?.number ?? "—" },
-    { label: "Atualizado", render: (linha) => br(linha.doc?.updatedAt, locale) },
+    { label: "Atualizado", render: (linha) => br(linha.doc?.updatedAt) },
     {
       label: "Validade",
       render: (linha) =>
-        linha.doc ? (linha.doc.validUntil ? br(linha.doc.validUntil, locale) : "sem validade") : "—",
+        linha.doc?.validUntil ? br(linha.doc.validUntil) : "—",
     },
     {
-      label: "Situação",
+      label: "Status",
       render: (linha) => (
         <EtiquetaSituacao
           state={documentState(linha.doc, hoje)}
@@ -746,8 +720,8 @@ function Tabela({
       actions={(linha) => (
         <Button
           className="espelho-do-sistema"
-          size="small"
-          variant="ghost"
+          size="medium"
+          variant="tint"
           leftIcon={linha.doc ? "fa-pen" : "fa-plus"}
           disabled={!podeEditar}
           onClick={() => onEditar(linha)}
@@ -771,13 +745,11 @@ function Tabela({
 function Credenciamento({
   pasta,
   hoje,
-  locale,
   permissions,
   onAviso,
 }: {
   pasta: ProfessionalDocumentsData;
   hoje: string;
-  locale: string | undefined;
   permissions: string[];
   onAviso: (mensagem: string) => void;
 }) {
@@ -809,7 +781,7 @@ function Credenciamento({
                   </h2>
                   {link && (
                     <p className="m-0 text-sm text-[var(--fg-2)]">
-                      desde {br(link.since, locale)}
+                      desde {br(link.since)}
                     </p>
                   )}
                 </div>
@@ -1156,13 +1128,11 @@ function FormularioDocumento({
 function ExportarAgrupado({
   open,
   documents,
-  locale,
   hoje,
   onClose,
 }: {
   open: boolean;
   documents: ProfessionalDocument[];
-  locale: string | undefined;
   hoje: string;
   onClose: () => void;
 }) {
@@ -1219,7 +1189,7 @@ function ExportarAgrupado({
           </Button>
         </div>
 
-        <p className="sr-only">{br(hoje, locale)}</p>
+        <p className="sr-only">{br(hoje)}</p>
       </div>
     </Modal>
   );
