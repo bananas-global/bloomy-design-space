@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import babel from "@rolldown/plugin-babel";
 import { devPort } from "./dev-port.js";
 
 /**
@@ -76,11 +77,10 @@ const deployEnv = {
 export default defineConfig({
   define: deployEnv,
   plugins: [
-    react({
-      babel: {
-        plugins: isDev || sourceMappingInBuild ? ["@react-dev-inspector/babel-plugin"] : [],
-      },
-    }),
+    ...(isDev || sourceMappingInBuild
+      ? [babel({ plugins: ["@react-dev-inspector/babel-plugin"] })]
+      : []),
+    react(),
     tailwindcss(),
   ],
   server: { port: devPort, strictPort: false },
