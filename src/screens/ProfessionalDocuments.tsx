@@ -387,7 +387,7 @@ function BadgeDoPerfil({
   icon?: string;
 }) {
   const cores = {
-    green: "bg-[var(--color-brand-green)]/20 text-[var(--color-brand-green-dark)]",
+    green: "bg-[var(--color-ok-bg)] text-[var(--color-ok-fg)]",
     red: "bg-[var(--color-red-light)] text-[var(--color-danger-fg)]",
     yellow: "bg-[var(--color-yellow)]/20 text-[var(--color-yellow-dark)]",
     blue: "bg-[var(--color-blue-light)] text-[var(--color-blue-dark)]",
