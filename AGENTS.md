@@ -23,10 +23,13 @@ O conteúdo aqui foi portado do monólito em 2026-08-01/02. O log do porte, com 
 que foi traduzido de onde e treze achados sobre o sistema real, está em
 [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 
-Os 274 cenários desse baseline usam `status: "ported"`: são referência importada,
-não validada e sem compromisso de implementação. Não os promova em massa. Quando
-um tema entrar no trabalho real, crie ou revise o cenário correspondente e só
-então use `proposed`, seguindo o ciclo normal até aprovação e implementação.
+Os 285 cenários desse baseline usam `status: "ported"`: são referência importada,
+não validada e sem compromisso de implementação. **Cenário `ported` nunca entra
+na suíte automatizada** — nem jornada, axe, zoom, toque ou varredura. Quando um
+tema entrar no trabalho real, crie ou revise apenas o cenário que delimita a
+mudança e só então use `proposed`, seguindo o ciclo normal até aprovação e
+implementação. Em Listas gerenciais, por exemplo, as onze listas são `ported` e
+somente a reorganização da navegação é `approved`.
 
 ## Comandos
 
@@ -34,7 +37,7 @@ então use `proposed`, seguindo o ciclo normal até aprovação e implementaçã
 pnpm dev          # dev server na porta 5206 (derivada do nome do projeto)
 pnpm typecheck
 pnpm test         # contrato de cenário, regras de negócio e contraste dos tokens
-pnpm test:e2e     # 356 jornadas Playwright + axe em todos os cenários
+pnpm test:e2e     # Playwright + axe somente no trabalho ativo e nos componentes
 pnpm check        # typecheck + test + build — rode antes de concluir qualquer alteração
 ```
 

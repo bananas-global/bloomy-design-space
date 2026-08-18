@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { scenarios } from "../../src/app/catalog.js";
+import { activeScenarios as scenarios } from "./active-scenarios.js";
 
 /**
  * O contraste do que é espelho do sistema.

@@ -1314,68 +1314,174 @@ test.describe("Prontuário", () => {
   });
 });
 
-test.describe("Gerência", () => {
-  test("cada frente diz de quem é", async ({ page }) => {
-    await page.goto(urlFor("management.monday"));
+test.describe("Listas gerenciais", () => {
+  test("as onze listas ficam organizadas em quatro grupos e Documentação não aparece", async ({ page }) => {
+    await page.goto(urlFor("management.grouped-navigation"));
 
-    // Nove listas numa tela viram ruído se não estiver dito de quem é cada uma.
-    await expect(page.getByText("Relatórios atrasados")).toBeVisible();
-    await expect(page.getByText("Coordenação, com quem escreve")).toBeVisible();
-    await expect(page.getByText("Cadastros de profissional incompletos").first()).toBeVisible();
-    // "People" aparece como dono da frente e como responsável da seção: as duas
-    // são a mesma afirmação, dita onde cada uma é útil.
-    await expect(page.getByText("People", { exact: true })).toBeVisible();
+    const navigation = page.getByRole("navigation", { name: "Listas gerenciais" });
+    const groups = navigation.locator("[data-management-group]");
+    await expect(groups).toHaveText(["Operação", "Agenda", "Assistencial", "Relatórios"]);
+    await expect(navigation.getByText("Documentação", { exact: true })).toHaveCount(0);
+    await expect(navigation.getByRole("button", { name: "Assistencial" })).toHaveAttribute("aria-current", "page");
+
+    await navigation.getByRole("button", { name: "Operação" }).click();
+    await expect(page.getByRole("menu", { name: "Operação" }).getByRole("menuitemradio")).toHaveText([
+      "Cadastro de Pacientes",
+      "Cadastro de Profissionais",
+      "Autorizações",
+    ]);
+
+    await navigation.getByRole("button", { name: "Agenda" }).click();
+    await expect(page.getByRole("menu", { name: "Agenda" }).getByRole("menuitemradio")).toHaveText([
+      "Mapa de Horas",
+      "Faltas Profissionais",
+    ]);
+
+    await navigation.getByRole("button", { name: "Assistencial" }).click();
+    await expect(page.getByRole("menu", { name: "Assistencial" }).getByRole("menuitemradio")).toHaveText([
+      "Supervisores",
+      "Aplicadores",
+      "Responsáveis Clínicos",
+      "Planos terapêuticos",
+    ]);
+
+    await navigation.getByRole("button", { name: "Relatórios" }).click();
+    await expect(page.getByRole("menu", { name: "Relatórios" }).getByRole("menuitemradio")).toHaveText([
+      "Profissionais por Especialidade",
+      "Controle de Relatórios",
+    ]);
+
+    await navigation.getByRole("button", { name: "Operação" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(navigation.getByRole("button", { name: "Agenda" })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
+    await expect(page.getByRole("menu", { name: "Agenda" }).getByRole("menuitemradio").first()).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(navigation.getByRole("button", { name: "Agenda" })).toBeFocused();
   });
 
-  test("o mais antigo não é o mais urgente, e a tela diz por quê", async ({ page }) => {
-    await page.goto(urlFor("management.reports-by-consequence"));
+  test("cada deep link destaca o grupo que contém a lista", async ({ page }) => {
+    await page.goto(urlFor("management.hour-maps"));
+    await expect(page.getByRole("button", { name: "Agenda" })).toHaveAttribute("aria-current", "page");
 
-    // O da operadora (9 dias) vem antes do da família (14 dias).
-    const primeiro = page.getByRole("listitem").filter({ hasText: "Atrasado 9 dias" });
-    await expect(primeiro).toBeVisible();
-    await expect(page.getByText(/segura a próxima autorização e o faturamento/)).toBeVisible();
-    await expect(page.getByText(/faz uma família procurar outra clínica/)).toBeVisible();
+    await page.goto(urlFor("management.professionals-by-specialty"));
+    await expect(page.getByRole("button", { name: "Relatórios" })).toHaveAttribute("aria-current", "page");
   });
 
-  test("quem pediu aparece em cada relatório", async ({ page }) => {
-    await page.goto(urlFor("management.reports-by-consequence"));
-
-    await expect(page.getByText("Pedido por: Operadora").first()).toBeVisible();
-    await expect(page.getByText("Pedido por: Família").first()).toBeVisible();
+  test("os menus agrupados mantêm relações ARIA válidas quando abertos", async ({ page }) => {
+    await page.goto(urlFor("management.grouped-navigation"));
+    await page.getByRole("button", { name: "Assistencial" }).click();
+    const results = await new AxeBuilder({ page })
+      .include('nav[aria-label="Listas gerenciais"]')
+      .disableRules(["color-contrast"])
+      .analyze();
+    expect(results.violations).toEqual([]);
   });
 
-  test("só a lacuna que trava sessão é alarmada", async ({ page }) => {
-    await page.goto(urlFor("management.mentorship-gap"));
+  test("supervisor mostra quantidade e abre a edição de aplicadores", async ({ page }) => {
+    await page.goto(urlFor("management.supervisors"));
 
-    await expect(page.getByText("Trava fechamento de sessão")).toHaveCount(1);
-    await expect(page.getByText(/não terão quem as assine/)).toBeVisible();
-    await expect(page.getByText(/Não é um problema por si/)).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Aplicadores" })).toBeVisible();
+    await page.getByRole("button", { name: "Editar Aplicadores de Clara Vidigal" }).click();
+    await expect(page.getByRole("dialog", { name: "Editar Aplicadores" })).toBeVisible();
+    await expect(page.getByText("Aplicadores adicionados: 4")).toBeVisible();
   });
 
-  test("o paciente sem responsável é enquadrado como deriva, não como bloqueio", async ({ page }) => {
-    await page.goto(urlFor("management.monday"));
+  test("aplicadores distingue por texto quem exige segunda assinatura", async ({ page }) => {
+    await page.goto(urlFor("management.applicators"));
 
-    await expect(
-      page.getByRole("heading", { name: "O atendimento continua sem ninguém respondendo pelo caso" }),
-    ).toBeVisible();
-    await expect(page.getByText(/há 46 dias/)).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "Assina" })).toBeVisible();
+    await expect(page.getByText("Sim", { exact: true })).toHaveCount(2);
+    await expect(page.getByText("Não", { exact: true })).toHaveCount(1);
   });
 
-  test("sem pendência, o vazio é uma frase e não quatro zeros", async ({ page }) => {
-    await page.goto(urlFor("management.clear"));
+  test("responsáveis clínicos conserva o paciente sem vínculo e permite editar", async ({ page }) => {
+    await page.goto(urlFor("management.clinical-owners"));
 
-    await expect(
-      page.getByRole("heading", { name: "Nenhuma pendência nas frentes acompanhadas" }),
-    ).toBeVisible();
-    await expect(page.getByText(/dá para fechar esta tela/)).toBeVisible();
+    const noah = page.getByRole("row").filter({ hasText: "Noah Rivas Camargo" });
+    await expect(noah).toContainText("—");
+    const edit = noah.getByRole("button", { name: /Editar responsáveis/ });
+    await edit.focus();
+    await edit.press("Enter");
+    await expect(page.getByRole("dialog", { name: "Editar Responsáveis Clínicos" })).toBeVisible();
   });
 
-  test("quem atende não alcança a gerência", async ({ page }) => {
+  test("cadastro de pacientes filtra pelo item faltante", async ({ page }) => {
+    await page.goto(urlFor("management.patient-registration"));
+
+    await page.getByRole("combobox", { name: "Itens faltantes" }).click();
+    await page.getByRole("option", { name: "Mapa de Horas" }).click();
+    await expect(page.getByRole("row").filter({ hasText: "Théo Andrade Lins" })).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: "Noah Rivas Camargo" })).toHaveCount(0);
+  });
+
+  test("cadastro de profissionais lista unidade, escala e contrato faltantes", async ({ page }) => {
+    await page.goto(urlFor("management.professional-registration"));
+
+    const table = page.locator("#missing_professionals");
+    await expect(table.getByText("Vínculo de Unidade")).toBeVisible();
+    await expect(table.getByText("Escala")).toBeVisible();
+    await expect(table.getByText("Contrato")).toHaveCount(2);
+  });
+
+  test("autorizações mostra vigência e vencimento sem depender de cor", async ({ page }) => {
+    await page.goto(urlFor("management.authorizations"));
+
+    const table = page.locator("#authorizations_table");
+    await expect(table.getByText("Em Vigência", { exact: true })).toHaveCount(2);
+    await expect(table.getByText("Vencido", { exact: true })).toHaveCount(1);
+    await page.getByRole("combobox", { name: "Status" }).click();
+    await page.getByRole("option", { name: "Vencido" }).click();
+    await expect(table.getByText("Vencido", { exact: true })).toHaveCount(1);
+  });
+
+  test("profissionais por especialidade preserva todas as categorias", async ({ page }) => {
+    await page.goto(urlFor("management.professionals-by-specialty"));
+
+    for (const heading of ["Total", "Coordenadores", "Supervisores", "Terapeutas", "Aplicadores", "Em formação"]) {
+      await expect(page.getByRole("columnheader", { name: heading })).toBeVisible();
+    }
+  });
+
+  test("mapa de horas abre em Sem padrão", async ({ page }) => {
+    await page.goto(urlFor("management.hour-maps"));
+
+    await expect(page.getByRole("combobox", { name: "Status" })).toHaveAttribute("data-value", "without_active");
+    await expect(page.getByRole("row").filter({ hasText: "Théo Andrade Lins" })).toBeVisible();
+    await expect(page.getByText("Mostrando 1 de 1 registros")).toBeVisible();
+  });
+
+  test("controle de relatórios mostra prazo vencido e abre solicitação", async ({ page }) => {
+    await page.goto(urlFor("management.report-control"));
+
+    await expect(page.getByText("25/07/2026")).toContainText("25/07/2026");
+    await page.getByRole("button", { name: "Solicitar relatório" }).click();
+    await expect(page.getByRole("dialog", { name: "Solicitar relatório" })).toBeVisible();
+  });
+
+  test("faltas informa dias, horas e percentual de presença", async ({ page }) => {
+    await page.goto(urlFor("management.absences"));
+
+    const otavio = page.getByRole("row").filter({ hasText: "Otávio Ferrandini" });
+    await expect(otavio).toContainText("4 dias");
+    await expect(otavio).toContainText("18 horas");
+    await expect(otavio).toContainText("68%");
+  });
+
+  test("PICs mostra vigência, autoria, assinatura e estado", async ({ page }) => {
+    await page.goto(urlFor("management.intervention-plans"));
+
+    const table = page.locator("#behavior_intervention_plan_management");
+    await expect(table.getByText("Vigente", { exact: true })).toBeVisible();
+    await expect(table.getByText("Pendente", { exact: true })).toBeVisible();
+    await expect(table.getByText("Expirado", { exact: true })).toBeVisible();
+    await expect(page.getByText("Elisa Lins")).toBeVisible();
+  });
+
+  test("quem atende não alcança as listas gerenciais", async ({ page }) => {
     await page.goto(urlFor("management.no-access"));
 
-    await expect(
-      page.getByRole("heading", { name: "Você não tem acesso à gerência" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Você não tem acesso às listas gerenciais" })).toBeVisible();
   });
 });
 

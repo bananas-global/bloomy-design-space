@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { scenarios } from "../../src/app/catalog.js";
+import { activeScenarios as scenarios } from "./active-scenarios.js";
 
 /**
  * Ordem de tabulação contra ordem visual, **dentro de cada coluna**.
@@ -15,9 +15,8 @@ import { scenarios } from "../../src/app/catalog.js";
  * salto para cima ali significa que a ordem do DOM discorda da ordem lida, e
  * quem navega por teclado é levado de volta a algo que já passou.
  */
-// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
-// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
-// caber em 30s seria medir menos para aprovar mais.
+// A varredura percorre apenas o trabalho ativo. Referências `ported` não são
+// casos de teste.
 test.setTimeout(180_000);
 
 test("dentro de uma coluna, o foco nunca volta para cima", async ({ page }) => {

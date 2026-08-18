@@ -11,6 +11,13 @@ import { authorizationFixtures } from "../fixtures/authorizations.js";
 import { closureFixtures } from "../fixtures/closures.js";
 import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
+import {
+  insurerDocumentFixtures,
+  professionalDocumentFixtures,
+  teamDocumentationFixtures,
+  unitDocumentFixtures,
+} from "../fixtures/documents.js";
+import { professionalDeactivationFixtures } from "../fixtures/professionalDeactivation.js";
 import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
@@ -106,6 +113,7 @@ import { authorizationScenarios } from "../scenarios/authorizations.js";
 import { closureScenarios } from "../scenarios/closures.js";
 import { invoiceScenarios } from "../scenarios/invoices.js";
 import { teamScenarios } from "../scenarios/team.js";
+import { documentScenarios } from "../scenarios/documents.js";
 import { publicPortalScenarios } from "../scenarios/publicPortal.js";
 import { guardianPortalScenarios } from "../scenarios/guardianPortal.js";
 import { insurerPortalScenarios } from "../scenarios/insurerPortal.js";
@@ -642,7 +650,7 @@ export const modules: Module[] = [
   },
   {
     id: "team",
-    name: "Equipe",
+    name: "Profissionais",
     description:
       "Quem trabalha na clínica — e as decisões deste cadastro que aparecem no atendimento e no fechamento.",
     flows: [
@@ -662,6 +670,36 @@ export const modules: Module[] = [
             },
           },
         ],
+      },
+      {
+        id: "keep-the-folder-in-order",
+        title: "Manter a documentação em dia",
+        description:
+          "Da pasta de uma pessoa à fila da equipe inteira. As variações de cada tela ficam no seletor de dados.",
+        steps: [
+          { scenario: "team.docs-folder", label: "Abrir a pasta do profissional" },
+          { scenario: "team.docs-team-matrix", label: "Ver a documentação da equipe" },
+        ],
+      },
+      {
+        id: "deactivate-a-professional",
+        title: "Inativar um profissional",
+        description: "A saída que deixa paciente sem responsável.",
+        steps: [{ scenario: "team.deactivation", label: "Marcar a saída e definir o destino" }],
+      },
+    ],
+  },
+  {
+    id: "health-cares",
+    name: "Operadoras",
+    description:
+      "O convênio pelo lado da clínica: quem está credenciado, o que falta e quais unidades ele aceita.",
+    flows: [
+      {
+        id: "who-the-insurer-accepts",
+        title: "Ver quem a operadora aceita",
+        description: "A mesma pasta de documentos, com a pergunta invertida.",
+        steps: [{ scenario: "health-cares.docs", label: "Abrir a ficha da operadora" }],
       },
     ],
   },
@@ -750,7 +788,7 @@ export const modules: Module[] = [
   },
   {
     id: "structure",
-    name: "Estrutura",
+    name: "Unidades",
     description:
       "Salas, serviços e bloqueios: a camada física que a agenda esbarra e que nenhuma tela de agendamento mostra.",
     flows: [
@@ -770,6 +808,15 @@ export const modules: Module[] = [
               "Horário bloqueado": "structure.blockings",
             },
           },
+        ],
+      },
+      {
+        id: "keep-the-unit-licensed",
+        title: "Manter a unidade licenciada",
+        description:
+          "Doze documentos, um só conjunto para todas as operadoras — e a conta que não perdoa o décimo segundo.",
+        steps: [
+          { scenario: "structure.docs-unit", label: "Abrir a pasta da unidade" },
         ],
       },
     ],
@@ -802,24 +849,18 @@ export const modules: Module[] = [
   },
   {
     id: "management",
-    name: "Gerência",
+    name: "Listas gerenciais",
     description:
-      "As filas de trabalho da coordenação — cada uma com um dono e uma consequência para o que fica parado.",
+      "Reorganização aprovada da navegação das onze listas existentes, sem mudar seu conteúdo.",
     flows: [
       {
-        id: "work-the-queues",
-        title: "Trabalhar as pendências da semana",
-        description:
-          "Da visão das frentes até as duas que custam mais caro paradas.",
+        id: "reorganize-management-tabs",
+        title: "Reorganizar as abas",
+        description: "Agrupar as onze abas atuais por contexto de trabalho.",
         steps: [
           {
-            scenario: "management.monday",
-            label: "Ver o que está pendente",
-            decision: "Qual frente custa mais cara parada?",
-            branches: {
-              "Relatório da operadora": "management.reports-by-consequence",
-              "Aplicador sem supervisor": "management.mentorship-gap",
-            },
+            scenario: "management.grouped-navigation",
+            label: "Consultar a navegação aprovada",
           },
         ],
       },
@@ -1123,6 +1164,7 @@ export const scenarios: Scenario[] = [
   ...closureScenarios,
   ...invoiceScenarios,
   ...teamScenarios,
+  ...documentScenarios,
   ...publicPortalScenarios,
   ...guardianPortalScenarios,
   ...insurerPortalScenarios,
@@ -1171,6 +1213,11 @@ export const fixtures: Fixture[] = [
   ...closureFixtures,
   ...invoiceFixtures,
   ...teamFixtures,
+  ...professionalDocumentFixtures,
+  ...insurerDocumentFixtures,
+  ...teamDocumentationFixtures,
+  ...unitDocumentFixtures,
+  ...professionalDeactivationFixtures,
   ...publicPortalFixtures,
   ...npsFixtures,
   ...guardianPortalFixtures,

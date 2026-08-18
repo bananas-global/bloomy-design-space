@@ -30,6 +30,9 @@ env:
 
 jobs:
   publicar:
+    # O GitHub não entrega secrets a workflows disparados por pushes do
+    # Dependabot. Esses PRs continuam cobertos pelo workflow CI.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +110,7 @@ jobs:
       - name: Instalar navegador
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Jornada e axe contra o que foi publicado
+      - name: Trabalho ativo, componentes e axe contra o publicado
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
         run: pnpm test:e2e

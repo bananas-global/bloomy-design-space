@@ -37,17 +37,31 @@ describe("contrato de cenário", () => {
     expect(without).toEqual([]);
   });
 
-  it("mantém o baseline inteiro como referência portada, fora do trabalho ativo", () => {
-    expect(productDefinition.scenarios).toHaveLength(274);
-    expect(new Set(productDefinition.scenarios.map((scenario) => scenario.status))).toEqual(
-      new Set(["ported"]),
+  it("separa as referências portadas do trabalho ativo", () => {
+    expect(productDefinition.scenarios.filter((scenario) => scenario.status === "ported")).toHaveLength(285);
+    const approved = productDefinition.scenarios.filter((scenario) => scenario.status === "approved");
+    expect(approved.map((scenario) => scenario.id)).toEqual(["management.grouped-navigation"]);
+    expect(approved[0]?.approvedAt).toEqual({
+      url: "https://bloomy-design-space-1fl24nbrk-vectorspace.vercel.app/management?scenario=management.grouped-navigation&persona=coordinator&fixture=management-grouped-navigation&viewport=desktop&handoff=1&allowScenario=management.grouped-navigation&allowComponent=core.lazy-tabs",
+      commit: "c55259f2ad5162181044f93360e1b43fabe0f0ed",
+      date: "2026-08-13",
+    });
+    expect(approved[0]?.permissions).toEqual(["management.list"]);
+    expect(approved[0]?.tags).not.toContain("aprovado");
+    expect(approved[0]?.expected).toContain(
+      "Selecionar um item abre a lista já existente; filtros, tabelas, ações, regras e permissões não fazem parte desta entrega.",
     );
-    expect(scenariosUnderTest(productDefinition)).toEqual([]);
+    // `scenariosUnderTest` do motor é o recorte de aprovado em diante; em revisão
+    // ainda não entra nele. A varredura local de `active-scenarios.ts` é mais
+    // larga de propósito: ela cobre tudo que não é `ported`.
+    expect(scenariosUnderTest(productDefinition).map((scenario) => scenario.id)).toEqual([
+      "management.grouped-navigation",
+    ]);
   });
 
-  it("expõe os 47 componentes portados no catálogo visual do motor", () => {
+  it("expõe os 47 componentes centrais, button_tabs e lazy_tabs no catálogo visual do motor", () => {
     const components = productDefinition.components ?? [];
-    expect(components).toHaveLength(47);
+    expect(components).toHaveLength(49);
     expect(new Set(components.map((component) => component.id)).size).toBe(components.length);
     expect(components.every((component) => component.id.startsWith("core."))).toBe(true);
     expect(components.every((component) => component.group === "Core components")).toBe(true);

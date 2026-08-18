@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { scenarios } from "../../src/app/catalog.js";
+import { activeScenarios as scenarios } from "./active-scenarios.js";
 
 /**
- * Varredura de propriedades que valem para **todos** os cenários.
+ * Varredura de propriedades que valem para **todos os cenários ativos**.
  *
  * Separada de `journey.spec.ts` porque a natureza é outra: lá cada teste
  * verifica uma situação; aqui um teste percorre as 186 e afirma algo que não
@@ -16,9 +16,8 @@ import { scenarios } from "../../src/app/catalog.js";
  * existir, porque produz confiança. Por isso o teste conta as páginas vazias e
  * falha se houver alguma.
  */
-// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
-// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
-// caber em 30s seria medir menos para aprovar mais.
+// Referências `ported` ficam fora: elas não foram validadas e não representam
+// compromisso de implementação.
 test.setTimeout(180_000);
 
 test("nenhum cenário renderiza vazio, salta nível de título ou vaza jargão", async ({

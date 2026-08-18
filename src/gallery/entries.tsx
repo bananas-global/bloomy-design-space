@@ -4,7 +4,7 @@ import { Button } from "../components/bloomy/Button.js";
 import { Card, InfoCard } from "../components/bloomy/Card.js";
 import { StatusTag, Tag, TagList, type TagVariant } from "../components/bloomy/Tag.js";
 import { SimpleTable, Table } from "../components/bloomy/Table.js";
-import { Checkbox, FakeInput, FieldError, Input, InputSwitchCard, InputWithSelect, Label, Switch, SwitchCard, Textarea } from "../components/bloomy/Input.js";
+import { Checkbox, FakeInput, FieldError, Input, InputSwitchCard, InputWithSelect, Label, Select, Switch, SwitchCard, Textarea } from "../components/bloomy/Input.js";
 import {
   Avatar, Back, DescriptionList, EmptyStateCard, InsideCard,
   LoadingCard, MetaInfo, Progress, SectionHeader, TimelineList,
@@ -17,16 +17,18 @@ import {
 import { Flash, FlashGroup, SimpleForm } from "../components/bloomy/Feedback.js";
 import { ImageUpload } from "../components/bloomy/ImageUpload.js";
 import { CopyButton, LinkButton, ToastHost } from "../components/bloomy/Action.js";
+import { ButtonTabs, LazyTabs } from "../components/bloomy/Tabs.js";
 
 /**
  * Índice dos componentes do sistema.
  *
  * Os **47** componentes de `lib/bloomy_web/components/core_components.ex`, na
- * ordem em que aparecem lá. Cada entrada carrega o arquivo e a linha de origem,
- * conferidos pelo mesmo script que valida as citações do log.
+ * ordem em que aparecem lá, mais os componentes compartilhados que vivem em
+ * arquivos próprios no monólito. Cada entrada carrega o arquivo e a linha de
+ * origem, conferidos pelo mesmo script que valida as citações do log.
  *
  * Apenas entradas com demonstração entram no catálogo visual do motor. Hoje as
- * 47 têm preview; se uma futura entrada ainda não tiver, permanece nesta fonte
+ * Todos têm preview; se uma futura entrada ainda não tiver, permanece nesta fonte
  * até existir algo real para o motor renderizar.
  */
 
@@ -104,6 +106,136 @@ function DemoModal() {
         </p>
       </Modal>
     </>
+  );
+}
+
+function DemoButtonTabs() {
+  const [active, setActive] = useState<"programas" | "protocolos" | "historico">("programas");
+  const labels = {
+    programas: "Programas estruturados em aquisição.",
+    protocolos: "ABLLS-R e protocolos de avaliação.",
+    historico: "Alterações registradas no plano.",
+  };
+  return (
+    <ButtonTabs
+      id="g-button-tabs"
+      label="Conteúdo clínico"
+      value={active}
+      onChange={setActive}
+      tabs={[
+        { id: "programas", label: "Programas" },
+        { id: "protocolos", label: "Protocolos" },
+        { id: "historico", label: "Histórico" },
+      ]}
+      panelClassName="rounded-lg bg-white p-4 text-sm text-[var(--color-brand-purple-dark)]/80"
+    >
+      {labels[active]}
+    </ButtonTabs>
+  );
+}
+
+type PatientLazyTab =
+  | "personal-summary"
+  | "personal-record"
+  | "clinical-summary"
+  | "general-anamnesis"
+  | "clinical-anamnesis"
+  | "external-anamnesis"
+  | "pic-active"
+  | "pic-history"
+  | "hours-map"
+  | "appointments"
+  | "evolution"
+  | "financial"
+  | "contents"
+  | "absences"
+  | "nps";
+
+function DemoLazyTabs() {
+  const [active, setActive] = useState<PatientLazyTab>("clinical-summary");
+  const labels: Record<PatientLazyTab, string> = {
+    "personal-summary": "Resumo cadastral",
+    "personal-record": "Cadastro completo",
+    "clinical-summary": "Resumo Clínico",
+    "general-anamnesis": "Anamnese Geral",
+    "clinical-anamnesis": "Anamnese Clínica",
+    "external-anamnesis": "Externo",
+    "pic-active": "Plano atual",
+    "pic-history": "Histórico de planos",
+    "hours-map": "Mapa de Horas",
+    appointments: "Atendimentos",
+    evolution: "Evolução",
+    financial: "Financeiro",
+    contents: "Conteúdos",
+    absences: "Faltas",
+    nps: "NPS",
+  };
+
+  return (
+    <LazyTabs<PatientLazyTab>
+      id="g-lazy-tabs"
+      label="Perfil do paciente"
+      value={active}
+      onChange={setActive}
+      tabs={[
+        { id: "personal", label: "Dados Pessoais", tabs: [
+          { id: "personal-summary", label: "Resumo cadastral" },
+          { id: "personal-record", label: "Cadastro completo" },
+        ] },
+        { id: "anamneses", label: "Anamneses", tabs: [
+          { id: "clinical-summary", label: "Resumo Clínico" },
+          { id: "general-anamnesis", label: "Anamnese Geral" },
+          { id: "clinical-anamnesis", label: "Anamnese Clínica" },
+          { id: "external-anamnesis", label: "Externo" },
+        ] },
+        { id: "pic", label: "PIC", tabs: [
+          { id: "pic-active", label: "Plano atual" },
+          { id: "pic-history", label: "Histórico de planos" },
+        ] },
+        { id: "hours", label: "Mapa de Horas", tabs: [{ id: "hours-map", label: "Mapa de Horas" }] },
+        { id: "care", label: "Atendimentos", tabs: [{ id: "appointments", label: "Atendimentos" }] },
+        { id: "evolution", label: "Evolução" },
+        { id: "financial", label: "Financeiro" },
+        { id: "contents", label: "Conteúdos" },
+        { id: "absences", label: "Faltas" },
+        { id: "nps", label: "NPS" },
+      ]}
+      header={(
+        <div>
+          <h2 className="m-0 text-2xl font-bold text-[var(--color-brand-purple-dark)]">Raul Tavares Rodrigues</h2>
+          <p className="mb-0 mt-2 text-sm text-[var(--color-brand-purple-dark)]/70">Ativo · 5 anos · 0 faltas · 0h semanais</p>
+        </div>
+      )}
+    >
+      {(selected) => (
+        <Card>
+          <h3 className="m-0 text-xl font-bold text-[var(--color-brand-purple-dark)]">{labels[selected]}</h3>
+          <p className="mb-0 mt-2 text-[var(--color-brand-purple-dark)]/70">
+            O conteúdo desta opção é avaliado somente quando ela é selecionada.
+          </p>
+        </Card>
+      )}
+    </LazyTabs>
+  );
+}
+
+function DemoSelect() {
+  const [specialty, setSpecialty] = useState("");
+  const [status, setStatus] = useState("active");
+  const specialties = [
+    { label: "Aplicador ABA", value: "aba" },
+    { label: "Fisioterapia", value: "physiotherapy" },
+    { label: "Fonoaudiologia", value: "speech-therapy" },
+    { label: "Psicologia", value: "psychology" },
+    { label: "Terapia Ocupacional", value: "occupational-therapy" },
+  ];
+  return (
+    <div id="g-select-wrapper" className="grid max-w-3xl gap-6 md:grid-cols-2">
+      <Select id="g-specialty" name="professional[specialty]" label="Especialidade" prompt="Selecione a especialidade" value={specialty} options={specialties} onChange={setSpecialty} />
+      <Select id="g-status" name="professional[status]" label="Status profissional" prompt="Selecione o status" value={status} options={[{ label: "Ativo", value: "active" }, { label: "Inativo", value: "inactive" }]} onChange={setStatus} />
+      <Select id="g-select-error" label="Especialidade com erro" prompt="Selecione a especialidade" value="" options={specialties} errors={["selecione uma especialidade"]} onChange={() => undefined} />
+      <Select id="g-select-disabled" label="Especialidade indisponível" prompt="Selecione a especialidade" value="psychology" options={specialties} disabled />
+    </div>
   );
 }
 
@@ -315,6 +447,30 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
+  {
+    name: "button_tabs",
+    origem: "lib/bloomy_web/components/button_tab_components.ex:18",
+    descricao: "Abas em trilho, com um marcador que acompanha a seleção.",
+    demos: [
+      {
+        titulo: "Marcador móvel entre abas",
+        nota: "O marcador mede cada rótulo; setas, Home e End movem a seleção sem perder o foco.",
+        render: () => <DemoButtonTabs />,
+      },
+    ],
+  },
+  {
+    name: "lazy_tabs",
+    origem: "lib/bloomy_web/components/lazy_tab_component.ex:28",
+    descricao: "Abas com grupos em dropdown e conteúdo carregado sob demanda.",
+    demos: [
+      {
+        titulo: "Abas agrupadas do perfil do paciente",
+        nota: "A linha azul acompanha o grupo ativo; o menu preserva seleção, check e navegação por teclado.",
+        render: () => <DemoLazyTabs />,
+      },
+    ],
+  },
   { name: "modal", origem: "lib/bloomy_web/components/core_components.ex:66", descricao: "Diálogo sobreposto, com foco preso e fechamento por Esc.",
     demos: [
       {
@@ -347,6 +503,11 @@ export const GALLERY: GalleryEntry[] = [
             <Input id="g-desab" label="Somente leitura" defaultValue="Não editável" disabled />
           </div>
         ),
+      },
+      {
+        titulo: "Seleção com menu próprio",
+        nota: "O sistema não abre o menu nativo do navegador: opções, destaque, limpeza e check pertencem ao componente.",
+        render: () => <DemoSelect />,
       },
       {
         titulo: "Com erro",
@@ -786,7 +947,8 @@ function fixtureIdFor(title: string, index: number) {
  *
  * Só uma entrada com demonstração pode ser aberta como preview. Os pendentes
  * continuam visíveis na página completa, mas não fingem ser uma composição
- * navegável. Hoje os 47 componentes estão portados.
+ * navegável. Hoje os 47 componentes de `core_components.ex` estão portados, e
+ * `button_tabs` e `lazy_tabs` também entram a partir dos arquivos próprios do sistema.
  */
 export const COMPONENT_PREVIEWS: ComponentPreview[] = portados().map((entry) => {
   const fixtures = (entry.demos ?? []).map((demo, index) => {

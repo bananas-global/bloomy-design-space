@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("catálogo de componentes do motor", () => {
-  test("lista os 47 componentes portados e abre o preview", async ({ page }) => {
+  test("lista os 47 componentes centrais, button_tabs e lazy_tabs, e abre o preview", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("tab", { name: "Componentes" }).click();
 
     const items = page.locator(".ds-component-item");
-    await expect(items).toHaveCount(47);
+    await expect(items).toHaveCount(49);
 
     await page.getByRole("button", { name: /^button\b/ }).click();
     await expect(page).toHaveURL(/component=core\.button/);

@@ -24,10 +24,12 @@ própria.
 
 ## O que existe hoje
 
-274 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
-exceção. Todos formam uma **referência portada e ainda não validada**: ajudam a
-consultar o que já foi levantado, mas não pertencem à fila de trabalho ativo e
-não representam compromisso de implementação.
+304 cenários em vinte e quatro módulos, cobrindo sucesso, vazio, permissão, regra e
+exceção. Desses, 285 formam a **referência portada e ainda não validada**; uma
+mudança aprovada reorganiza as abas de Listas gerenciais sem alterar o conteúdo
+das onze listas existentes; e dezoito são a **documentação, em revisão** —
+pasta do profissional, credenciamento em operadoras, documentação da equipe,
+inativação de profissional e pasta da unidade.
 
 O conteúdo foi portado do monólito Elixir/Phoenix em 2026-08-01/02. O log do
 porte — o que foi traduzido de onde, e treze achados sobre o sistema real — está
@@ -65,10 +67,15 @@ sistema de terapia ABA para autismo, e a sessão — com programas, tentativas,
 evolução e cadeia de assinatura — é onde isso aparece. O porte do sistema real
 está registrado em [`docs/porte-do-sistema-real.md`](docs/porte-do-sistema-real.md).
 
-Todos estão com status `ported` (**Portado — não validado**). Quando um cenário
-entrar no fluxo real de design, ele deve ser promovido para `proposed` ou
-substituído por um novo cenário; só depois da validação de negócio pode chegar a
-`approved`. A referência portada permanece acessível sem poluir a fila ativa.
+O baseline de 285 está com status `ported` (**Portado — não validado**). Quando
+um tema entra no fluxo real de design, ele passa para `proposed` ou ganha um novo
+cenário; só depois da validação de negócio pode chegar a `approved`. Listas
+gerenciais concluiu esse caminho com um único cenário aprovado para reorganizar
+a navegação.
+
+Referência `ported` é arquivo histórico e **não entra na suíte automatizada**.
+Playwright, axe e as varreduras de layout percorrem somente cenários de trabalho
+ativo; componentes continuam com testes próprios.
 
 ## Regras implementadas
 
@@ -214,12 +221,10 @@ O que quebra o build de propósito:
   qualquer aviso acumulado.
 - **Contraste dos tokens.** Par abaixo do alvo, ou com margem menor que 0.1 —
   aprovado por 4.5 exato não sobrevive ao próximo ajuste.
-- **Axe, violação séria ou crítica.** Por cenário, nos 24, na mesma jornada
+- **Axe, violação séria ou crítica.** Por cenário ativo, na mesma jornada
   Playwright.
 - **Regras de negócio.** 30 testes cobrindo fronteiras: a tolerância exata dos 15
   minutos, sobreposição que só encosta na borda, menor que fez 18 anos.
-
-Estado atual: 45 testes unitários, 75 jornadas Playwright.
 
 Verificação automática é piso, não teto. Ordem de leitura confusa, rótulo
 tecnicamente presente mas sem sentido e fluxo impossível de completar com leitor
@@ -275,9 +280,9 @@ token — então qualquer pessoa com push no repositório dispara um preview, e 
 continua sem consumir assento.
 
 O que o workflow faz, em ordem: typecheck e testes (falha barata, antes de gastar um
-deploy), build no runner do GitHub, publica só o resultado na Vercel, e roda a
-jornada Playwright com axe **contra a URL recém-publicada**. O link aparece no resumo
-da execução.
+deploy), build no runner do GitHub, publica só o resultado na Vercel, e roda
+Playwright com axe **somente no trabalho ativo e nos componentes**, contra a URL
+recém-publicada. O link aparece no resumo da execução.
 
 Se o workflow parar de rodar, nada é publicado. É deslocamento de responsabilidade,
 não redundância.
