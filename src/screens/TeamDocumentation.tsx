@@ -173,7 +173,7 @@ function Nome({
         {pessoa.name}
         {pessoa.tbd && <Etiqueta item="TBD" variant="yellow" className="ml-2" />}
         {situacao === "deactivating" && pessoa.deactivationDate && (
-          <span className="block text-sm font-normal text-[var(--color-orange-dark)]">
+          <span className="block text-sm font-normal text-[var(--color-pending-fg)]">
             <Icon name="fa-arrow-right-from-bracket" className="mr-1" />
             Em inativação · sai {formatDate(pessoa.deactivationDate, locale)} ·{" "}
             {dias === 0 ? "hoje" : `${dias} ${dias === 1 ? "dia" : "dias"}`}
