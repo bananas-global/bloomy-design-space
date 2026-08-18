@@ -107,7 +107,7 @@ jobs:
       - name: Instalar navegador
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Jornada e axe contra o que foi publicado
+      - name: Trabalho ativo, componentes e axe contra o publicado
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
         run: pnpm test:e2e

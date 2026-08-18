@@ -9,14 +9,14 @@ test.describe("catálogo — campos compostos e somente leitura", () => {
     await expect(value).toHaveAttribute("id", "g-criterio-frequencia");
     await expect(value).toHaveAttribute("name", "programa[mastery_frequency]");
     await expect(value).toHaveValue("3");
-    await expect(criterion).toHaveAttribute("name", "programa[mastery_criteria]");
-    await expect(criterion.locator("option")).toHaveText(["Sessões Cumulativas", "Sessões Consecutivas"]);
+    await expect(page.locator('input[name="programa[mastery_criteria]"]')).toHaveValue("consecutive");
     await value.click();
     await value.fill("5");
     await page.keyboard.press("Tab");
     await expect(criterion).toBeFocused();
-    await criterion.selectOption("cumulative");
-    await expect(criterion).toHaveValue("cumulative");
+    await criterion.press("Enter");
+    await page.getByRole("option", { name: "Sessões Cumulativas" }).click();
+    await expect(page.locator('input[name="programa[mastery_criteria]"]')).toHaveValue("cumulative");
     const blocked = page.getByRole("textbox", { name: "Critério indisponível: valor" });
     await expect(blocked).toBeDisabled();
     await expect(blocked).toHaveAttribute("aria-invalid", "true");

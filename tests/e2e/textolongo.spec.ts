@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { pathFor } from "@brucesantos/design-space/testing";
-import { scenarios } from "../../src/app/catalog.js";
+import { activeScenarios as scenarios } from "./active-scenarios.js";
 
 /**
  * Cadeia longa sem espaços, injetada em cada elemento de texto.
@@ -14,9 +14,8 @@ import { scenarios } from "../../src/app/catalog.js";
  * ilegível, sem sinal nenhum — passava como sucesso. Medido no elemento, 400
  * caracteres produziam 2.782 px de texto dentro de um parágrafo de 726 px.
  */
-// A varredura percorre **todos** os cenários, e o catálogo cresce a cada
-// módulo portado. O prazo acompanha o catálogo: encurtar a varredura para
-// caber em 30s seria medir menos para aprovar mais.
+// A varredura percorre apenas o trabalho ativo. Referências `ported` não são
+// casos de teste.
 test.setTimeout(180_000);
 
 test("cadeia longa sem espaços quebra dentro da caixa", async ({ page }) => {

@@ -24,6 +24,17 @@ const DESTRUTIVAS =
 const EXCECOES = [
   { trecho: "Voltar", porque: "sai do painel de cancelamento sem cancelar nada" },
   { trecho: "Registrar outra pessoa", porque: "recomeça o quiosque, não desfaz nada" },
+  {
+    trecho: "Cancelar",
+    arquivo: "src/screens/Management.tsx",
+    porque: "fecha um diálogo de edição sem salvar; não cancela nenhum registro",
+  },
+  {
+    trecho: "Cancelar",
+    arquivo: "src/screens/ProfessionalDocuments.tsx",
+    porque:
+      "fecha o formulário de documento e o diálogo de exportação sem salvar; não cancela documento nem compartilhamento",
+  },
 ];
 
 const arquivos = readdirSync("src/screens")
@@ -40,7 +51,13 @@ for (const arquivo of arquivos) {
     const rotulo = corpo.replace(/\s+/g, " ").trim();
 
     if (!DESTRUTIVAS.test(rotulo)) continue;
-    if (EXCECOES.some((excecao) => rotulo.includes(excecao.trecho))) continue;
+    if (
+      EXCECOES.some(
+        (excecao) =>
+          rotulo.includes(excecao.trecho) &&
+          (excecao.arquivo === undefined || excecao.arquivo === arquivo),
+      )
+    ) continue;
 
     const variante = atributos.match(/variant="(\w+)"/)?.[1] ?? "secondary";
     if (variante === "danger") continue;

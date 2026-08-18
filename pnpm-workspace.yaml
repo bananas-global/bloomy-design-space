@@ -1,4 +1,4 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@brucesantos/design-space@0.5.1'
+  - '@brucesantos/design-space@0.5.1 || 0.6.0'
