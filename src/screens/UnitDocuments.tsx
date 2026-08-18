@@ -5,8 +5,8 @@ import type {
   DocumentType,
   UnitDocument,
   UnitDocumentsData,
+  UnitListData,
 } from "../contracts/index.js";
-import { formatDate } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
 import { Icon } from "../components/Icon.js";
 import { EmptyState, ErrorState, LoadingState } from "../components/primitives.js";
@@ -43,7 +43,7 @@ import {
  * 2. **A conta é do conjunto.** Onze documentos em ordem não compensam o
  *    décimo segundo: faltando o AVCB, a operadora não credencia o endereço.
  */
-export function UnitDocuments({ context }: ScreenProps) {
+export function UnitDocuments({ params, context }: ScreenProps) {
   const { data, isLoading, error, permissions, can } = context;
 
   if (isLoading) return wrap(context, <LoadingState label="Carregando os documentos da unidade" />);
@@ -69,10 +69,42 @@ export function UnitDocuments({ context }: ScreenProps) {
     );
   }
 
-  const pasta = data as UnitDocumentsData | null;
-  if (!pasta) return wrap(context, <ErrorState message="Não foi possível carregar." />);
+  /**
+   * A lista e a pasta são o mesmo fluxo, e por isso a mesma fixture.
+   *
+   * Quando o dado vem da lista, a unidade é escolhida pelo id da rota. Duas
+   * fixtures obrigariam a trocar o seletor de dados no meio do caminho.
+   */
+  const pasta = comoPasta(data, params.id);
+  if (!pasta) {
+    return wrap(
+      context,
+      <EmptyState
+        title="Unidade não encontrada"
+        description={`Nenhuma unidade com o identificador ${params.id ?? "informado"}.`}
+      />,
+    );
+  }
 
   return <Conteudo context={context} pasta={pasta} permissions={permissions} />;
+}
+
+/** Aceita a pasta pronta ou a fixture da lista, escolhendo pelo id da rota. */
+function comoPasta(data: unknown, id: string | undefined): UnitDocumentsData | null {
+  const bruto = data as (UnitDocumentsData & Partial<UnitListData>) | null;
+  if (!bruto) return null;
+  if (!bruto.units) return bruto;
+
+  const unidade = bruto.units.find((item) => item.id === id) ?? bruto.units[0];
+  if (!unidade) return null;
+
+  return {
+    now: bruto.now,
+    unit: { id: unidade.id, name: unidade.name },
+    city: unidade.city,
+    documents: unidade.documents,
+    insurers: bruto.insurers,
+  };
 }
 
 /**
@@ -162,8 +194,10 @@ const TOM: Record<DocumentState | "not_in_force", "green" | "orange" | "red" | "
   not_in_force: "light-blue",
 };
 
-function br(iso: string | undefined, locale: string | undefined): string {
-  return iso ? formatDate(iso, locale) : "—";
+/** dd/mm/aaaa — o formato da tabela, como na do profissional. */
+function br(iso: string | undefined): string {
+  if (!iso) return "—";
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 }
 
 /* ============================================================== conteúdo */
@@ -177,7 +211,6 @@ function Conteudo({
   pasta: UnitDocumentsData;
   permissions: string[];
 }) {
-  const { locale } = context;
   const hoje = pasta.now.slice(0, 10);
   const [aviso, setAviso] = useState("");
   const linhas = useMemo(() => montarLinhas(pasta.documents), [pasta.documents]);
@@ -215,22 +248,22 @@ function Conteudo({
     {
       label: "Vigência",
       render: (linha) =>
-        linha.doc?.validFrom ? `a partir de ${br(linha.doc.validFrom, locale)}` : "—",
+        linha.doc?.validFrom ? `a partir de ${br(linha.doc.validFrom)}` : "—",
     },
     {
       label: "Expira em",
       render: (linha) =>
-        linha.doc ? (linha.doc.validUntil ? br(linha.doc.validUntil, locale) : "sem validade") : "—",
+        linha.doc?.validUntil ? br(linha.doc.validUntil) : "—",
     },
     {
-      label: "Situação",
+      label: "Status",
       render: (linha) => {
         const estado = unitDocumentState(linha.doc, hoje);
         const dias = linha.doc?.validUntil ? daysUntil(linha.doc.validUntil, hoje) : undefined;
         return <Etiqueta item={documentStateLabel(estado, dias)} variant={TOM[estado]} />;
       },
     },
-    { label: "Últ. atualização", render: (linha) => br(linha.doc?.updatedAt, locale) },
+    { label: "Últ. atualização", render: (linha) => br(linha.doc?.updatedAt) },
     {
       label: "Compartilhado com",
       render: (linha) =>
@@ -283,8 +316,8 @@ function Conteudo({
           actions={(linha) => (
             <Button
               className="espelho-do-sistema"
-              size="small"
-              variant="ghost"
+              size="medium"
+              variant="tint"
               leftIcon={linha.doc ? "fa-pen" : "fa-plus"}
               disabled={!podeEditar}
               onClick={() => setAviso(`${linha.nome} aberto para edição.`)}

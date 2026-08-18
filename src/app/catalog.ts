@@ -15,9 +15,8 @@ import {
   insurerDocumentFixtures,
   professionalDocumentFixtures,
   teamDocumentationFixtures,
-  unitDocumentFixtures,
+  unitListFixtures,
 } from "../fixtures/documents.js";
-import { professionalDeactivationFixtures } from "../fixtures/professionalDeactivation.js";
 import { publicPortalFixtures, npsFixtures } from "../fixtures/publicPortal.js";
 import { guardianPortalFixtures } from "../fixtures/guardianPortal.js";
 import { insurerPortalFixtures } from "../fixtures/insurerPortal.js";
@@ -671,35 +670,24 @@ export const modules: Module[] = [
           },
         ],
       },
-      {
-        id: "keep-the-folder-in-order",
-        title: "Manter a documentação em dia",
-        description:
-          "Da pasta de uma pessoa à fila da equipe inteira. As variações de cada tela ficam no seletor de dados.",
-        steps: [
-          { scenario: "team.docs-folder", label: "Abrir a pasta do profissional" },
-          { scenario: "team.docs-team-matrix", label: "Ver a documentação da equipe" },
-        ],
-      },
-      {
-        id: "deactivate-a-professional",
-        title: "Inativar um profissional",
-        description: "A saída que deixa paciente sem responsável.",
-        steps: [{ scenario: "team.deactivation", label: "Marcar a saída e definir o destino" }],
-      },
     ],
   },
   {
-    id: "health-cares",
-    name: "Operadoras",
+    id: "documents",
+    name: "Documentos",
     description:
-      "O convênio pelo lado da clínica: quem está credenciado, o que falta e quais unidades ele aceita.",
+      "A documentação que a clínica precisa manter em dia — do profissional, da operadora e da unidade.",
     flows: [
       {
-        id: "who-the-insurer-accepts",
-        title: "Ver quem a operadora aceita",
-        description: "A mesma pasta de documentos, com a pergunta invertida.",
-        steps: [{ scenario: "health-cares.docs", label: "Abrir a ficha da operadora" }],
+        id: "keep-documents-in-order",
+        title: "Manter a documentação em dia",
+        description:
+          "Três frentes da mesma tarefa. As variações de cada tela ficam no seletor de dados.",
+        steps: [
+          { scenario: "documents.professional", label: "Da lista da equipe à pasta de uma pessoa" },
+          { scenario: "documents.insurer", label: "A clínica vista pela operadora" },
+          { scenario: "documents.unit", label: "Os documentos da unidade" },
+        ],
       },
     ],
   },
@@ -808,15 +796,6 @@ export const modules: Module[] = [
               "Horário bloqueado": "structure.blockings",
             },
           },
-        ],
-      },
-      {
-        id: "keep-the-unit-licensed",
-        title: "Manter a unidade licenciada",
-        description:
-          "Doze documentos, um só conjunto para todas as operadoras — e a conta que não perdoa o décimo segundo.",
-        steps: [
-          { scenario: "structure.docs-unit", label: "Abrir a pasta da unidade" },
         ],
       },
     ],
@@ -1216,8 +1195,7 @@ export const fixtures: Fixture[] = [
   ...professionalDocumentFixtures,
   ...insurerDocumentFixtures,
   ...teamDocumentationFixtures,
-  ...unitDocumentFixtures,
-  ...professionalDeactivationFixtures,
+  ...unitListFixtures,
   ...publicPortalFixtures,
   ...npsFixtures,
   ...guardianPortalFixtures,

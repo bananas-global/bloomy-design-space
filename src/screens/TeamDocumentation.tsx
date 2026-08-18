@@ -18,8 +18,8 @@ import {
   INTERNAL_DOCUMENT_TYPES,
   PROFESSIONAL_DOCUMENT_TYPES,
 } from "../fixtures/documents.js";
-import { professionalStatus } from "../rules/professionalDeactivation.js";
 import {
+  professionalStatus,
   daysUntil,
   completeness,
   credentialStatus,
@@ -293,10 +293,15 @@ function Conteudo({
               return (
                 <tr
                   key={linha.professional.id}
-                  className="border-b border-[var(--color-brand-purple-dark)]/10 last:border-0"
+                  className="border-b border-[var(--color-brand-purple-dark)]/10 last:border-0 hover:bg-[var(--color-brand-purple-dark)]/5"
                 >
                   <th scope="row" className="px-3 py-4 text-left font-bold text-[var(--color-brand-purple-dark)]">
-                    <Nome pessoa={linha.professional} hoje={hoje} locale={context.locale} />
+                    <a
+                      href={`/team/${linha.professional.id}/documents${typeof window === "undefined" ? "" : window.location.search}`}
+                      className="block rounded focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]"
+                    >
+                      <Nome pessoa={linha.professional} hoje={hoje} locale={context.locale} />
+                    </a>
                   </th>
 
                   {visao === "lista" ? (

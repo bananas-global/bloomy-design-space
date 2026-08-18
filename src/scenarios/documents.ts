@@ -1,70 +1,34 @@
 import type { Scenario } from "@brucesantos/design-space";
 
 /**
- * Cenários da documentação — um por tela.
+ * Documentos — três frentes da mesma tarefa.
  *
- * As variações (vencido, a vencer, sem arquivo, descredenciado, vazio) são
- * trocas de dados na mesma tela, no seletor do rodapé. Elas não viram item na
- * lista: vinte irmãos para cinco telas fazem quem abre o link não saber por onde
- * começar.
+ * Cada uma é um fluxo, e não uma tela: o profissional começa na lista e abre a
+ * pasta de quem for clicado. As variações — vencido, a vencer, sem arquivo,
+ * descredenciado, vazio — ficam no seletor de dados do rodapé.
  */
 export const documentScenarios: Scenario[] = [
   {
-    id: "team.docs-folder",
-    title: "Documentos do profissional",
+    id: "documents.professional",
+    title: "Profissional",
     intent:
-      "A pasta de um profissional: o que existe, o que falta, o que está prestes a vencer e o que a operadora já enxerga.",
-    route: "/team/prof-marina/documents",
-    persona: "people",
-    fixture: "docs-professional-complete",
-    a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
-    expected: [
-      "Os sete tipos padrão aparecem, e os que não têm arquivo aparecem como lacuna.",
-      "Cada documento diz com quais operadoras foi compartilhado.",
-      "O credenciamento é consequência dos documentos, e não um campo digitado.",
-      "Trocar os dados no rodapé mostra vencido, a vencer, sem arquivo, descredenciado e pasta vazia.",
-    ],
-    tags: ["lista", "regra", "exceção"],
-  },
-  {
-    id: "team.docs-team-matrix",
-    title: "Documentação da equipe",
-    intent:
-      "A lista de profissionais na visão Documentação: completude e pendências por escopo, para saber por quem começar.",
+      "Da lista da equipe à pasta de uma pessoa: o que existe, o que falta, o que está prestes a vencer e o que a operadora já enxerga.",
     route: "/team/documentation",
     persona: "people",
     fixture: "docs-team-matrix",
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [
-      "O alternador troca entre a lista de profissionais e a documentação, sem trocar de página.",
-      "Cada escopo mostra o resumo por situação, ou “em dia” quando não há pendência.",
-      "Quem atende não alcança a tela: o bloqueio é de permissão.",
+      "A lista alterna entre Profissionais e Documentação sem trocar de página.",
+      "Clicar num profissional abre a pasta dele.",
+      "Na pasta, os sete tipos padrão aparecem — os sem arquivo, como lacuna.",
+      "O credenciamento é consequência dos documentos, e não um campo digitado.",
     ],
-    tags: ["lista", "permissão"],
+    tags: ["lista", "regra", "permissão"],
   },
   {
-    id: "team.deactivation",
-    title: "Inativar um profissional",
-    intent:
-      "A saída marcada com data, e o destino dos pacientes em atendimento — a etapa que não pode ser resolvida depois.",
-    route: "/team/prof-saindo/deactivate",
-    persona: "people",
-    fixture: "professional-deactivation-caseload",
-    a11y: { keyboard: "full", contrast: "AA" },
-    status: "in-review",
-    expected: [
-      "Confirmar fica indisponível enquanto houver paciente sem destino, com o motivo dito.",
-      "Quem já tem saída marcada não aparece como substituto.",
-      "Cancelar as sessões é a outra saída, e diz quantos atendimentos caem.",
-      "Trocar os dados no rodapé mostra a inativação já marcada e a saída sem caseload.",
-    ],
-    tags: ["regra", "exceção"],
-  },
-  {
-    id: "health-cares.docs",
-    title: "Documentos da operadora",
+    id: "documents.insurer",
+    title: "Operadora",
     intent:
       "A clínica vista pelo convênio: quem está credenciado, o que falta e quais unidades ele aceita.",
     route: "/insurers/unimed/documents",
@@ -80,19 +44,21 @@ export const documentScenarios: Scenario[] = [
     tags: ["lista", "exceção"],
   },
   {
-    id: "structure.docs-unit",
-    title: "Documentos da unidade",
-    intent: "Os doze documentos que a vigilância cobra, incluindo os que ainda não existem.",
+    id: "documents.unit",
+    title: "Unidade",
+    intent:
+      "Da lista de unidades à pasta de uma delas: os doze documentos que a vigilância cobra, incluindo os que ainda não existem.",
     route: "/structure/documents",
     persona: "operation",
-    fixture: "docs-unit-blocked",
+    fixture: "docs-unit-list",
     a11y: { keyboard: "full", contrast: "AA" },
     status: "in-review",
     expected: [
+      "A lista traz nome, CNPJ, CNES, endereço, cidade e se está ativa.",
+      "Clicar numa unidade abre a pasta de documentos dela.",
       "A licença que ainda não entrou em vigência aparece como Aguardando vigência.",
       "O documento que nunca foi anexado aparece como lacuna, com a ação de anexar.",
       "Um documento vencido segura o credenciamento da unidade inteira.",
-      "Trocar os dados no rodapé mostra a unidade recém-aberta.",
     ],
     tags: ["lista", "regra", "exceção"],
   },

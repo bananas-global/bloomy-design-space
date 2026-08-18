@@ -7,9 +7,9 @@ import type {
   ProfessionalDocument,
   ProfessionalDocumentsData,
   InsurerDocumentsData,
+  UnitListData,
   TeamDocumentationData,
   UnitDocument,
-  UnitDocumentsData,
 } from "../contracts/index.js";
 
 /**
@@ -1103,54 +1103,76 @@ export const teamDocumentationFixtures: Fixture<TeamDocumentationData>[] = [
   },
 ];
 
-export const unitDocumentFixtures: Fixture<UnitDocumentsData>[] = [
+/**
+ * As cinco unidades da lista, com os dados que a tabela mostra.
+ *
+ * CNPJ e CNES são sintéticos.
+ */
+export const unitListFixtures: Fixture<UnitListData>[] = [
   {
-    id: "docs-unit-blocked",
-    label: "AVCB vencido segura o credenciamento",
-    description:
-      "Onze dos doze documentos padrão em ordem. O AVCB venceu em 10/07 e a unidade sai de credenciada nas duas operadoras.",
+    id: "docs-unit-list",
+    label: "Unidades da clínica",
+    description: "Cinco unidades, uma inativa. Clicar numa linha abre a pasta de documentos dela.",
     data: {
       now: NOW,
-      unit: unidade,
-      city: "São Paulo",
-      documents: documentosUnidade,
       insurers: INSURERS,
-    },
-  },
-  {
-    id: "docs-unit-missing-slot",
-    label: "Locação nunca anexada",
-    description:
-      "O contrato de locação nunca entrou. A lacuna aparece na pasta mesmo sem nenhum registro criado.",
-    data: {
-      now: NOW,
-      unit: unidade,
-      city: "São Paulo",
-      documents: documentosUnidade
-        .filter((item) => item.typeId !== "avcb")
-        .concat({
-          id: "udoc-avcb-novo",
-          typeId: "avcb",
-          name: "AVCB 2026 — Auto de Vistoria do Corpo de Bombeiros",
-          responsible: "Marcos Vinícius Salles",
-          validUntil: "2029-07-15",
-          updatedAt: "2026-07-16",
-          file: "avcb-2026.pdf",
-          sharedWith: ["unimed", "bradesco"],
-        }),
-      insurers: INSURERS,
-    },
-  },
-  {
-    id: "docs-unit-empty",
-    label: "Unidade sem documentos",
-    description: "Unidade recém-aberta: doze lacunas padrão e nenhum arquivo.",
-    data: {
-      now: NOW,
-      unit: { id: "unit-nova", name: "Unidade Aurora" },
-      city: "Campinas",
-      documents: [],
-      insurers: INSURERS,
+      units: [
+        {
+          id: "unit-girassol",
+          name: "Unidade Girassol",
+          cnpj: "20.384.928/0001-24",
+          cnes: "4931777",
+          street: "Rua Antônio de Barros",
+          number: "2080",
+          city: "São Paulo",
+          active: true,
+          documents: documentosUnidade,
+        },
+        {
+          id: "unit-santana",
+          name: "Santana",
+          cnpj: "20.384.928/0002-05",
+          cnes: "4931777",
+          street: "Rua Salete",
+          number: "15",
+          city: "São Paulo",
+          active: true,
+          documents: documentosUnidade.filter((doc) => doc.typeId !== "avcb"),
+        },
+        {
+          id: "unit-itu",
+          name: "Itu",
+          cnpj: "20.384.928/0003-96",
+          cnes: "8164061",
+          street: "Avenida Doutor Ermelindo Maffei",
+          number: "218",
+          city: "Itu",
+          active: true,
+          documents: documentosUnidade,
+        },
+        {
+          id: "unit-salto",
+          name: "Salto",
+          cnpj: "20.384.928/0005-58",
+          cnes: "8061416",
+          street: "Rua 9 de Julho",
+          number: "872",
+          city: "Salto",
+          active: true,
+          documents: [],
+        },
+        {
+          id: "unit-aurora",
+          name: "Unidade Aurora",
+          cnpj: "00.000.000/0000-00",
+          cnes: "0000000",
+          street: "Rua Teste",
+          number: "000",
+          city: "Campinas",
+          active: false,
+          documents: [],
+        },
+      ],
     },
   },
 ];

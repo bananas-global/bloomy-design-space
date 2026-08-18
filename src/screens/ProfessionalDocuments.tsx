@@ -6,6 +6,7 @@ import type {
   DocumentType,
   ProfessionalDocument,
   ProfessionalDocumentsData,
+  TeamDocumentationData,
 } from "../contracts/index.js";
 import { formatDate } from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
@@ -21,6 +22,7 @@ import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
 import { Tag } from "../components/bloomy/Tag.js";
 import { PROFESSIONAL_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
+  professionalStatus,
   canExport,
   canShare,
   credentialStatus,
@@ -32,7 +34,6 @@ import {
   isTypeLocked,
   missingForInsurer,
 } from "../rules/documents.js";
-import { professionalStatus } from "../rules/professionalDeactivation.js";
 
 /**
  * A pasta de documentos de um profissional.
@@ -53,7 +54,7 @@ import { professionalStatus } from "../rules/professionalDeactivation.js";
  *    vence, o vínculo com a operadora cai sozinho. Sem essa frase, quem opera
  *    procura quem mexeu.
  */
-export function ProfessionalDocuments({ context }: ScreenProps) {
+export function ProfessionalDocuments({ params, context }: ScreenProps) {
   const { data, isLoading, error, permissions, can } = context;
 
   if (isLoading) return wrap(context, <LoadingState label="Carregando os documentos" />);
@@ -83,10 +84,43 @@ export function ProfessionalDocuments({ context }: ScreenProps) {
     );
   }
 
-  const pasta = data as ProfessionalDocumentsData | null;
-  if (!pasta) return wrap(context, <ErrorState message="Não foi possível carregar." />);
+  /**
+   * A lista e a pasta são o mesmo fluxo, e por isso a mesma fixture.
+   *
+   * Quando o dado vem da lista da equipe, o profissional é escolhido pelo id da
+   * rota. Duas fixtures obrigariam a trocar o seletor de dados no meio do
+   * caminho — e o fluxo deixaria de ser um.
+   */
+  const pasta = comoPasta(data, params.id);
+  if (!pasta) {
+    return wrap(
+      context,
+      <EmptyState
+        title="Profissional não encontrado"
+        description={`Nenhum profissional com o identificador ${params.id ?? "informado"}.`}
+      />,
+    );
+  }
 
   return <Conteudo context={context} pasta={pasta} permissions={permissions} />;
+}
+
+/** Aceita a pasta pronta ou a fixture da lista, escolhendo pelo id da rota. */
+function comoPasta(data: unknown, id: string | undefined): ProfessionalDocumentsData | null {
+  const bruto = data as (ProfessionalDocumentsData & Partial<TeamDocumentationData>) | null;
+  if (!bruto) return null;
+  if (!bruto.rows) return bruto;
+
+  const linha = bruto.rows.find((item) => item.professional.id === id) ?? bruto.rows[0];
+  if (!linha) return null;
+
+  return {
+    now: bruto.now,
+    professional: linha.professional,
+    documents: linha.documents,
+    insurers: bruto.insurers,
+    links: linha.links,
+  };
 }
 
 /* ================================================================ linhas */

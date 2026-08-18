@@ -62,8 +62,8 @@ import { LeadTasks } from "../screens/LeadTasks.js";
 import { Reports } from "../screens/Reports.js";
 import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
 import { TeamDocumentation } from "../screens/TeamDocumentation.js";
-import { ProfessionalDeactivation } from "../screens/ProfessionalDeactivation.js";
 import { UnitDocuments } from "../screens/UnitDocuments.js";
+import { UnitList } from "../screens/UnitList.js";
 import { InsurerDocuments } from "../screens/InsurerDocuments.js";
 
 /**
@@ -132,9 +132,9 @@ export const productDefinition: ProductDefinition = {
     { path: "/team/documentation", screen: guard(TeamDocumentation) },
     { path: "/team/patient-scope", screen: guard(PatientScope) },
     { path: "/team/:id/documents", screen: guard(ProfessionalDocuments) },
-    { path: "/team/:id/deactivate", screen: guard(ProfessionalDeactivation) },
     { path: "/team", screen: guard(Team) },
-    { path: "/structure/documents", screen: guard(UnitDocuments) },
+    { path: "/structure/documents", screen: guard(UnitList) },
+    { path: "/structure/:id/documents", screen: guard(UnitDocuments) },
     { path: "/insurers/:id/documents", screen: guard(InsurerDocuments) },
     { path: "/kiosk", screen: guard(Kiosk) },
     { path: "/nps", screen: guard(Nps) },

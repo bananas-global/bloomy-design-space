@@ -3013,42 +3013,6 @@ export interface UnitDocumentsData {
   insurers: DocumentInsurer[];
 }
 
-/**
- * Um paciente em atendimento com quem está saindo.
- *
- * A inativação de um profissional não é um campo de status: é a transferência
- * desta lista. Enquanto ela não tiver destino, não há o que confirmar.
- */
-export interface CaseloadEntry {
-  patientId: string;
-  patientName: string;
-  specialty: string;
-  weeklyHours: number;
-  monthlySessions: number;
-  unitName: string;
-}
-
-export interface DeactivationSubstitute {
-  id: string;
-  name: string;
-  specialty: string;
-  active: boolean;
-  /** Já tem saída marcada: não pode receber caseload de quem está saindo. */
-  deactivationDate?: string;
-}
-
-export interface ProfessionalDeactivationData {
-  now: string;
-  professional: DocumentSubject;
-  caseload: CaseloadEntry[];
-  substitutes: DeactivationSubstitute[];
-  /** Atendimentos já marcados depois da data de saída escolhida. */
-  scheduledAfter: number;
-  /** Atendimentos entre hoje e a data de saída. */
-  scheduledUntil: number;
-  /** Períodos que este profissional ocupa na escala de salas. */
-  roomPeriods: number;
-}
 
 /** A ficha da operadora, do ponto de vista dos documentos. */
 export interface InsurerDocumentsData {
@@ -3062,4 +3026,25 @@ export interface InsurerDocumentsData {
     city: string;
     documents: UnitDocument[];
   }[];
+}
+
+/** Uma unidade na lista de Unidades. */
+export interface UnitListing {
+  id: string;
+  name: string;
+  cnpj: string;
+  cnes: string;
+  street: string;
+  number: string;
+  complement?: string;
+  city: string;
+  active: boolean;
+  /** Quantos dos doze documentos padrão estão em ordem. */
+  documents: UnitDocument[];
+}
+
+export interface UnitListData {
+  now: string;
+  units: UnitListing[];
+  insurers: DocumentInsurer[];
 }

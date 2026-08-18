@@ -333,3 +333,22 @@ export function unitCredentialStatus(
     ? "in_credentialing"
     : "credentialed";
 }
+
+/* =========================================================== profissional */
+
+/**
+ * Situação do profissional.
+ *
+ * "Em inativação" não é campo: é ativo com data de saída futura. A lista e o
+ * cabeçalho da pasta leem daqui.
+ */
+export function professionalStatus(
+  professional: { active: boolean; deactivationDate?: string },
+  now: string,
+): "active" | "deactivating" | "inactive" {
+  if (!professional.active) return "inactive";
+  if (professional.deactivationDate && daysUntil(professional.deactivationDate, now) >= 0) {
+    return "deactivating";
+  }
+  return "active";
+}

@@ -83,7 +83,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  server: { port: devPort, strictPort: false },
+  // `host: true` escuta em IPv4 e IPv6. Sem isso o Vite fica só em `[::1]`, e o
+  // navegador que resolve `localhost` para `127.0.0.1` não conecta.
+  server: { port: devPort, strictPort: false, host: true },
   preview: { port: devPort + 1, strictPort: false },
   build: { sourcemap: true },
   test: {
