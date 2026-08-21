@@ -61,10 +61,11 @@ import { LeadDashboard } from "../screens/LeadDashboard.js";
 import { LeadTasks } from "../screens/LeadTasks.js";
 import { Reports } from "../screens/Reports.js";
 import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
-import { TeamDocumentation } from "../screens/TeamDocumentation.js";
+import { Professionals } from "../screens/Professionals.js";
 import { UnitDocuments } from "../screens/UnitDocuments.js";
 import { UnitList } from "../screens/UnitList.js";
 import { InsurerDocuments } from "../screens/InsurerDocuments.js";
+import { InsurerList } from "../screens/InsurerList.js";
 
 /**
  * A única coisa que o Bloomy Design Space entrega ao motor.
@@ -129,12 +130,13 @@ export const productDefinition: ProductDefinition = {
     { path: "/closures", screen: guard(Closures) },
     { path: "/invoices/:id", screen: guard(HealthcareInvoiceScreen) },
     // Literais antes da paramétrica, como em `/patients`.
-    { path: "/team/documentation", screen: guard(TeamDocumentation) },
+    { path: "/team/documentation", screen: guard(Professionals) },
     { path: "/team/patient-scope", screen: guard(PatientScope) },
     { path: "/team/:id/documents", screen: guard(ProfessionalDocuments) },
     { path: "/team", screen: guard(Team) },
     { path: "/structure/documents", screen: guard(UnitList) },
     { path: "/structure/:id/documents", screen: guard(UnitDocuments) },
+    { path: "/insurers/documents", screen: guard(InsurerList) },
     { path: "/insurers/:id/documents", screen: guard(InsurerDocuments) },
     { path: "/kiosk", screen: guard(Kiosk) },
     { path: "/nps", screen: guard(Nps) },

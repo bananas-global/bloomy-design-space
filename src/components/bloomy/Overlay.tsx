@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "../Icon.js";
 import { Button } from "./Button.js";
 
@@ -145,19 +146,32 @@ const DRAWER_WIDTH: Record<Exclude<DrawerVariant, "custom">, string> = {
 
 const DRAWER_NOOP = () => {};
 
-/** `drawer_modal/1`: diálogo lateral com os mesmos ids e divisões do HEEx. */
+/**
+ * `drawer_modal/1`: diálogo lateral com os mesmos ids e divisões do HEEx.
+ *
+ * Uma diferença deliberada em relação ao original: lá o painel inteiro rola
+ * junto (`overflow-y-auto` no container), então em formulário longo o título sai
+ * de vista e as ações ficam depois do fim do conteúdo. Aqui quem rola é só o
+ * miolo — cabeçalho e `footer` ficam presos nas bordas do painel. É decisão de
+ * layout registrada em `docs/decisions/0014-o-drawer-longo-perde-titulo-e-acoes.md`,
+ * não descuido do porte.
+ *
+ * O `footer` é opcional: sem ele o painel tem exatamente as duas divisões do
+ * HEEx, e as ações continuam podendo morar no fim do conteúdo.
+ */
 export function DrawerModal({
   id, show = false, onCancel = DRAWER_NOOP, title, titleClassName = "text-blue-dark", avatarUrl,
   target, triggerShow, placement = "right", variant = "small", customSize, contentClassName,
-  customTitle, customTitleClassName, children, className, ...rest
+  customTitle, customTitleClassName, footer, children, className, ...rest
 }: HTMLAttributes<HTMLDivElement> & {
   id: string; show?: boolean; onCancel?: () => void; title?: string;
   titleClassName?: string; avatarUrl?: string; target?: string; triggerShow?: string;
   placement?: "left" | "right"; variant?: DrawerVariant; customSize?: string;
   contentClassName?: string; customTitle?: ReactNode; customTitleClassName?: string;
-  children: ReactNode;
+  footer?: ReactNode; children: ReactNode;
 }) {
   const container = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   const onCancelRef = useRef(onCancel);
   onCancelRef.current = onCancel;
@@ -185,7 +199,8 @@ export function DrawerModal({
     if (!isOpen || !mounted) return;
     returnFocus.current = document.activeElement as HTMLElement | null;
     document.body.classList.add("overflow-hidden");
-    container.current?.scrollTo(0, 0);
+    // Quem rola é o miolo; o container é a moldura fixa.
+    content.current?.scrollTo(0, 0);
     const focusables = () => Array.from(container.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') ?? []);
     focusables()[0]?.focus();
     const keydown = (event: KeyboardEvent) => {
@@ -212,15 +227,21 @@ export function DrawerModal({
     <div className="fixed inset-0 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby={title ? `${id}-title` : undefined} aria-describedby={`${id}-description`} tabIndex={0}>
       <div id={`${id}-bg`} className={["fixed inset-0 bg-[var(--color-neutral-900)]/30 transition-all transform", visible ? "opacity-100 ease-out duration-300" : "opacity-0 ease-in duration-200"].join(" ")} aria-hidden="true" onClick={onCancel} />
       <div className={["fixed inset-y-0 flex max-w-full", placement === "right" ? "right-0" : "left-0"].join(" ")}>
-        <div ref={container} id={`${id}-container`} className={["relative flex h-full w-full flex-col overflow-y-auto bg-white shadow-main transition-transform ease-in-out", visible ? "translate-x-0 duration-300" : `${offscreen} duration-200`, placement === "right" ? "rounded-l-2xl" : "rounded-r-2xl", width].filter(Boolean).join(" ")}>
-          <div className="flex items-center justify-between border-b border-neutral-100 p-6">
+        {/*
+          O original arredonda o canto interno (`rounded-l-2xl` à direita,
+          `rounded-r-2xl` à esquerda). Aqui o painel é reto: decisão de design
+          registrada em `docs/decisions/0014-o-drawer-longo-perde-titulo-e-acoes.md`.
+        */}
+        <div ref={container} id={`${id}-container`} className={["relative flex h-full w-full flex-col overflow-hidden bg-white shadow-main transition-transform ease-in-out", visible ? "translate-x-0 duration-300" : `${offscreen} duration-200`, width].filter(Boolean).join(" ")}>
+          <div className="flex shrink-0 items-center justify-between border-b border-neutral-100 p-6">
             <div className="flex min-w-0 items-center">
               {avatarUrl && <img src={avatarUrl} alt="" className="mr-2 h-7 w-7 rounded-full object-cover" />}
               {title ? <div className="min-w-0"><h1 id={`${id}-title`} className={["m-0 truncate text-2xl font-bold", titleClassName].filter(Boolean).join(" ")}>{title}</h1></div> : <div className={customTitleClassName}>{customTitle}</div>}
             </div>
             <Button id={`${id}-btn-close`} data-drawer-id={id} data-close-drawer type="button" variant="tint" aria-label="Fechar" onClick={onCancel}><Icon name="fa-times" className="block h-4 w-4 self-center" /></Button>
           </div>
-          <div id={`${id}-content`} className={["flex-1 p-6", contentClassName].filter(Boolean).join(" ")}>{children}</div>
+          <div ref={content} id={`${id}-content`} className={["min-h-0 flex-1 overflow-y-auto p-6", contentClassName].filter(Boolean).join(" ")}>{children}</div>
+          {footer && <div id={`${id}-footer`} className="shrink-0 border-t border-neutral-100 p-6">{footer}</div>}
         </div>
       </div>
     </div>
@@ -240,7 +261,20 @@ export function ModalContent({ title, className, onClose, children, ...rest }: H
   </div>;
 }
 
-/** `dropdown/1`: painel ancorado num gatilho livre. */
+/**
+ * `dropdown/1`: painel ancorado num gatilho livre.
+ *
+ * O painel é **posicionado por `fixed` num portal para o `body`**, e não por
+ * `absolute` dentro da raiz. A diferença aparece no único lugar em que ela
+ * importa: dentro de uma tabela. O container de `Table` tem `overflow-x-auto`
+ * para a rolagem horizontal, e um painel absoluto ali é cortado pela borda da
+ * tabela — o menu abre e some pela metade. É a mesma solução que `LazyTabs` já
+ * usa para os menus de grupo, pelo mesmo motivo.
+ *
+ * A consequência é que o painel precisa **acompanhar o gatilho**: sem isso ele
+ * fica onde estava quando a página rolar, o que é pior que o corte. Daí o
+ * reposicionamento no `scroll` e no `resize`.
+ */
 export function Dropdown({
   id,
   trigger,
@@ -253,35 +287,75 @@ export function Dropdown({
   className?: string;
 }) {
   const [aberto, setAberto] = useState(false);
+  const [posicao, setPosicao] = useState({ left: 0, top: 0 });
   const raiz = useRef<HTMLDivElement>(null);
+  const gatilho = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!aberto) return;
-    const foraDaqui = (e: MouseEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAberto(false);
+
+    /**
+     * Encostado na direita, o painel entra para dentro da janela.
+     *
+     * A largura mínima é a mesma do painel (`min-w-56`, 224px). Um menu de linha
+     * de tabela nasce quase sempre na borda direita, e sem este limite ele abriria
+     * metade fora da tela.
+     */
+    const reposicionar = () => {
+      const rect = gatilho.current?.getBoundingClientRect();
+      if (!rect) return;
+      const largura = 224;
+      const left = Math.min(rect.left, window.innerWidth - largura - 8);
+      setPosicao({ left: Math.max(8, left), top: rect.bottom + 4 });
     };
+
+    const foraDaqui = (e: MouseEvent) => {
+      const alvo = e.target as Node;
+      const painel = document.getElementById(`${id}-menu`);
+      if (!raiz.current?.contains(alvo) && !painel?.contains(alvo)) setAberto(false);
+    };
+
+    reposicionar();
+    window.addEventListener("resize", reposicionar);
+    window.addEventListener("scroll", reposicionar, true);
     document.addEventListener("mousedown", foraDaqui);
-    return () => document.removeEventListener("mousedown", foraDaqui);
-  }, [aberto]);
+    return () => {
+      window.removeEventListener("resize", reposicionar);
+      window.removeEventListener("scroll", reposicionar, true);
+      document.removeEventListener("mousedown", foraDaqui);
+    };
+  }, [aberto, id]);
 
   return (
     <div id={id} ref={raiz} className={["relative", className].filter(Boolean).join(" ")}>
       <button
+        ref={gatilho}
         type="button"
         className="cursor-pointer border-0 bg-transparent p-0"
         aria-expanded={aberto}
+        aria-haspopup="menu"
         onClick={() => setAberto((a) => !a)}
       >
         {trigger}
       </button>
 
-      {aberto && (
-        <nav className="absolute z-[9999]">
-          <div className="mt-1 min-w-56 rounded-md border border-[var(--color-neutral-200)]/70 bg-white p-1 text-[var(--color-neutral-900)] shadow-md">
-            {children}
-          </div>
-        </nav>
-      )}
+      {aberto &&
+        createPortal(
+          <nav
+            id={`${id}-menu`}
+            className="fixed z-[9999]"
+            style={{ left: posicao.left, top: posicao.top }}
+            // Escolher uma ação fecha o menu. Sem isto ele fica aberto atrás do
+            // que a ação abriu — um drawer, por exemplo —, e reaparece por cima
+            // quando o drawer fecha.
+            onClick={() => setAberto(false)}
+          >
+            <div className="min-w-56 rounded-md border border-[var(--color-neutral-200)]/70 bg-white p-1 text-[var(--color-neutral-900)] shadow-md">
+              {children}
+            </div>
+          </nav>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -315,7 +389,13 @@ export function DropdownMenu({ id, items }: { id: string; items: ReactNode[] }) 
       </button>
 
       {aberto && (
-        <nav className="absolute z-[9999]">
+        // `right-0`, e não só `absolute` como no HEEx. O original é posicionado
+        // pelo `DropdownController`, que usa Floating UI com `flip()` e
+        // `shift({ padding: 8 })` — no canto direito de um cartão, o efeito do
+        // `shift` é exatamente puxar o menu de volta para dentro. Sem isso, o
+        // menu alinha pela esquerda do gatilho e sai da tela, que é onde o botão
+        // de ações quase sempre está.
+        <nav className="absolute right-0 z-[9999]">
           <ul className="m-0 mt-1 min-w-48 list-none rounded border border-[var(--color-neutral-200)]/70 bg-white p-0 shadow">
             {items.map((item, i) => (
               <li

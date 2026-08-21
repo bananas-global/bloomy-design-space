@@ -8,7 +8,9 @@ import {
   type KeyboardEvent,
   type ReactElement,
   type ReactNode,
+  type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "../Icon.js";
 
 /**
@@ -394,6 +396,97 @@ export function SwitchCard({
 export type SelectOption = { label: string; value: string };
 
 /**
+ * Posicionamento do painel flutuante, comum a `Select` e `MultiSelect`.
+ *
+ * O painel é `fixed` e vai para o `body` por portal. As duas coisas juntas são o
+ * requisito: `fixed` para não ser cortado por um pai com `overflow`, e portal
+ * porque `fixed` sozinho não basta — um ancestral com `transform` ou `translate`
+ * passa a ser o bloco de contenção do painel, e aí as coordenadas de viewport
+ * apontam para o lugar errado. É exatamente o caso do `DrawerModal`, que anima a
+ * entrada com `translate`: sem o portal o menu abre fora da tela.
+ *
+ * Em troca, o painel precisa medir o gatilho, decidir se abre para baixo ou para
+ * cima e refazer a conta quando a página rola ou muda de tamanho.
+ */
+function useFloatingMenu(
+  open: boolean,
+  close: () => void,
+  refs: {
+    root: RefObject<HTMLDivElement | null>;
+    trigger: RefObject<HTMLButtonElement | null>;
+    menu: RefObject<HTMLDivElement | null>;
+  },
+) {
+  const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: 256 });
+  const closeRef = useRef(close);
+  closeRef.current = close;
+
+  function positionMenu() {
+    const button = refs.trigger.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const menuHeight = Math.min(refs.menu.current?.offsetHeight ?? 256, 256);
+    const below = window.innerHeight - rect.bottom - 16;
+    const above = rect.top - 16;
+    const opensAbove = below < Math.min(menuHeight, 192) && above > below;
+    const top = opensAbove ? Math.max(16, rect.top - menuHeight - 4) : rect.bottom + 4;
+    const left = Math.min(Math.max(16, rect.left), Math.max(16, window.innerWidth - rect.width - 16));
+
+    setPosition({
+      left,
+      top,
+      width: rect.width,
+      maxHeight: Math.max(96, opensAbove ? above - 4 : below),
+    });
+  }
+
+  useLayoutEffect(() => {
+    if (open) positionMenu();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const closeOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!refs.root.current?.contains(target) && !refs.menu.current?.contains(target)) {
+        closeRef.current();
+      }
+    };
+    const reposition = () => positionMenu();
+
+    /**
+     * Esc com a lista aberta fecha a lista, e só ela.
+     *
+     * Fica na captura da janela porque o alvo da tecla depende de onde a pessoa
+     * clicou por último — nas opções o foco não muda, mas basta um clique no
+     * painel para o alvo ser o `body`, e aí o `keydown` do `DrawerModal` fecharia
+     * o formulário inteiro em vez de fechar a lista.
+     */
+    const escape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      closeRef.current();
+    };
+
+    document.addEventListener("pointerdown", closeOutside);
+    window.addEventListener("keydown", escape, true);
+    window.addEventListener("resize", reposition);
+    // `true` para pegar a rolagem de qualquer contêiner, não só a da janela.
+    window.addEventListener("scroll", reposition, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      window.removeEventListener("keydown", escape, true);
+      window.removeEventListener("resize", reposition);
+      window.removeEventListener("scroll", reposition, true);
+    };
+  }, [open]);
+
+  return position;
+}
+
+/**
  * A cláusula `input/1` com `type="select"` usa o `CustomSelectComponent` do
  * sistema: gatilho próprio, opções flutuantes e seleção visível com check.
  * Não é um `<select>` nativo estilizado.
@@ -437,52 +530,9 @@ export function Select({
   const menu = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(-1);
-  const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: 256 });
+  const position = useFloatingMenu(open, () => setOpen(false), { root, trigger, menu });
   const selectedIndex = options.findIndex((option) => option.value === value);
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
-
-  function positionMenu() {
-    const button = trigger.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const menuHeight = Math.min(menu.current?.offsetHeight ?? 256, 256);
-    const below = window.innerHeight - rect.bottom - 16;
-    const above = rect.top - 16;
-    const opensAbove = below < Math.min(menuHeight, 192) && above > below;
-    const top = opensAbove ? Math.max(16, rect.top - menuHeight - 4) : rect.bottom + 4;
-    const left = Math.min(Math.max(16, rect.left), Math.max(16, window.innerWidth - rect.width - 16));
-
-    setPosition({
-      left,
-      top,
-      width: rect.width,
-      maxHeight: Math.max(96, opensAbove ? above - 4 : below),
-    });
-  }
-
-  useLayoutEffect(() => {
-    if (open) positionMenu();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const closeOutside = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (!root.current?.contains(target) && !menu.current?.contains(target)) setOpen(false);
-    };
-    const reposition = () => positionMenu();
-
-    document.addEventListener("pointerdown", closeOutside);
-    window.addEventListener("resize", reposition);
-    window.addEventListener("scroll", reposition, true);
-    return () => {
-      document.removeEventListener("pointerdown", closeOutside);
-      window.removeEventListener("resize", reposition);
-      window.removeEventListener("scroll", reposition, true);
-    };
-  }, [open]);
 
   function openMenu() {
     if (disabled) return;
@@ -507,7 +557,11 @@ export function Select({
     }
 
     if (event.key === "Escape" || event.key === "Tab") {
-      if (event.key === "Escape") event.preventDefault();
+      if (event.key === "Escape") {
+        event.preventDefault();
+        // Fecha a lista sem fechar o diálogo que contém o campo.
+        event.stopPropagation();
+      }
       setOpen(false);
       return;
     }
@@ -600,7 +654,7 @@ export function Select({
         <input type="hidden" name={name} value={value} />
       </div>
 
-      {open && (
+      {open && createPortal(
         <div
           ref={menu}
           data-options-container
@@ -634,7 +688,346 @@ export function Select({
               );
             })}
           </ul>
+        </div>,
+        document.body,
+      )}
+
+      {errors.length > 0 && (
+        <div id={errorId}>
+          {errors.map((message) => <FieldError key={message} className="absolute -bottom-6 font-normal leading-none" message={message} />)}
         </div>
+      )}
+    </div>
+  );
+}
+
+export type MultiSelectOption = SelectOption & {
+  /** Anotação curta ao lado do rótulo na lista. Não entra na etiqueta. */
+  hint?: string;
+  disabled?: boolean;
+  /** Por que a opção está indisponível. Fica visível abaixo do campo. */
+  reason?: string;
+};
+
+/**
+ * A cláusula `input/1` com `type="multi_select_search"`: um gatilho só, as
+ * escolhidas viram etiquetas dentro dele e o painel continua aberto enquanto a
+ * pessoa marca.
+ *
+ * Três decisões que vieram da convenção do produto, não do visual:
+ *
+ * 1. **Opção indisponível continua na lista**, desabilitada, e o motivo fica
+ *    visível abaixo do campo — não dentro do painel, que fecha. A opção aponta
+ *    para o motivo por `aria-describedby`. É a decisão 0003: ação bloqueada
+ *    alcança o teclado e diz por quê.
+ * 2. **A etiqueta não tem botão de remover.** Botão dentro de botão não é HTML
+ *    válido, e um `div` clicável no lugar do gatilho perderia teclado. Desmarcar
+ *    é reabrir a lista e clicar de novo; "Limpar" zera tudo.
+ * 3. **O painel não fecha ao marcar.** Escolha múltipla que fecha a cada clique
+ *    obriga a reabrir uma vez por operadora.
+ */
+export function MultiSelect({
+  id: providedId,
+  name,
+  label,
+  ariaLabel,
+  description,
+  note,
+  prompt = "Selecione uma ou mais opções",
+  values,
+  options,
+  disabled = false,
+  clear = true,
+  errors = [],
+  className,
+  inputClassName,
+  onChange,
+}: {
+  id?: string;
+  name?: string;
+  label?: string;
+  ariaLabel?: string;
+  description?: string;
+  /** Consequência da seleção atual. Anunciado quando aparece; não é erro. */
+  note?: string;
+  prompt?: string;
+  values: string[];
+  options: MultiSelectOption[];
+  disabled?: boolean;
+  clear?: boolean;
+  errors?: string[];
+  className?: string;
+  inputClassName?: string;
+  onChange?: (values: string[]) => void;
+}) {
+  const generatedId = useId();
+  const id = providedId ?? `multi-select-${generatedId.replace(/:/g, "")}`;
+  const triggerId = `${id}-trigger`;
+  const listboxId = `${id}-options`;
+  const errorId = errors.length > 0 ? `${id}-errors` : undefined;
+  const descriptionId = description ? `${id}-description` : undefined;
+  const noteId = note ? `${id}-note` : undefined;
+  const root = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const position = useFloatingMenu(open, () => setOpen(false), { root, trigger, menu });
+
+  const selected = options.filter((option) => values.includes(option.value));
+
+  /**
+   * Motivos agrupados: quando a mesma condição bloqueia várias opções — falta o
+   * arquivo, falta a permissão — repetir a frase uma vez por opção enche o painel
+   * com o mesmo texto. Agrupado, o campo tem uma linha por causa, não por opção.
+   */
+  const blocked = options.reduce<{ reason: string; labels: string[]; values: string[] }[]>(
+    (grupos, option) => {
+      if (!option.disabled || !option.reason) return grupos;
+      const grupo = grupos.find((item) => item.reason === option.reason);
+      if (grupo) {
+        grupo.labels.push(option.label);
+        grupo.values.push(option.value);
+      } else {
+        grupos.push({ reason: option.reason, labels: [option.label], values: [option.value] });
+      }
+      return grupos;
+    },
+    [],
+  );
+  const reasonId = (value: string) =>
+    `${id}-reason-${blocked.findIndex((grupo) => grupo.values.includes(value))}`;
+
+  function openMenu() {
+    if (disabled) return;
+    setHighlighted(options.findIndex((option) => !option.disabled));
+    setOpen(true);
+  }
+
+  function toggle(option: MultiSelectOption) {
+    if (option.disabled) return;
+    onChange?.(
+      values.includes(option.value)
+        ? values.filter((value) => value !== option.value)
+        : [...values, option.value],
+    );
+  }
+
+  function keyboard(event: KeyboardEvent<HTMLButtonElement>) {
+    if (!open) {
+      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openMenu();
+      }
+      return;
+    }
+
+    if (event.key === "Escape" || event.key === "Tab") {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        // O Esc aqui fecha a lista, não o diálogo que contém o campo. Sem isto o
+        // `DrawerModal` também ouve a tecla e a pessoa perde o formulário inteiro
+        // ao desistir de uma opção.
+        event.stopPropagation();
+      }
+      setOpen(false);
+      return;
+    }
+
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const next =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? options.length - 1
+            : Math.min(
+                Math.max(highlighted + (event.key === "ArrowDown" ? 1 : -1), 0),
+                options.length - 1,
+              );
+      setHighlighted(next);
+      menu.current?.querySelector<HTMLElement>(`[data-option-index="${next}"]`)?.scrollIntoView({ block: "nearest" });
+      return;
+    }
+
+    // Enter e espaço marcam sem fechar: a lista existe para escolher mais de uma.
+    if ((event.key === "Enter" || event.key === " ") && highlighted >= 0) {
+      event.preventDefault();
+      const option = options[highlighted];
+      if (option) toggle(option);
+    }
+  }
+
+  return (
+    <div ref={root} id={id} className={["relative", disabled && "cursor-not-allowed opacity-60", className].filter(Boolean).join(" ")}>
+      {label && <Label htmlFor={triggerId}>{label}</Label>}
+      {description && (
+        <p id={descriptionId} className="m-0 mt-1 text-sm text-[var(--fg-2)]">{description}</p>
+      )}
+
+      <div className={["relative w-full", (label || description) && "mt-2"].filter(Boolean).join(" ")}>
+        <button
+          ref={trigger}
+          id={triggerId}
+          type="button"
+          role="combobox"
+          aria-label={ariaLabel}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={listboxId}
+          aria-activedescendant={open && highlighted >= 0 ? `${id}-option-${highlighted}` : undefined}
+          aria-describedby={[descriptionId, noteId, errorId].filter(Boolean).join(" ") || undefined}
+          aria-invalid={errors.length > 0 || undefined}
+          data-open={open}
+          data-container
+          disabled={disabled}
+          onClick={() => (open ? setOpen(false) : openMenu())}
+          onKeyDown={keyboard}
+          className={[
+            // `h-12` e `overflow-hidden`, como o `data-container` do original:
+            // altura fixa, sem quebra de linha, excedente cortado. Era
+            // `min-h-12` com `flex-wrap`, e o campo crescia a cada escolha.
+            "group flex h-12 w-full cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-lg border pl-4 text-left",
+            "border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/10",
+            "data-[open=true]:border-[var(--color-brand-blue)]",
+            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
+            "disabled:cursor-not-allowed",
+            clear && selected.length > 0 ? "pr-20" : "pr-12",
+            inputClassName,
+          ].filter(Boolean).join(" ")}
+        >
+          {selected.length === 0 ? (
+            <span className="truncate font-normal text-[var(--color-brand-purple-dark)]/60">{prompt}</span>
+          ) : (
+            /**
+             * As escolhidas em fila única, como no original: `flex items-center
+             * gap-2` dentro de um gatilho de altura fixa com `overflow-hidden`.
+             * Elas **não** quebram linha — o excedente é cortado pela borda, e a
+             * altura do campo não muda com a quantidade.
+             *
+             * A etiqueta é a do componente Phoenix, `uppercase` incluído:
+             * `bg-brand-blue/20 text-brand-blue-dark font-semibold text-sm
+             * py-0.5 px-1.5 rounded whitespace-nowrap truncate`.
+             *
+             * Só a cor do texto diverge. `--brand-blue-dark` (#4094bb) sobre o
+             * azul a 20% dá 2,83:1; `--blue-dark` é o mesmo azul já corrigido
+             * para AA, como na decisão 0001. Aqui a correção vale porque o campo
+             * também é usado fora de `espelho-do-sistema`.
+             */
+            <span className="flex items-center gap-2 overflow-hidden">
+              {selected.map((option) => (
+                <span
+                  key={option.value}
+                  title={option.label}
+                  className="truncate whitespace-nowrap rounded bg-[var(--color-brand-blue)]/20 px-1.5 py-0.5 text-sm font-semibold uppercase text-[var(--color-blue-dark)]"
+                >
+                  {option.label}
+                </span>
+              ))}
+            </span>
+          )}
+        </button>
+
+        <Icon
+          name="fa-chevron-down"
+          className={[
+            "pointer-events-none absolute right-4 top-6 -translate-y-1/2",
+            open ? "text-[var(--color-brand-blue)]" : "text-[var(--color-brand-purple-dark)]/40",
+          ].join(" ")}
+        />
+
+        {clear && selected.length > 0 && !disabled && (
+          <button
+            type="button"
+            title="Limpar seleção"
+            aria-label={`Limpar ${label ?? "seleção"}`}
+            onClick={() => {
+              onChange?.([]);
+              trigger.current?.focus();
+            }}
+            className="absolute right-10 top-6 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--color-brand-red)] transition-colors hover:bg-[var(--color-brand-purple-dark)]/10 focus-visible:outline-2 focus-visible:outline-[var(--color-action)]"
+          >
+            <Icon name="fa-times" />
+          </button>
+        )}
+
+        {values.map((value) => <input key={value} type="hidden" name={name ? `${name}[]` : undefined} value={value} />)}
+      </div>
+
+      {note && (
+        <p
+          id={noteId}
+          role="status"
+          className="m-0 mt-2 flex gap-2 text-sm text-[var(--fg-2)]"
+        >
+          <Icon name="fa-circle-info" className="mt-1 text-[var(--color-brand-blue-dark)]" />
+          <span>{note}</span>
+        </p>
+      )}
+
+      {blocked.length > 0 && (
+        <ul className="m-0 mt-2 list-none space-y-1 p-0">
+          {blocked.map((grupo, index) => (
+            <li key={grupo.reason} id={`${id}-reason-${index}`} className="text-sm text-[var(--fg-2)]">
+              <span className="font-bold">{grupo.labels.join(", ")}</span> — {grupo.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {open && createPortal(
+        <div
+          ref={menu}
+          data-options-container
+          className="fixed z-[9999] overflow-hidden rounded-lg border border-[var(--color-neutral-100)] bg-white shadow"
+          style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}
+        >
+          <ul
+            id={listboxId}
+            role="listbox"
+            aria-multiselectable="true"
+            aria-label={label ?? ariaLabel}
+            className="thin-scrollbar m-0 max-h-64 list-none overflow-y-auto p-4"
+          >
+            {options.length === 0 && <li className="bg-white px-4 py-2 text-center text-[var(--color-blue-dark)]/80">Nenhuma opção encontrada</li>}
+            {options.map((option, index) => {
+              const isSelected = values.includes(option.value);
+              const isHighlighted = index === highlighted;
+              return (
+                <li
+                  key={option.value}
+                  id={`${id}-option-${index}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  aria-disabled={option.disabled || undefined}
+                  aria-describedby={option.disabled && option.reason ? reasonId(option.value) : undefined}
+                  data-option-index={index}
+                  data-options
+                  data-highlighted={isHighlighted || undefined}
+                  onPointerMove={() => setHighlighted(index)}
+                  // Marcar não tira o foco do gatilho: o painel é um portal no
+                  // `body`, e sem isto o foco iria para lá e o teclado perderia
+                  // o campo depois do primeiro clique.
+                  onPointerDown={(event) => event.preventDefault()}
+                  onClick={() => toggle(option)}
+                  className={[
+                    "flex items-center justify-between gap-3 rounded-lg px-4 py-2 font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
+                    option.disabled
+                      ? "cursor-not-allowed bg-white opacity-60"
+                      : "cursor-pointer " + (isSelected || isHighlighted ? "bg-[var(--color-brand-purple-dark)]/10" : "bg-white hover:bg-[var(--color-brand-purple-dark)]/5"),
+                  ].join(" ")}
+                >
+                  <span className="min-w-0">
+                    {option.label}
+                    {option.hint && <span className="font-normal"> — {option.hint}</span>}
+                  </span>
+                  {isSelected ? <Icon name="fa-check" /> : option.disabled ? <Icon name="fa-lock" /> : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>,
+        document.body,
       )}
 
       {errors.length > 0 && (

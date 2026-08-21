@@ -6,7 +6,9 @@ import type {
   DocumentType,
   ProfessionalDocument,
   ProfessionalDocumentsData,
-  InsurerDocumentsData,
+  ProfessionalHours,
+  InsurerListData,
+  InsurerProfile,
   UnitListData,
   TeamDocumentationData,
   UnitDocument,
@@ -159,6 +161,25 @@ export const PROFESSIONAL_DOCUMENT_TYPES: DocumentType[] = [
     icon: "fa-award",
     hint: "Pós-graduação ou especialização concluída",
   },
+  /**
+   * O tipo aberto, e por que ele existe.
+   *
+   * Sem ele, a pasta só aceita o que este catálogo nomeia — e a clínica que
+   * recebe um comprovante que ninguém previu não tem onde guardá-lo. É o único
+   * tipo em que o nome do documento é digitado, porque é o único em que o nome
+   * não vem do tipo.
+   */
+  {
+    id: "other",
+    scope: "professional",
+    name: "Outro documento",
+    short: "Outro",
+    standard: false,
+    required: false,
+    expires: false,
+    icon: "fa-file",
+    hint: "Qualquer comprovante que os tipos acima não nomeiam",
+  },
 ];
 
 /**
@@ -256,10 +277,16 @@ export const INTERNAL_DOCUMENT_TYPES: DocumentType[] = [
  * escopo profissional, onde cada convênio exige o seu conjunto. A diferença tem
  * uma razão concreta: aqui quem cobra é a vigilância sanitária, e ela não
  * negocia por convênio.
+ *
+ * `renewal` é a cadência de renovação, e existe como campo porque é dado, não
+ * prosa: o cartão do documento mostra "renovação anual" ao lado da validade, e
+ * antes disso a cadência vivia dentro da frase de `hint` — onde nenhuma tela
+ * conseguia ler.
  */
 export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
   {
     id: "cli",
+    renewal: "anual",
     scope: "unit",
     name: "CLI — Certificado de Licenciamento Integrado",
     short: "CLI",
@@ -267,10 +294,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-file-shield",
-    hint: "Licenciamento integrado da prefeitura · renovação anual",
+    hint: "Licenciamento integrado da prefeitura",
   },
   {
     id: "alvara",
+    renewal: "anual",
     scope: "unit",
     name: "Alvará de Funcionamento",
     short: "Alvará",
@@ -278,10 +306,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-building-circle-check",
-    hint: "Autorização municipal para operar no endereço · renovação anual",
+    hint: "Autorização municipal para operar no endereço",
   },
   {
     id: "avcb",
+    renewal: "a cada três anos",
     scope: "unit",
     name: "AVCB — Auto de Vistoria do Corpo de Bombeiros",
     short: "AVCB",
@@ -289,10 +318,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-fire-extinguisher",
-    hint: "Vistoria do Corpo de Bombeiros · renovação a cada três anos",
+    hint: "Vistoria do Corpo de Bombeiros",
   },
   {
     id: "vigilancia",
+    renewal: "anual",
     scope: "unit",
     name: "Licença da Vigilância Sanitária",
     short: "Vigilância",
@@ -300,10 +330,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-microscope",
-    hint: "Licença sanitária do estabelecimento de saúde · renovação anual",
+    hint: "Licença sanitária do estabelecimento de saúde",
   },
   {
     id: "cnes",
+    renewal: "sem validade",
     scope: "unit",
     name: "CNES — Cadastro Nacional de Estabelecimentos de Saúde",
     short: "CNES",
@@ -311,10 +342,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: false,
     icon: "fa-hospital",
-    hint: "Comprovante de cadastro no CNES · sem validade",
+    hint: "Comprovante de cadastro no CNES",
   },
   {
     id: "crp",
+    renewal: "anual",
     scope: "unit",
     name: "Registro no CRP",
     short: "CRP",
@@ -322,10 +354,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-brain",
-    hint: "Registro da pessoa jurídica no conselho de psicologia · renovação anual",
+    hint: "Registro da pessoa jurídica no conselho de psicologia",
   },
   {
     id: "crefito",
+    renewal: "anual",
     scope: "unit",
     name: "Registro no CREFITO",
     short: "CREFITO",
@@ -333,10 +366,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-person-walking",
-    hint: "Registro da pessoa jurídica no conselho de fisioterapia e terapia ocupacional · renovação anual",
+    hint: "Registro da pessoa jurídica no conselho de fisioterapia e terapia ocupacional",
   },
   {
     id: "crefono",
+    renewal: "anual",
     scope: "unit",
     name: "Registro no CREFONO",
     short: "CREFONO",
@@ -344,10 +378,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-comment-medical",
-    hint: "Registro da pessoa jurídica no conselho de fonoaudiologia · renovação anual",
+    hint: "Registro da pessoa jurídica no conselho de fonoaudiologia",
   },
   {
     id: "dedetizacao",
+    renewal: "a cada seis meses",
     scope: "unit",
     name: "Certificado de Dedetização",
     short: "Dedetização",
@@ -355,10 +390,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-bug-slash",
-    hint: "Controle de pragas com certificado da empresa aplicadora · renovação a cada seis meses",
+    hint: "Controle de pragas com certificado da empresa aplicadora",
   },
   {
     id: "potabilidade",
+    renewal: "a cada seis meses",
     scope: "unit",
     name: "Laudo de Potabilidade da Água",
     short: "Potabilidade",
@@ -366,10 +402,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-droplet",
-    hint: "Análise laboratorial exigida pela vigilância · renovação a cada seis meses",
+    hint: "Análise laboratorial exigida pela vigilância",
   },
   {
     id: "residuos",
+    renewal: "anual",
     scope: "unit",
     name: "PGRSS — Plano de Gerenciamento de Resíduos",
     short: "PGRSS",
@@ -377,10 +414,11 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-recycle",
-    hint: "Plano e comprovante de coleta de resíduos de serviços de saúde · renovação anual",
+    hint: "Plano e comprovante de coleta de resíduos de serviços de saúde",
   },
   {
     id: "locacao",
+    renewal: "conforme contrato",
     scope: "unit",
     name: "Contrato de Locação do Imóvel",
     short: "Locação",
@@ -388,9 +426,52 @@ export const UNIT_DOCUMENT_TYPES: DocumentType[] = [
     required: true,
     expires: true,
     icon: "fa-file-signature",
-    hint: "Contrato vigente do imóvel onde a unidade funciona · conforme contrato",
+    hint: "Contrato vigente do imóvel onde a unidade funciona",
   },
 ];
+
+/**
+ * Os doze tipos da unidade em três categorias.
+ *
+ * O enum do monólito é outro — `Units.Document.type` tem `regulatory`, `general`
+ * e `others` —, e ele classifica o documento que alguém anexou, não o slot que a
+ * unidade precisa preencher. Esta agrupação é do resumo da lista: ela existe para
+ * a coluna dizer **onde** está a pendência, e não só quantas são.
+ *
+ * O corte é por quem cobra o papel:
+ *
+ * - **Licenças** são autorização para operar naquele endereço. Faltando uma, a
+ *   unidade não deveria estar atendendo.
+ * - **Certificados** são comprovação técnica e cadastral — laudo, plano, registro
+ *   de conselho. Faltando um, a operadora não credencia; a porta continua aberta.
+ * - **Contratos** é a relação com o imóvel. Um só, e é o único que não tem
+ *   cadência fixa: vence quando o contrato vencer.
+ */
+export const UNIT_DOCUMENT_GROUPS = [
+  { id: "licencas", label: "Licenças", ids: ["alvara", "avcb", "vigilancia"] },
+  {
+    id: "certificados",
+    label: "Certificados",
+    ids: [
+      "cli",
+      "cnes",
+      "crp",
+      "crefito",
+      "crefono",
+      "dedetizacao",
+      "potabilidade",
+      "residuos",
+    ],
+  },
+  { id: "contratos", label: "Contratos", ids: ["locacao"] },
+] as const;
+
+/** Os tipos de um grupo, na ordem do catálogo. */
+export function unitTypesOfGroup(groupId: string): DocumentType[] {
+  const grupo = UNIT_DOCUMENT_GROUPS.find((item) => item.id === groupId);
+  if (!grupo) return UNIT_DOCUMENT_TYPES;
+  return UNIT_DOCUMENT_TYPES.filter((tipo) => grupo.ids.includes(tipo.id as never));
+}
 
 /**
  * Operadoras, com o que cada uma exige para credenciar.
@@ -1042,6 +1123,48 @@ export const professionalDocumentFixtures: Fixture<ProfessionalDocumentsData>[] 
   },
 ];
 
+/**
+ * O mês apurado de cada pessoa, para a aba Controle de horas.
+ *
+ * As horas planejadas são a carga semanal vezes quatro. As trabalhadas
+ * divergem nas duas direções de propósito: a Clara e a Helena passaram da
+ * escala, o Rui e a Marina ficaram abaixo, e a Denise — em inativação — fez
+ * pouco mais da metade. Uma apuração em que todos batem a escala não mostra
+ * nada, e é justamente a diferença que a clínica vai olhar.
+ */
+const HORAS: Record<string, ProfessionalHours> = {
+  "prof-clara": {
+    plannedHours: 96,
+    workedHours: 100,
+    appointments: 38,
+    compensationCents: 532_000,
+  },
+  "prof-marina": {
+    plannedHours: 120,
+    workedHours: 114,
+    appointments: 46,
+    compensationCents: 342_000,
+  },
+  "prof-rui": {
+    plannedHours: 80,
+    workedHours: 76,
+    appointments: 29,
+    compensationCents: 261_000,
+  },
+  "prof-incompleto": {
+    plannedHours: 64,
+    workedHours: 68,
+    appointments: 26,
+    compensationCents: 234_000,
+  },
+  "prof-saindo": {
+    plannedHours: 48,
+    workedHours: 30,
+    appointments: 11,
+    compensationCents: 99_000,
+  },
+};
+
 export const teamDocumentationFixtures: Fixture<TeamDocumentationData>[] = [
   {
     id: "docs-team-matrix",
@@ -1056,11 +1179,13 @@ export const teamDocumentationFixtures: Fixture<TeamDocumentationData>[] = [
           professional: rui,
           documents: documentosRui,
           links: vinculos.filter((link) => link.professionalId === "prof-rui"),
+          hours: HORAS["prof-rui"],
         },
         {
           professional: helena,
           documents: documentosHelena,
           links: [],
+          hours: HORAS["prof-incompleto"],
         },
         {
           professional: clara,
@@ -1069,13 +1194,20 @@ export const teamDocumentationFixtures: Fixture<TeamDocumentationData>[] = [
             ...vinculos.filter((link) => link.professionalId === "prof-clara"),
             descredenciada,
           ],
+          hours: HORAS["prof-clara"],
         },
         {
           professional: marina,
           documents: documentosMarina,
           links: vinculos.filter((link) => link.professionalId === "prof-marina"),
+          hours: HORAS["prof-marina"],
         },
-        { professional: denise, documents: documentosDenise, links: [] },
+        {
+          professional: denise,
+          documents: documentosDenise,
+          links: [],
+          hours: HORAS["prof-saindo"],
+        },
       ],
     },
   },
@@ -1091,6 +1223,7 @@ export const teamDocumentationFixtures: Fixture<TeamDocumentationData>[] = [
           professional: marina,
           documents: documentosMarina.filter((item) => item.typeId !== "council_quit"),
           links: vinculos.filter((link) => link.professionalId === "prof-marina"),
+          hours: HORAS["prof-marina"],
         },
       ],
     },
@@ -1122,9 +1255,14 @@ export const unitListFixtures: Fixture<UnitListData>[] = [
           name: "Unidade Girassol",
           cnpj: "20.384.928/0001-24",
           cnes: "4931777",
+          phone: "(11) 3555-1200",
           street: "Rua Antônio de Barros",
           number: "2080",
+          neighborhood: "Vila Formosa",
           city: "São Paulo",
+          state: "SP",
+          rooms: 12,
+          professionals: 18,
           active: true,
           documents: documentosUnidade,
         },
@@ -1133,9 +1271,14 @@ export const unitListFixtures: Fixture<UnitListData>[] = [
           name: "Santana",
           cnpj: "20.384.928/0002-05",
           cnes: "4931777",
+          phone: "(11) 3555-1201",
           street: "Rua Salete",
           number: "15",
+          neighborhood: "Santana",
           city: "São Paulo",
+          state: "SP",
+          rooms: 8,
+          professionals: 11,
           active: true,
           documents: documentosUnidade.filter((doc) => doc.typeId !== "avcb"),
         },
@@ -1144,9 +1287,14 @@ export const unitListFixtures: Fixture<UnitListData>[] = [
           name: "Itu",
           cnpj: "20.384.928/0003-96",
           cnes: "8164061",
+          phone: "(11) 4022-3300",
           street: "Avenida Doutor Ermelindo Maffei",
           number: "218",
+          neighborhood: "Centro",
           city: "Itu",
+          state: "SP",
+          rooms: 6,
+          professionals: 7,
           active: true,
           documents: documentosUnidade,
         },
@@ -1155,20 +1303,33 @@ export const unitListFixtures: Fixture<UnitListData>[] = [
           name: "Salto",
           cnpj: "20.384.928/0005-58",
           cnes: "8061416",
+          phone: "(11) 4028-9100",
           street: "Rua 9 de Julho",
           number: "872",
+          neighborhood: "Vila Nova",
           city: "Salto",
+          state: "SP",
+          rooms: 4,
+          professionals: 5,
           active: true,
           documents: [],
         },
         {
+          // A unidade recém-cadastrada e ainda inativa: CNPJ e CNES de
+          // preenchimento, nenhuma sala, nenhum profissional. É ela que mostra o
+          // cabeçalho no estado em que quase nada foi informado.
           id: "unit-aurora",
           name: "Unidade Aurora",
           cnpj: "00.000.000/0000-00",
           cnes: "0000000",
+          phone: "(19) 3255-4400",
           street: "Rua Teste",
           number: "000",
+          neighborhood: "Jardim Aurora",
           city: "Campinas",
+          state: "SP",
+          rooms: 0,
+          professionals: 0,
           active: false,
           documents: [],
         },
@@ -1177,33 +1338,143 @@ export const unitListFixtures: Fixture<UnitListData>[] = [
   },
 ];
 
-export const insurerDocumentFixtures: Fixture<InsurerDocumentsData>[] = INSURERS.filter(
-  (insurer) => insurer.kind !== "particular",
-).map((insurer) => ({
-  id: `docs-insurer-${insurer.id}`,
-  label: `Documentos · ${insurer.name}`,
-  description: `A clínica vista pela ${insurer.name}: quem está credenciado, quem falta documento e quais unidades ela aceita.`,
-  data: {
-    now: NOW,
-    insurer,
-    ans: { unimed: "339679", bradesco: "005711", sulamerica: "006246", cassi: "346659", porto: "417530" }[insurer.id],
-    professionals: [
-      { professional: rui, documents: documentosRui, links: vinculos.filter((l) => l.professionalId === "prof-rui") },
-      { professional: helena, documents: documentosHelena, links: [] },
-      {
-        professional: clara,
-        documents: documentosClaraCompletosPorto,
-        links: [...vinculos.filter((l) => l.professionalId === "prof-clara"), descredenciada],
-      },
-      { professional: marina, documents: documentosMarina, links: vinculos.filter((l) => l.professionalId === "prof-marina") },
-      { professional: denise, documents: documentosDenise, links: [] },
-    ],
-    units: [
-      { unit: unidade, city: "São Paulo", documents: documentosUnidade },
-      { unit: { id: "unit-aurora", name: "Unidade Aurora" }, city: "Campinas", documents: [] },
-    ],
+/**
+ * O cabeçalho de cada operadora.
+ *
+ * O ANS vai no formato que o changeset do monólito exige — `~r/\d{5}-\d/`, cinco
+ * dígitos e o verificador. Antes estava como seis dígitos corridos ("339679"), que
+ * é como o número se escreve em prosa e é o que o próprio sistema recusaria no
+ * cadastro.
+ *
+ * Só a Porto tem observação: é o caso que acende o sino no botão, e um sino em
+ * todas as cinco não mostraria a diferença entre ter e não ter texto escrito.
+ */
+const PERFIS_DE_OPERADORA: Record<string, InsurerProfile> = {
+  unimed: {
+    ansRegister: "33967-9",
+    planCount: 4,
+    phone: "(11) 3265-9000",
+    email: "credenciamento@unimed.com.br",
   },
-}));
+  bradesco: {
+    ansRegister: "00571-1",
+    planCount: 3,
+    phone: "(11) 4004-2700",
+    email: "rede@bradescosaude.com.br",
+  },
+  sulamerica: {
+    ansRegister: "00624-6",
+    planCount: 2,
+    phone: "(11) 4004-4400",
+    email: "credenciados@sulamerica.com.br",
+  },
+  cassi: {
+    ansRegister: "34665-9",
+    planCount: 1,
+    phone: "(11) 3382-6600",
+    email: "rede.sp@cassi.com.br",
+  },
+  porto: {
+    ansRegister: "41753-0",
+    planCount: 1,
+    phone: "(11) 3333-7686",
+    email: "financeiro@portoseguro.com.br",
+    observation:
+      "Credenciamento suspenso para novos profissionais até a renovação do contrato, em março. Habilitação individual só com autorização da diretoria.",
+  },
+};
+
+/**
+ * Os cinco profissionais e as duas unidades que toda operadora vê.
+ *
+ * A clínica é a mesma vista de qualquer convênio — o que muda de operadora para
+ * operadora é o `requires`, e é ele que decide quem está credenciado. Uma cópia
+ * desta lista por operadora faria a lista e a ficha divergirem no primeiro
+ * documento que alguém mexesse.
+ */
+const CLINICA_VISTA_PELA_OPERADORA = {
+  professionals: [
+    { professional: rui, documents: documentosRui, links: vinculos.filter((l) => l.professionalId === "prof-rui") },
+    { professional: helena, documents: documentosHelena, links: [] },
+    {
+      professional: clara,
+      documents: documentosClaraCompletosPorto,
+      links: [...vinculos.filter((l) => l.professionalId === "prof-clara"), descredenciada],
+    },
+    { professional: marina, documents: documentosMarina, links: vinculos.filter((l) => l.professionalId === "prof-marina") },
+    { professional: denise, documents: documentosDenise, links: [] },
+  ],
+  units: [
+    { unit: unidade, city: "São Paulo", documents: documentosUnidade },
+    { unit: { id: "unit-aurora", name: "Unidade Aurora" }, city: "Campinas", documents: [] },
+  ],
+};
+
+/**
+ * O endereço de cada operadora.
+ *
+ * Não é enfeite: são duas das quatro colunas da lista real — Endereço e Cidade —,
+ * e no monólito o endereço é associação com `cast_assoc(:address, required: true)`,
+ * então operadora sem endereço não existe.
+ *
+ * Cidades diferentes de propósito: o filtro por cidade só se mostra útil quando
+ * filtrar muda a lista.
+ */
+const ENDERECOS_DE_OPERADORA: Record<
+  string,
+  { street: string; number: string; complement?: string; city: string }
+> = {
+  unimed: { street: "Alameda Ministro Rocha Azevedo", number: "366", complement: "12º andar", city: "São Paulo" },
+  bradesco: { street: "Rua Barão de Itapagipe", number: "225", city: "Rio de Janeiro" },
+  sulamerica: { street: "Rua Beatriz Larragoiti Lucas", number: "121", city: "Rio de Janeiro" },
+  cassi: { street: "Avenida Paulista", number: "1842", complement: "Conjunto 61", city: "São Paulo" },
+  porto: { street: "Avenida Rio Branco", number: "1489", city: "São Paulo" },
+};
+
+const OPERADORAS = INSURERS.filter((insurer) => insurer.kind !== "particular");
+
+/**
+ * A lista de operadoras — e, por ela, a ficha de cada uma.
+ *
+ * **Havia cinco fixtures aqui, uma por operadora, e elas saíram.** A ficha lê da
+ * lista pelo id da rota (`comoFicha`, em `InsurerDocuments`), que é o que a pasta
+ * da unidade já fazia; com as duas formas registradas, escolher a fixture da
+ * Unimed enquanto a lista está aberta entregava à lista um dado sem `insurers` e a
+ * tela quebrava. Uma fixture por frente, servindo lista e ficha, é a regra das
+ * outras duas frentes de Documentos.
+ *
+ * Uma fixture, e não uma por operadora, também porque a lista é sobre o conjunto:
+ * o caso que interessa é a diferença entre as cinco — a Unimed exige quatro
+ * documentos e a SulAmérica dois, então a mesma clínica está credenciada numa e
+ * não na outra.
+ *
+ * A variação sem nenhuma operadora fica na fixture vazia, que é o estado de uma
+ * clínica que só atende particular.
+ */
+export const insurerListFixtures: Fixture<InsurerListData>[] = [
+  {
+    id: "docs-insurer-list",
+    label: "Operadoras · cinco convênios",
+    description:
+      "A lista de operadoras: registro ANS, endereço e, na aba nova, quanto da clínica cada convênio já aceita.",
+    data: {
+      now: NOW,
+      insurers: OPERADORAS.map((insurer) => ({
+        insurer,
+        profile: PERFIS_DE_OPERADORA[insurer.id] ?? { planCount: 0 },
+        ...ENDERECOS_DE_OPERADORA[insurer.id]!,
+        ...CLINICA_VISTA_PELA_OPERADORA,
+      })),
+    },
+  },
+  {
+    id: "docs-insurer-list-empty",
+    label: "Operadoras · nenhuma cadastrada",
+    description:
+      "Clínica que só atende particular. A lista existe e não tem linha nenhuma — é o primeiro dia de uso.",
+    data: { now: NOW, insurers: [] },
+  },
+];
 
 export const documentIds = {
   hoje: HOJE,

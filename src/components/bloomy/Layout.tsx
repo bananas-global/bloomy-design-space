@@ -56,6 +56,35 @@ export function SectionHeader({
   );
 }
 
+/**
+ * Rótulo de grupo de campos.
+ *
+ * **Não existe no monólito** — é da decisão 0015. O sistema tem um rótulo só,
+ * `label/1`, para campo e para grupo, e num formulário curto isso basta. No
+ * drawer de documento há três grupos — o tipo, o arquivo e o compartilhamento —
+ * e cada um contém mais de um controle; com `label/1` nos dois níveis, o rótulo
+ * do grupo ficava do mesmo tamanho e da mesma cor do rótulo do campo, e a
+ * hierarquia do formulário desaparecia.
+ *
+ * Caixa alta e cinza de propósito: o grupo é orientação, o campo é o dado. Não é
+ * cabeçalho de seção da página — por isso `span`, e não `h2`. Quem nomeia o
+ * grupo para leitor de tela é o `fieldset`/`legend` de cada controle.
+ */
+export function FieldsetLabel({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={[
+        "block text-xs font-bold uppercase tracking-wide text-[var(--color-brand-purple-dark)]/50",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {children}
+    </span>
+  );
+}
+
 /** `list/1`: lista de descrição, termo à esquerda em um quarto da largura. */
 export function DescriptionList({ items }: { items: { title: string; content: ReactNode }[] }) {
   return (
@@ -283,7 +312,8 @@ export function Progress({
   className,
 }: {
   value: number;
-  variant?: "default" | "error" | "purple" | "accent";
+  /** `green` não existe em `progress/1` — extensão da decisão 0015. */
+  variant?: "default" | "error" | "purple" | "accent" | "green";
   showPercentage?: boolean;
   className?: string;
 }) {
@@ -291,6 +321,7 @@ export function Progress({
     default: "bg-[var(--color-blue)]/20",
     accent: "bg-[var(--color-brand-accent)]/20",
     error: "bg-[var(--color-red)]/20",
+    green: "bg-[var(--color-brand-green)]/20",
     // Sem ramo próprio no original: fica com o trilho azul da classe base.
     purple: "bg-[var(--color-blue)]/20",
   }[variant];
@@ -300,6 +331,7 @@ export function Progress({
     purple: "bg-[var(--color-purple)]",
     accent: "bg-[var(--color-brand-accent)]",
     error: "bg-[var(--color-red)]",
+    green: "bg-[var(--color-brand-green)]",
   }[variant];
 
   return (

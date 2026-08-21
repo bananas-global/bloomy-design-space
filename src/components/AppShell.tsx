@@ -27,6 +27,29 @@ type NavItem = {
   icon: string;
   /** Permissão mínima para o item aparecer, como no `:if` do layout real. */
   permission?: string;
+  /**
+   * Os primeiros segmentos de rota que pertencem a este item.
+   *
+   * É o que responde "que aba estou vendo": `/structure/unit-girassol/documents`
+   * é Unidades, `/team/tamires/documents` é Profissionais. Prefixo de `path` não
+   * serve para isso — o `path` de Unidades é `/structure/documents`, e a pasta de
+   * uma unidade não começa por ele.
+   */
+  segmentos?: string[];
+  /**
+   * A situação que o item abre, quando ele aponta para uma frente do trabalho
+   * ativo.
+   *
+   * Existe porque cada situação declara a própria persona. Um link só de rota
+   * chega sem persona nenhuma e a tela responde "você não tem acesso" — a
+   * documentação da unidade é de `services.list` e a da operadora é de
+   * `health_cares.show`, e nenhuma das duas é de quem cuida de profissionais.
+   *
+   * **Item com `scenario` não é filtrado por permissão.** A pergunta certa não é
+   * se a persona atual alcança a tela: é a persona da situação de destino que
+   * vai valer quando ela abrir.
+   */
+  scenario?: string;
   /** Rota do sistema real, para quem for conferir o espelho. */
   origem: string;
 };
@@ -46,24 +69,55 @@ type NavItem = {
  */
 const NAV: NavItem[] = [
   { label: "Dashboard", icon: "fa-chart-pie", origem: "/backoffice" },
-  { label: "Agendamentos", path: "/agenda", icon: "fa-calendar-day", permission: "schedules.list", origem: "/backoffice/agendamentos" },
-  { label: "Mapa da Unidade", path: "/unit-map", icon: "fa-table", permission: "unit_maps.show", origem: "/backoffice/mapa-da-unidade" },
-  { label: "Pacientes", path: "/patients", icon: "fa-users", permission: "patients.list", origem: "/backoffice/pacientes" },
-  { label: "Leads", path: "/prospects", icon: "fa-user-plus", permission: "patients.create", origem: "/backoffice/visitas" },
-  { label: "Na Clínica", path: "/in-clinic", icon: "fa-house-chimney-medical", permission: "closures.list", origem: "/backoffice/na-clinica" },
+  { label: "Agendamentos", path: "/agenda", segmentos: ["agenda", "sessions"], icon: "fa-calendar-day", permission: "schedules.list", origem: "/backoffice/agendamentos" },
+  { label: "Mapa da Unidade", path: "/unit-map", segmentos: ["unit-map"], icon: "fa-table", permission: "unit_maps.show", origem: "/backoffice/mapa-da-unidade" },
+  { label: "Pacientes", path: "/patients", segmentos: ["patients"], icon: "fa-users", permission: "patients.list", origem: "/backoffice/pacientes" },
+  { label: "Leads", path: "/prospects", segmentos: ["prospects", "leads"], icon: "fa-user-plus", permission: "patients.create", origem: "/backoffice/visitas" },
+  { label: "Na Clínica", path: "/in-clinic", segmentos: ["in-clinic"], icon: "fa-house-chimney-medical", permission: "closures.list", origem: "/backoffice/na-clinica" },
   { label: "Biblioteca", icon: "fa-memo-circle-check", permission: "programs.list", origem: "/backoffice/programas" },
-  { label: "Profissionais", path: "/team", icon: "fa-user-md", permission: "professionals.list", origem: "/backoffice/profissionais" },
-  { label: "Unidades", path: "/structure", icon: "fa-hospital", permission: "services.list", origem: "/backoffice/unidades" },
-  { label: "Central de autorizações", path: "/authorizations", icon: "fa-solid fa-bullhorn", permission: "authorizations.hub", origem: "/backoffice/central_autorizacoes" },
-  { label: "Operadoras", icon: "fa-building", origem: "/backoffice/operadoras" },
+  // `path` é a lista nova, de três abas. `/team` continua existindo e serve os
+  // dez cenários portados da equipe, que se alcançam pela navegação do Design
+  // Space — não pelo menu do produto.
+  { label: "Profissionais", path: "/team/documentation", segmentos: ["team"], scenario: "documents.professional", icon: "fa-user-md", permission: "professionals.list", origem: "/backoffice/profissionais" },
+  { label: "Unidades", path: "/structure/documents", segmentos: ["structure"], scenario: "documents.unit", icon: "fa-hospital", permission: "services.list", origem: "/backoffice/unidades" },
+  { label: "Central de autorizações", path: "/authorizations", segmentos: ["authorizations"], icon: "fa-solid fa-bullhorn", permission: "authorizations.hub", origem: "/backoffice/central_autorizacoes" },
+  { label: "Operadoras", path: "/insurers/documents", segmentos: ["insurers"], scenario: "documents.insurer", icon: "fa-building", origem: "/backoffice/operadoras" },
   { label: "Serviços", icon: "fa-suitcase-medical", permission: "services.list", origem: "/backoffice/servicos" },
   { label: "Bloqueios", icon: "fa-calendar-xmark", origem: "/backoffice/bloqueios" },
-  { label: "Atendimentos", path: "/clinical-hours", icon: "fa-calendar-pen", origem: "/backoffice/atendimentos" },
-  { label: "Fechamentos", path: "/closures", icon: "fa-dollar", permission: "closures.list", origem: "/backoffice/financeiro/fechamentos" },
-  { label: "Listas gerenciais", path: "/management", icon: "fa-gear", permission: "management.list", origem: "/backoffice/gerencia" },
+  { label: "Atendimentos", path: "/clinical-hours", segmentos: ["clinical-hours"], icon: "fa-calendar-pen", origem: "/backoffice/atendimentos" },
+  { label: "Fechamentos", path: "/closures", segmentos: ["closures", "invoices"], icon: "fa-dollar", permission: "closures.list", origem: "/backoffice/financeiro/fechamentos" },
+  { label: "Listas gerenciais", path: "/management", segmentos: ["management"], icon: "fa-gear", permission: "management.list", origem: "/backoffice/gerencia" },
   { label: "Colaboradores", icon: "fa-solid fa-user-tie", origem: "/backoffice/usuarios" },
-  { label: "Supervisão", path: "/supervision", icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
+  { label: "Supervisão", path: "/supervision", segmentos: ["supervision"], icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
 ];
+
+/**
+ * O item do menu a que a rota atual pertence.
+ *
+ * `NAV` acima continua completo de propósito: ele é o espelho do menu real, com
+ * os rótulos e a ordem do sistema, e é o registro de onde cada tela mora. O que
+ * esta função faz é escolher **qual desses itens aparece**: só o da aba aberta.
+ * Vendo unidades, o drawer mostra Unidades; vendo operadora, Operadoras; vendo
+ * profissionais, Profissionais; vendo as listas gerenciais, Listas gerenciais —
+ * cada um com o ícone do sistema, que é o que `NAV` já registra.
+ *
+ * A comparação é pelo **primeiro segmento** da rota, e não por prefixo de
+ * `path`: a pasta de uma unidade é `/structure/unit-girassol/documents`, que não
+ * começa pelo `/structure/documents` do item, e por prefixo a aba aberta não
+ * acendia nenhum item.
+ *
+ * Rota que nenhum item reivindica — `/notifications`, que no sistema se alcança
+ * pelo menu da pessoa e não pelo drawer — deixa o trilho só com a marca. É
+ * preferível a inventar um item: o drawer diz onde você está, e ali você não está
+ * em item nenhum.
+ *
+ * **Para devolver o menu inteiro, troque isto por `NAV.filter(...)` de permissão.**
+ * Nenhum item foi removido de `NAV`.
+ */
+function frenteAberta(currentPath: string): NavItem | undefined {
+  const segmento = currentPath.split("/")[1] ?? "";
+  return NAV.find((item) => item.segmentos?.includes(segmento));
+}
 
 /**
  * Em que superfície a tela vive.
@@ -110,8 +164,19 @@ export function AppShell({
    * é um só e tem nome afirmativo — `expandido` —, para não herdar a inversão.
    */
   const [expandido, setExpandido] = useState(false);
-  const visiveis = NAV.filter(
-    (item) => item.permission === undefined || context.can(item.permission),
+  /**
+   * O item da aba aberta não passa pelo filtro de permissão.
+   *
+   * O `:if` do layout real pergunta se **esta** pessoa alcança a tela, e é a
+   * pergunta certa quando o menu oferece dezoito destinos. Aqui o menu tem um só,
+   * e é o da tela que já está aberta: quem chegou até ela passou pelo guarda da
+   * situação. Perguntar de novo esconderia o item justamente onde ele é verdade —
+   * a documentação da unidade é de `services.list`, a da operadora é de
+   * `health_cares.show`, e People, que cuida de profissionais, não tem nenhuma
+   * das duas.
+   */
+  const visiveis = [frenteAberta(currentPath)].filter(
+    (item): item is NavItem => item !== undefined,
   );
 
   return (
@@ -145,37 +210,23 @@ export function AppShell({
 
           <ul className="m-0 flex list-none flex-col gap-2 overflow-y-auto overflow-x-hidden p-0">
             {visiveis.map((item) => {
-              const atual = item.path !== undefined && currentPath.startsWith(item.path);
-              const naoPortado = item.path === undefined;
-
-              // Item sem tela ainda: visível e inativo, com o motivo. É a mesma
-              // convenção das ações bloqueadas do produto — esconder faria a
-              // navegação parecer completa.
-              if (naoPortado) {
-                return (
-                  <li key={item.label}>
-                    <span
-                      className={[
-                        "flex h-12 cursor-default items-center gap-2.5 rounded-lg text-lg font-bold text-white/45",
-                        expandido ? "w-full px-4" : "mx-auto w-12 justify-center px-2",
-                      ].join(" ")}
-                      title={`${item.label} — existe no sistema (${item.origem}) e ainda não foi portado`}
-                    >
-                      <Icon name={item.icon} className="w-6 shrink-0 text-center" />
-                      {expandido && <span className="truncate">{item.label}</span>}
-                    </span>
-                  </li>
-                );
-              }
+              // O destino leva a situação quando o item tem uma. Sem ela, a
+              // rota chega sem persona e a tela responde "você não tem acesso".
+              const destino = item.scenario
+                ? `${item.path}?scenario=${item.scenario}`
+                : item.path!;
 
               return (
                 <li key={item.label}>
                   <a
-                    href={item.path}
-                    aria-current={atual ? "page" : undefined}
+                    href={destino}
+                    // O único item do drawer é o da aba aberta, então ele está
+                    // sempre marcado. O link continua servindo: da pasta de uma
+                    // unidade, clicar em Unidades volta para a lista.
+                    aria-current="page"
                     onClick={(event) => {
                       event.preventDefault();
-                      context.navigate(item.path!);
+                      context.navigate(destino);
                     }}
                     // Recolhido, o rótulo sai da tela mas continua acessível: o
                     // `title` e o `aria-label` seguram o nome para leitor de tela
@@ -186,9 +237,7 @@ export function AppShell({
                     className={[
                       "flex h-12 items-center gap-2.5 rounded-lg text-lg font-bold text-white no-underline transition-colors",
                       expandido ? "w-full px-4" : "mx-auto w-12 justify-center px-2",
-                      atual
-                        ? "bg-[var(--color-brand-blue-dark)]"
-                        : "hover:bg-[var(--color-brand-blue-dark)]/40",
+                      "bg-[var(--color-brand-blue-dark)]",
                     ].join(" ")}
                   >
                     <Icon name={item.icon} className="w-6 shrink-0 text-center" />

@@ -69,7 +69,15 @@ export function FakeRadioGroup({ id, label, selectedValue, options, variant = "d
   </fieldset>;
 }
 
-/** `radio_group/1`: opções soltas, a marcada ganha fundo. */
+/**
+ * `radio_group/1`: opções soltas, a marcada ganha fundo.
+ *
+ * O invólucro é `fieldset`/`legend`, e não `div`/`label` como no original —
+ * mesma correção intencional que `Checkgroup` e `FakeRadioGroup` já traziam
+ * neste arquivo. O rótulo do grupo é o que diz o que as opções significam; num
+ * `div` ele fica solto, e quem usa leitor de tela ouve "Sem validade" sem ouvir
+ * "Validade". A aparência não muda: o `legend` repete as classes do `.label`.
+ */
 export function RadioGroup({
   label,
   name,
@@ -90,8 +98,17 @@ export function RadioGroup({
   const base = useId();
 
   return (
-    <div className={className}>
-      {label && <Label color={variant}>{label}</Label>}
+    <fieldset className={["min-w-0 border-0 p-0", className].filter(Boolean).join(" ")}>
+      {label && (
+        <legend
+          className={[
+            "text-sm/4 font-bold",
+            variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-brand-blue)]",
+          ].join(" ")}
+        >
+          {label}
+        </legend>
+      )}
 
       <div className="mt-2 w-full space-x-2">
         {options.map((op, i) => (
@@ -124,7 +141,7 @@ export function RadioGroup({
           </label>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -133,6 +150,17 @@ export function RadioGroup({
  *
  * A marcada ganha fundo e uma linha superior por dentro (`shadow-top-inset`),
  * que é o que dá o efeito de aba pressionada.
+ *
+ * **`layout="pills"` não existe no original** — é extensão da decisão 0015. A
+ * barra do sistema é uma linha só, e funciona para duas ou três opções curtas.
+ * Com seis rótulos longos — "Certificado de especialização" ao lado de
+ * "Comprovante de endereço" — ela transborda numa faixa que rola para o lado, e
+ * escolher passa a exigir rolagem horizontal dentro de um formulário. Em pilha
+ * de pastilhas as opções quebram linha e ficam todas visíveis de uma vez.
+ *
+ * O que não muda: continua sendo um `fieldset` de `input[type=radio]`, com o
+ * mesmo teclado e o mesmo nome acessível. A extensão é de moldura, não de
+ * semântica.
  */
 export function RadioSelector({
   label,
@@ -140,6 +168,7 @@ export function RadioSelector({
   value,
   options,
   variant = "default",
+  layout = "bar",
   onChange,
   className,
 }: {
@@ -148,10 +177,53 @@ export function RadioSelector({
   value?: string;
   options: Opcao[];
   variant?: ChoiceVariant;
+  layout?: "bar" | "pills";
   onChange?: (valor: string) => void;
   className?: string;
 }) {
   const base = useId();
+
+  if (layout === "pills") {
+    return (
+      <div>
+        {label && <Label color={variant}>{label}</Label>}
+        <div
+          className={["flex flex-wrap gap-2", label && "mt-2", className]
+            .filter(Boolean)
+            .join(" ")}
+          role="radiogroup"
+          aria-label={label}
+        >
+          {options.map((op, i) => (
+            <label
+              key={op.value}
+              htmlFor={`${base}-${i}`}
+              title={op.title}
+              className={[
+                "inline-flex cursor-pointer items-center rounded-full border px-4 py-2 text-sm font-bold transition-colors",
+                "border-[var(--color-brand-purple-dark)]/15 text-[var(--color-brand-purple-dark)]",
+                "has-[input:checked]:border-[var(--color-brand-purple-dark)] has-[input:checked]:bg-[var(--color-brand-purple-dark)] has-[input:checked]:text-white",
+                "has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--color-action)]",
+                "has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-40",
+              ].join(" ")}
+            >
+              <input
+                type="radio"
+                name={name}
+                id={`${base}-${i}`}
+                value={op.value}
+                checked={value === op.value}
+                disabled={op.disabled}
+                onChange={() => onChange?.(op.value)}
+                className="sr-only"
+              />
+              {op.label}
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

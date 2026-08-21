@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ScreenProps } from "@brucesantos/design-space";
 import type {
   DocumentInsurer,
@@ -14,8 +14,10 @@ import { Icon } from "../components/Icon.js";
 import { EmptyState, ErrorState, LoadingState } from "../components/primitives.js";
 import { Button } from "../components/bloomy/Button.js";
 import { Card } from "../components/bloomy/Card.js";
-import { Checkbox, Input, Select } from "../components/bloomy/Input.js";
-import { Avatar, EmptyStateCard, SectionHeader } from "../components/bloomy/Layout.js";
+import { RadioGroup, RadioSelector } from "../components/bloomy/Choice.js";
+import { FileUploader } from "../components/bloomy/FileUploader.js";
+import { Checkbox, Input, MultiSelect, Select } from "../components/bloomy/Input.js";
+import { Avatar, EmptyStateCard, FieldsetLabel, SectionHeader } from "../components/bloomy/Layout.js";
 import { DrawerModal, Modal } from "../components/bloomy/Overlay.js";
 import { Table, type Coluna } from "../components/bloomy/Table.js";
 import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
@@ -24,15 +26,13 @@ import { PROFESSIONAL_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
   professionalStatus,
   canExport,
-  canShare,
-  credentialStatus,
-  credentialStatusLabel,
+  canSelectInsurer,
   daysUntil,
   documentState,
   documentStateLabel,
   hasFile,
   isTypeLocked,
-  missingForInsurer,
+  STATE_SEVERITY,
 } from "../rules/documents.js";
 
 /**
@@ -44,15 +44,18 @@ import {
  * seções, o que obrigava a pessoa a montar de cabeça a resposta que ela veio
  * buscar: *este profissional pode atender pela Unimed hoje?*
  *
- * Duas coisas que a tela precisa fazer e que não são óbvias:
+ * O que a tela precisa fazer e não é óbvio: **mostrar a lacuna, e não só o que
+ * existe.** Os sete tipos padrão viram linha mesmo sem arquivo. Uma lista do que
+ * foi anexado esconde exatamente o documento que ninguém anexou — que é o único
+ * que importa.
  *
- * 1. **Mostrar a lacuna, e não só o que existe.** Os sete tipos padrão viram
- *    linha mesmo sem arquivo. Uma lista do que foi anexado esconde exatamente o
- *    documento que ninguém anexou — que é o único que importa.
- *
- * 2. **Dizer que a queda do credenciamento não teve autor.** Quando um registro
- *    vence, o vínculo com a operadora cai sozinho. Sem essa frase, quem opera
- *    procura quem mexeu.
+ * **O que saiu daqui.** A pasta tinha um segundo cartão, "Credenciamento nas
+ * operadoras", que derivava o vínculo dos documentos e explicava que a queda do
+ * credenciamento não tem autor. Foi removido a pedido do time de design, por não
+ * ser reconhecível no contexto da pasta. As regras continuam existindo e em uso
+ * na tela da operadora (`InsurerDocuments`), que é onde o credenciamento é o
+ * assunto: `credentialStatus`, `missingForInsurer` e `canShare` não foram
+ * tocadas.
  */
 export function ProfessionalDocuments({ params, context }: ScreenProps) {
   const { data, isLoading, error, permissions, can } = context;
@@ -171,6 +174,97 @@ function montarLinhas(documents: ProfessionalDocument[]): Linha[] {
 }
 
 /**
+ * Os tipos que a pessoa escolhe.
+ *
+ * São os não padrão: o padrão vem do slot e não se escolhe. A ordem é a do
+ * catálogo, com "Outro documento" no fim porque é o que sobra quando nenhum dos
+ * outros serve.
+ */
+const TIPOS_ABERTOS = PROFESSIONAL_DOCUMENT_TYPES.filter((item) => !item.standard);
+
+/** O que o formulário devolve ao salvar. */
+type ValoresDoDocumento = {
+  /** O tipo escolhido nas pastilhas, que pode não ser o da linha aberta. */
+  tipoId: string;
+  nome: string;
+  arquivo: string;
+  validade?: string;
+  horas?: number;
+  compartilhar: string[];
+};
+
+/**
+ * Aplica o que foi salvo à lista de documentos da sessão.
+ *
+ * Duas coisas que a implementação real vai precisar decidir igual:
+ *
+ * 1. **A data de compartilhamento de quem já estava compartilhado não muda.**
+ *    Ela registra quando a operadora ganhou acesso; reescrevê-la a cada
+ *    salvamento apagaria a única informação que a etiqueta carrega no `title`.
+ * 2. **Desmarcar é revogar.** A operadora que sai da seleção sai da lista, e o
+ *    texto do campo já diz que revogar remove o acesso imediatamente.
+ *
+ * Sem `Date.now()`: a data de hoje vem do `now` declarado na fixture.
+ */
+function salvarDocumento(
+  documentos: ProfessionalDocument[],
+  linha: Linha,
+  valores: ValoresDoDocumento,
+  hoje: string,
+): ProfessionalDocument[] {
+  const compartilhamento = (anteriores: ProfessionalDocument["sharedWith"]) =>
+    valores.compartilhar.map((insurerId) => ({
+      insurerId,
+      at: anteriores.find((share) => share.insurerId === insurerId)?.at ?? hoje,
+    }));
+
+  if (linha.doc) {
+    const id = linha.doc.id;
+    return documentos.map((doc) =>
+      doc.id === id
+        ? {
+            ...doc,
+            name: valores.nome,
+            file: valores.arquivo || undefined,
+            validUntil: valores.validade || undefined,
+            hours: valores.horas,
+            updatedAt: hoje,
+            sharedWith: compartilhamento(doc.sharedWith),
+          }
+        : doc,
+    );
+  }
+
+  // Id determinístico: o tipo mais a posição na lista. Não há `Math.random()`
+  // em fixture, regra ou tela, e um id de sessão não é exceção.
+  //
+  // O tipo vem dos valores, e não da linha: numa lacuna de tipo aberto a pessoa
+  // troca a pastilha antes de salvar, e o documento precisa nascer no tipo que
+  // ficou escolhido.
+  return [
+    ...documentos,
+    {
+      id: `${valores.tipoId}-${documentos.length + 1}`,
+      typeId: valores.tipoId,
+      name: valores.nome,
+      file: valores.arquivo || undefined,
+      validUntil: valores.validade || undefined,
+      hours: valores.horas,
+      updatedAt: hoje,
+      sharedWith: compartilhamento([]),
+    },
+  ];
+}
+
+/** O que o anúncio diz depois de salvar, sem repetir o nome do documento. */
+function resumoDoCompartilhamento(compartilhar: string[], insurers: DocumentInsurer[]): string {
+  if (compartilhar.length === 0) return "Nenhuma operadora tem acesso a ele.";
+
+  const nomes = compartilhar.map((id) => nomeDaOperadora(insurers, id)).join(", ");
+  return `Compartilhado com ${nomes}.`;
+}
+
+/**
  * Etiqueta do sistema.
  *
  * A paleta de `tag/1` é a do monólito, e o contraste dela também: amarelo sobre
@@ -209,6 +303,195 @@ function br(iso: string | undefined): string {
   return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 }
 
+/* ================================================================= resumo */
+
+type Contagem = { pendente: number; valido: number; aVencer: number; vencido: number };
+
+/**
+ * O resumo da pasta, só com o que tem documento.
+ *
+ * "0 a vencer" e "0 expirados" ocupavam duas etiquetas para dizer que não há
+ * nada a fazer — e diluíam as duas que dizem que há. A ausência de vermelho é a
+ * informação; escrever "0 expirados" em vermelho a transforma em ruído da cor
+ * mais forte da tela.
+ *
+ * Nada some quando as quatro são zero, porque as quatro **não podem** ser zero:
+ * os sete tipos padrão viram linha sempre, e uma linha é pendente ou é ativa. Se
+ * a pasta chegar vazia, quem fala é o `empty_state_card` abaixo, e não um resumo
+ * de nada.
+ */
+function Resumo({ contagem }: { contagem: Contagem }) {
+  const etiquetas = [
+    contagem.pendente > 0 && {
+      key: "pendente",
+      item: `${contagem.pendente} ${contagem.pendente === 1 ? "pendente" : "pendentes"}`,
+      // `light-blue` e não amarelo: a contagem é um resumo, e o amarelo aqui
+      // competia com a etiqueta "Pendente" de cada cartão, que aponta o trabalho.
+      variant: "light-blue" as const,
+    },
+    contagem.valido > 0 && {
+      key: "valido",
+      item: `${contagem.valido} ${contagem.valido === 1 ? "ativo" : "ativos"}`,
+      variant: "green" as const,
+    },
+    contagem.aVencer > 0 && {
+      key: "aVencer",
+      item: `${contagem.aVencer} a vencer`,
+      variant: "orange" as const,
+    },
+    contagem.vencido > 0 && {
+      key: "vencido",
+      item: `${contagem.vencido} ${contagem.vencido === 1 ? "expirado" : "expirados"}`,
+      variant: "red" as const,
+    },
+  ].filter(Boolean) as { key: string; item: string; variant: "light-blue" | "green" | "orange" | "red" }[];
+
+  if (etiquetas.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {etiquetas.map((etiqueta) => (
+        <Etiqueta key={etiqueta.key} item={etiqueta.item} variant={etiqueta.variant} />
+      ))}
+    </div>
+  );
+}
+
+/* ================================================================ filtros */
+
+type ValoresDeFiltro = {
+  nome: string;
+  tipo: string;
+  situacao: string;
+  operadora: string;
+  padrao: string;
+};
+
+/**
+ * O que "Padrão" separa, e por que é um filtro e não uma seção.
+ *
+ * Padrão é o tipo que a clínica exige de todo mundo: ele vira linha com ou sem
+ * arquivo, e é a soma deles que a completude mede. Fora do padrão é o que a
+ * pessoa juntou por conta — especialização, currículo, um segundo certificado.
+ *
+ * Separar os dois em seções fixas foi o que a primeira versão da proposta fazia,
+ * e o efeito era esconder a lacuna: quem abria a pasta via primeiro a pilha do
+ * que existe. Como filtro, a pasta continua abrindo com tudo junto e na ordem do
+ * catálogo, e a separação fica disponível para quem foi buscá-la — tipicamente
+ * para conferir o que a operadora exige, que é sempre padrão.
+ */
+const PADRAO = [
+  { label: "Somente padrão", value: "padrao" },
+  { label: "Somente fora do padrão", value: "extra" },
+];
+
+/**
+ * Os cinco filtros da pasta.
+ *
+ * Três vêm de `edit_tabs/documents.ex`: Buscar por nome, Tipo e Status. Os outros
+ * dois são desta entrega. **Operadora** responde a pergunta que traz a pessoa
+ * aqui na maior parte das vezes — *o que a Unimed já enxerga?* —, que sem ele
+ * exige ler as etiquetas de todos os cartões. **Padrão** separa o que a clínica
+ * exige do que a pessoa juntou.
+ *
+ * As opções de Tipo e Operadora saem do que a pasta tem, e não do catálogo
+ * inteiro: um filtro que oferece o que não existe devolve lista vazia e parece
+ * defeito.
+ */
+function Filtros({
+  linhas,
+  insurers,
+  hoje,
+  valores,
+  onChange,
+}: {
+  linhas: Linha[];
+  insurers: DocumentInsurer[];
+  hoje: string;
+  valores: ValoresDeFiltro;
+  onChange: (valores: ValoresDeFiltro) => void;
+}) {
+  const tipos = [...new Map(linhas.map((linha) => [linha.type.id, linha.type])).values()];
+
+  const situacoes = [...new Set(linhas.map((linha) => documentState(linha.doc, hoje)))]
+    .sort((a, b) => STATE_SEVERITY[a] - STATE_SEVERITY[b])
+    .map((estado) => ({ label: documentStateLabel(estado), value: estado }));
+
+  const operadoras = insurers.filter((insurer) =>
+    linhas.some((linha) =>
+      linha.doc?.sharedWith.some((share) => share.insurerId === insurer.id),
+    ),
+  );
+
+  return (
+    <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <Input
+        id="documentos-nome"
+        label="Nome"
+        placeholder="Buscar por nome"
+        rightIcon="fa-search"
+        value={valores.nome}
+        onChange={(evento) => onChange({ ...valores, nome: evento.target.value })}
+      />
+      <Select
+        id="documentos-tipo"
+        label="Tipo"
+        prompt="Todos"
+        value={valores.tipo}
+        options={tipos.map((tipo) => ({ label: tipo.name, value: tipo.id }))}
+        onChange={(tipo) => onChange({ ...valores, tipo })}
+      />
+      <Select
+        id="documentos-situacao"
+        label="Status"
+        prompt="Todos"
+        value={valores.situacao}
+        options={situacoes}
+        onChange={(situacao) => onChange({ ...valores, situacao })}
+      />
+      <Select
+        id="documentos-operadora"
+        label="Operadora"
+        prompt="Todas"
+        value={valores.operadora}
+        options={operadoras.map((insurer) => ({ label: insurer.name, value: insurer.id }))}
+        onChange={(operadora) => onChange({ ...valores, operadora })}
+      />
+      <Select
+        id="documentos-padrao"
+        label="Padrão"
+        prompt="Todos"
+        value={valores.padrao}
+        options={PADRAO}
+        onChange={(padrao) => onChange({ ...valores, padrao })}
+      />
+    </div>
+  );
+}
+
+/** O nome buscado é o do documento **ou** o do tipo: a lacuna não tem o primeiro. */
+function passaNoFiltro(linha: Linha, valores: ValoresDeFiltro, hoje: string): boolean {
+  const busca = valores.nome.trim().toLowerCase();
+  if (
+    busca &&
+    !(linha.doc?.name ?? "").toLowerCase().includes(busca) &&
+    !linha.type.name.toLowerCase().includes(busca)
+  ) {
+    return false;
+  }
+  if (valores.tipo && linha.type.id !== valores.tipo) return false;
+  if (valores.situacao && documentState(linha.doc, hoje) !== valores.situacao) return false;
+  if (valores.padrao === "padrao" && !linha.standard) return false;
+  if (valores.padrao === "extra" && linha.standard) return false;
+  if (
+    valores.operadora &&
+    !linha.doc?.sharedWith.some((share) => share.insurerId === valores.operadora)
+  ) {
+    return false;
+  }
+  return true;
+}
+
 /* =============================================================== conteúdo */
 
 function Conteudo({
@@ -227,21 +510,48 @@ function Conteudo({
   const [exportando, setExportando] = useState(false);
   const [aviso, setAviso] = useState("");
 
-  const linhas = useMemo(() => montarLinhas(pasta.documents), [pasta.documents]);
+  /**
+   * O que foi salvo nesta sessão.
+   *
+   * Sem isto, salvar só anunciava: as etiquetas de operadora do cartão continuavam
+   * mostrando o compartilhamento antigo, e a tela dizia uma coisa enquanto
+   * mostrava outra. Numa especificação executável isso é pior que não salvar —
+   * quem revisa conclui que a ação não faz nada.
+   *
+   * A cópia vive na tela e some ao recarregar, como todo estado de cenário. Ela é
+   * refeita quando a fixture muda, que é o seletor de dados do rodapé trocando
+   * de estado.
+   */
+  const [documentos, setDocumentos] = useState(pasta.documents);
+  useEffect(() => setDocumentos(pasta.documents), [pasta.documents]);
+
+  const linhas = useMemo(() => montarLinhas(documentos), [documentos]);
   const podeEditar = permissions.includes("professionals.edit");
+
+  const [filtros, setFiltros] = useState<ValoresDeFiltro>({
+    nome: "",
+    tipo: "",
+    situacao: "",
+    operadora: "",
+    padrao: "",
+  });
+  const filtradas = useMemo(
+    () => linhas.filter((linha) => passaNoFiltro(linha, filtros, hoje)),
+    [linhas, filtros, hoje],
+  );
 
   const contagem = {
     pendente: linhas.filter((linha) => !hasFile(linha.doc)).length,
-    valido: pasta.documents.filter((doc) => {
+    valido: documentos.filter((doc) => {
       const estado = documentState(doc, hoje);
       return hasFile(doc) && (estado === "valid" || estado === "no_expiry");
     }).length,
-    aVencer: pasta.documents.filter((doc) => documentState(doc, hoje) === "expiring").length,
-    vencido: pasta.documents.filter((doc) => documentState(doc, hoje) === "expired").length,
+    aVencer: documentos.filter((doc) => documentState(doc, hoje) === "expiring").length,
+    vencido: documentos.filter((doc) => documentState(doc, hoje) === "expired").length,
   };
 
 
-  const exportacao = canExport(pasta.documents);
+  const exportacao = canExport(documentos);
 
   return wrap(
     context,
@@ -273,10 +583,13 @@ function Conteudo({
                 ))}
               </div>
 
+              {/* Tint e não `outline`: exportar é ação secundária da seção, e o
+                  contorno a colocava no mesmo peso visual de "Adicionar
+                  documento", que é a ação primária. */}
               <Button
                 className="espelho-do-sistema"
-                variant="outline"
-                leftIcon="fa-file-pdf"
+                variant="tint"
+                rightIcon="fa-file-pdf"
                 title={exportacao.allowed ? undefined : exportacao.reason}
                 aria-describedby={exportacao.allowed ? undefined : "motivo-exportar"}
                 aria-disabled={exportacao.allowed ? undefined : true}
@@ -285,23 +598,24 @@ function Conteudo({
                 Exportar agrupado
               </Button>
 
-              {podeEditar && (
-                <Button
-                  className="espelho-do-sistema"
-                  variant="tint"
-                  leftIcon="fa-plus"
-                  onClick={() =>
-                    setEditando({
-                      key: "novo",
-                      type: PROFESSIONAL_DOCUMENT_TYPES.find((item) => !item.standard)!,
-                      extra: 0,
-                      standard: false,
-                    })
-                  }
-                >
-                  Adicionar documento
-                </Button>
-              )}
+              {/* Visível e desabilitada, não escondida: é a convenção do
+                  produto para ação bloqueada — decisão 0003. */}
+              <Button
+                className="espelho-do-sistema"
+                rightIcon="fa-plus"
+                disabled={!podeEditar}
+                title={podeEditar ? undefined : "Adicionar documento é de quem edita o cadastro."}
+                onClick={() =>
+                  setEditando({
+                    key: "novo",
+                    type: PROFESSIONAL_DOCUMENT_TYPES.find((item) => !item.standard)!,
+                    extra: 0,
+                    standard: false,
+                  })
+                }
+              >
+                Adicionar documento
+              </Button>
             </div>
           }
         >
@@ -314,20 +628,27 @@ function Conteudo({
           </p>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          <Etiqueta item={`${contagem.pendente} ${contagem.pendente === 1 ? "pendente" : "pendentes"}`} variant="yellow" />
-          <Etiqueta item={`${contagem.valido} ${contagem.valido === 1 ? "ativo" : "ativos"}`} variant="green" />
-          <Etiqueta item={`${contagem.aVencer} a vencer`} variant="orange" />
-          <Etiqueta item={`${contagem.vencido} ${contagem.vencido === 1 ? "expirado" : "expirados"}`} variant="red" />
-        </div>
+        <Resumo contagem={contagem} />
+
+        <Filtros
+          linhas={linhas}
+          insurers={pasta.insurers}
+          hoje={hoje}
+          valores={filtros}
+          onChange={setFiltros}
+        />
 
         {linhas.length === 0 ? (
           <EmptyStateCard icon="fa-folder-open" text="Nenhum documento cadastrado">
             Os sete tipos padrão aparecem aqui assim que a pasta for aberta, com ou sem arquivo.
           </EmptyStateCard>
+        ) : filtradas.length === 0 ? (
+          <EmptyStateCard icon="fa-filter" text="Nenhum documento nesses filtros">
+            Limpe um dos campos acima para ver o resto da pasta.
+          </EmptyStateCard>
         ) : visao === "cards" ? (
           <Cartoes
-            linhas={linhas}
+            linhas={filtradas}
             insurers={pasta.insurers}
             hoje={hoje}
             podeEditar={podeEditar}
@@ -335,7 +656,7 @@ function Conteudo({
           />
         ) : (
           <Tabela
-            linhas={linhas}
+            linhas={filtradas}
             insurers={pasta.insurers}
             hoje={hoje}
             podeEditar={podeEditar}
@@ -343,13 +664,6 @@ function Conteudo({
           />
         )}
       </Card>
-
-      <Credenciamento
-        pasta={pasta}
-        hoje={hoje}
-        permissions={permissions}
-        onAviso={setAviso}
-      />
 
       <p className="sr-only" role="status" aria-live="polite">
         {aviso}
@@ -360,15 +674,20 @@ function Conteudo({
         insurers={pasta.insurers}
         permissions={permissions}
         onClose={() => setEditando(null)}
-        onSave={(nome) => {
+        onSave={(valores) => {
+          const linha = editando;
+          if (!linha) return;
+          setDocumentos((atuais) => salvarDocumento(atuais, linha, valores, hoje));
           setEditando(null);
-          setAviso(`${nome} salvo. As operadoras que exigem esse tipo foram recalculadas.`);
+          setAviso(
+            `${valores.nome} salvo. ${resumoDoCompartilhamento(valores.compartilhar, pasta.insurers)}`,
+          );
         }}
       />
 
       <ExportarAgrupado
         open={exportando}
-        documents={pasta.documents}
+        documents={documentos}
         hoje={hoje}
         onClose={() => setExportando(false)}
       />
@@ -391,11 +710,18 @@ function Conteudo({
  * Não é `tag/1`: aquele é retangular e cola o ícone no texto. O cabeçalho do
  * perfil usa pílula com ícone separado — `pc2-badge` no protótipo.
  */
-/** Selo "Padrão" dos cartões: cadeado antes do texto, com gap. */
+/**
+ * Selo "Padrão" dos cartões: cadeado antes do texto, com gap.
+ *
+ * `text-xs` e não `text-sm`: no cartão de seis colunas o selo divide a linha com
+ * a etiqueta de situação, que é `text-sm` porque vem de `tag/1`. No tamanho da
+ * etiqueta os dois não caibam juntos e o selo quebrava para a linha de cima,
+ * empurrando o título do documento para baixo em metade dos cartões.
+ */
 function SeloPadrao() {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-purple-dark)]/10 px-2.5 py-0.5 text-sm font-bold text-[var(--fg-2)]">
-      <Icon name="fa-lock" type="solid" className="text-xs" />
+    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-brand-purple-dark)]/10 px-1.5 py-0.5 text-xs font-bold text-[var(--fg-2)]">
+      <Icon name="fa-lock" type="solid" className="text-[0.625rem]" />
       Padrão
     </span>
   );
@@ -469,8 +795,18 @@ function CabecalhoDoPerfil({
     { icon: "fa-calendar-xmark", texto: `${pessoa.absences ?? 0} faltas` },
   ].filter(Boolean) as { icon: string; texto: string }[];
 
-  return (
-    <Card className="space-y-4">
+  /**
+   * O cabeçalho é o `header` do `lazy_tabs`, não um cartão à parte.
+   *
+   * No sistema o componente **é** o cartão: `card` com `p-0!`, o cabeçalho num
+   * `div` com `p-6` e a barra de abas com `px-6` e borda em cima. Aqui isso
+   * estava invertido — a tela tinha o próprio `Card` e enfiava o componente
+   * dentro dele com `-mx-6 -mb-6 px-6`. O resultado eram dois cartões aninhados
+   * e dois `px-6` somados: as abas recuavam 48px enquanto o nome recuava 24px, e
+   * era esse desalinhamento que parecia margem.
+   */
+  const cabecalho = (
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-shrink-0">
@@ -508,20 +844,24 @@ function CabecalhoDoPerfil({
           </span>
         ))}
       </div>
+    </div>
+  );
 
-      {/* A barra de abas mora no mesmo cartão do cabeçalho, colada nele. */}
-      <LazyTabs
-        className="espelho-do-sistema -mx-6 -mb-6 border-t border-[var(--color-brand-purple-dark)]/10 px-6"
-        id="abas-do-profissional"
-        label="Perfil do profissional"
-        tabs={ABAS}
-        value="documents"
-        onChange={() => undefined}
-        panelClassName="hidden"
-      >
-        {null}
-      </LazyTabs>
-    </Card>
+  return (
+    // O `mb-6` que o componente traz no cartão e o `space-y-6` da página são
+    // margens adjacentes: colapsam para 24px, não somam. Sem correção.
+    <LazyTabs
+      className="espelho-do-sistema"
+      id="abas-do-profissional"
+      label="Perfil do profissional"
+      tabs={ABAS}
+      value="documents"
+      onChange={() => undefined}
+      header={cabecalho}
+      panelClassName="hidden"
+    >
+      {null}
+    </LazyTabs>
   );
 }
 
@@ -577,7 +917,18 @@ function Cartoes({
   onEditar: (linha: Linha) => void;
 }) {
   return (
-    <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2 xl:grid-cols-3">
+    /**
+     * Até seis colunas. Onze tipos em três colunas davam quatro linhas de cartão
+     * e a pasta não caía numa tela; a densidade é o que faz a lacuna e o
+     * documento válido serem comparados de relance.
+     *
+     * A sexta coluna só entra a partir de 1900px, e o corte não é arbitrário: o
+     * cartão divide a linha de cima entre o quadrado do ícone, o selo "Padrão" e
+     * a etiqueta de situação, e "Sem validade" em `text-sm` — que é o tamanho de
+     * `tag/1` — precisa de 165px de folga. Abaixo disso a etiqueta cai para a
+     * linha seguinte em todos os cartões sem validade.
+     */
+    <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1900px]:grid-cols-6">
       {linhas.map((linha) => {
         const estado = documentState(linha.doc, hoje);
         const dias = linha.doc?.validUntil ? daysUntil(linha.doc.validUntil, hoje) : undefined;
@@ -585,13 +936,31 @@ function Cartoes({
 
         return (
           <li key={linha.key}>
-            <article className="flex h-full flex-col gap-3 rounded-2xl border border-[var(--color-brand-purple-dark)]/10 p-5">
+            {/* A lacuna tem fundo. É o único estado do cartão em que não há nada
+                para ler — nem data, nem arquivo, nem operadora — e o preenchimento
+                é o que a separa do documento resolvido sem depender da etiqueta. */}
+            <article
+              className={[
+                "flex h-full flex-col gap-3 rounded-2xl border border-[var(--color-brand-purple-dark)]/10 p-5",
+                linha.doc ? undefined : "bg-[var(--color-brand-purple-dark)]/5",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               <div className="flex items-start justify-between gap-2">
-                <Icon
-                  name={linha.type.icon}
-                  type="solid"
-                  className="text-xl text-[var(--color-brand-blue)]"
-                />
+                {/* O tamanho é o do `item/1` variante `simplified` — `w-7 h-7
+                    rounded` —, e a cor não: lá o quadrado é `bg-brand-blue/20`
+                    com o ícone em `brand-blue-dark`, o que aqui pintava onze
+                    quadrados de azul e disputava a atenção com a etiqueta de
+                    situação, que é quem diz o que fazer. Tinta neutra, ícone no
+                    roxo escuro do texto. */}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-[var(--color-brand-purple-dark)]/8">
+                  <Icon
+                    name={linha.type.icon}
+                    type="solid"
+                    className="text-[var(--color-brand-purple-dark)]"
+                  />
+                </div>
                 <div className="flex flex-wrap justify-end gap-1.5">
                   {linha.standard && <SeloPadrao />}
                   <EtiquetaSituacao state={estado} days={dias} />
@@ -603,35 +972,41 @@ function Cartoes({
               </h2>
 
               {linha.extra > 0 && (
-                <p className="m-0 text-sm text-[var(--fg-2)]">
-                  +{linha.extra} {linha.extra === 1 ? "versão anterior" : "versões anteriores"}
+                // "Outros documentos deste tipo", e não "versões anteriores": o
+                // slot padrão aceita mais de um documento do mesmo tipo, e
+                // chamá-los de versão sugere que só o primeiro vale.
+                <p className="m-0 text-sm font-semibold text-[var(--color-action)]">
+                  +{linha.extra} {linha.extra === 1 ? "outro documento" : "outros documentos"} deste
+                  tipo
                 </p>
               )}
 
               {linha.doc ? (
                 <div className="space-y-1 text-sm text-[var(--fg-2)]">
                   <p className="m-0">
-                    <Icon name={hasFile(linha.doc) ? "fa-file-pdf" : "fa-file"} className="mr-2" />
-                    {hasFile(linha.doc) ? (
-                      linha.doc.file
-                    ) : (
-                      <span className="font-bold text-[var(--color-danger-fg)]">sem arquivo anexado</span>
-                    )}
-                  </p>
-                  <p className="m-0">
                     atualizado em {br(linha.doc.updatedAt)}
                     {linha.doc.validUntil
                       ? ` · válido até ${br(linha.doc.validUntil)}`
                       : " · sem validade"}
                   </p>
+                  {/* O nome do arquivo saiu do cartão: ele ocupava uma linha em
+                      todos para informar em nenhum. O que continua aparecendo é a
+                      ausência dele, que é o estado que engana. */}
+                  {semArquivo && (
+                    <p className="m-0 font-bold text-[var(--color-danger-fg)]">
+                      <Icon name="fa-file" className="mr-2" />
+                      sem arquivo anexado
+                    </p>
+                  )}
                   {linha.doc.hours !== undefined && (
-                    <p className="m-0">{linha.doc.hours}h de carga horária</p>
+                    <p className="m-0 font-bold text-[var(--color-brand-purple-dark)]">
+                      {linha.doc.hours}h de carga horária
+                    </p>
                   )}
                 </div>
               ) : (
-                <p className="m-0 text-sm text-[var(--fg-2)]">
-                  {linha.type.hint}
-                </p>
+                // Itálico: é texto de apoio do tipo, não dado do documento.
+                <p className="m-0 text-sm italic text-[var(--fg-2)]">{linha.type.hint}</p>
               )}
 
               <div className="mt-auto space-y-3">
@@ -660,10 +1035,13 @@ function Cartoes({
                   </p>
                 )}
 
+                {/* `color="brand"`: é a ação repetida da lista, uma por cartão.
+                    Em `tint` azul, os onze botões ficavam da cor do "Adicionar
+                    documento" do cabeçalho, que é a ação da página. */}
                 <Button
-                  className="espelho-do-sistema"
                   size="medium"
-                  variant="outline"
+                  variant="tint"
+                  color="brand"
                   leftIcon={linha.doc ? "fa-pen" : "fa-plus"}
                   disabled={!podeEditar}
                   onClick={() => onEditar(linha)}
@@ -752,10 +1130,13 @@ function Tabela({
       rowId={(linha) => linha.key}
       cols={colunas}
       actions={(linha) => (
+        // `small`: a ação da tabela real são ícones de 24px, não um botão de 48.
+        // Aqui o rótulo fica — "Anexar" e "Editar" não são a mesma ação, e o
+        // ícone sozinho não diria qual é — mas na altura do botão pequeno.
         <Button
-          className="espelho-do-sistema"
-          size="medium"
+          size="small"
           variant="tint"
+          color="brand"
           leftIcon={linha.doc ? "fa-pen" : "fa-plus"}
           disabled={!podeEditar}
           onClick={() => onEditar(linha)}
@@ -765,155 +1146,6 @@ function Tabela({
       )}
     />
   );
-}
-
-/* ======================================================= credenciamento */
-
-/**
- * O credenciamento, que é consequência e não campo.
- *
- * A frase que mais importa aqui é a que explica a queda: quando um registro
- * vence, o vínculo cai **sem que ninguém tenha agido**. Sem ela, a primeira
- * reação de quem opera é procurar quem mexeu — e não existe quem.
- */
-function Credenciamento({
-  pasta,
-  hoje,
-  permissions,
-  onAviso,
-}: {
-  pasta: ProfessionalDocumentsData;
-  hoje: string;
-  permissions: string[];
-  onAviso: (mensagem: string) => void;
-}) {
-  return (
-    <Card className="space-y-4">
-      <SectionHeader variant="small" subtitle="Derivado dos documentos compartilhados e válidos. Ninguém digita esta situação.">
-        Credenciamento nas operadoras
-      </SectionHeader>
-
-      <ul
-        aria-label="Credenciamento nas operadoras"
-        className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2"
-      >
-        {pasta.insurers.map((insurer) => {
-          const link = pasta.links.find((item) => item.insurerId === insurer.id);
-          const status = credentialStatus(link, pasta.documents, insurer, hoje);
-          const faltando = missingForInsurer(pasta.documents, insurer, hoje);
-          const compartilhamento = canShare(pasta.documents[0], insurer, permissions);
-
-          return (
-            <li
-              key={insurer.id}
-              className="rounded-2xl border border-[var(--color-brand-purple-dark)]/10 p-5"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h2 className="m-0 text-base font-bold text-[var(--color-brand-purple-dark)]">
-                    {insurer.name}
-                  </h2>
-                  {link && (
-                    <p className="m-0 text-sm text-[var(--fg-2)]">
-                      desde {br(link.since)}
-                    </p>
-                  )}
-                </div>
-                <Etiqueta
-                  item={credentialStatusLabel(status)}
-                  variant={
-                    status === "credentialed"
-                      ? "green"
-                      : status === "decredentialed"
-                        ? "red"
-                        : status === "in_credentialing"
-                          ? "orange"
-                          : "brand"
-                  }
-                />
-              </div>
-
-              {insurer.kind === "particular" ? (
-                <p className="m-0 mt-3 text-sm text-[var(--fg-2)]">
-                  {compartilhamento.reason}
-                </p>
-              ) : status === "decredentialed" ? (
-                <div className="mt-3 space-y-3">
-                  <p className="m-0 text-sm text-[var(--fg-2)]">
-                    A documentação exigida está completa e o vínculo continua fechado. Descredenciar
-                    é decisão da operadora, e nenhum documento novo a desfaz — reabrir é uma ação, e
-                    devolve o vínculo a Em credenciamento.
-                  </p>
-                  <Button
-                    className="espelho-do-sistema"
-                    size="medium"
-                    variant="outline"
-                    color="green"
-                    disabled={!permissions.includes("professionals.edit")}
-                    onClick={() =>
-                      onAviso(`Credenciamento reaberto em ${insurer.name}. Situação: Em credenciamento.`)
-                    }
-                  >
-                    Reabrir credenciamento
-                  </Button>
-                </div>
-              ) : faltando.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  <p className="m-0 text-sm font-bold text-[var(--color-brand-purple-dark)]">
-                    <Icon name="fa-triangle-exclamation" className="mr-2 text-[var(--color-orange-dark)]" />
-                    {faltando.length === 1 ? "Falta 1 documento" : `Faltam ${faltando.length} documentos`}
-                  </p>
-                  <ul className="m-0 list-disc space-y-1 pl-5 text-sm text-[var(--fg-2)]">
-                    {faltando.map((typeId) => (
-                      <li key={typeId}>{motivoDaFalta(pasta.documents, typeId, insurer.id, hoje)}</li>
-                    ))}
-                  </ul>
-                  {/* A frase da queda só cabe onde houve queda: um vínculo que
-                      existia e caiu. Repeti-la em operadora sem vínculo diria
-                      que algo se perdeu onde nunca houve nada. */}
-                  {link && faltando.some((typeId) => vencido(pasta.documents, typeId, hoje)) && (
-                    <p className="m-0 text-sm text-[var(--fg-2)]">
-                      A queda não teve autor: o documento venceu e o vínculo voltou para credenciamento
-                      sozinho. É o mesmo cálculo que a operadora faz do lado dela.
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="m-0 mt-3 text-sm text-[var(--fg-2)]">
-                  Todos os documentos exigidos estão compartilhados e válidos.
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
-  );
-}
-
-function vencido(documents: ProfessionalDocument[], typeId: string, hoje: string): boolean {
-  const doc = documents.find((item) => item.typeId === typeId);
-  return documentState(doc, hoje) === "expired";
-}
-
-/** A falta tem três causas, e a ação de cada uma é diferente. */
-function motivoDaFalta(
-  documents: ProfessionalDocument[],
-  typeId: string,
-  insurerId: string,
-  hoje: string,
-): string {
-  const nome =
-    PROFESSIONAL_DOCUMENT_TYPES.find((item) => item.id === typeId)?.name ?? typeId;
-  const doc = documents.find((item) => item.typeId === typeId);
-
-  if (!doc) return `${nome} — nunca foi anexado`;
-  if (!hasFile(doc)) return `${nome} — registro sem arquivo anexado`;
-  if (documentState(doc, hoje) === "expired") return `${nome} — vencido`;
-  if (!doc.sharedWith.some((share) => share.insurerId === insurerId)) {
-    return `${nome} — está no cadastro e não foi compartilhado`;
-  }
-  return nome;
 }
 
 function nomeDaOperadora(insurers: DocumentInsurer[], id: string): string {
@@ -940,24 +1172,79 @@ function FormularioDocumento({
   insurers: DocumentInsurer[];
   permissions: string[];
   onClose: () => void;
-  onSave: (nome: string) => void;
+  onSave: (valores: ValoresDoDocumento) => void;
 }) {
   const editando = Boolean(linha?.doc);
   const travado = isTypeLocked(linha?.type);
 
+  /**
+   * O tipo escolhido nas pastilhas.
+   *
+   * Só existe quando o tipo **não** é travado: no slot padrão ele vem da linha e
+   * não se escolhe. `undefined` significa "o da linha", que é o que mantém o
+   * formulário coerente quando a pessoa abre uma pasta e volta.
+   */
+  const [tipoEscolhido, setTipoEscolhido] = useState<string | undefined>(undefined);
   const [nome, setNome] = useState("");
-  const [arquivo, setArquivo] = useState("");
+  // `undefined` é "não mexeu no arquivo"; `""` é "removeu o que estava anexado".
+  // Sem essa distinção, remover o anexo de um documento salvo cairia de volta no
+  // arquivo do servidor e o botão de remover não faria nada.
+  const [arquivo, setArquivo] = useState<string | undefined>(undefined);
+  const [tamanho, setTamanho] = useState(0);
   const [temValidade, setTemValidade] = useState(false);
   const [validade, setValidade] = useState("");
   const [horas, setHoras] = useState("");
   const [tocado, setTocado] = useState(false);
   const [compartilhar, setCompartilhar] = useState<string[]>([]);
 
-  const nomeAtual = nome || linha?.doc?.name || linha?.type.name || "";
-  const arquivoAtual = arquivo || linha?.doc?.file || "";
-  const exigeHoras = linha?.type.id === "aba_course";
+  /**
+   * O formulário começa no estado do documento que foi aberto.
+   *
+   * O que mais importa aqui é o compartilhamento: a etiqueta da operadora no
+   * cartão **quer dizer** que o documento já está compartilhado com ela, então
+   * abrir o formulário com o campo vazio dizia o contrário — e salvar assim
+   * pareceria revogar o acesso.
+   *
+   * Roda por documento aberto, não a cada render, e não roda no fechamento: o
+   * `linha` vira `null` enquanto o painel ainda desliza para fora, e limpar ali
+   * apagaria o conteúdo na frente de quem está olhando.
+   */
+  const chave = linha?.key;
+  useEffect(() => {
+    if (!linha) return;
+    setTipoEscolhido(undefined);
+    setNome(linha.type.id === "other" ? (linha.doc?.name ?? "") : "");
+    setArquivo(undefined);
+    setTamanho(0);
+    setTemValidade(Boolean(linha.doc?.validUntil));
+    setValidade(linha.doc?.validUntil ?? "");
+    setHoras(linha.doc?.hours !== undefined ? String(linha.doc.hours) : "");
+    setTocado(false);
+    setCompartilhar(linha.doc?.sharedWith.map((share) => share.insurerId) ?? []);
+    // `chave` identifica o documento aberto; `linha` muda de referência a cada
+    // render da tela e reiniciaria o preenchimento no meio da digitação.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chave]);
 
-  const erroNome = !nomeAtual.trim() ? "Informe um nome para o documento." : undefined;
+  /** O tipo em vigor: o escolhido nas pastilhas, ou o da linha aberta. */
+  const tipo: DocumentType | undefined =
+    TIPOS_ABERTOS.find((item) => item.id === tipoEscolhido) ?? linha?.type;
+  const tipoAberto = tipo?.id === "other";
+
+  /**
+   * O nome que vai ser salvo.
+   *
+   * Fora do tipo aberto ele **é** o nome do tipo, e é isso que mantém o cabeçalho
+   * da matriz e o cartão falando a mesma língua. No tipo aberto é o que a pessoa
+   * digitou, e aí ele é obrigatório: sem nome, o cartão sairia como "Outro
+   * documento" e a pasta ganharia dois cartões indistinguíveis.
+   */
+  const nomeAtual = tipoAberto ? nome : (tipo?.name ?? "");
+  const arquivoAtual = arquivo ?? linha?.doc?.file ?? "";
+  const exigeHoras = tipo?.id === "aba_course";
+
+  const erroNome =
+    tipoAberto && !nome.trim() ? "Informe um nome para o documento." : undefined;
   const erroArquivo = !arquivoAtual.trim() ? "Anexe o arquivo do documento." : undefined;
   const erroValidade = temValidade && !validade ? "Escolha a data de validade." : undefined;
   const erroHoras =
@@ -965,10 +1252,60 @@ function FormularioDocumento({
 
   const invalido = Boolean(erroNome || erroArquivo || erroValidade || erroHoras);
 
+  /** Quem exige este tipo para credenciar. Sai de `insurer.requires`. */
+  const exigidoPor = useMemo(
+    () =>
+      tipo ? insurers.filter((insurer) => insurer.requires.includes(tipo.id)) : [],
+    [insurers, tipo],
+  );
+
+  /**
+   * As operadoras como opções do multiselect.
+   *
+   * Quem decide aqui é `canSelectInsurer`, não `canShare`: escolher a operadora
+   * não depende do arquivo, e o arquivo é condição do salvar. A operadora que
+   * não pode receber — particular, ou falta de permissão — continua na lista,
+   * desabilitada, e o `reason` da regra é o que a pessoa lê abaixo do campo.
+   */
+  const opcoesDeCompartilhamento = useMemo(
+    () =>
+      insurers.map((insurer) => {
+        const decisao = canSelectInsurer(insurer, permissions);
+
+        return {
+          label: insurer.name,
+          value: insurer.id,
+          hint: tipo && insurer.requires.includes(tipo.id) ? "exige este tipo" : undefined,
+          disabled: !decisao.allowed,
+          reason: decisao.allowed ? undefined : decisao.reason,
+        };
+      }),
+    [insurers, tipo, permissions],
+  );
+
+  /**
+   * O que a escolha ainda não faz.
+   *
+   * Sem o anexo, a intenção está registrada e o compartilhamento não acontece —
+   * é o que `canShare` recusa no documento salvo. Dizer isso no campo é o que
+   * evita a leitura de que marcar já liberou o acesso.
+   */
+  const compartilhamentoPendente =
+    compartilhar.length > 0 && !arquivoAtual.trim()
+      ? "Nada é compartilhado antes de salvar com o arquivo anexado. A operadora audita o papel, e um registro sem anexo é recusado como se não existisse."
+      : undefined;
+
   function salvar() {
     setTocado(true);
     if (invalido) return;
-    onSave(nomeAtual);
+    onSave({
+      tipoId: tipo?.id ?? "",
+      nome: nomeAtual,
+      arquivo: arquivoAtual,
+      validade: temValidade ? validade : undefined,
+      horas: exigeHoras && horas ? Number(horas) : undefined,
+      compartilhar,
+    });
   }
 
   return (
@@ -984,32 +1321,58 @@ function FormularioDocumento({
             : "Adicionar documento"
       }
       variant="medium"
+      titleClassName="text-[var(--color-brand-purple-dark)]"
+      footer={
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          {/* O rótulo diz o que vai acontecer. No modal do sistema é "Salvar"
+              com `fa-save` nos dois casos, e criar não é a mesma coisa que
+              alterar — quem abriu uma lacuna precisa saber que vai criar. */}
+          <Button rightIcon="fa-check" onClick={salvar}>
+            {editando ? "Salvar alterações" : "Adicionar documento"}
+          </Button>
+        </div>
+      }
     >
       {linha && (
-        <div className="espelho-do-sistema space-y-6">
-          {travado && (
-            <div className="rounded-lg bg-[var(--color-brand-blue)]/10 p-4">
-              <p className="m-0 font-bold text-[var(--color-brand-purple-dark)]">
-                <Icon name="fa-lock" className="mr-2" />
-                {linha.type.name}
-              </p>
-              <p className="m-0 mt-1 text-sm text-[var(--fg-2)]">
-                {linha.type.hint}. O tipo é fixo: ele vem do slot padrão, e mudar o nome do
-                documento não muda o slot que ele ocupa.
-              </p>
-            </div>
-          )}
+        <div className="space-y-6">
+          <div>
+            <FieldsetLabel>Tipo de documento</FieldsetLabel>
 
-          {!travado && (
-            <Select
-              id="documento-tipo"
-              label="Tipo de documento"
-              value={linha.type.id}
-              options={PROFESSIONAL_DOCUMENT_TYPES.filter((item) => !item.standard).map((item) => ({
-                label: item.name,
-                value: item.id,
-              }))}
-              onChange={() => undefined}
+            {travado ? (
+              // Pastilha, e não caixa de aviso com parágrafo. O tipo fixo é um
+              // dado do formulário — o que ele é —, e o cadeado já diz que não
+              // se escolhe. A explicação de por que ele é fixo estava ocupando
+              // quatro linhas para dizer uma coisa que ninguém tentou fazer.
+              <span className="mt-2 inline-flex items-center gap-2 rounded-full bg-[var(--color-brand-purple-dark)]/8 px-4 py-2 font-bold text-[var(--color-brand-purple-dark)]">
+                <Icon name="fa-lock" type="solid" className="text-xs" />
+                {linha.type.name}
+              </span>
+            ) : (
+              <RadioSelector
+                className="mt-2"
+                name="documento[tipo]"
+                layout="pills"
+                value={tipo?.id}
+                options={TIPOS_ABERTOS.map((item) => ({ value: item.id, label: item.name }))}
+                onChange={setTipoEscolhido}
+              />
+            )}
+          </div>
+
+          {/* O nome só é campo no tipo aberto. Nos outros ele **é** o tipo, e um
+              campo pré-preenchido com "Currículo" convida a reescrever o que a
+              matriz usa como cabeçalho de coluna. */}
+          {tipoAberto && (
+            <Input
+              id="documento-nome"
+              label="Nome do documento"
+              placeholder="Ex.: Curso de formação em ABA — 180h"
+              value={nome}
+              errors={tocado && erroNome ? [erroNome] : []}
+              onChange={(event) => setNome(event.target.value)}
             />
           )}
 
@@ -1027,129 +1390,82 @@ function FormularioDocumento({
             />
           )}
 
-          <Input
-            id="documento-nome"
-            label="Nome do documento"
-            value={nomeAtual}
-            errors={tocado && erroNome ? [erroNome] : []}
-            onChange={(event) => setNome(event.target.value)}
-          />
-
-          <fieldset className="m-0 border-0 p-0">
-            <legend className="text-base font-bold text-[var(--color-brand-purple-dark)]">
-              Validade
-            </legend>
-            <div className="mt-2 flex gap-4">
-              {[
-                { id: "sem", label: "Sem validade", valor: false },
-                { id: "com", label: "Definir data", valor: true },
-              ].map((opcao) => (
-                <label key={opcao.id} className="flex items-center gap-2 text-base">
-                  <input
-                    type="radio"
-                    name="documento-validade"
-                    checked={temValidade === opcao.valor}
-                    onChange={() => setTemValidade(opcao.valor)}
-                  />
-                  {opcao.label}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          {temValidade && (
-            <Input
-              id="documento-validade"
-              label="Válido até"
-              type="date"
-              value={validade}
-              errors={tocado && erroValidade ? [erroValidade] : []}
-              onChange={(event) => setValidade(event.target.value)}
+          {/* A data ao lado da escolha, e não abaixo dela: "Definir data" sem o
+              campo à vista faz a pessoa procurar onde digitar. */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <RadioGroup
+              label="Validade"
+              name="documento[validade]"
+              value={temValidade ? "com" : "sem"}
+              options={[
+                { value: "sem", label: "Sem validade" },
+                { value: "com", label: "Definir data" },
+              ]}
+              onChange={(valor) => setTemValidade(valor === "com")}
             />
-          )}
 
-          <div>
-            <label
-              htmlFor="documento-arquivo"
-              className="block text-base font-bold text-[var(--color-brand-purple-dark)]"
-            >
-              Arquivo
-            </label>
-            <p className="m-0 mt-1 text-sm text-[var(--fg-2)]">
-              PDF, JPG ou PNG até 10 MB. Sem arquivo, o registro não satisfaz exigência de operadora
-              nem entra em exportação.
-            </p>
-            <input
-              id="documento-arquivo"
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              className="mt-2 block w-full text-base"
-              onChange={(event) => setArquivo(event.target.files?.[0]?.name ?? "")}
-            />
-            {arquivoAtual && (
-              <p className="m-0 mt-2 text-sm text-[var(--fg-2)]">
-                <Icon name="fa-file-circle-check" className="mr-2" />
-                {arquivoAtual}
-              </p>
-            )}
-            {tocado && erroArquivo && (
-              <p className="m-0 mt-2 text-sm font-bold text-[var(--color-danger-fg)]">{erroArquivo}</p>
+            {temValidade && (
+              <Input
+                id="documento-validade"
+                label="Válido até"
+                type="date"
+                value={validade}
+                errors={tocado && erroValidade ? [erroValidade] : []}
+                onChange={(event) => setValidade(event.target.value)}
+              />
             )}
           </div>
 
-          <fieldset className="m-0 border-0 p-0">
-            <legend className="text-base font-bold text-[var(--color-brand-purple-dark)]">
-              Compartilhar com operadoras
-            </legend>
-            <p className="m-0 mt-1 text-sm text-[var(--fg-2)]">
-              A operadora passa a ver o arquivo e a validade. Revogar remove o acesso imediatamente.
-            </p>
-            <div className="mt-2 flex flex-col gap-1">
-              {insurers.map((insurer) => {
-                const decisao = canShare(
-                  { ...(linha.doc ?? ({} as ProfessionalDocument)), file: arquivoAtual },
-                  insurer,
-                  permissions,
-                );
-                const exige = insurer.requires.includes(linha.type.id);
+          <div>
+            <FieldsetLabel>Arquivo</FieldsetLabel>
+            <FileUploader
+              className="mt-2"
+              id="documento-arquivo"
+              name="documento[file]"
+              variant="inline"
+              hint="PDF, JPG ou PNG até 10 MB"
+              fileName={arquivoAtual}
+              fileSize={tamanho}
+              errors={tocado && erroArquivo ? [erroArquivo] : []}
+              onFileChange={(file) => {
+                setArquivo(file?.name ?? "");
+                setTamanho(file?.size ?? 0);
+              }}
+            />
+          </div>
 
-                return (
-                  <div key={insurer.id}>
-                    <Checkbox
-                      id={`compartilhar-${insurer.id}`}
-                      label={`${insurer.name}${exige ? " — exige este tipo" : ""}`}
-                      checked={compartilhar.includes(insurer.id)}
-                      disabled={!decisao.allowed}
-                      aria-describedby={decisao.allowed ? undefined : `motivo-${insurer.id}`}
-                      onChange={(event) =>
-                        setCompartilhar((atual) =>
-                          event.target.checked
-                            ? [...atual, insurer.id]
-                            : atual.filter((id) => id !== insurer.id),
-                        )
-                      }
-                    />
-                    {!decisao.allowed && (
-                      <p
-                        id={`motivo-${insurer.id}`}
-                        className="m-0 pl-4 text-sm text-[var(--fg-2)]"
-                      >
-                        {decisao.reason}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </fieldset>
+          {/* O compartilhamento em painel próprio: é a parte do formulário que
+              decide credenciamento, e a única cujo efeito sai da clínica. */}
+          <div className="rounded-lg bg-[var(--color-brand-purple-dark)]/5 p-4">
+            <FieldsetLabel>Compartilhar com operadoras</FieldsetLabel>
+            <MultiSelect
+              className="mt-2"
+              id="documento-compartilhar"
+              name="documento[insurers]"
+              ariaLabel="Compartilhar com operadoras"
+              note={compartilhamentoPendente}
+              prompt="Nenhuma operadora"
+              values={compartilhar}
+              options={opcoesDeCompartilhamento}
+              onChange={setCompartilhar}
+            />
 
-          <div className="flex flex-wrap gap-3">
-            <Button variant="outline" onClick={onClose}>
-              Cancelar
-            </Button>
-            <Button leftIcon="fa-check" onClick={salvar}>
-              {editando ? "Salvar alterações" : "Adicionar documento"}
-            </Button>
+            {exigidoPor.length > 0 && (
+              // Quem exige este tipo, dito antes da escolha. Sai de
+              // `insurer.requires`, então a frase acompanha o catálogo em vez de
+              // repetir de cabeça o que cada convênio pede.
+              <p className="m-0 mt-3 flex gap-2 text-sm text-[var(--fg-2)]">
+                <Icon
+                  name="fa-circle-info"
+                  type="solid"
+                  className="mt-0.5 shrink-0 text-[var(--color-brand-blue)]"
+                />
+                <span>
+                  Exigido por {exigidoPor.map((insurer) => insurer.name).join(", ")} para
+                  credenciar.
+                </span>
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -1246,7 +1562,7 @@ function wrap(
           : undefined
       }
       breadcrumb={[
-        { label: "Profissionais", path: "/team" },
+        { label: "Profissionais", path: "/team/documentation" },
         { label: pasta?.professional.name ?? "Profissional" },
         { label: "Documentos" },
       ]}

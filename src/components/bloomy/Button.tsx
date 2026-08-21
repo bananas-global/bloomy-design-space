@@ -29,7 +29,20 @@ import { Icon } from "../Icon.js";
  */
 
 export type ButtonVariant = "default" | "outline" | "tint" | "ghost";
-export type ButtonColor = "blue" | "red" | "green" | "purple" | "yellow";
+
+/**
+ * `brand` **não existe em `button/1`** — é extensão da decisão 0015.
+ *
+ * As cinco cores do original são todas de sinal: azul de ação, vermelho de
+ * perigo, verde, roxo, amarelo. Faltava a cor de nenhum sinal — o botão de ação
+ * repetida, que aparece uma vez por item de uma lista e não deve competir com a
+ * ação da página. Nos cartões da pasta de documentos, "Editar" em `tint` azul
+ * pintava onze botões da mesma cor do "Adicionar documento" do cabeçalho.
+ *
+ * Só `tint` tem ramo `brand`. `default` em cima do roxo escuro seria um segundo
+ * botão primário, que é exatamente o que esta cor existe para não ser.
+ */
+export type ButtonColor = "blue" | "red" | "green" | "purple" | "yellow" | "brand";
 export type ButtonSize = "small" | "medium" | "normal";
 
 const TAMANHO: Record<ButtonSize, string> = {
@@ -38,6 +51,9 @@ const TAMANHO: Record<ButtonSize, string> = {
   medium: "h-9 min-w-9 px-2 py-2.5 text-sm items-center",
 };
 
+/** Cor de fallback quando a variante não tem ramo próprio para `brand`. */
+const SEM_RAMO_BRAND = "bg-[var(--color-brand-blue)] text-white";
+
 const VARIANTE: Record<ButtonVariant, Record<ButtonColor, string> | string> = {
   default: {
     blue: "bg-[var(--color-brand-blue)] text-white",
@@ -45,6 +61,7 @@ const VARIANTE: Record<ButtonVariant, Record<ButtonColor, string> | string> = {
     green: "bg-[var(--color-green)] text-white",
     purple: "bg-[var(--color-purple)] text-white",
     yellow: "bg-[var(--color-yellow)] text-black",
+    brand: SEM_RAMO_BRAND,
   },
   outline: {
     blue: "border border-[var(--color-blue)] text-[var(--color-blue)]",
@@ -52,6 +69,8 @@ const VARIANTE: Record<ButtonVariant, Record<ButtonColor, string> | string> = {
     green: "border border-[var(--color-green)] text-[var(--color-green)]",
     purple: "border border-[var(--color-purple)] text-[var(--color-purple)]",
     yellow: "border border-[var(--color-yellow)] text-[var(--color-yellow)]",
+    brand:
+      "border border-[var(--color-brand-purple-dark)]/20 text-[var(--color-brand-purple-dark)]",
   },
   tint: {
     blue: "bg-[var(--color-blue-light)] text-[var(--color-blue-dark)]",
@@ -59,6 +78,11 @@ const VARIANTE: Record<ButtonVariant, Record<ButtonColor, string> | string> = {
     green: "bg-[var(--color-green-light)] text-[var(--color-green-dark)]",
     purple: "bg-[var(--color-purple-light)] text-[var(--color-purple-dark)]",
     yellow: "bg-[var(--color-yellow)]/20 text-[var(--color-yellow-dark)]",
+    // O par do `tag/1` variante `brand`, que é a etiqueta sem sinal do sistema —
+    // só com o fundo mais claro, porque aqui ele carrega texto de 14px em negrito
+    // e não uma palavra de etiqueta.
+    brand:
+      "bg-[var(--color-brand-purple-dark)]/8 text-[var(--color-brand-purple-dark)] hover:bg-[var(--color-brand-purple-dark)]/12",
   },
   ghost: "text-[var(--color-neutral-600)]",
 };

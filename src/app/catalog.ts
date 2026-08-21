@@ -12,7 +12,7 @@ import { closureFixtures } from "../fixtures/closures.js";
 import { invoiceFixtures } from "../fixtures/invoices.js";
 import { teamFixtures } from "../fixtures/team.js";
 import {
-  insurerDocumentFixtures,
+  insurerListFixtures,
   professionalDocumentFixtures,
   teamDocumentationFixtures,
   unitListFixtures,
@@ -685,8 +685,8 @@ export const modules: Module[] = [
           "Três frentes da mesma tarefa. As variações de cada tela ficam no seletor de dados.",
         steps: [
           { scenario: "documents.professional", label: "Da lista da equipe à pasta de uma pessoa" },
-          { scenario: "documents.insurer", label: "A clínica vista pela operadora" },
-          { scenario: "documents.unit", label: "Os documentos da unidade" },
+          { scenario: "documents.insurer", label: "Da lista de convênios à ficha de um deles" },
+          { scenario: "documents.unit", label: "Da lista de unidades à pasta de uma delas" },
         ],
       },
     ],
@@ -1193,7 +1193,7 @@ export const fixtures: Fixture[] = [
   ...invoiceFixtures,
   ...teamFixtures,
   ...professionalDocumentFixtures,
-  ...insurerDocumentFixtures,
+  ...insurerListFixtures,
   ...teamDocumentationFixtures,
   ...unitListFixtures,
   ...publicPortalFixtures,
