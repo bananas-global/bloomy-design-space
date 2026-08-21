@@ -2876,6 +2876,13 @@ export interface DocumentType {
   required: boolean;
   /** Se falso, um documento deste tipo nunca vence. */
   expires: boolean;
+  /**
+   * Cadência de renovação, quando o tipo tem uma — "anual", "a cada seis meses".
+   *
+   * É campo e não parte do `hint` porque é dado que a tela mostra ao lado da
+   * validade. Dentro da frase, nenhuma tela conseguia lê-lo.
+   */
+  renewal?: string;
   icon: string;
   hint: string;
 }
@@ -2973,11 +2980,27 @@ export interface ProfessionalDocumentsData {
   links: CredentialLink[];
 }
 
+/**
+ * O mês fechado de um profissional, como o controle de horas o mostra.
+ *
+ * `plannedHours` vem da escala e `workedHours` do que foi atendido — e eles
+ * divergem de propósito. É a divergência que a tela existe para mostrar: quem
+ * trabalhou mais do que a escala previa e quem trabalhou menos.
+ */
+export interface ProfessionalHours {
+  plannedHours: number;
+  workedHours: number;
+  appointments: number;
+  compensationCents: number;
+}
+
 /** Uma linha da matriz de documentação da equipe. */
 export interface TeamDocumentationRow {
   professional: DocumentSubject;
   documents: ProfessionalDocument[];
   links: CredentialLink[];
+  /** Ausente quando o mês não tem apuração para esta pessoa. */
+  hours?: ProfessionalHours;
 }
 
 export interface TeamDocumentationData {
@@ -3005,21 +3028,80 @@ export interface UnitDocument {
   sharedWith: string[];
 }
 
+/**
+ * A unidade como o cabeçalho dela mostra.
+ *
+ * Espelha o que `UnitLive.Components.CardHeader` lê: nome, situação, telefone,
+ * endereço por extenso e duas contagens. As contagens não são campo da unidade —
+ * saem de `count_unit_rooms/1` e `count_unit_professionals/1`, que o componente
+ * chama no `update`. Estão aqui porque quem desenha o cabeçalho precisa saber que
+ * elas existem e que são derivadas.
+ */
+export interface UnitProfile {
+  id: string;
+  name: string;
+  active: boolean;
+  phone: string;
+  cnpj: string;
+  cnes: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  /** Salas cadastradas. Derivado, não armazenado. */
+  rooms: number;
+  /** Profissionais vinculados. Derivado, não armazenado. */
+  professionals: number;
+}
+
 export interface UnitDocumentsData {
   now: string;
-  unit: Unit;
-  city: string;
+  unit: UnitProfile;
   documents: UnitDocument[];
   insurers: DocumentInsurer[];
 }
 
 
+/**
+ * A operadora como o cabeçalho dela mostra.
+ *
+ * Espelha o que `HealthCareLive.Components.CardHeader` lê de `health_cares`:
+ * registro ANS, contagem de planos, telefone, e-mail e observação. `DocumentInsurer`
+ * continua sendo a referência leve — id, nome, natureza e o que a operadora exige —
+ * e é ela que viaja nas listas; estes campos só a ficha carrega.
+ *
+ * Os quatro últimos são opcionais no schema, e o original imprime `"-"` quando
+ * faltam. Quem desenhar o cabeçalho precisa saber disso: uma operadora recém
+ * cadastrada tem nome, ANS e mais nada.
+ */
+export interface InsurerProfile {
+  /**
+   * `ans_register`. O changeset valida `~r/\d{5}-\d/` — cinco dígitos, hífen e o
+   * dígito verificador. É por isso que o cabeçalho mostra "33967-9", e não
+   * "339679".
+   */
+  ansRegister?: string;
+  /** `plan_count` — virtual no schema, contado na consulta que abre a ficha. */
+  planCount: number;
+  phone?: string;
+  email?: string;
+  /**
+   * `observation` — o texto livre do modal de observações.
+   *
+   * Presente, acende o sino no botão: é o `notification_badge` de
+   * `card_header.ex`, e é a única pista de que existe algo escrito ali.
+   */
+  observation?: string;
+}
+
 /** A ficha da operadora, do ponto de vista dos documentos. */
 export interface InsurerDocumentsData {
   now: string;
   insurer: DocumentInsurer;
-  /** Registro ANS, para o cabeçalho da ficha. */
-  ans?: string;
+  /** Os campos que só o cabeçalho da ficha usa. */
+  profile: InsurerProfile;
   professionals: TeamDocumentationRow[];
   units: {
     unit: Unit;
@@ -3028,17 +3110,14 @@ export interface InsurerDocumentsData {
   }[];
 }
 
-/** Uma unidade na lista de Unidades. */
-export interface UnitListing {
-  id: string;
-  name: string;
-  cnpj: string;
-  cnes: string;
-  street: string;
-  number: string;
-  complement?: string;
-  city: string;
-  active: boolean;
+/**
+ * Uma unidade na lista de Unidades.
+ *
+ * É o perfil mais os documentos: a lista mostra as colunas do cabeçalho, e
+ * clicar numa linha abre a pasta com o mesmo dado. Uma linha que não carregasse o
+ * perfil inteiro obrigaria a pasta a buscar de novo o que a lista já tinha.
+ */
+export interface UnitListing extends UnitProfile {
   /** Quantos dos doze documentos padrão estão em ordem. */
   documents: UnitDocument[];
 }
@@ -3047,4 +3126,48 @@ export interface UnitListData {
   now: string;
   units: UnitListing[];
   insurers: DocumentInsurer[];
+}
+
+/**
+ * Uma operadora na lista de Operadoras.
+ *
+ * As quatro colunas de `health_care_live/index.ex` são nome, registro ANS,
+ * endereço e cidade — e o endereço é uma associação, não campo da operadora: o
+ * `list/1` faz `preload(:address)`, e uma operadora sem endereço não passa no
+ * changeset (`cast_assoc(:address, required: true)`).
+ *
+ * Como em `UnitListing`, a linha carrega o **perfil inteiro** e não só as quatro
+ * colunas: a lista e a ficha são o mesmo fluxo, e uma linha que não trouxesse o
+ * perfil obrigaria a ficha a buscar de novo o que a lista já tinha.
+ *
+ * Vale saber que no monólito não é assim, e a diferença é intencional: `plan_count`
+ * é virtual e só é calculado em `get_health_care!/2`; o `list/1` não conta plano
+ * nenhum, porque a lista não tem essa coluna e a contagem custaria uma consulta por
+ * linha. Quem implementar mantém as duas consultas separadas — aqui elas são uma
+ * fixture só para não obrigar a trocar o seletor de dados no meio do caminho.
+ *
+ * O credenciamento é o que a aba nova acrescenta, e é derivado: sai dos documentos
+ * dos profissionais e das unidades contra o `requires` da operadora.
+ */
+export interface InsurerListing {
+  insurer: DocumentInsurer;
+  /** Os campos do cabeçalho da ficha, incluindo o registro ANS que a lista mostra. */
+  profile: InsurerProfile;
+  street: string;
+  number: string;
+  complement?: string;
+  city: string;
+  /** Profissionais da clínica, para contar credenciamento contra esta operadora. */
+  professionals: TeamDocumentationRow[];
+  /** Unidades da clínica, para o mesmo cálculo do outro lado. */
+  units: {
+    unit: Unit;
+    city: string;
+    documents: UnitDocument[];
+  }[];
+}
+
+export interface InsurerListData {
+  now: string;
+  insurers: InsurerListing[];
 }

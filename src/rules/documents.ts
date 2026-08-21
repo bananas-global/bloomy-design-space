@@ -150,8 +150,17 @@ export interface Completeness {
  * conveniente: uma pessoa de quem a clínica não exige nada não tem pendência, e
  * mostrar 0% ali colocaria no topo da fila justamente quem não precisa de nada.
  */
+/**
+ * O tipo mínimo que a completude lê.
+ *
+ * `ProfessionalDocument` e `UnitDocument` divergem em `sharedWith` — lá é lista de
+ * operadora com data, aqui é lista de id —, e a completude não olha nem um nem o
+ * outro. Exigir o tipo inteiro obrigaria a unidade a ter uma cópia da regra.
+ */
+type ContaParaCompletude = Pick<ProfessionalDocument, "typeId" | "file" | "validUntil" | "waived">;
+
 export function completeness(
-  documents: ProfessionalDocument[],
+  documents: ContaParaCompletude[],
   types: DocumentType[],
   now: string,
 ): Completeness {
@@ -236,10 +245,56 @@ export function credentialStatusLabel(status: CredentialStatus): string {
 type Decision = { allowed: boolean; reason?: string };
 
 /**
+ * Escolher a operadora enquanto o documento está sendo preenchido.
+ *
+ * Duas recusas, e nenhuma delas é o arquivo. A distinção é o ponto: escolher com
+ * quem compartilhar é intenção declarada no formulário, e o arquivo é condição
+ * para **salvar**, não para decidir. Exigir o anexo antes da escolha invertia a
+ * ordem do trabalho — a pessoa marcava as operadoras de cabeça, anexava, e
+ * marcava de novo.
+ *
+ * Nada é compartilhado antes de salvar, e salvar sem arquivo é recusado pelo
+ * formulário. `canShare` continua sendo quem decide o compartilhamento efetivo de
+ * um documento que já existe.
+ */
+export function canSelectInsurer(
+  insurer: DocumentInsurer,
+  permissions: string[],
+  /**
+   * A permissão que governa o escopo.
+   *
+   * A pasta da unidade compartilha com as mesmas operadoras e é governada por
+   * `units.edit`. Um segundo `canSelectInsurer` para ela seria a mesma regra
+   * duas vezes, e a recusa do particular é a que mais importa aqui — ela não
+   * depende de escopo nenhum.
+   */
+  permission = "professionals.edit",
+): Decision {
+  if (!permissions.includes(permission)) {
+    return {
+      allowed: false,
+      reason:
+        permission === "units.edit"
+          ? "Seu perfil não edita a documentação de unidades."
+          : "Seu perfil não edita a documentação de profissionais.",
+    };
+  }
+  if (insurer.kind === "particular") {
+    return {
+      allowed: false,
+      reason: "Particular não credencia profissional — não há operadora para receber o documento.",
+    };
+  }
+  return { allowed: true };
+}
+
+/**
  * Compartilhar um documento com uma operadora.
  *
- * Duas recusas, e as duas dizem o que fazer. A do particular não é técnica: ele
- * não credencia ninguém, então não há para quem mandar.
+ * Três recusas, e as três dizem o que fazer. A do particular não é técnica: ele
+ * não credencia ninguém, então não há para quem mandar. A do arquivo vale para o
+ * documento que já existe — no formulário, quem cobra o anexo é o salvar, e a
+ * escolha da operadora passa por `canSelectInsurer`.
  */
 export function canShare(
   doc: ProfessionalDocument | undefined,

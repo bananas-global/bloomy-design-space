@@ -64,7 +64,10 @@ export function Tag({
         .join(" ")}
     >
       {item}
-      {icon && <Icon name={icon} />}
+      {/* O espaço é do original: no HEEX o `<%= @item %>` e o `<.icon>` estão em
+          linhas separadas, e a quebra vira um espaço no HTML. Em JSX a quebra
+          desaparece, e sem isto a etiqueta sai "ANS: 33967-9#", colada. */}
+      {icon && <> <Icon name={icon} /></>}
     </span>
   );
 }

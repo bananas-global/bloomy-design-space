@@ -35,6 +35,12 @@ const EXCECOES = [
     porque:
       "fecha o formulário de documento e o diálogo de exportação sem salvar; não cancela documento nem compartilhamento",
   },
+  {
+    trecho: "Cancelar",
+    arquivo: "src/screens/UnitDocuments.tsx",
+    porque:
+      "fecha o formulário de documento da unidade sem salvar; não cancela documento nem compartilhamento",
+  },
 ];
 
 const arquivos = readdirSync("src/screens")

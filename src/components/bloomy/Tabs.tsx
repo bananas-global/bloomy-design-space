@@ -14,6 +14,16 @@ export type ButtonTab<T extends string> = {
   id: T;
   label: string;
   disabled?: boolean;
+  /**
+   * Ícone antes do rótulo. **Não existe em `button_tabs/1`** — ver decisão 0015.
+   */
+  icon?: string;
+  /**
+   * Contador depois do rótulo. Também extensão: o original não tem badge.
+   * Zero não renderiza — um contador de pendência que mostra "0" convida a
+   * abrir a aba que não tem trabalho.
+   */
+  badge?: number;
 };
 
 /**
@@ -22,6 +32,15 @@ export type ButtonTab<T extends string> = {
  * A implementação original mede a largura e o deslocamento do botão ativo e
  * move um marcador absoluto por baixo dele. Preservar o marcador separado é o
  * que mantém a transição fluida mesmo quando os rótulos têm larguras diferentes.
+ *
+ * **Três extensões sobre o original**, registradas na decisão 0015:
+ *
+ * 1. `icon` e `badge` por aba. O HEEx renderiza só o rótulo.
+ * 2. `header`, que o `wrapper` não tem e o `lazy_tabs/1` tem. Sem ele, o título
+ *    da página e o trilho ficariam em linhas diferentes e o `justify-between`
+ *    do original empurraria as abas para a esquerda do cartão.
+ * 3. `actions`, que o original **tem** (`slot :actions`) e este porte não
+ *    tinha. Voltou junto porque é onde o botão de ação da página mora.
  */
 export function ButtonTabs<T extends string>({
   id,
@@ -30,6 +49,8 @@ export function ButtonTabs<T extends string>({
   value,
   onChange,
   children,
+  header,
+  actions,
   size = "small",
   className,
   panelClassName,
@@ -40,6 +61,10 @@ export function ButtonTabs<T extends string>({
   value: T;
   onChange: (value: T) => void;
   children: ReactNode;
+  /** Título da página, à esquerda do trilho. Extensão — ver acima. */
+  header?: ReactNode;
+  /** `slot :actions` do original: o que fica à direita do trilho. */
+  actions?: ReactNode;
   size?: "small" | "normal";
   className?: string;
   panelClassName?: string;
@@ -91,7 +116,19 @@ export function ButtonTabs<T extends string>({
 
   return (
     <div id={id} className={["relative", className].filter(Boolean).join(" ")}>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {header}
+        {/* Sem `header`, o grupo ocupa a linha e volta ao `justify-between` do
+            original: trilho à esquerda, ações à direita. Com `header`, trilho e
+            ações andam juntos no canto direito. */}
+        <div
+          className={[
+            "flex flex-wrap items-center gap-3",
+            header ? undefined : "flex-1 justify-between",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
         <div
           ref={tabList}
           className="thin-scrollbar relative inline-flex max-w-full gap-2 overflow-auto rounded-xl bg-[var(--color-brand-purple-dark)]/5 p-2 text-[var(--color-brand-purple-dark)]"
@@ -123,15 +160,24 @@ export function ButtonTabs<T extends string>({
               disabled={tab.disabled}
               onClick={() => onChange(tab.id)}
               className={[
-                "relative cursor-pointer whitespace-nowrap rounded-md font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
+                "relative inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-md font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
                 "disabled:cursor-not-allowed disabled:text-[var(--color-neutral-300)]",
                 size === "normal" ? "px-4 py-2.5 text-lg" : "px-2 py-1.5 text-base",
               ].join(" ")}
             >
+              {tab.icon && <Icon name={tab.icon} />}
               {tab.label}
+              {tab.badge !== undefined && tab.badge > 0 && (
+                <span className="rounded-full bg-[var(--color-red-light)] px-2 text-xs font-bold text-[var(--color-danger-fg)]">
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
+        </div>
+
+          {actions}
         </div>
       </div>
 
