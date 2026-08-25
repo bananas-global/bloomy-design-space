@@ -2055,6 +2055,126 @@ export interface SupervisionData {
   schedules: SupervisedSchedule[];
 }
 
+/* ========================================= Supervisão — a equipe inteira */
+
+/**
+ * A supervisão como relação de três pontas, e não como lista.
+ *
+ * Os tipos acima descrevem a tela do sistema: uma lista de supervisores e, ao
+ * lado, os atendimentos de quem o selecionado supervisiona. Os de baixo
+ * descrevem a proposta — supervisor, aplicador e paciente como três entradas
+ * para a mesma relação, cada uma filtrando as outras duas.
+ *
+ * Os dois convivem de propósito. A tela portada continua em `/supervision` e
+ * responde pelas cinco situações do porte; a proposta mora em
+ * `/supervision/team`. É o mesmo arranjo de Profissionais e Unidades.
+ */
+
+/** Para onde o programa está indo. Duas das quatro são ponto de atenção. */
+export type ProgramTrend = "up" | "flat" | "stalled" | "down";
+
+export interface SupervisedProgram {
+  name: string;
+  trend: ProgramTrend;
+}
+
+/** O que um programa produziu **numa** sessão: o que a assinatura confere. */
+export interface SessionProgramResult extends SupervisedProgram {
+  trials: number;
+  correct: number;
+}
+
+/**
+ * Registro ABC — antecedente, comportamento, consequência.
+ *
+ * Não é anotação livre: é o formato do registro de comportamento-alvo do ABA, e
+ * quem assina precisa ver os três campos juntos para saber o que a consequência
+ * respondeu.
+ */
+export interface AbcRecord {
+  antecedent: string;
+  behavior: string;
+  consequence: string;
+  minutes: number;
+}
+
+export interface SupervisionSupervisor {
+  id: string;
+  name: string;
+  specialtyName: string;
+}
+
+export interface SupervisionApplicator {
+  id: string;
+  name: string;
+  /** O papel do produto — Aplicador, Terapeuta, Especialista. */
+  roleName: string;
+  specialtyName: string;
+  /** O vínculo de estágio. É ele, e não o papel, que monta a coluna. */
+  supervisorId: string;
+  /** Última supervisão registrada, `YYYY-MM-DD`. Ausente é nunca. */
+  lastSupervisionOn?: string;
+}
+
+export interface SupervisionPatient {
+  id: string;
+  name: string;
+  birthDate: string;
+  /** Guia do convênio a vencer: ponto de atenção que não é clínico. */
+  expiringGuide: boolean;
+  programs: SupervisedProgram[];
+}
+
+/**
+ * Um atendimento de alguém supervisionado, com o registro que a assinatura
+ * confere.
+ *
+ * O registro vem junto do atendimento porque é isso que a segunda assinatura
+ * afirma: quem assina está dizendo que leu as tentativas, a observação e o ABC.
+ * Um lote que assine sem mostrar isso assina no escuro.
+ */
+export interface SupervisionSession {
+  id: string;
+  applicatorId: string;
+  patientId: string;
+  serviceName: string;
+  start: string;
+  end: string;
+  status: ScheduleStatus;
+  hasRecord: boolean;
+  /** Unidade ou domicílio: o atendimento domiciliar não tem sala. */
+  placeName: string;
+  checkinAt?: string;
+  checkoutAt?: string;
+  /** Observação de quem aplicou, como ela chega para quem assina. */
+  note?: string;
+  programs: SessionProgramResult[];
+  abc: AbcRecord[];
+}
+
+export interface SupervisionTeamData {
+  /** A referência do período. Determinística, como todo `now` daqui. */
+  now: string;
+  /**
+   * Quem o visitante **é**, quando o visitante supervisiona.
+   *
+   * `supervisor_internships` é um registro da pessoa, não do papel: se você tem
+   * um vínculo é um fato do seu cadastro, e nenhuma permissão o expressa. Neste
+   * ambiente a pessoa que abre é a persona escolhida, então é a fixture que diz
+   * qual supervisor ela seria — do mesmo jeito que `NotificationsData` carrega o
+   * papel de quem abriu.
+   *
+   * Ausente, o visitante que supervisiona é alguém recém-designado, sem ninguém
+   * ainda. A tela não abre para ele, e é a mesma constatação do porte: a lista é
+   * montada a partir dos vínculos, não do cargo.
+   */
+  viewerSupervisorId?: string;
+  supervisors: SupervisionSupervisor[];
+  applicators: SupervisionApplicator[];
+  patients: SupervisionPatient[];
+  sessions: SupervisionSession[];
+}
+
 /* ====================================================== Mapa da unidade */
 
 /** Os quatro eixos do mapa. Dois deles não têm escolha de granularidade. */

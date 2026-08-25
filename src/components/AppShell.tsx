@@ -3,6 +3,7 @@ import type { ScenarioContext } from "@brucesantos/design-space";
 import logotipo from "../assets/bloomy-negative.svg";
 import simbolo from "../assets/bloomy-symbol-negative.svg";
 import { Icon } from "./Icon.js";
+import { Avatar } from "./bloomy/Layout.js";
 
 /**
  * Chrome do Bloomy — **espelho** do backoffice real.
@@ -88,7 +89,9 @@ const NAV: NavItem[] = [
   { label: "Fechamentos", path: "/closures", segmentos: ["closures", "invoices"], icon: "fa-dollar", permission: "closures.list", origem: "/backoffice/financeiro/fechamentos" },
   { label: "Listas gerenciais", path: "/management", segmentos: ["management"], icon: "fa-gear", permission: "management.list", origem: "/backoffice/gerencia" },
   { label: "Colaboradores", icon: "fa-solid fa-user-tie", origem: "/backoffice/usuarios" },
-  { label: "Supervisão", path: "/supervision", segmentos: ["supervision"], icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
+  // `path` é a tela nova, por relação. `/supervision` continua existindo e serve
+  // as cinco situações portadas — mesmo arranjo de Profissionais e Unidades.
+  { label: "Supervisão", path: "/supervision/team", segmentos: ["supervision"], scenario: "supervision.team", icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
 ];
 
 /**
@@ -251,32 +254,53 @@ export function AppShell({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {/*
+          Cabeçalho — espelho de `backoffice.html.heex:141-324`.
+
+          `justify-end md:justify-between` é de lá: abaixo de `md` o breadcrumb
+          está escondido e o grupo da direita vai inteiro para a borda. Com
+          `justify-between` fixo, o botão do drawer ficava sozinho na esquerda de
+          um cabeçalho vazio.
+        */}
         {surface === "backoffice" && (
-          <header className="sticky top-0 z-40 flex items-center justify-between gap-4 bg-surface px-4 py-4 shadow-[var(--shadow-main)] lg:px-8">
-            <div className="flex min-w-0 items-center gap-4">
-              <button
-                type="button"
-                onClick={() => setExpandido((antes) => !antes)}
-                aria-expanded={expandido}
-                aria-label={expandido ? "Recolher a navegação" : "Expandir a navegação"}
-                className="hidden h-5 w-5 shrink-0 items-center justify-center text-[var(--color-brand-purple-dark)]/60 lg:flex"
-              >
-                <Icon name="fa-sidebar" />
-              </button>
+          <header className="sticky top-0 z-40 flex w-full items-center justify-end bg-surface px-4 py-4 shadow-[var(--shadow-main)] md:justify-between lg:px-8">
+            <div className="flex gap-4">
+              <div className="hidden lg:block">
+                <button
+                  type="button"
+                  onClick={() => setExpandido((antes) => !antes)}
+                  aria-expanded={expandido}
+                  aria-label={expandido ? "Recolher a navegação" : "Expandir a navegação"}
+                  className="flex h-5 w-5 shrink-0 items-center justify-center text-[var(--color-brand-purple-dark)]/60"
+                >
+                  <Icon name="fa-sidebar" />
+                </button>
+              </div>
+
+              {/*
+               * `breadcrumbs/1`: separador de chevron, 14px em negrito, e o item
+               * atual em roxo cheio contra os anteriores a 50%. Antes disto era
+               * invenção minha — barra "/" como separador, 13px, links na cor de
+               * ação. Escondido abaixo de `md`, como lá.
+               *
+               * O `aria-label` é o do original, "Breadcrumb", e não a tradução
+               * que eu tinha posto.
+               */}
               {breadcrumb && breadcrumb.length > 0 && (
-                <nav aria-label="Trilha de navegação" className="min-w-0">
-                  <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-[0.8125rem] text-[var(--fg-2)]">
+                <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
+                  <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0">
                     {breadcrumb.map((crumb, index) => (
-                      <li key={crumb.label} className="flex items-center gap-1.5">
+                      <li key={crumb.label} className="flex items-center gap-2">
                         {index > 0 && (
-                          <span aria-hidden="true" className="text-[var(--fg-3)]">
-                            /
-                          </span>
+                          <Icon
+                            name="fa-chevron-right"
+                            className="text-xs text-[var(--color-brand-purple-dark)]/30"
+                          />
                         )}
                         {crumb.path ? (
                           <a
                             href={crumb.path}
-                            className="text-action underline-offset-2 hover:underline"
+                            className="espelho-do-sistema text-sm font-semibold text-[var(--color-brand-purple-dark)]/50 no-underline transition-colors hover:text-[var(--color-brand-purple)]"
                             onClick={(event) => {
                               event.preventDefault();
                               context.navigate(crumb.path!);
@@ -285,7 +309,9 @@ export function AppShell({
                             {crumb.label}
                           </a>
                         ) : (
-                          <span>{crumb.label}</span>
+                          <span className="text-sm font-semibold text-[var(--color-brand-purple-dark)]">
+                            {crumb.label}
+                          </span>
                         )}
                       </li>
                     ))}
@@ -294,8 +320,16 @@ export function AppShell({
               )}
             </div>
 
-            {/* Unidade e perfil, à direita, como no sistema: rótulo pequeno em
-                cor forte sobre o valor, e um quadrado de ícone ao lado. */}
+            {/*
+             * Unidade, perfil, pessoa e notificações — os quatro blocos do
+             * sistema, nesta ordem. Faltavam os dois últimos.
+             *
+             * No original os três primeiros são `dropdown/1`: trocar de unidade,
+             * trocar de papel, e "Meu perfil / Base de Conhecimento / Sair". Aqui
+             * são estáticos — o Design Space troca unidade e papel pelo painel do
+             * motor, e um menu que abre para links mortos seria pior que nenhum.
+             * A anatomia visual é a de lá.
+             */}
             <div className="flex shrink-0 items-center gap-x-4 md:gap-x-6">
               <div className="flex items-center gap-2">
                 <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
@@ -322,6 +356,46 @@ export function AppShell({
                   <Icon name="fa-user-tie" className="text-[var(--color-purple)]" />
                 </span>
               </div>
+
+              {/* A pessoa: nome em `brand-blue-dark` sobre "Bem-vindo(a)", e o
+                  avatar quadrado. O par do nome dá 3,40:1 e já está registrado
+                  como divergência do produto. */}
+              <div className="flex items-center gap-2">
+                <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
+                  <span className="block text-base/4 font-black text-[var(--color-brand-blue-dark)]">
+                    Marcos Vinícius Gimenes
+                  </span>
+                  Bem-vindo(a)
+                </p>
+                <Avatar shape="square" size="medium" />
+              </div>
+
+              {/* `NotificationComponent`: quadrado laranja com o sino, e a
+                  contagem num selo roxo com borda branca, saindo do canto.
+
+                  O sino é laranja do produto sobre o mesmo laranja a 20%: 2,02:1,
+                  contra os 3:1 que a WCAG 1.4.11 pede para elemento não textual.
+                  O axe não o alcança — é um glifo de fonte num `span` sem texto —
+                  então a marca de espelho aqui não esconde nada dele; ela existe
+                  para o par ficar registrado e medido. O selo roxo passa com
+                  4,89, e é ele que carrega o número. */}
+              <a
+                href="/notifications"
+                aria-label="Notificações: 2 não lidas"
+                onClick={(event) => {
+                  event.preventDefault();
+                  context.navigate("/notifications");
+                }}
+                className="espelho-do-sistema relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--color-orange)]/20"
+              >
+                <Icon name="fa-bell" className="text-[var(--color-orange)]" />
+                <span
+                  aria-hidden="true"
+                  className="absolute -right-2 -top-2 inline-flex h-6 w-6 items-center justify-center rounded-lg border-2 border-white bg-[var(--color-purple)] text-xs font-bold text-white"
+                >
+                  2
+                </span>
+              </a>
             </div>
           </header>
         )}
