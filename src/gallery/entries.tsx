@@ -86,6 +86,11 @@ const TAGS: TagVariant[] = [
   "red", "orange", "brand", "green", "yellow",
 ];
 
+/** As invertidas que este produto acrescentou; não existem no `tag/1`. */
+const TAGS_INVERTIDAS: TagVariant[] = [
+  "solid-red", "solid-green", "solid-orange", "solid-yellow", "solid-brand",
+];
+
 /** Linhas sintéticas para a tabela da galeria. */
 const LINHAS = [
   { horario: "08:00", paciente: "Helena M.", servico: "Terapia ocupacional", situacao: true },
@@ -833,10 +838,21 @@ export const GALLERY: GalleryEntry[] = [
     demos: [
       {
         titulo: "As dez variantes",
-        nota: "`blue` é a única invertida: fundo forte e texto claro, onde as outras fazem o oposto.",
+        nota: "`blue` é a única invertida: fundo forte e texto claro, onde as outras fazem o oposto. O fundo é o do produto; o texto das cinco variantes de sinal foi escurecido para o tom da própria família, porque as originais reprovavam AA — `light-blue` ficava em 2,14:1 num texto de 14px em negrito. É a decisão 0001, e os pares corrigidos estão em `contrastPairs`.",
         render: () => (
           <div className="flex flex-wrap items-center gap-2">
             {TAGS.map((v) => (
+              <Tag key={v} item={v} variant={v} />
+            ))}
+          </div>
+        ),
+      },
+      {
+        titulo: "As cinco invertidas — extensão deste produto",
+        nota: "Não existem no `tag/1`: o original só inverte `blue`. O fundo é o tom **escuro** da família, não o cheio — `--color-red` (#f04646) não é escuro, `--color-red-dark` (#902a2a) é —, e as cinco atingem AA: `solid-brand` 14,05, `solid-yellow` 13,15, `solid-orange` 6,85, `solid-red` 6,77 e `solid-green` 5,73.",
+        render: () => (
+          <div className="flex flex-wrap items-center gap-2">
+            {TAGS_INVERTIDAS.map((v) => (
               <Tag key={v} item={v} variant={v} />
             ))}
           </div>

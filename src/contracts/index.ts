@@ -1965,6 +1965,35 @@ export function formatDateTime(iso: string, locale = "pt-BR"): string {
 }
 
 /**
+ * Data numérica — `25/08/2026`.
+ *
+ * `formatDate/2` escreve o mês por extenso ("25 de ago. de 2026"), que é o que
+ * uma ficha quer e o que uma grade não aguenta. Onde a data divide a linha com
+ * horário, situação e duas ações — a linha de atendimento e o cabeçalho da
+ * revisão —, o mês por extenso empurra tudo para a segunda linha.
+ *
+ * Mesmo fuso das outras: horário de atendimento é do lugar onde o atendimento
+ * acontece, e a data virada é o caso em que isso aparece.
+ */
+export function formatNumericDate(iso: string, locale = "pt-BR"): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: CLINIC_TIMEZONE,
+  }).format(parseIsoDate(iso));
+}
+
+/** Dia e mês — `25/08`. O ano é o do período que a tela já declarou. */
+export function formatDayMonth(iso: string, locale = "pt-BR"): string {
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: CLINIC_TIMEZONE,
+  }).format(parseIsoDate(iso));
+}
+
+/**
  * Idade em anos completos, medida contra {@link TODAY} e não contra o relógio.
  *
  * A implementação vive no motor desde a versão 0.1.0: os dois primeiros produtos

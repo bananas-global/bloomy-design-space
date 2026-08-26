@@ -27,6 +27,10 @@ test.describe("catálogo — drawer_modal, modal_content e simple_table", () => 
     await page.keyboard.press("Tab");
     await expect(close).toBeFocused();
     await page.keyboard.press("Tab");
+    // O miolo que rola é foco próprio: sem ele, quem usa teclado não tem como
+    // rolar um registro mais alto que o painel. Ver a nota em `Overlay.tsx`.
+    await expect(drawer.locator("#g-drawer-content")).toBeFocused();
+    await page.keyboard.press("Tab");
     const reason = drawer.locator("#g-drawer-reason");
     await expect(reason).toBeFocused();
     await reason.pressSequentially("Agenda duplicada");

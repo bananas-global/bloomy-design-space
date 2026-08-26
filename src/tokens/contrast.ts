@@ -37,6 +37,23 @@ export const contrastPairs: ContrastPair[] = [
   { name: "branco sobre botão de ação em hover", foreground: "#ffffff", background: "#1f5a73" }, // 7.28
   { name: "branco sobre acento", foreground: "#ffffff", background: "#6144c5" }, // 6.68
 
+  /* ----------------------------------------------------------- etiquetas
+     `tag/1` com o fundo do produto e o texto escurecido para o tom da família.
+     `light-blue` e `red` caem exatamente nos pares de chip declarados abaixo —
+     `--color-blue-light` é o mesmo valor de `--color-info-bg`, e
+     `--color-red-light` o mesmo de `--color-danger-bg` —, então só as três que
+     não coincidem entram aqui. Os fundos vêm achatados sobre o branco, porque um
+     par declarado com alfa mediria contra o que estivesse atrás. */
+  { name: "etiqueta green do tag/1", foreground: "#256a23", background: "#e7f4d1" }, // 5.77
+  { name: "etiqueta orange do tag/1", foreground: "#854d0e", background: "#fcebdf" }, // 5.90
+  { name: "etiqueta yellow do tag/1", foreground: "#854d0e", background: "#fff3cc" }, // 6.18
+  /* As invertidas deste produto: fundo no tom escuro, texto no tom claro. */
+  { name: "etiqueta solid-red do produto", foreground: "#fde3e3", background: "#902a2a" }, // 6.77
+  { name: "etiqueta solid-green do produto", foreground: "#e2f3e1", background: "#256a23" }, // 5.73
+  { name: "etiqueta solid-orange do produto", foreground: "#ffffff", background: "#854d0e" }, // 6.85
+  { name: "etiqueta solid-yellow do produto", foreground: "#000000", background: "#ffc402" }, // 13.15
+  { name: "etiqueta solid-brand do produto", foreground: "#ffffff", background: "#2b235b" }, // 14.05
+
   /* --------------------------------------------------------------- chips */
   { name: "chip confirmado", foreground: "#256a23", background: "#e2f3e1" }, // 5.73
   { name: "chip recusado", foreground: "#902a2a", background: "#fde3e3" }, // 6.77
@@ -112,32 +129,37 @@ export const knownProductionFailures: (ContrastPair & { measured: number; usedFo
     usedFor: "indicador positivo e chip de unidade no produto",
   },
   /*
-   * As duas variantes de `tag/1` usadas pelos selos de contagem da Supervisão.
+   * O azul cheio como contorno da linha selecionada, sobre o preenchimento claro
+   * dela: 2,47:1, abaixo dos 3:1 que a 1.4.11 pede para indicador de estado.
    *
-   * O fundo já vem achatado sobre o branco — `yellow` é `--color-yellow` a 20%,
-   * e um par declarado com alfa mediria contra o que estivesse atrás. Medidos no
-   * navegador, com a variante renderizada de verdade.
-   *
-   * Das dez variantes de `tag/1`, oito reprovam AA e só `brand` (12,15) e
-   * `purple` (4,89) passam. Estas duas são escolha de design registrada na
-   * decisão 0016: a cor de sinal do produto vale mais que a razão de contraste,
-   * e o significado é carregado pelo ícone e pelo rótulo textual, que o leitor
-   * de tela recebe inteiro.
+   * Escolha de design, registrada na segunda passada da decisão 0016. O estado
+   * não está só na borda: o preenchimento troca de família junto — cinza-lavanda
+   * para ciano-claro — e o `aria-pressed` diz o que a cor diz.
    */
   {
-    name: "etiqueta light-blue do sistema",
+    name: "azul cheio como contorno de selecionado",
     foreground: "#0eb2e5",
-    background: "#dbf3fb",
-    measured: 2.14,
-    usedFor: "tag/1 variante light-blue — fila de assinaturas na Supervisão",
+    background: "#ffffff",
+    measured: 2.47,
+    usedFor: "linha selecionada das três colunas da Supervisão, e a barra de assinatura",
   },
-  {
-    name: "etiqueta yellow do sistema",
-    foreground: "#dba301",
-    background: "#fff3cc",
-    measured: 2.03,
-    usedFor: "tag/1 variante yellow — pontos de atenção na Supervisão",
-  },
+  /*
+   * As cinco variantes de sinal do `tag/1` **saíram desta lista** em 2026-08-26.
+   *
+   * Elas estiveram aqui: `light-blue` em 2,14, `red` em 3,05, `green` em 2,46,
+   * `orange` em 2,93 e `yellow` em 2,05 — a etiqueta é 14px em negrito, então o
+   * limiar é 4,5. Eram divergência assumida, com o argumento de que a cor de
+   * sinal do produto valia mais que a razão.
+   *
+   * O argumento caiu quando ficou claro que só o **texto** carregava a
+   * divergência: mantendo o fundo do produto e escurecendo o texto para o tom da
+   * própria família, as cinco passam AA e a cor de sinal continua sendo a do
+   * produto. É a decisão 0001 aplicada onde a decisão 0016 tinha apontado, e os
+   * pares corrigidos estão em `contrastPairs`, na seção de etiquetas.
+   *
+   * Ficam registradas aqui por nome, e não por entrada: o par que falha é o do
+   * monólito, e o Design Space não usa mais nenhum deles.
+   */
   /*
    * O cabeçalho do backoffice, portado por inteiro em 2026-08-25.
    *

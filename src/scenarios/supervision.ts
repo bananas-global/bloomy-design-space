@@ -171,7 +171,7 @@ export const supervisionScenarios: Scenario[] = [
       contrast: "AA",
       announces: ["signature.result"],
       notes:
-        "Cada coluna é uma região nomeada com um grupo de botões de alternância, e `aria-pressed` diz o que está selecionado. A fila e os pontos de atenção têm rótulo textual além do número — os selos usam a paleta de `tag/1`, que reprova o contraste, e os pares estão registrados como divergência. O diálogo do lote prende o foco e fecha com Esc.",
+        "Cada coluna é uma região nomeada com um grupo de botões de alternância, e `aria-pressed` diz o que está selecionado. A fila e os pontos de atenção têm rótulo textual além do número; a situação do atendimento e a tendência do programa têm rótulo e ícone. As cinco etiquetas usam a paleta de `tag/1`, que reprova o contraste, e os pares estão registrados como divergência. No drawer, o trilho é leitura — o andamento vai por texto (\"4 de 7\") e quem navega são duas setas rotuladas. O drawer e o resumo prendem o foco e fecham com Esc.",
     },
     status: "proposed",
     preconditions: [
@@ -183,8 +183,8 @@ export const supervisionScenarios: Scenario[] = [
     actions: [
       "Selecionar um supervisor, um aplicador ou um paciente em qualquer coluna.",
       "Remover uma marca de filtro, ou limpar todas.",
-      "Encolher as três colunas para quem tem assinatura pendente.",
-      "Abrir a fila de revisão, assinar e avançar, ou deixar o atendimento na fila.",
+      "Abrir a fila de revisão, assinar e avançar, ou pular o atendimento.",
+      "Abrir o registro de uma sessão qualquer pelo link da linha, inclusive de uma que não espera assinatura.",
       "Trocar a persona para ver o alcance mudar de coluna.",
     ],
     expected: [
@@ -192,7 +192,9 @@ export const supervisionScenarios: Scenario[] = [
       "Selecionar um aplicador revela o supervisor dele na coluna da esquerda, em vez de manter o que estava.",
       "Selecionar um paciente mostra quem o atende e de quem é a assinatura de cada um — a pergunta que a tela atual não tem por onde receber.",
       "Uma seleção incompatível com a anterior apaga a anterior, em vez de produzir “nenhum resultado”.",
-      "O lote abre um atendimento por vez, com as tentativas de cada programa, a observação de quem aplicou e os registros de comportamento; assinar avança e derruba a fila, e deixar na fila não assina.",
+      "O lote abre um atendimento por vez, com as tentativas de cada programa, a observação de quem aplicou e os registros de comportamento; assinar avança e derruba a fila, e pular não assina.",
+      "Quando a fila acaba, o painel fecha e o resumo aparece centrado, contando quantos foram assinados e quantos seguem pendentes.",
+      "O link do registro abre o mesmo painel para uma sessão que não espera assinatura, e nele o rodapé diz que não há assinatura a dar em vez de oferecer o botão.",
       "Com a persona de quem supervisiona, a coluna de supervisores não existe e limpar os filtros volta para os vínculos dele, não para a clínica — quem diz de quem é a carteira é o painel de detalhe, não um aviso.",
       "Admin, admin de clínica e coordenação veem três colunas; a recepção vê duas, sem supervisores; People, Operação e quem é supervisionado não abrem a tela e são mandados para onde a pergunta que sobrou é respondida.",
       "Com a fila vazia, a barra diz que não há assinatura pendente e os pontos de atenção continuam ali — guia vencendo, programa estagnado, faltas e a aplicadora que nunca foi supervisionada.",
