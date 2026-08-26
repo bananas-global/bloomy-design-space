@@ -4,11 +4,32 @@ import { Icon } from "../Icon.js";
  * Etiqueta, lista de etiquetas e ponto de situação — espelho de `tag/1`,
  * `tag_list/1` e `status_tag/1`.
  *
- * Duas coisas do original que valem ser ditas.
+ * Três coisas que valem ser ditas.
  *
  * A variante `blue` inverte o par das outras: onde as demais são fundo claro
  * com texto forte, ela é `bg-blue text-blue-light`. Não é engano meu na cópia —
- * está assim no arquivo, e é o único caso.
+ * está assim no arquivo, e é o único caso. As cinco `solid-*` são extensão
+ * daqui: a mesma inversão para as cores de sinal que o original não tem.
+ *
+ * **O fundo é o do produto; o texto foi escurecido.** Das dez variantes do
+ * original, oito reprovavam AA — a etiqueta é 14px em negrito, e `light-blue`
+ * ficava em 2,14:1. Aqui cada variante de sinal mantém o fundo do `tag/1` e troca
+ * o texto pelo tom escuro da mesma família, que é a decisão 0001 aplicada onde a
+ * decisão 0016 tinha apontado: escurecer o token em vez de escolher variante por
+ * variante, ou pintar cada tela com uma régua diferente.
+ *
+ * Para o laranja e o amarelo o `-dark` da própria família não basta — param em
+ * 2,93 e 2,05 —, e os dois usam `--color-warn-fg`. Não é invenção: `tokens.css`
+ * já carrega o valor corrigido dessas duas famílias no par de chip, com a nota
+ * "laranja e amarelo foram escurecidos".
+ *
+ * **Sem borda, como no original.** As variantes claras chegaram a ganhar um fio de
+ * 1px, porque em cima da linha da coluna da Supervisão — que era o navy a 10% — o
+ * selo separava 1,05:1 do fundo. O que resolveu de verdade foi tirar o
+ * preenchimento da linha: contra o branco o selo separa sozinho, e o fio virou
+ * contorno de um problema que não existe mais. Fica registrado porque a medida
+ * vale de novo no dia em que alguém puser um selo destes em cima de uma faixa
+ * tingida.
  *
  * E `status_tag/1` é **só um ponto colorido**, verde ou vermelho, sem texto
  * nenhum. O `title` é opcional. Quando ele não vem, a situação existe só na
@@ -16,6 +37,20 @@ import { Icon } from "../Icon.js";
  * registrado no achado 103.
  */
 
+/**
+ * As dez do original, mais quatro invertidas — extensão da decisão 0015.
+ *
+ * O original só tem **uma** etiqueta de fundo forte com texto claro: `blue`. As
+ * outras nove são fundo claro com texto forte, e três delas — `cyan`, `purple`,
+ * `brand` — já são fundo cheio com texto branco. Faltava a inversão das cores de
+ * sinal, que é o que faz um número de fila ser visto de longe sem depender de a
+ * pessoa distinguir dois tons claros.
+ *
+ * O prefixo é `solid-`, e não a simetria do par `blue`/`light-blue`. Ali a
+ * convenção do original é "o claro leva o prefixo", e seguir isso aqui pediria
+ * renomear `red`, `green`, `orange` e `yellow` para `light-*` — quatro variantes
+ * usadas em outras telas, trocando de significado em silêncio.
+ */
 export type TagVariant =
   | "light-blue"
   | "blue"
@@ -26,17 +61,22 @@ export type TagVariant =
   | "orange"
   | "brand"
   | "green"
-  | "yellow";
+  | "yellow"
+  | "solid-red"
+  | "solid-green"
+  | "solid-orange"
+  | "solid-yellow"
+  | "solid-brand";
 
 const VARIANTE: Record<TagVariant, string> = {
-  "light-blue": "bg-[var(--color-blue-light)] text-[var(--color-blue)]",
+  "light-blue": "bg-[var(--color-blue-light)] text-[var(--color-blue-dark)]",
   // O único invertido do conjunto: fundo forte, texto claro.
   blue: "bg-[var(--color-blue)] text-[var(--color-blue-light)]",
   cyan: "bg-[var(--color-cyan)] text-white",
   purple: "bg-[var(--color-purple)] text-white",
   "light-purple": "bg-[var(--color-purple-light)] text-[var(--color-purple)]",
-  red: "bg-[var(--color-red-light)] text-[var(--color-red)]",
-  orange: "bg-[var(--color-brand-orange)]/20 text-[var(--color-orange-dark)]",
+  red: "bg-[var(--color-red-light)] text-[var(--color-red-dark)]",
+  orange: "bg-[var(--color-brand-orange)]/20 text-[var(--color-warn-fg)]",
   /**
    * A única variante com opacidade divergente do original.
    *
@@ -51,8 +91,33 @@ const VARIANTE: Record<TagVariant, string> = {
    * contra 5,08:1 do par original. É a decisão 0001 na direção de sempre.
    */
   brand: "bg-[var(--color-brand-purple-dark)]/8 text-[var(--color-brand-purple-dark)]",
-  green: "bg-[var(--color-brand-green)]/20 text-[var(--color-brand-green-dark)]",
-  yellow: "bg-[var(--color-yellow)]/20 text-[var(--color-yellow-dark)]",
+  green: "bg-[var(--color-brand-green)]/20 text-[var(--color-green-dark)]",
+  yellow: "bg-[var(--color-yellow)]/20 text-[var(--color-warn-fg)]",
+
+  /*
+   * As cinco invertidas, montadas como o `blue` do original: fundo cheio e texto
+   * no tom claro da mesma família. **O fundo é o tom escuro, não o cheio** — pela
+   * mesma razão das claras, e porque "fundo escuro" era o pedido: `--color-red`
+   * (#f04646) não é escuro, `--color-red-dark` (#902a2a) é.
+   *
+   * | Variante       | Par                                | Razão |
+   * | -------------- | ---------------------------------- | ----- |
+   * | `solid-brand`  | branco sobre o navy                | 14,05 ✓ |
+   * | `solid-yellow` | preto sobre `--color-yellow`       | 13,15 ✓ |
+   * | `solid-orange` | branco sobre `--color-warn-fg`     | 6,85 ✓ |
+   * | `solid-red`    | `red-light` sobre `red-dark`       | 6,77 ✓ |
+   * | `solid-green`  | `green-light` sobre `green-dark`   | 5,73 ✓ |
+   *
+   * `solid-orange` não tem tom claro na paleta — não existe
+   * `--color-orange-light` —, então o texto é branco. `solid-yellow` é preto
+   * porque o amarelo cheio é claro: é o mesmo par do `button/1` na variante
+   * `default` amarela, e o único caso em que o fundo não escurece.
+   */
+  "solid-red": "bg-[var(--color-red-dark)] text-[var(--color-red-light)]",
+  "solid-green": "bg-[var(--color-green-dark)] text-[var(--color-green-light)]",
+  "solid-orange": "bg-[var(--color-warn-fg)] text-white",
+  "solid-yellow": "bg-[var(--color-yellow)] text-black",
+  "solid-brand": "bg-[var(--color-brand-purple-dark)] text-white",
 };
 
 export function Tag({

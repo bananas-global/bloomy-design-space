@@ -55,8 +55,8 @@ importers:
         specifier: ^4.13.0
         version: 4.13.0
       feedback-collector:
-        specifier: ^0.2.0
-        version: 0.2.0
+        specifier: ^0.3.0
+        version: 0.3.0
       tailwindcss:
         specifier: ^4.1.11
         version: 4.3.3
@@ -885,8 +885,8 @@ packages:
       picomatch:
         optional: true
 
-  feedback-collector@0.2.0:
-    resolution: {integrity: sha512-WJX7A7/hfb0at7uUSPY3zGD0LnTVora/RG0BNv9woJwlPn2yImozmIRUu4sk6l/q7MwH6tjnGOh+8MCkdRAA9A==}
+  feedback-collector@0.3.0:
+    resolution: {integrity: sha512-L+H99iSxGc3Esq4PYeM2hR6fOjbQ0PxLjv0qklBLxQFF++krHMjDgK+rwr1E7f5A1cPR70edmGQEq4DfcecTwA==}
 
   fsevents@2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
@@ -1966,7 +1966,7 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.5
 
-  feedback-collector@0.2.0: {}
+  feedback-collector@0.3.0: {}
 
   fsevents@2.3.2:
     optional: true

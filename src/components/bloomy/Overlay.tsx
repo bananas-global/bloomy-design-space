@@ -112,13 +112,20 @@ export function Modal({
               LARGURA[variant],
             ].join(" ")}
           >
+            {/*
+              O `p-6` vale com ou sem título. Ele estava condicionado ao título,
+              e um `modal/1` sem título — o resumo de uma fila, por exemplo —
+              nascia com o botão de fechar encostado no canto arredondado, sem
+              margem nenhuma. Sem título ele também vai para a direita: com um
+              filho só, `justify-between` o joga para a esquerda.
+            */}
             <div
               className={[
-                "flex items-center justify-between",
-                title && "border-b border-[var(--color-neutral-100)] p-6",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+                "flex items-center p-6",
+                title
+                  ? "justify-between border-b border-[var(--color-neutral-100)]"
+                  : "justify-end pb-0",
+              ].join(" ")}
             >
               {title && (
                 <h1 id={`${id}-title`} className="m-0 text-2xl font-bold">
@@ -240,7 +247,20 @@ export function DrawerModal({
             </div>
             <Button id={`${id}-btn-close`} data-drawer-id={id} data-close-drawer type="button" variant="tint" aria-label="Fechar" onClick={onCancel}><Icon name="fa-times" className="block h-4 w-4 self-center" /></Button>
           </div>
-          <div ref={content} id={`${id}-content`} className={["min-h-0 flex-1 overflow-y-auto p-6", contentClassName].filter(Boolean).join(" ")}>{children}</div>
+          {/*
+            `tabIndex={0}` no miolo que rola.
+            Quem rola aqui é este bloco, e o cabeçalho e o rodapé ficam presos nas
+            bordas — então um conteúdo mais alto que o painel só é alcançável pela
+            roda do mouse ou pelo dedo. Com o Tab, o foco pulava do botão de fechar
+            para o rodapé e o miolo inteiro ficava sem como ser rolado; num registro
+            de atendimento longo, a pessoa assinava o que não teve como ler.
+            É a remediação que a 2.1.1 pede, e é o que o axe cobra na regra
+            `scrollable-region-focusable` — ela apareceu na Supervisão no dia em que
+            o cabeçalho da revisão passou a ocupar duas linhas.
+            O custo é uma parada de Tab a mais nos drawers curtos, entre o botão de
+            fechar e o primeiro campo.
+          */}
+          <div ref={content} id={`${id}-content`} tabIndex={0} className={["min-h-0 flex-1 overflow-y-auto p-6", contentClassName].filter(Boolean).join(" ")}>{children}</div>
           {footer && <div id={`${id}-footer`} className="shrink-0 border-t border-neutral-100 p-6">{footer}</div>}
         </div>
       </div>

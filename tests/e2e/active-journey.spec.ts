@@ -126,12 +126,15 @@ test.describe("Supervisão da equipe", () => {
 
     await page.locator("#conteudo").getByRole("button", { name: "Revisar e assinar" }).first().click();
 
-    const dialogo = page.getByRole("dialog");
+    const dialogo = page.locator("#lote-de-assinaturas");
     await expect(dialogo.getByText("Programas trabalhados")).toBeVisible();
-    await expect(dialogo.getByText("Observação de quem aplicou")).toBeVisible();
+    await expect(dialogo.getByText("Observações do aplicador")).toBeVisible();
     // Tentativas corretas, e não só o nome do programa: é o que a assinatura
     // afirma ter sido conferido.
-    await expect(dialogo.getByText(/de \d+ tentativas corretas/).first()).toBeVisible();
+    await expect(dialogo.getByText(/\d+\/\d+ tentativas corretas/).first()).toBeVisible();
+    // Check-in e check-out ficam à vista: sem eles a assinatura afirma que o
+    // atendimento aconteceu sem dizer quando começou.
+    await expect(dialogo.getByText(/Check-in \d{2}:\d{2}/)).toBeVisible();
   });
 
   test("assinar avança e derruba a fila; o resumo conta o que foi assinado", async ({ page }) => {
@@ -144,17 +147,21 @@ test.describe("Supervisão da equipe", () => {
       .click();
     await page.locator("#conteudo").getByRole("button", { name: "Revisar e assinar" }).first().click();
 
-    const dialogo = page.getByRole("dialog");
+    const dialogo = page.locator("#lote-de-assinaturas");
     await expect(dialogo.getByText("1 de 2")).toBeVisible();
 
     await dialogo.getByRole("button", { name: "Assinar e avançar" }).click();
     await expect(dialogo.getByText("2 de 2")).toBeVisible();
     await expect(page.locator("#indicador-a-assinar")).toContainText("6");
 
+    // A última assinatura fecha o painel e abre o resumo, que é `modal/1`
+    // centrado: o fim da fila não continua a leitura, ele fecha o assunto.
     await dialogo.getByRole("button", { name: "Assinar e avançar" }).click();
-    await expect(dialogo.getByText("2 atendimentos assinados")).toBeVisible();
+    const resumo = page.locator("#lote-concluido");
+    await expect(resumo.getByText("2 atendimentos assinados")).toBeVisible();
+    await expect(dialogo).toHaveCount(0);
 
-    await dialogo.getByRole("button", { name: "Concluir" }).click();
+    await resumo.getByRole("button", { name: "Concluir" }).click();
     // A região viva nasce vazia e só fala depois da ação.
     await expect(page.locator('[role="status"]')).toHaveText("2 atendimentos assinados.");
   });
@@ -169,12 +176,19 @@ test.describe("Supervisão da equipe", () => {
       .click();
     await page.locator("#conteudo").getByRole("button", { name: "Revisar e assinar" }).first().click();
 
-    const dialogo = page.getByRole("dialog");
-    await dialogo.getByRole("button", { name: "Deixar na fila" }).click();
-    await dialogo.getByRole("button", { name: "Deixar na fila" }).click();
+    const dialogo = page.locator("#lote-de-assinaturas");
+    await dialogo.getByRole("button", { name: "Pular" }).click();
+    await dialogo.getByRole("button", { name: "Pular" }).click();
 
-    await expect(dialogo.getByText("Nenhum atendimento assinado")).toBeVisible();
-    await expect(dialogo.getByText(/continuam na fila/)).toBeVisible();
+    const resumo = page.locator("#lote-concluido");
+    await expect(resumo.getByText("Nenhum atendimento assinado")).toBeVisible();
+    await expect(resumo.getByText(/ficaram pendentes e seguem na sua fila/)).toBeVisible();
+
+    // E a região viva continua calada: nada mudou na tela, então não há
+    // resultado a anunciar — um aviso verde de confirmação sobre "nada foi
+    // assinado" diria o contrário do que aconteceu.
+    await resumo.getByRole("button", { name: "Concluir" }).click();
+    await expect(page.locator('[role="status"]')).toHaveText("");
     // Nada saiu da fila: pular não é recusar, e não é assinar.
     await expect(page.locator("#indicador-a-assinar")).toContainText("7");
   });
@@ -196,14 +210,15 @@ test.describe("Supervisão da equipe", () => {
       .click();
     await page.locator("#conteudo").getByRole("button", { name: "Revisar e assinar" }).first().click();
 
-    const dialogo = page.getByRole("dialog");
+    const dialogo = page.locator("#lote-de-assinaturas");
     await dialogo.getByRole("button", { name: "Assinar e avançar" }).click();
-    await dialogo.getByRole("button", { name: "Deixar na fila" }).click();
+    await dialogo.getByRole("button", { name: "Pular" }).click();
 
-    await expect(dialogo.getByText("1 atendimento assinado")).toBeVisible();
-    await expect(dialogo.getByText(/1 atendimento continua na fila/)).toBeVisible();
+    const resumo = page.locator("#lote-concluido");
+    await expect(resumo.getByText("1 atendimento assinado")).toBeVisible();
+    await expect(resumo.getByText(/1 atendimento ficou pendente e segue na sua fila/)).toBeVisible();
     // Um assinado mais um na fila é a fila inteira: nenhum contado duas vezes.
-    await dialogo.getByRole("button", { name: "Concluir" }).click();
+    await resumo.getByRole("button", { name: "Concluir" }).click();
     await expect(page.locator("#indicador-a-assinar")).toContainText("6");
   });
 
@@ -211,7 +226,9 @@ test.describe("Supervisão da equipe", () => {
     await page.goto(urlFor("supervision.team"));
     await semColetor(page);
     await page.locator("#conteudo").getByRole("button", { name: "Revisar e assinar" }).first().click();
-    await page.getByRole("dialog").waitFor();
+    // O painel é o `-container`: o `<div>` do id é a moldura de posicionamento,
+    // sem caixa própria, e `waitFor` sobre ele espera para sempre.
+    await page.locator("#lote-de-assinaturas-container").waitFor();
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])

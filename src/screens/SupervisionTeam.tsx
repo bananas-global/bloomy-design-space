@@ -2,20 +2,25 @@ import { useMemo, useState, type ReactNode } from "react";
 import type { ScreenProps } from "@brucesantos/design-space";
 import type {
   ProgramTrend,
+  ScheduleStatus,
   SupervisionSession,
   SupervisionTeamData,
 } from "../contracts/index.js";
-import { ageInYears, formatDate, formatTime } from "../contracts/index.js";
+import {
+  ageInYears,
+  formatDate,
+  formatDayMonth,
+  formatNumericDate,
+  formatTime,
+} from "../contracts/index.js";
 import { AppShell } from "../components/AppShell.js";
 import { Icon } from "../components/Icon.js";
 import {
-  Button as AcaoLocal,
-  Chip,
   EmptyState,
   ErrorState,
   LoadingState,
   Notice,
-  ScheduleStatusChip,
+  scheduleStatusLabel,
 } from "../components/primitives.js";
 import { Button } from "../components/bloomy/Button.js";
 // `Card` do sistema, com nome próprio: `Card` de `primitives` já é o das colunas
@@ -27,8 +32,8 @@ import {
 } from "../components/bloomy/Card.js";
 import { Input } from "../components/bloomy/Input.js";
 import { Progress } from "../components/bloomy/Layout.js";
-import { DrawerModal } from "../components/bloomy/Overlay.js";
-import { Tag } from "../components/bloomy/Tag.js";
+import { DrawerModal, Modal } from "../components/bloomy/Overlay.js";
+import { Tag, type TagVariant } from "../components/bloomy/Tag.js";
 import {
   applicatorAlerts,
   applicatorsOfSupervisor,
@@ -126,26 +131,40 @@ function inicial(nome: string): string {
   return `${partes[0]?.[0] ?? ""}${partes[partes.length - 1]?.[0] ?? ""}`.toUpperCase();
 }
 
-type Tipo = "supervisor" | "aplicador" | "paciente";
-
 /**
- * As iniciais num quadrado colorido, uma cor por tipo.
+ * As iniciais num círculo, **uma cor só para as três pontas**.
  *
- * As três cores são de pares declarados em `src/tokens/contrast.ts`: branco
- * sobre ação, sobre acento e sobre o roxo do drawer. O azul de marca, que seria
- * a escolha óbvia, dá 2,22:1 — e aqui ele carregaria texto, não decoração.
+ * A primeira versão pintava supervisor, aplicador e paciente de três cores
+ * diferentes, e o círculo passava a dizer o tipo. Só que o tipo já está dito
+ * pela coluna em que o nome mora, e a mesma pessoa aparece nas duas — o
+ * supervisor no painel do aplicador, o aplicador na lista de quem atende o
+ * paciente — trocando de cor no caminho. Uma cor: o círculo é âncora do nome, e
+ * não um segundo canal de informação que contradiz o primeiro.
+ *
+ * **A cor é o texto rebaixado: fundo em navy a 10%, iniciais em navy a 80%.** O
+ * azul cheio do `avatar/1` esteve aqui, e ele punha a cor mais saturada da tela
+ * em doze círculos que não carregam informação nenhuma — a coluna virava um
+ * mostruário de azul, e o que precisa ser visto de longe é o selo de fila.
+ *
+ * As duas opacidades se compõem a favor. O fundo é translúcido, então dentro de
+ * uma linha que já é navy a 10% ele chega a 19% e o círculo aparece; sobre o
+ * branco do painel de detalhe fica em 10% e continua aparecendo. Uma cor só,
+ * dois contextos, sem variante.
+ *
+ * De passagem o contraste deixou de ser divergência: as iniciais dão 5,84:1
+ * dentro da linha e 6,61:1 sobre o branco, contra os 2,47 do azul cheio. O
+ * círculo continua sendo decoração `aria-hidden` com o nome inteiro ao lado — só
+ * que agora quem o vê, lê.
  */
-const FUNDO: Record<Tipo, string> = {
-  supervisor: "bg-action",
-  aplicador: "bg-accent",
-  paciente: "bg-navy",
-};
-
-function Iniciais({ nome, tipo }: { nome: string; tipo: Tipo }) {
+function Iniciais({ nome, tamanho = "normal" }: { nome: string; tamanho?: "normal" | "grande" }) {
   return (
     <span
       aria-hidden="true"
-      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-field text-[0.8125rem] font-bold text-white ${FUNDO[tipo]}`}
+      className={[
+        "flex shrink-0 items-center justify-center rounded-full",
+        "bg-navy/10 font-bold text-navy/80",
+        tamanho === "grande" ? "h-12 w-12 text-[1.0625rem]" : "h-9 w-9 text-[0.8125rem]",
+      ].join(" ")}
     >
       {inicial(nome)}
     </span>
@@ -153,7 +172,7 @@ function Iniciais({ nome, tipo }: { nome: string; tipo: Tipo }) {
 }
 
 /**
- * Os dois selos de contagem são `tag/1`, o componente do sistema.
+ * Os selos são `tag/1`, o componente do sistema.
  *
  * A primeira versão desta tela os desenhava à mão — dois `span` com raio,
  * padding e paleta próprios — e o resultado era duas implementações de etiqueta
@@ -161,23 +180,28 @@ function Iniciais({ nome, tipo }: { nome: string; tipo: Tipo }) {
  * mesma correção da decisão 0001: o componente do sistema no lugar do que eu
  * tinha desenhado.
  *
- * **A variante é a da cor de sinal, e ela reprova o contraste.** `light-blue` na
- * fila e `yellow` nos pontos de atenção: 2,14:1 e 2,03:1, medidos no navegador
- * com a transparência achatada sobre o branco. Das dez variantes de `tag/1` só
- * duas atingem AA — `brand` com 12,15 e `purple` com 4,89 —, e nenhuma das duas
- * é cor de sinal: uma é cinza-roxo e a outra é roxo cheio, e um selo de fila que
- * parece um selo neutro não é lido como fila.
+ * **As duas são claras: `light-blue` na fila e `red` nos pontos de atenção.** As
+ * invertidas — fundo cheio, texto claro — estiveram aqui e foram desfeitas: numa
+ * coluna de doze linhas, dois retângulos de cor cheia por linha viram o assunto da
+ * tela, e o assunto da tela são os nomes. O selo claro pede um segundo de atenção
+ * a mais e devolve uma coluna que se lê de cima a baixo.
  *
- * É escolha de design, registrada na decisão 0016, e o preço é explícito: **quem
- * depende do contraste não lê o número na cor.** O que sustenta a escolha é que a
- * cor não é o único canal — o ícone distingue os dois selos, e o `title` mais o
- * rótulo `sr-only` entregam a frase inteira ("3 atendimentos aguardando
- * assinatura"), que é o requisito de 1.4.1. O que não se resolve é 1.4.3, e é
- * isso que os dois pares em `knownProductionFailures` afirmam.
+ * **E o selo claro passou a ser legível.** Ele ficou muito tempo em 2,14:1, com o
+ * argumento de que a cor de sinal do produto valia mais que a razão de contraste —
+ * o ícone distingue os dois selos, e o `title` mais o rótulo `sr-only` entregam a
+ * frase inteira ("3 atendimentos aguardando assinatura"), que é o requisito de
+ * 1.4.1. O que não se resolvia era 1.4.3: quem depende do contraste não lia o
+ * número.
  *
- * Daí o `espelho-do-sistema`: com a variante do produto, o selo **é** espelho, e
- * a classe é o que diz ao axe que a reprovação é a do `tag/1`, não uma invenção
- * daqui. Ela não vale para o selo que eu desenhar — vale para o que eu copiar.
+ * O argumento caiu quando ficou claro que só o **texto** carregava a divergência.
+ * O `tag/1` deste repositório mantém o fundo do produto e escurece o texto para o
+ * tom da própria família, e as cinco variantes de sinal passam AA sem trocar de
+ * cor: `light-blue` em 5,25 e `red` em 6,77. É a decisão 0001 aplicada onde a
+ * decisão 0016 tinha apontado.
+ *
+ * Por isso o `espelho-do-sistema` saiu dos selos, aqui e nas etiquetas de situação
+ * e de tendência: não há mais reprovação do `tag/1` para o axe deixar passar, e a
+ * varredura volta a conferi-los como confere o resto da tela.
  */
 function Fila({ quantas }: { quantas: number }) {
   if (quantas === 0) return null;
@@ -186,7 +210,6 @@ function Fila({ quantas }: { quantas: number }) {
   return (
     <span className="inline-flex shrink-0 items-center">
       <Tag
-        className="espelho-do-sistema"
         item={String(quantas)}
         variant="light-blue"
         icon="fa-signature"
@@ -197,7 +220,13 @@ function Fila({ quantas }: { quantas: number }) {
   );
 }
 
-/** Pontos de atenção, em número. O detalhe lista quais são. */
+/**
+ * Pontos de atenção, em número. O detalhe lista quais são.
+ *
+ * `red` e não `yellow`: os pontos são guia vencendo, programa estagnado, faltas
+ * e supervisão que nunca aconteceu — nenhum deles é "atenção", todos são coisa
+ * parada.
+ */
 function Atencao({ quantos }: { quantos: number }) {
   if (quantos === 0) return null;
   const rotulo = `${quantos} ${quantos === 1 ? "ponto de atenção" : "pontos de atenção"}`;
@@ -205,9 +234,8 @@ function Atencao({ quantos }: { quantos: number }) {
   return (
     <span className="inline-flex shrink-0 items-center">
       <Tag
-        className="espelho-do-sistema"
         item={String(quantos)}
-        variant="yellow"
+        variant="red"
         icon="fa-triangle-exclamation"
         title={rotulo}
       />
@@ -216,15 +244,77 @@ function Atencao({ quantos }: { quantos: number }) {
   );
 }
 
-const TREND_TONE: Record<ProgramTrend, "ok" | "info" | "warn" | "danger"> = {
-  up: "ok",
-  flat: "info",
-  stalled: "warn",
-  down: "danger",
+/**
+ * Tendência do programa, em `tag/1` — não mais no `Chip` local.
+ *
+ * A tela tinha duas anatomias de etiqueta e duas réguas de contraste: `Tag` na
+ * contagem e `Chip` na tendência e na situação. A decisão 0016 registrou a
+ * inconsistência e apontou o caminho — usar o componente do sistema e cobrar a
+ * dívida de contraste na origem, escurecendo os tokens do `tag/1`, em vez de
+ * escolher variante por variante. As duas metades estão feitas: uma etiqueta só, e
+ * o texto dela escurecido no espelho.
+ *
+ * O ícone é o segundo canal, e ele é o que faz a etiqueta funcionar em preto e
+ * branco: seta para cima, seta para baixo, dois sentidos, pausa.
+ */
+const TENDENCIA: Record<ProgramTrend, { variant: TagVariant; icon: string }> = {
+  up: { variant: "green", icon: "fa-arrow-trend-up" },
+  flat: { variant: "light-blue", icon: "fa-arrows-left-right" },
+  stalled: { variant: "orange", icon: "fa-pause" },
+  down: { variant: "red", icon: "fa-arrow-trend-down" },
 };
 
 function Tendencia({ trend }: { trend: ProgramTrend }) {
-  return <Chip tone={TREND_TONE[trend]}>{programTrendLabel(trend)}</Chip>;
+  const { variant, icon } = TENDENCIA[trend];
+  return (
+    <Tag
+      className="shrink-0"
+      item={programTrendLabel(trend)}
+      variant={variant}
+      icon={icon}
+    />
+  );
+}
+
+/**
+ * Situação do atendimento, em `tag/1`.
+ *
+ * **Os rótulos continuam os do produto**, e não os do desenho. O desenho escreve
+ * "Concluído" e "Assinar"; `priv/gettext/pt_BR/LC_MESSAGES/enums.po` escreve
+ * "Finalizado" e "Assinatura Supervisor", e é a palavra que a clínica usa em voz
+ * alta. Trocar por uma mais curta faria a especificação divergir do produto num
+ * lugar em que ninguém iria conferir.
+ *
+ * `pending_supervisor_signature` é a única que sai do mapa de tons do `Chip`:
+ * ela vai em `purple` em vez do laranja de pendência, porque é a situação sobre
+ * a qual esta tela inteira existe. `purple` já atingia AA antes da correção do
+ * espelho (4,89:1), e continua.
+ */
+const SITUACAO: Partial<Record<ScheduleStatus, { variant: TagVariant; icon?: string }>> = {
+  scheduled: { variant: "light-blue" },
+  incomplete: { variant: "yellow", icon: "fa-circle-exclamation" },
+  ready_for_service: { variant: "green" },
+  not_started: { variant: "orange" },
+  delayed: { variant: "yellow", icon: "fa-clock" },
+  ongoing: { variant: "brand" },
+  pending_register: { variant: "orange", icon: "fa-clipboard" },
+  pending_signature: { variant: "orange", icon: "fa-signature" },
+  pending_supervisor_signature: { variant: "purple", icon: "fa-signature" },
+  finished: { variant: "green", icon: "fa-circle-check" },
+  cancelled: { variant: "red" },
+  missed: { variant: "red", icon: "fa-user-xmark" },
+};
+
+function Situacao({ status }: { status: ScheduleStatus }) {
+  const { variant, icon } = SITUACAO[status] ?? { variant: "brand" as TagVariant };
+  return (
+    <Tag
+      className="shrink-0"
+      item={scheduleStatusLabel(status)}
+      variant={variant}
+      {...(icon ? { icon } : {})}
+    />
+  );
 }
 
 /**
@@ -233,11 +323,33 @@ function Tendencia({ trend }: { trend: ProgramTrend }) {
  * `aria-pressed` e não `aria-current`: o nó é um filtro que liga e desliga, e
  * clicar no que já está ligado desliga. `aria-current` diria "você está aqui",
  * que é outra coisa — e não teria como dizer que dá para sair.
+ *
+ * **Selecionado é o azul a 10% com contorno azul cheio; o resto é só contorno, no
+ * navy a 10%.** A linha não selecionada já foi preenchida — `ink-50` primeiro,
+ * depois o navy a 10% — e o preenchimento cinza num alvo clicável lê como
+ * desabilitado: doze linhas apagadas com uma acesa, quando as doze são clicáveis.
+ * Sem preenchimento, o branco do cartão é o fundo, o contorno delimita, e quem
+ * ganha peso é só o que está selecionado.
+ *
+ * De passagem resolveu o selo: em cima do preenchimento tingido ele separava
+ * 1,05:1 do fundo e precisou de um fio de 1px para aparecer. Contra o branco ele
+ * separa sozinho, e o fio saiu.
+ *
+ * O contorno do selecionado é `--color-blue` cheio, e dá 2,47:1 sobre o branco do
+ * cartão — abaixo dos 3:1 que a 1.4.11 pede para indicador de estado. É a mesma
+ * escolha do círculo de iniciais, do backlog de 26/08, e o que a segura é que o
+ * estado não está só na borda: o preenchimento aparece junto, e o `aria-pressed`
+ * diz o que a cor diz.
+ *
+ * **Três colunas, e os selos são a terceira.** Eles dividiam a linha do nome, e
+ * numa coluna de 273px "Rafael Andrade Nunes" ficava com o que sobrava de dois
+ * selos — enquanto a linha de baixo tinha a largura toda para "Psicologia · 3
+ * aplicadores". Como coluna própria, os selos ficam sempre no mesmo lugar,
+ * centrados nas duas linhas, e as duas linhas de texto cortam na mesma medida.
  */
 function No({
   nome,
   detalhe,
-  tipo,
   selecionado,
   fila,
   atencao,
@@ -245,7 +357,6 @@ function No({
 }: {
   nome: string;
   detalhe: string;
-  tipo: Tipo;
   selecionado: boolean;
   fila: number;
   atencao?: number;
@@ -257,26 +368,22 @@ function No({
       aria-pressed={selecionado}
       onClick={onClick}
       className={[
-        "flex w-full items-start gap-2.5 rounded-field border px-3 py-2.5 text-left transition-colors",
+        "flex w-full items-center gap-2.5 rounded-card border px-3 py-2.5 text-left transition-colors",
         selecionado
-          ? "border-action bg-info-bg"
-          : "border-[var(--border-soft)] bg-surface hover:bg-ink-50",
+          ? "border-[var(--color-blue)] bg-[var(--color-blue)]/10"
+          : "border-[var(--border-soft)] hover:bg-navy/5",
       ].join(" ")}
     >
-      <Iniciais nome={nome} tipo={tipo} />
-      {/* O nome tem a largura toda, e os números dividem a segunda linha com o
-          detalhe. Ao lado do nome, dois selos deixavam "Rafael Andrade Nunes"
-          com 86px numa coluna de 238 — e um nome cortado num filtro de nomes
-          obriga a clicar para saber em quem se está clicando. */}
+      <Iniciais nome={nome} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[0.9375rem] font-semibold text-navy">{nome}</span>
-        <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-[var(--fg-2)]">
-            {detalhe}
-          </span>
-          <Fila quantas={fila} />
-          {atencao !== undefined && <Atencao quantos={atencao} />}
+        <span className="mt-0.5 block truncate text-[0.8125rem] text-[var(--fg-2)]">
+          {detalhe}
         </span>
+      </span>
+      <span className="flex shrink-0 items-center gap-1">
+        <Fila quantas={fila} />
+        {atencao !== undefined && <Atencao quantos={atencao} />}
       </span>
     </button>
   );
@@ -317,7 +424,7 @@ function Coluna({
           {titulo}
         </h2>
         {/* `tag/1`, variante sem sinal: é uma contagem, não um estado. `brand`
-            dá 12,15:1 e é a única das dez que serve para número sem cor. */}
+            dá 12,07:1 e é a única das dez que serve para número sem cor. */}
         <Tag item={String(quantos)} variant="brand" />
       </div>
       <div className="space-y-2 p-3">
@@ -342,39 +449,47 @@ function SemResultado() {
   );
 }
 
-/** Cabeçalho do painel de detalhe: quem é, e o que ele é. */
+/**
+ * Cabeçalho do painel de detalhe: quem é, e o que ele é.
+ *
+ * Sem `nome` de pessoa não há círculo — a visão geral é a equipe, e um quadrado
+ * com as iniciais de "Sua equipe de supervisão" seria decoração fingindo ser
+ * âncora.
+ */
 function Cabecalho({
   nome,
   detalhe,
-  tipo,
-  icone,
+  comIniciais = true,
 }: {
   nome: string;
   detalhe: string;
-  tipo?: Tipo;
-  icone?: string;
+  comIniciais?: boolean;
 }) {
   return (
     <div className="flex items-center gap-3">
-      {tipo ? (
-        <Iniciais nome={nome} tipo={tipo} />
-      ) : (
-        <span
-          aria-hidden="true"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-field bg-action text-white"
-        >
-          <Icon name={icone ?? "fa-people-group"} />
-        </span>
-      )}
+      {comIniciais && <Iniciais nome={nome} tamanho="grande" />}
       <div className="min-w-0">
-        <h2 className="m-0 break-words text-[1.0625rem] font-bold text-navy">{nome}</h2>
+        <h2 className="m-0 break-words text-[1.25rem] font-bold text-navy">{nome}</h2>
         <p className="m-0 break-words text-[0.875rem] text-[var(--fg-2)]">{detalhe}</p>
       </div>
     </div>
   );
 }
 
-/** A barra que concentra a ação, ou a frase de que não há nada a fazer. */
+/**
+ * A barra que concentra a ação, ou a frase de que não há nada a fazer.
+ *
+ * O botão fica **abaixo** da frase, e não ao lado dela. Ao lado, ele dividia a
+ * largura com um texto que muda de tamanho a cada escopo — "aguardando
+ * assinatura na equipe" contra "aguardando assinatura" — e a ação principal da
+ * tela mudava de posição a cada clique numa coluna.
+ *
+ * A cor é o azul a 10% com contorno cheio, o mesmo par da linha selecionada e da
+ * sessão que espera assinatura. Era `info-bg` com o contorno em `info-fg/25` —
+ * dois tons de azul separados por um passo pequeno, num lugar em que o par de
+ * sinal já estava definido. Fila e "está selecionado" são a mesma família nesta
+ * tela, e o verde da barra vazia é o que se separa das duas.
+ */
 function BarraDeAssinatura({
   quantas,
   frase,
@@ -396,22 +511,24 @@ function BarraDeAssinatura({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-info-fg/25 bg-info-bg px-4 py-3.5">
-      <p className="m-0 min-w-0 break-words text-[0.9375rem] text-navy">
+    <div className="rounded-card border border-[var(--color-blue)] bg-[var(--color-blue)]/10 px-4 py-3.5">
+      <p className="m-0 break-words text-[0.9375rem] text-navy">
         <strong className="font-bold">{quantas}</strong>{" "}
         {quantas === 1 ? "atendimento" : "atendimentos"} {frase}
       </p>
-      <Button className="espelho-do-sistema shrink-0" rightIcon="fa-signature" onClick={onRevisar}>
-        Revisar e assinar
-      </Button>
+      <div className="mt-3">
+        <Button className="espelho-do-sistema" rightIcon="fa-signature" onClick={onRevisar}>
+          Revisar e assinar
+        </Button>
+      </div>
     </div>
   );
 }
 
-function Bloco({ titulo, children }: { titulo: string; children: ReactNode }) {
+function Bloco({ titulo, children }: { titulo: ReactNode; children: ReactNode }) {
   return (
     <section>
-      <h3 className="m-0 mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+      <h3 className="m-0 mb-3 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
         {titulo}
       </h3>
       {children}
@@ -453,7 +570,7 @@ function Conteudo({
    */
   const [assinados, setAssinados] = useState<ReadonlySet<string>>(() => new Set<string>());
   const [busca, setBusca] = useState({ supervisor: "", aplicador: "", paciente: "" });
-  const [lote, setLote] = useState<{ titulo: string; sessoes: SupervisionSession[] } | null>(null);
+  const [lote, setLote] = useState<SupervisionSession[] | null>(null);
   const [aviso, setAviso] = useState("");
 
   const comColunaDeSupervisores = alcance.supervisors;
@@ -484,20 +601,29 @@ function Conteudo({
       .filter((item) => contem(item.name, busca.paciente));
   }, [equipe, selecao, busca.paciente]);
 
-  function abrirLote(titulo: string, sessoes: SupervisionSession[]) {
+  function abrirLote(sessoes: SupervisionSession[]) {
     if (sessoes.length === 0) return;
-    setLote({ titulo, sessoes });
+    setLote(sessoes);
   }
 
   function assinar(id: string) {
     setAssinados((antes) => new Set(antes).add(id));
   }
 
+  /**
+   * O aviso só fala quando alguma coisa aconteceu.
+   *
+   * Fechar a fila sem assinar nada dizia "Nenhuma assinatura foi dada. Os
+   * atendimentos seguem na fila." — em verde, com um ícone de confirmação, sobre
+   * o resumo que acabou de dizer a mesma coisa em duas linhas. Nada mudou na
+   * tela, então não há resultado a anunciar: a região volta a ficar vazia, e a
+   * fila continua onde estava, com os mesmos números.
+   */
   function fecharLote(quantas: number) {
     setLote(null);
     setAviso(
       quantas === 0
-        ? "Nenhuma assinatura foi dada. Os atendimentos seguem na fila."
+        ? ""
         : quantas === 1
           ? "1 atendimento assinado."
           : `${quantas} atendimentos assinados.`,
@@ -532,7 +658,15 @@ function Conteudo({
 
   return moldura(
     context,
-    <div className="space-y-4">
+    /*
+     * `flex flex-col gap-4`, e não `space-y-4`.
+     *
+     * `space-y-*` põe a margem no próprio filho, e todo filho que precisa zerar a
+     * margem do navegador — `<p className="m-0">`, que aqui é a região viva —
+     * apagava o espaçamento junto com ela. O espaço sumia sem erro nenhum para
+     * investigar, e o `gap` do flex não passa por margem: nada do filho o desliga.
+     */
+    <div className="flex flex-col gap-4">
       {/* Sem aviso de escopo.
           A carteira travada se explica sozinha: não há coluna de supervisores, o
           cabeçalho do painel diz o nome de quem é a carteira, e os números são os
@@ -541,44 +675,46 @@ function Conteudo({
           permissão que lista supervisores — é fato de especificação, não recado
           de tela: mora na decisão 0016 e no `rationale` da regra. */}
 
-      {/* ------------------------------------------------------ filtros */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          {marcas.length === 0 ? (
-            <p className="m-0 flex items-start gap-2 break-words text-[0.875rem] text-[var(--fg-2)]">
-              <Icon name="fa-arrow-pointer" className="mt-0.5 shrink-0" />
-              Selecione em qualquer coluna para filtrar — as outras duas se ajustam.
-            </p>
-          ) : (
-            <>
-              <span className="text-[0.875rem] font-semibold text-navy">Filtros:</span>
-              {marcas.map((marca) => (
-                <span
-                  key={marca.chave}
-                  className="inline-flex items-center gap-1 rounded-full bg-info-bg py-0.5 pl-3 pr-1 text-[0.875rem] font-semibold text-info-fg"
-                >
-                  {marca.rotulo}
-                  <button
-                    type="button"
-                    onClick={marca.limpar}
-                    aria-label={`Remover o filtro ${marca.rotulo}`}
-                    className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-info-fg/10"
-                  >
-                    <Icon name="fa-xmark" />
-                  </button>
-                </span>
-              ))}
-              <button
-                type="button"
-                onClick={() => setSelecao(clearSelection(escopo))}
-                className="rounded px-2 py-1 text-[0.875rem] font-semibold text-action underline underline-offset-2"
+      {/* ------------------------------------------------------ filtros
+          `min-h-8` é a altura da marca de filtro — 24px do botão de fechar mais o
+          padding —, e a linha a reserva mesmo quando o que está ali é a frase de
+          uma linha só. Sem isso, o primeiro clique numa coluna crescia esta faixa
+          em 7px e empurrava os indicadores e as três colunas para baixo, no mesmo
+          quadro em que a pessoa procura o que mudou na coluna. */}
+      <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-2">
+        {marcas.length === 0 ? (
+          <p className="m-0 flex items-center gap-2 break-words text-[0.875rem] text-[var(--fg-2)]">
+            <Icon name="fa-arrow-pointer" className="shrink-0" />
+            Selecione em qualquer coluna para filtrar — os demais se ajustam automaticamente.
+          </p>
+        ) : (
+          <>
+            <span className="text-[0.875rem] font-semibold text-navy">Filtros:</span>
+            {marcas.map((marca) => (
+              <span
+                key={marca.chave}
+                className="inline-flex items-center gap-1 rounded-lg bg-info-bg py-0.5 pl-3 pr-1 text-[0.875rem] font-semibold text-info-fg"
               >
-                Limpar
-              </button>
-            </>
-          )}
-        </div>
-
+                {marca.rotulo}
+                <button
+                  type="button"
+                  onClick={marca.limpar}
+                  aria-label={`Remover o filtro ${marca.rotulo}`}
+                  className="flex h-6 w-6 items-center justify-center rounded-full hover:bg-info-fg/10"
+                >
+                  <Icon name="fa-xmark" />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={() => setSelecao(clearSelection(escopo))}
+              className="rounded px-2 py-1 text-[0.875rem] font-semibold text-action underline underline-offset-2"
+            >
+              Limpar
+            </button>
+          </>
+        )}
       </div>
 
       {/* A única região viva da tela. Nasce vazia: uma frase no primeiro quadro
@@ -595,19 +731,17 @@ function Conteudo({
         )}
       </p>
 
-      {/* --------------------------------------------------- indicadores */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        {/* Os três cartões são brancos, e quem carrega o sinal é a cor do número
-            e do ícone — que é o que `info_card/1` tinge. O fundo colorido era
-            adição do desenho, e ele custava contraste: o azul de `A assinar` dá
-            3,40:1 sobre branco e passa, e sobre o azul-claro do cartão caía para
-            2,95. Trocar três fundos por um número legível é troca boa. */}
+      {/* --------------------------------------------------- indicadores
+          Três cartões de largura fixa, encostados à esquerda, e não uma faixa de
+          três colunas ocupando a tela toda. Um número de dois dígitos centrado
+          num cartão de 480px é o número mais longe possível do rótulo dele. */}
+      <div className="grid gap-3 sm:max-w-[43rem] sm:grid-cols-3">
         <Indicador
           id="atendimentos"
           icone="fa-calendar-check"
           valor={indicadores.appointments}
           rotulo="Atendimentos"
-          variante="accent"
+          variante="info"
         />
         <Indicador
           id="a-assinar"
@@ -626,12 +760,12 @@ function Conteudo({
       </div>
 
       {/* ------------------------------------------- colunas e detalhe
-          As colunas e o detalhe só ficam lado a lado quando há largura para os
-          dois. Numa tela de 1280 as quatro faixas dão 238px cada, e a coluna do
-          meio deixa de servir de filtro — o detalhe desce para baixo e as três
-          colunas ficam com 371px. Acima de 1536 a leitura volta a ser lateral,
-          que é como o desenho foi feito. */}
-      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] 2xl:items-start">
+          As quatro faixas só ficam lado a lado quando cada uma passa dos 270px,
+          que é onde o desenho foi feito: a 1440 as colunas dão 273px e o painel
+          419. A 1280 dariam 238px e a coluna do meio deixaria de servir de
+          filtro — abaixo do corte o detalhe desce para baixo e as três colunas
+          ficam com 371px. */}
+      <div className="grid gap-4 min-[1440px]:grid-cols-[minmax(0,1.9fr)_minmax(0,1fr)] min-[1440px]:items-start">
         <div
           className={[
             "grid gap-4 md:grid-cols-2",
@@ -654,7 +788,6 @@ function Conteudo({
                   key={item.id}
                   nome={item.name}
                   detalhe={`${item.specialtyName} · ${quantia(applicatorsOfSupervisor(equipe, item.id).length, "aplicador", "aplicadores")}`}
-                  tipo="supervisor"
                   selecionado={selecao.supervisorId === item.id}
                   fila={pendingOfSupervisor(equipe, item.id, assinados)}
                   onClick={() => setSelecao(pickSupervisor(equipe, selecao, item.id, escopo))}
@@ -679,7 +812,6 @@ function Conteudo({
                 key={item.id}
                 nome={item.name}
                 detalhe={`${item.roleName} · ${quantia(patientsOfApplicator(equipe, item.id).length, "paciente", "pacientes")}`}
-                tipo="aplicador"
                 selecionado={selecao.applicatorId === item.id}
                 fila={pendingOfApplicator(equipe, item.id, assinados)}
                 atencao={applicatorAlerts(equipe, item.id).length}
@@ -705,10 +837,9 @@ function Conteudo({
                 nome={item.name}
                 detalhe={`${ageInYears(item.birthDate, equipe.now)} anos · ${quantia(
                   applicatorsDoPaciente(equipe, item.id),
-                  "aplicador",
-                  "aplicadores",
+                  "terapeuta",
+                  "terapeutas",
                 )}`}
-                tipo="paciente"
                 selecionado={selecao.patientId === item.id}
                 fila={pendingOfPatient(equipe, item.id, assinados)}
                 atencao={patientAlerts(equipe, item.id).length}
@@ -741,10 +872,7 @@ function Conteudo({
               mostraSupervisor={comColunaDeSupervisores}
               onEscolherSupervisor={(id) => setSelecao(pickSupervisor(equipe, selecao, id, escopo))}
               onRevisar={() =>
-                abrirLote(
-                  aplicador.name,
-                  sessionsToSign(equipe, { applicatorIds: [aplicador.id] }, assinados),
-                )
+                abrirLote(sessionsToSign(equipe, { applicatorIds: [aplicador.id] }, assinados))
               }
             />
           ) : supervisor ? (
@@ -754,7 +882,6 @@ function Conteudo({
               assinados={assinados}
               onRevisar={() =>
                 abrirLote(
-                  supervisor.name,
                   sessionsToSign(
                     equipe,
                     { applicatorIds: applicatorsOfSupervisor(equipe, supervisor.id) },
@@ -767,9 +894,7 @@ function Conteudo({
             <VisaoGeral
               equipe={equipe}
               assinados={assinados}
-              onRevisar={() =>
-                abrirLote("Sua equipe de supervisão", sessionsToSign(equipe, {}, assinados))
-              }
+              onRevisar={() => abrirLote(sessionsToSign(equipe, {}, assinados))}
             />
           )}
         </section>
@@ -778,9 +903,9 @@ function Conteudo({
       {lote && (
         <LoteDeAssinaturas
           equipe={equipe}
-          titulo={lote.titulo}
-          sessoes={lote.sessoes}
+          sessoes={lote}
           locale={locale}
+          assinados={assinados}
           onAssinar={assinar}
           onFechar={fecharLote}
         />
@@ -814,17 +939,18 @@ function applicatorsDoPaciente(equipe: SupervisionTeamData, pacienteId: string):
  * mostra uma barra pulsando no lugar do número, que é o que a pessoa vê enquanto
  * o painel carrega.
  *
- * O fundo colorido é o do próprio `card/1`: `extract_bg_class/1` deixa o cartão
- * branco a menos que quem o usa passe uma classe de fundo. É a regra pequena que
- * permite os cartões coloridos do produto sem uma propriedade a mais, e é o que
- * reproduz o azul da fila e o amarelo das faltas do desenho.
+ * **O número é navy, e quem carrega o sinal é o quadrado do ícone.** No espelho
+ * do sistema a variante tinge os dois, e era isso que a tela fazia: `orange`
+ * ficava em 2,94:1 sobre branco — reprovado mesmo no limiar de texto grande, que
+ * é 3:1 — e `blue` em 3,40, aprovado por 0,40. Três números de dois dígitos, que
+ * são a primeira coisa que se lê na tela, dependendo de uma folga dessa. Com o
+ * navy os três dão 14,05:1 e o quadrado continua dizendo qual é qual.
  *
- * **A cor do número é a do produto, e ela reprova.** O número é 20px extrabold,
- * então o limiar AA é 3:1 e não 4,5 — mesmo assim `orange` fica em 2,94 sobre
- * branco, e menos que isso sobre o creme do cartão. `accent` (6,68) e `info`
- * (4,74) passariam, e nenhum dos dois é a cor que o desenho pede para "Faltas".
- * Mesma escolha das etiquetas de contagem, registrada na decisão 0016: os pares
- * ficam em `knownProductionFailures` e o cartão leva `espelho-do-sistema`.
+ * O `[&_p]:` alcança os dois parágrafos do `info_card/1` — o número e o rótulo —
+ * e o rótulo já é navy no original, então a classe muda um só. É override de
+ * fora, e não uma propriedade nova no espelho: `info_card/1` continua sendo o
+ * que o sistema tem, e a galeria continua mostrando as cinco variantes como
+ * elas são.
  */
 function Indicador({
   id,
@@ -839,20 +965,10 @@ function Indicador({
   rotulo: string;
   variante: InfoCardVariant;
 }) {
-  /*
-   * Só a variante que reprova sai da varredura.
-   *
-   * Sobre branco, `accent` dá 6,68 e `blue` dá 3,40 — os dois passam, porque o
-   * número é 20px extrabold e o limiar de texto grande é 3:1. `orange` fica em
-   * 2,94 e perde por 0,06; é ele, e só ele, que leva `espelho-do-sistema`.
-   * Marcar os três tiraria do axe duas cores que ele deveria conferir.
-   */
-  const reprova = variante === "orange";
-
   return (
     <CartaoDoSistema
       id={`indicador-${id}`}
-      {...(reprova ? { className: "espelho-do-sistema" } : {})}
+      className="[&_p]:text-[var(--color-brand-purple-dark)]"
     >
       <InfoCard title={rotulo} info={String(valor)} variant={variante} icon={icone} />
     </CartaoDoSistema>
@@ -876,15 +992,15 @@ function VisaoGeral({
     <div className="space-y-4">
       <Cabecalho
         nome="Sua equipe de supervisão"
-        detalhe={`${quantia(equipe.supervisors.length, "supervisor", "supervisores")} · ${quantia(equipe.applicators.length, "aplicador", "aplicadores")} · ${quantia(equipe.patients.length, "paciente", "pacientes")}`}
-        icone="fa-people-group"
+        detalhe={`${quantia(equipe.supervisors.length, "supervisor", "supervisores")} · ${quantia(equipe.applicators.length, "supervisionado", "supervisionados")} · ${quantia(equipe.patients.length, "paciente", "pacientes")}`}
+        comIniciais={false}
       />
       <BarraDeAssinatura
         quantas={fila}
         frase="aguardando assinatura na equipe."
         onRevisar={onRevisar}
       />
-      <Pista>Selecione um supervisor, um aplicador ou um paciente em qualquer coluna.</Pista>
+      <Pista>Selecione um supervisor, aplicador ou paciente em qualquer coluna.</Pista>
     </div>
   );
 }
@@ -909,11 +1025,7 @@ function DetalheDoSupervisor({
 
   return (
     <div className="space-y-4">
-      <Cabecalho
-        nome={supervisor.name}
-        detalhe={`${supervisor.specialtyName} · Supervisor`}
-        tipo="supervisor"
-      />
+      <Cabecalho nome={supervisor.name} detalhe={`${supervisor.specialtyName} · Supervisor`} />
       <BarraDeAssinatura
         quantas={fila}
         frase="aguardando a assinatura dele."
@@ -943,7 +1055,7 @@ function DetalheDoSupervisor({
         </Notice>
       )}
 
-      <Pista>Selecione um aplicador ou um paciente para detalhar.</Pista>
+      <Pista>Selecione um aplicador ou paciente para detalhar.</Pista>
     </div>
   );
 }
@@ -978,7 +1090,6 @@ function DetalheDoAplicador({
       <Cabecalho
         nome={aplicador.name}
         detalhe={`${aplicador.roleName} · ${aplicador.specialtyName}`}
-        tipo="aplicador"
       />
       <BarraDeAssinatura quantas={fila} frase="aguardando assinatura." onRevisar={onRevisar} />
 
@@ -987,9 +1098,9 @@ function DetalheDoAplicador({
           <button
             type="button"
             onClick={() => onEscolherSupervisor(supervisor.id)}
-            className="flex w-full items-center gap-3 rounded-field border border-[var(--border-soft)] px-3 py-2.5 text-left hover:bg-ink-50"
+            className="flex w-full items-center gap-3 rounded-card border border-[var(--border-soft)] px-3 py-2.5 text-left hover:bg-navy/10"
           >
-            <Iniciais nome={supervisor.name} tipo="supervisor" />
+            <Iniciais nome={supervisor.name} />
             <span className="min-w-0 flex-1 truncate text-[0.9375rem] font-semibold text-navy">
               {supervisor.name}
             </span>
@@ -1007,10 +1118,10 @@ function DetalheDoAplicador({
         <Medida
           valor={
             aplicador.lastSupervisionOn
-              ? formatDate(`${aplicador.lastSupervisionOn}T12:00:00.000-03:00`, locale)
+              ? formatDayMonth(`${aplicador.lastSupervisionOn}T12:00:00.000-03:00`, locale)
               : "Nunca"
           }
-          rotulo="Última supervisão"
+          rotulo="Últ. supervisão"
           alerta={!aplicador.lastSupervisionOn}
         />
       </div>
@@ -1039,11 +1150,12 @@ function DetalheDoAplicador({
         </Bloco>
       )}
 
-      <Pista>Selecione um paciente para ver programas e atendimentos.</Pista>
+      <Pista>Selecione um paciente para ver programas e sessões.</Pista>
     </div>
   );
 }
 
+/** Número e rótulo, sem contorno: o preenchimento é o que separa do cartão. */
 function Medida({
   valor,
   rotulo,
@@ -1056,11 +1168,11 @@ function Medida({
   return (
     <div
       className={[
-        "rounded-card border px-3 py-2.5 text-center",
-        alerta ? "border-warn-fg/25 bg-warn-bg" : "border-[var(--border-soft)] bg-surface",
+        "rounded-card px-3 py-2.5 text-center",
+        alerta ? "bg-warn-bg" : "bg-navy/10",
       ].join(" ")}
     >
-      <p className="m-0 break-words text-[0.9375rem] font-bold text-navy">{valor}</p>
+      <p className="m-0 break-words text-[1.0625rem] font-bold text-navy">{valor}</p>
       <p className="m-0 break-words text-[0.8125rem] text-[var(--fg-2)]">{rotulo}</p>
     </div>
   );
@@ -1081,11 +1193,12 @@ function DetalheDoPaciente({
   assinados: ReadonlySet<string>;
   locale: string | undefined;
   onEscolherAplicador: (id: string) => void;
-  onAbrirLote: (titulo: string, sessoes: SupervisionSession[]) => void;
+  onAbrirLote: (sessoes: SupervisionSession[]) => void;
 }) {
   const paciente = equipe.patients.find((item) => item.id === pacienteId)!;
   const fila = pendingOfPatient(equipe, pacienteId, assinados);
   const atencao = patientAlerts(equipe, pacienteId);
+  const aplicador = equipe.applicators.find((item) => item.id === aplicadorId);
 
   const quemAtende = equipe.applicators.filter((item) =>
     equipe.sessions.some(
@@ -1105,15 +1218,13 @@ function DetalheDoPaciente({
     <div className="space-y-4">
       <Cabecalho
         nome={paciente.name}
-        detalhe={`${ageInYears(paciente.birthDate, equipe.now)} anos · ${quantia(supervisores.length, "supervisor", "supervisores")}`}
-        tipo="paciente"
+        detalhe={`${ageInYears(paciente.birthDate, equipe.now)} anos`}
       />
       <BarraDeAssinatura
         quantas={fila}
         frase="aguardando assinatura."
         onRevisar={() =>
           onAbrirLote(
-            paciente.name,
             sessionsToSign(
               equipe,
               {
@@ -1126,50 +1237,67 @@ function DetalheDoPaciente({
         }
       />
 
-      <Bloco titulo="Atendido por">
-        <ul className="m-0 list-none space-y-2 p-0">
-          {quemAtende.map((item) => {
-            const dele = equipe.supervisors.find((sup) => sup.id === item.supervisorId);
-            return (
-              <li key={item.id}>
-                <button
-                  type="button"
-                  aria-pressed={aplicadorId === item.id}
-                  onClick={() => onEscolherAplicador(item.id)}
-                  className={[
-                    "flex w-full items-center gap-3 rounded-field border px-3 py-2.5 text-left",
-                    aplicadorId === item.id
-                      ? "border-action bg-info-bg"
-                      : "border-[var(--border-soft)] hover:bg-ink-50",
-                  ].join(" ")}
-                >
-                  <Iniciais nome={item.name} tipo="aplicador" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[0.9375rem] font-semibold text-navy">
-                      {item.name}
+      {/* "Atendido por" só existe sem aplicador escolhido.
+          Com um escolhido a coluna do meio já ficou com um nome, a marca de
+          filtro repete esse nome e o título das sessões repete de novo — quatro
+          lugares dizendo "Marina Costa". Sem nenhum escolhido, esta lista é a
+          resposta que a tela portada não tem por onde receber: de quem é a
+          assinatura de cada um de quem atende esta criança. */}
+      {aplicador === undefined && (
+        <Bloco
+          titulo={
+            <>
+              Atendido por
+              <span className="normal-case text-[var(--fg-2)]">
+                {" "}
+                · {quantia(supervisores.length, "supervisor", "supervisores")}
+              </span>
+            </>
+          }
+        >
+          <ul className="m-0 list-none space-y-2 p-0">
+            {quemAtende.map((item) => {
+              const dele = equipe.supervisors.find((sup) => sup.id === item.supervisorId);
+              return (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => onEscolherAplicador(item.id)}
+                    className="flex w-full items-center gap-3 rounded-card border border-[var(--border-soft)] px-3 py-2.5 text-left hover:bg-navy/5"
+                  >
+                    <Iniciais nome={item.name} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[0.9375rem] font-semibold text-navy">
+                        {item.name}
+                      </span>
+                      {/* De quem é a assinatura: é a resposta que a pergunta da
+                          família precisa, e ela some se ficar só na coluna. */}
+                      <span className="block truncate text-[0.8125rem] text-[var(--fg-2)]">
+                        {item.roleName} · supervisão de {dele?.name ?? "—"}
+                      </span>
                     </span>
-                    {/* De quem é a assinatura: é a resposta que a pergunta da
-                        família precisa, e ela some se ficar só na coluna. */}
-                    <span className="block truncate text-[0.8125rem] text-[var(--fg-2)]">
-                      {item.roleName} · supervisão de {dele?.name ?? "—"}
-                    </span>
-                  </span>
-                  <Fila quantas={pendingOfPair(equipe, item.id, pacienteId, assinados)} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </Bloco>
+                    <Fila quantas={pendingOfPair(equipe, item.id, pacienteId, assinados)} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Bloco>
+      )}
 
       <Bloco titulo="Programas">
         <ul className="m-0 list-none space-y-1.5 p-0">
           {paciente.programs.map((programa) => (
             <li
               key={programa.name}
+              /* Contorno, como as linhas das colunas: é uma lista, e linha de
+                 lista se delimita, não se preenche. O preenchimento fica para o
+                 programa que pede atenção — ali ele é sinal, e não ambiente. */
               className={[
-                "flex flex-wrap items-center justify-between gap-2 rounded-field px-3 py-2",
-                trendNeedsAttention(programa.trend) ? "bg-warn-bg" : "bg-ink-50",
+                "flex flex-wrap items-center justify-between gap-2 rounded-card border px-3 py-2.5",
+                trendNeedsAttention(programa.trend)
+                  ? "border-warn-fg/25 bg-warn-bg"
+                  : "border-[var(--border-soft)]",
               ].join(" ")}
             >
               <span className="min-w-0 break-words text-[0.9375rem] text-navy">
@@ -1199,7 +1327,16 @@ function DetalheDoPaciente({
         </Bloco>
       )}
 
-      <Bloco titulo="Atendimentos">
+      <Bloco
+        titulo={
+          <>
+            Sessões
+            {aplicador && (
+              <span className="normal-case text-action"> · {aplicador.name}</span>
+            )}
+          </>
+        }
+      >
         {atendimentos.length === 0 ? (
           <p className="m-0 break-words text-[0.875rem] text-[var(--fg-2)]">
             Nenhum atendimento deste paciente no período.
@@ -1213,7 +1350,7 @@ function DetalheDoPaciente({
                   sessao={sessao}
                   assinados={assinados}
                   locale={locale}
-                  onRevisar={() => onAbrirLote(paciente.name, [sessao])}
+                  onAbrir={() => onAbrirLote([sessao])}
                 />
               </li>
             ))}
@@ -1224,78 +1361,124 @@ function DetalheDoPaciente({
   );
 }
 
+/**
+ * Uma sessão do paciente: data à esquerda, o que aconteceu no meio, as ações à
+ * direita.
+ *
+ * **Uma ação só, e o ícone diz qual é.** A linha teve dois botões — "Registro" e
+ * "Assinar" — com o mesmo `onClick`, e dois controles que levam ao mesmo lugar
+ * pedem que a pessoa escolha entre sinônimos. O destino é o mesmo porque o
+ * registro do atendimento **é** a tela de revisão: as tentativas de cada programa,
+ * a observação de quem aplicou, os registros de comportamento. O que a pendência
+ * muda é o que ela vai fazer lá, e isso cabe no ícone: assinatura quando há o que
+ * assinar, folha de registro quando é só leitura.
+ *
+ * A decisão 0016 tinha tirado o link "Registro" por não haver destino; o destino
+ * apareceu quando a revisão passou a abrir uma sessão qualquer, e não só as da
+ * fila. O que **não** existe é assinar de fora: um botão que assinasse na linha
+ * afirmaria "eu li o registro" sem abrir o registro, que é a única coisa que a
+ * segunda assinatura afirma.
+ */
 function LinhaDeAtendimento({
   equipe,
   sessao,
   assinados,
   locale,
-  onRevisar,
+  onAbrir,
 }: {
   equipe: SupervisionTeamData;
   sessao: SupervisionSession;
   assinados: ReadonlySet<string>;
   locale: string | undefined;
-  onRevisar: () => void;
+  onAbrir: () => void;
 }) {
   const quem = equipe.applicators.find((item) => item.id === sessao.applicatorId);
   const assinado = sessao.status === "pending_supervisor_signature" && assinados.has(sessao.id);
   const pendente = isPendingSignature(sessao, assinados);
+  const rotuloDaAcao = pendente
+    ? `Assinar o atendimento de ${formatDate(sessao.start, locale)}`
+    : `Ver o registro do atendimento de ${formatDate(sessao.start, locale)}`;
 
   return (
     <article
       className={[
-        "rounded-field border px-3 py-2.5",
-        isPendingSignature(sessao, assinados)
-          ? "border-info-fg/35 bg-info-bg"
+        "flex items-stretch rounded-card border",
+        pendente
+          ? "border-[var(--color-blue)] bg-[var(--color-blue)]/10"
           : "border-[var(--border-soft)]",
       ].join(" ")}
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="text-[0.9375rem] font-bold text-navy">
-          {formatDate(sessao.start, locale)}
-        </span>
-        <span className="text-[0.8125rem] text-[var(--fg-2)]">
-          {formatTime(sessao.start, locale)} às {formatTime(sessao.end, locale)}
-        </span>
-        <ScheduleStatusChip status={assinado ? "finished" : sessao.status} />
+      <div className="w-[5.5rem] shrink-0 self-center border-r border-[var(--border-soft)] px-3 py-2.5">
+        <p className="m-0 text-[0.9375rem] font-bold text-navy">
+          {formatDayMonth(sessao.start, locale)}
+        </p>
+        <p className="m-0 text-[0.75rem] text-[var(--fg-2)]">
+          {formatTime(sessao.start, locale)}–{formatTime(sessao.end, locale)}
+        </p>
       </div>
 
-      <p className="m-0 mt-1 break-words text-[0.9375rem] text-navy">
-        {sessao.serviceName} · {quem?.name ?? "—"}
-      </p>
-
-      <p className="m-0 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 break-words text-[0.8125rem] text-[var(--fg-2)]">
-        <span>{sessao.hasRecord ? "Registro feito" : "Sem registro"}</span>
-        <span>{sessao.placeName}</span>
-        {sessao.abc.length > 0 && (
-          <span>
-            {quantia(sessao.abc.length, "registro de comportamento", "registros de comportamento")}
+      <div className="min-w-0 flex-1 px-3 py-2.5">
+        <p className="m-0 flex flex-wrap items-center gap-2">
+          <span className="min-w-0 break-words text-[0.9375rem] font-bold text-navy">
+            {sessao.serviceName}
           </span>
-        )}
-        {assinado && <span className="font-semibold text-ok-fg">Assinado por você agora</span>}
-      </p>
+          <Situacao status={assinado ? "finished" : sessao.status} />
+        </p>
+        <p className="m-0 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 break-words text-[0.8125rem] text-[var(--fg-2)]">
+          <span>
+            <Icon name="fa-user" /> {quem?.name ?? "—"}
+          </span>
+          <span>
+            <Icon name={sessao.hasRecord ? "fa-clipboard-check" : "fa-clipboard"} />{" "}
+            {sessao.hasRecord ? "Registro feito" : "Sem registro"}
+          </span>
+          {sessao.abc.length > 0 && (
+            <span className="font-semibold text-[var(--color-red-dark)]">
+              <Icon name="fa-clipboard-list" />{" "}
+              {quantia(sessao.abc.length, "registro ABC", "registros ABC")}
+            </span>
+          )}
+          {assinado && <span className="font-semibold text-ok-fg">Assinado por você agora</span>}
+        </p>
+      </div>
 
-      {/* A ação da linha **abre a revisão** deste atendimento; ela não assina.
-          Um botão "Assinar" aqui seria assinar sem ver o registro, que é o que a
-          fila de revisão existe para não deixar acontecer. */}
-      {pendente && (
-        <div className="mt-2">
-          <Button
-            className="espelho-do-sistema"
-            size="medium"
-            variant="tint"
-            rightIcon="fa-signature"
-            onClick={onRevisar}
-          >
-            Revisar e assinar
-          </Button>
-        </div>
-      )}
+      {/*
+        Uma ação, e ela é só ícone.
+        Eram dois botões com o mesmo `onClick` — "Registro" e "Assinar" —, e dois
+        controles que levam ao mesmo lugar pedem que a pessoa escolha entre
+        sinônimos. O que muda com a pendência não é o destino, é o que ela vai
+        fazer lá: assinar ou só ler. Então o que muda é o ícone e o peso do botão,
+        e o rótulo inteiro vai no `aria-label` e no `title`.
+
+        Só ícone exige as duas coisas juntas. `aria-label` porque o botão não tem
+        texto e sem ele o leitor de tela anuncia "botão" e mais nada; `title`
+        porque quem vê o ícone e não o reconhece precisa de um caminho — e o
+        `title` é o mesmo texto, não uma versão curta dele. O alvo é o `medium` do
+        `button/1`, 36px, acima dos 24 que a varredura de toque cobra.
+      */}
+      <div className="flex shrink-0 items-center justify-center px-3 py-2.5">
+        <Button
+          {...(pendente ? { className: "espelho-do-sistema" } : { variant: "tint" as const, color: "brand" as const })}
+          size="medium"
+          onClick={onAbrir}
+          aria-label={rotuloDaAcao}
+          title={rotuloDaAcao}
+        >
+          <Icon name={pendente ? "fa-signature" : "fa-file-alt"} />
+        </Button>
+      </div>
     </article>
   );
 }
 
 /* ==================================================== lote de revisão */
+
+const TRILHO: Record<"assinado" | "pulado" | "atual" | "pendente", string> = {
+  assinado: "bg-[var(--color-brand-green-dark)]",
+  pulado: "bg-[var(--color-brand-orange)]",
+  atual: "bg-[var(--color-brand-blue)]",
+  pendente: "bg-navy/15",
+};
 
 /**
  * A fila de revisão: um atendimento por vez, com o registro à vista.
@@ -1307,30 +1490,37 @@ function LinhaDeAtendimento({
  * quem parava no meio não sabia que existia. O drawer prende cabeçalho e rodapé
  * nas bordas e rola só o miolo, que é a moldura da decisão 0014 e o motivo dela.
  *
- * O andamento — "3 de 7 · 2 assinados" — mudou de lugar junto: saiu do topo e foi
- * para o rodapé, ao lado das ações. É a informação que decide se vale continuar, e
- * ela precisa estar onde a decisão é tomada.
+ * **Nada disso aparece quando a fila tem um atendimento só.** Aberto pelo ícone da
+ * linha, o painel mostra o registro e uma ação: assinar, ou fechar. Trilho, "1 de
+ * 1", setas as duas desabilitadas, contagem de assinados e "Pular" são cinco
+ * controles a explicar num painel que precisa de um — e "Pular" ainda ofereceria
+ * pular para lugar nenhum. O rótulo também encurta: "Assinar", não "Assinar e
+ * avançar", porque não há para onde avançar.
  *
- * Duas divergências do desenho, as duas por causa do dedo:
+ * **O andamento virou um trilho de barras, e ele não é clicável.** Os pontos de
+ * 8px do primeiro desenho eram inalcançáveis no toque; a correção anterior tinha
+ * sido dar-lhes alvo de 24px, e sobrava um trilho de botões que quase todos
+ * recusavam o clique. Agora o trilho é leitura — quantos ficaram, quantos foram,
+ * onde estou — e quem navega são as duas setas do rodapé, que são alvo de 36px e
+ * dizem o que fazem. "4 de 7" fica ao lado do trilho, em texto.
  *
- * - **O trilho tem alvos de 24px**, e não os pontos de 8px do desenho. Um ponto
- *   de 8px é inalcançável no toque e some para quem tem tremor — e o trilho é o
- *   único jeito de voltar a um atendimento pulado.
- * - **Assinar e deixar na fila ficam lado a lado**, na ordem em que a decisão
- *   acontece: primeiro se lê, depois se decide.
+ * **O fim da fila é um `modal/1` centrado, não a última tela do drawer.** O
+ * resumo não tem nada a rolar e não continua a leitura: ele fecha o assunto. Um
+ * painel de 612px encostado na direita, com uma frase no meio, faz parecer que
+ * ainda há um atendimento embaixo.
  */
 function LoteDeAssinaturas({
   equipe,
-  titulo,
   sessoes,
   locale,
+  assinados,
   onAssinar,
   onFechar,
 }: {
   equipe: SupervisionTeamData;
-  titulo: string;
   sessoes: SupervisionSession[];
   locale: string | undefined;
+  assinados: ReadonlySet<string>;
   onAssinar: (id: string) => void;
   onFechar: (quantas: number) => void;
 }) {
@@ -1338,10 +1528,39 @@ function LoteDeAssinaturas({
   const [dadas, setDadas] = useState<ReadonlySet<string>>(() => new Set<string>());
   const [puladas, setPuladas] = useState<ReadonlySet<string>>(() => new Set<string>());
 
+  /**
+   * Quem podia receber assinatura **quando a fila abriu**.
+   *
+   * Abrir "Registro" de um atendimento finalizado traz uma sessão que não é da
+   * fila — e sem esta distinção o drawer abriria com "Assinar e avançar" ativo
+   * sobre um atendimento que não espera assinatura de ninguém.
+   *
+   * Fixado no primeiro quadro, e não recalculado. `assinados` é o conjunto da
+   * página, e assinar aqui o faz crescer: recalculado, o atendimento que acabou
+   * de ser assinado deixava de ser assinável, a lista esvaziava e a fila **nunca
+   * terminava** — duas assinaturas numa fila de dois deixavam o painel aberto no
+   * último registro, sem resumo. Foi assim que apareceu.
+   */
+  const [assinaveis] = useState<readonly string[]>(() =>
+    sessoes.filter((sessao) => isPendingSignature(sessao, assinados)).map((sessao) => sessao.id),
+  );
+
   const ids = sessoes.map((sessao) => sessao.id);
   const resolvidas = new Set([...dadas, ...puladas]);
-  const acabou = resolvidas.size >= sessoes.length;
+  const acabou = assinaveis.length > 0 && assinaveis.every((id) => resolvidas.has(id));
   const sessao = sessoes[atual];
+  /**
+   * Isto é uma fila, ou é um atendimento só?
+   *
+   * Aberto pelo ícone da linha, o painel tem uma sessão — e aí o trilho é uma
+   * barra, "1 de 1" é uma frase que não informa, as setas nascem as duas
+   * desabilitadas, "0 assinados" conta o que ainda não foi feito e "Pular" oferece
+   * pular para lugar nenhum. Cinco controles a explicar num painel que só precisa
+   * de um: assinar, ou fechar.
+   */
+  const emFila = sessoes.length > 1;
+  const podeAssinar =
+    sessao !== undefined && assinaveis.includes(sessao.id) && !resolvidas.has(sessao.id);
 
   function avancar() {
     const proxima = nextUnresolved(ids, atual, resolvidas);
@@ -1354,7 +1573,7 @@ function LoteDeAssinaturas({
    * Sem esta guarda, dois cliques dentro do mesmo lote de atualizações do React
    * — um duplo-clique impaciente, ou o segundo botão antes de a tela repintar —
    * põem o **mesmo** atendimento em `dadas` e em `puladas`. Nada quebra, e o
-   * resumo passa a mentir: "6 assinados · 2 na fila" numa fila de sete. Foi assim
+   * resumo passa a mentir: "6 assinados · 2 pulados" numa fila de sete. Foi assim
    * que apareceu, clicando rápido.
    */
   function assinarEsta() {
@@ -1370,121 +1589,200 @@ function LoteDeAssinaturas({
     avancar();
   }
 
-  const terminou = acabou || !sessao;
-
   return (
-    <DrawerModal
-      id="lote-de-assinaturas"
-      show
-      title="Assinar atendimentos"
-      titleClassName="text-[var(--color-brand-purple-dark)]"
-      variant="medium"
-      onCancel={() => onFechar(dadas.size)}
-      footer={
-        terminou ? (
-          <div className="flex justify-end">
-            <Button
-              className="espelho-do-sistema"
-              rightIcon="fa-check"
-              onClick={() => onFechar(dadas.size)}
-            >
-              Concluir
-            </Button>
+    <>
+      <DrawerModal
+        id="lote-de-assinaturas"
+        show={!acabou}
+        // Sem nada a assinar o painel é só o registro, e o título diz isso: ele
+        // abre também pelo link da linha, sobre um atendimento finalizado.
+        title={assinaveis.length > 0 ? "Revisar e Assinar" : "Registro do atendimento"}
+        titleClassName="text-[var(--color-brand-purple-dark)]"
+        /*
+         * Largura declarada, e não uma das quatro do `drawer_modal/1`.
+         *
+         * O conteúdo tem duas medidas que decidem: quatro campos de cabeçalho
+         * numa linha e dois cartões de programa numa linha. A 768 (`medium`) o
+         * cartão de programa fica com 354px para uma barra e duas linhas de
+         * texto; a 576 (`small`) o campo do supervisor quebra em três linhas.
+         * 608 é onde os dois caem certos — 132px por campo, 276px por programa.
+         */
+        variant="custom"
+        customSize="max-w-[38rem]"
+        onCancel={() => onFechar(dadas.size)}
+        footer={
+          <div
+            className={[
+              "flex flex-wrap items-center gap-3",
+              emFila ? "justify-between" : "justify-end",
+            ].join(" ")}
+          >
+            {emFila && (
+              <div className="flex min-w-0 items-center gap-2">
+                <Button
+                  variant="tint"
+                  color="brand"
+                  size="medium"
+                  className="rounded-full disabled:opacity-40"
+                  aria-label="Atendimento anterior"
+                  disabled={atual === 0}
+                  onClick={() => setAtual((antes) => Math.max(0, antes - 1))}
+                >
+                  <Icon name="fa-chevron-left" />
+                </Button>
+                <Button
+                  variant="tint"
+                  color="brand"
+                  size="medium"
+                  className="rounded-full disabled:opacity-40"
+                  aria-label="Próximo atendimento"
+                  disabled={atual >= sessoes.length - 1}
+                  onClick={() => setAtual((antes) => Math.min(sessoes.length - 1, antes + 1))}
+                >
+                  <Icon name="fa-chevron-right" />
+                </Button>
+                <p className="m-0 ml-1 break-words text-[0.875rem] text-[var(--fg-2)]">
+                  <strong className="font-bold text-navy">{dadas.size}</strong>{" "}
+                  {dadas.size === 1 ? "assinado" : "assinados"}
+                  {puladas.size > 0 && ` · ${quantia(puladas.size, "pulado", "pulados")}`}
+                </p>
+              </div>
+            )}
+            {podeAssinar ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {/* "Pular" é avançar sem assinar. Sem fila não há para onde
+                    avançar, e quem não quer assinar fecha o painel. */}
+                {emFila && (
+                  <Button variant="ghost" onClick={pularEsta}>
+                    Pular
+                  </Button>
+                )}
+                <Button
+                  className="espelho-do-sistema"
+                  rightIcon="fa-signature"
+                  onClick={assinarEsta}
+                >
+                  {emFila ? "Assinar e avançar" : "Assinar"}
+                </Button>
+              </div>
+            ) : (
+              <p className="m-0 break-words text-[0.875rem] font-semibold text-[var(--fg-2)]">
+                {sessao === undefined
+                  ? ""
+                  : dadas.has(sessao.id)
+                    ? "Assinado nesta revisão."
+                    : puladas.has(sessao.id)
+                      ? "Pulado — segue na fila."
+                      : "Este atendimento não espera a sua assinatura."}
+              </p>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            {/* O andamento fica junto das ações, e não no topo: é a informação
-                que decide se vale continuar. */}
-            <p className="m-0 break-words text-[0.875rem] text-[var(--fg-2)]">
-              <strong className="font-bold text-navy">{atual + 1}</strong> de {sessoes.length}
-              {dadas.size > 0 && ` · ${quantia(dadas.size, "assinado", "assinados")}`}
-              {puladas.size > 0 && ` · ${quantia(puladas.size, "na fila", "na fila")}`}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <AcaoLocal variant="ghost" onClick={pularEsta}>
-                Deixar na fila
-              </AcaoLocal>
-              <Button
-                className="espelho-do-sistema"
-                rightIcon="fa-signature"
-                onClick={assinarEsta}
-              >
-                Assinar e avançar
-              </Button>
-            </div>
-          </div>
-        )
-      }
-    >
-      {terminou ? (
-        <div className="space-y-4 text-center">
-          <p className="m-0 text-[1.0625rem] font-bold text-navy" role="status">
+        }
+      >
+        {/* O trilho: quantos ficaram, quantos foram, onde estou. Com um
+            atendimento só ele não tem nada a dizer. */}
+        {emFila && (
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <ol aria-hidden="true" className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+            {sessoes.map((item, indice) => (
+              <li
+                key={item.id}
+                className={[
+                  "h-1.5 w-7 rounded-full",
+                  TRILHO[
+                    dadas.has(item.id)
+                      ? "assinado"
+                      : puladas.has(item.id)
+                        ? "pulado"
+                        : indice === atual
+                          ? "atual"
+                          : "pendente"
+                  ],
+                ].join(" ")}
+              />
+            ))}
+          </ol>
+          <p className="m-0 shrink-0 break-words text-[0.875rem] text-[var(--fg-2)]">
+            <strong className="font-bold text-navy">{atual + 1}</strong> de {sessoes.length}
+          </p>
+        </div>
+        )}
+
+        {sessao && (
+          <RevisaoDeAtendimento equipe={equipe} sessao={sessao} locale={locale} />
+        )}
+      </DrawerModal>
+
+      {/* O fim da fila. `role="status"` no número: é o resultado da ação, e é o
+          que o cenário declara em `a11y.announces`. */}
+      <Modal
+        id="lote-concluido"
+        open={acabou}
+        variant="extra_small"
+        onClose={() => onFechar(dadas.size)}
+      >
+        {/* Sem padding próprio: o `modal/1` já envolve o conteúdo em `p-6`, e o
+            `px-8 pb-10` daqui somava a ele — 40px de nada embaixo de um botão,
+            num diálogo de três linhas. */}
+        <div className="flex flex-col gap-2 text-center">
+          <Icon
+            name="fa-circle-check"
+            type="solid"
+            className="text-[2.5rem] text-[var(--color-green)]"
+          />
+          <p className="m-0 text-[1.25rem] font-bold text-navy" role="status">
             {dadas.size === 0
               ? "Nenhum atendimento assinado"
               : quantia(dadas.size, "atendimento assinado", "atendimentos assinados")}
           </p>
           <p className="m-0 break-words text-[0.9375rem] text-[var(--fg-2)]">
             {puladas.size > 0
-              ? `${quantia(puladas.size, "atendimento continua", "atendimentos continuam")} na fila — pular não assina, e não é a mesma coisa que recusar.`
+              ? `${quantia(puladas.size, "atendimento ficou pendente", "atendimentos ficaram pendentes")} e ${puladas.size === 1 ? "segue" : "seguem"} na sua fila.`
               : "Não há mais nada esperando assinatura neste escopo."}
           </p>
+          <div className="flex justify-center pt-1">
+            <Button
+              variant="tint"
+              color="blue"
+              rightIcon="fa-check"
+              onClick={() => onFechar(dadas.size)}
+            >
+              Concluir
+            </Button>
+          </div>
         </div>
-      ) : (
-        <RevisaoDeAtendimento
-          equipe={equipe}
-          titulo={titulo}
-          sessao={sessao!}
-          posicao={atual}
-          total={sessoes.length}
-          sessoes={sessoes}
-          dadas={dadas}
-          puladas={puladas}
-          locale={locale}
-          onIr={setAtual}
-        />
-      )}
-    </DrawerModal>
+      </Modal>
+    </>
   );
 }
 
 function RevisaoDeAtendimento({
   equipe,
-  titulo,
   sessao,
-  posicao,
-  total,
-  sessoes,
-  dadas,
-  puladas,
   locale,
-  onIr,
 }: {
   equipe: SupervisionTeamData;
-  titulo: string;
   sessao: SupervisionSession;
-  posicao: number;
-  total: number;
-  sessoes: SupervisionSession[];
-  dadas: ReadonlySet<string>;
-  puladas: ReadonlySet<string>;
   locale: string | undefined;
-  onIr: (indice: number) => void;
 }) {
   const quem = equipe.applicators.find((item) => item.id === sessao.applicatorId);
   const paciente = equipe.patients.find((item) => item.id === sessao.patientId);
   const supervisor = equipe.supervisors.find((item) => item.id === quem?.supervisorId);
 
   return (
-    <div className="space-y-4">
+    /*
+     * `space-y-6`, e não `space-y-4`.
+     *
+     * O miolo da revisão é seis blocos empilhados — nome, campos, a linha de
+     * check-in, programas, observação e ABC —, e a 16px a linha de "Registro
+     * completo · Check-in · Check-out" encostava nos cartões de cima e no título
+     * de baixo ao mesmo tempo. Ela é a única linha solta da tela, sem
+     * preenchimento nem contorno para se separar sozinha, e é o que a assinatura
+     * confere primeiro: se o atendimento aconteceu, e quando.
+     */
+    <div className="flex flex-col gap-6">
       <div>
-        {/* O escopo do lote só é dito quando ele não é o próprio paciente.
-            "Lucas Almeida Ferreira" duas vezes seguidas não informa nada. */}
-        {titulo !== paciente?.name && (
-          <p className="m-0 break-words text-[0.8125rem] font-bold uppercase tracking-wide text-action">
-            {titulo}
-          </p>
-        )}
-        <h2 className="m-0 break-words text-[1.0625rem] font-bold text-navy">
+        <h2 className="m-0 break-words text-[1.25rem] font-bold text-navy">
           {paciente?.name ?? "—"}
         </h2>
         <p className="m-0 break-words text-[0.875rem] text-[var(--fg-2)]">
@@ -1492,73 +1790,45 @@ function RevisaoDeAtendimento({
         </p>
       </div>
 
-      {/* O trilho: onde estou, o que já assinei, o que pulei. */}
-      <ul className="m-0 flex list-none flex-wrap gap-1 p-0">
-        {sessoes.map((item, indice) => {
-          const estado = dadas.has(item.id)
-            ? "assinado"
-            : puladas.has(item.id)
-              ? "pulado"
-              : "pendente";
-          return (
-            <li key={item.id}>
-              {/* Resolvido continua alcançável pelo Tab e anuncia o estado, mas
-                  não navega: voltar a um atendimento já assinado abriria a tela
-                  com o botão de assinar ativo de novo. */}
-              <button
-                type="button"
-                aria-disabled={estado !== "pendente" || undefined}
-                onClick={() => {
-                  if (estado === "pendente") onIr(indice);
-                }}
-                aria-current={indice === posicao ? "step" : undefined}
-                aria-label={`Atendimento ${indice + 1} de ${total} — ${
-                  estado === "assinado"
-                    ? "assinado"
-                    : estado === "pulado"
-                      ? "deixado na fila"
-                      : "aguardando revisão"
-                }`}
-                className="flex h-6 w-6 items-center justify-center rounded-full"
-              >
-                <span
-                  aria-hidden="true"
-                  className={[
-                    "block rounded-full",
-                    indice === posicao ? "h-3 w-3" : "h-2 w-2",
-                    estado === "assinado"
-                      ? "bg-ok-fg"
-                      : estado === "pulado"
-                        ? "bg-warn-fg"
-                        : indice === posicao
-                          ? "bg-action"
-                          : "bg-ink-200",
-                  ].join(" ")}
-                />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
-
-      <dl className="m-0 grid gap-3 sm:grid-cols-2">
-        <Campo rotulo="Data" valor={formatDate(sessao.start, locale)} />
+      {/* Duas colunas, e não quatro: data e horário na primeira linha, local e
+          supervisor na segunda. A quatro, cada campo ficava com 131px — "Unidade
+          Pinheiros" e "Beatriz Lima Rocha" quebravam em duas e três linhas, e as
+          quatro caixas ficavam com a altura da pior delas. */}
+      <dl className="m-0 grid grid-cols-2 gap-3">
+        <Campo rotulo="Data" valor={formatNumericDate(sessao.start, locale)} />
         <Campo
           rotulo="Horário"
-          valor={`${formatTime(sessao.start, locale)} às ${formatTime(sessao.end, locale)}`}
+          valor={`${formatTime(sessao.start, locale)}–${formatTime(sessao.end, locale)}`}
         />
         <Campo rotulo="Local" valor={sessao.placeName} />
         <Campo rotulo="Supervisor" valor={supervisor?.name ?? "—"} />
       </dl>
 
-      <p className="m-0 flex flex-wrap items-center gap-x-4 gap-y-1 break-words text-[0.875rem] text-navy">
-        <span>{sessao.hasRecord ? "Registro completo" : "Sem registro"}</span>
-        {sessao.checkinAt && <span>Entrada às {formatTime(sessao.checkinAt, locale)}</span>}
-        {sessao.checkoutAt && <span>Saída às {formatTime(sessao.checkoutAt, locale)}</span>}
+      <p className="m-0 flex flex-wrap items-center gap-x-5 gap-y-2 break-words text-[0.8125rem] font-semibold">
+        <span className={sessao.hasRecord ? "text-ok-fg" : "text-warn-fg"}>
+          <Icon name={sessao.hasRecord ? "fa-circle-check" : "fa-circle-exclamation"} />{" "}
+          {sessao.hasRecord ? "Registro completo" : "Sem registro"}
+        </span>
+        {sessao.checkinAt && (
+          <span className="text-[var(--fg-2)]">
+            <Icon name="fa-right-to-bracket" /> Check-in {formatTime(sessao.checkinAt, locale)}
+          </span>
+        )}
+        {sessao.checkoutAt && (
+          <span className="text-[var(--fg-2)]">
+            <Icon name="fa-right-from-bracket" /> Check-out {formatTime(sessao.checkoutAt, locale)}
+          </span>
+        )}
+        {sessao.abc.length > 0 && (
+          <span className="text-[var(--color-red-dark)]">
+            <Icon name="fa-clipboard-list" />{" "}
+            {quantia(sessao.abc.length, "registro ABC", "registros ABC")}
+          </span>
+        )}
       </p>
 
       <section>
-        <h3 className="m-0 mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+        <h3 className="m-0 mb-3 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
           Programas trabalhados
         </h3>
         {sessao.programs.length === 0 ? (
@@ -1566,13 +1836,17 @@ function RevisaoDeAtendimento({
             Nenhum programa registrado neste atendimento.
           </p>
         ) : (
-          <ul className="m-0 grid list-none gap-3 p-0 sm:grid-cols-2">
+          /* Um embaixo do outro, sempre. Lado a lado, cada cartão ficava com
+             276px para o nome do programa, a etiqueta de tendência, a barra e a
+             linha de tentativas — e o nome quebrava em duas linhas enquanto a
+             barra encolhia até não mostrar mais diferença entre 62% e 85%. */
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {sessao.programs.map((programa) => {
               const percentual = Math.round((programa.correct / programa.trials) * 100);
               return (
                 <li
                   key={programa.name}
-                  className="rounded-card border border-[var(--border-soft)] px-3 py-2.5"
+                  className="rounded-card border border-[var(--border-soft)] px-4 py-3"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="min-w-0 break-words text-[0.9375rem] font-semibold text-navy">
@@ -1587,7 +1861,8 @@ function RevisaoDeAtendimento({
                     variant={percentual >= 70 ? "green" : percentual >= 50 ? "default" : "error"}
                   />
                   <p className="m-0 mt-1 break-words text-[0.8125rem] text-[var(--fg-2)]">
-                    {programa.correct} de {programa.trials} tentativas corretas · {percentual}%
+                    {programa.correct}/{programa.trials} tentativas corretas ·{" "}
+                    <strong className="font-bold text-navy">{percentual}%</strong>
                   </p>
                 </li>
               );
@@ -1597,57 +1872,74 @@ function RevisaoDeAtendimento({
       </section>
 
       <section>
-        <h3 className="m-0 mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
-          Observação de quem aplicou
+        <h3 className="m-0 mb-3 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+          Observações do aplicador
         </h3>
-        <p className="m-0 break-words rounded-card bg-ink-50 px-3 py-2.5 text-[0.9375rem] text-navy">
+        <p className="m-0 break-words rounded-card bg-navy/10 px-4 py-3 text-[0.9375rem] text-navy">
           {sessao.note ?? "Nenhuma observação foi escrita neste atendimento."}
         </p>
       </section>
 
       {sessao.abc.length > 0 && (
         <section>
-          <h3 className="m-0 mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
-            Registros de comportamento
+          <h3 className="m-0 mb-3 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+            Registros ABC
           </h3>
           <ul className="m-0 list-none space-y-2 p-0">
             {sessao.abc.map((registro) => (
               <li
                 key={registro.behavior}
-                className="rounded-card border border-warn-fg/25 bg-warn-bg px-3 py-2.5"
+                className="flex items-start gap-4 rounded-card bg-warn-bg px-4 py-3"
               >
-                <p className="m-0 break-words text-[0.8125rem] font-semibold text-warn-fg">
-                  Duração de {registro.minutes} minutos
-                </p>
-                <dl className="m-0 mt-1.5 grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-3 gap-y-1">
+                <dl className="m-0 grid min-w-0 flex-1 grid-cols-[minmax(6.5rem,auto)_1fr] gap-x-3 gap-y-1">
                   <Par rotulo="Antecedente" valor={registro.antecedent} />
                   <Par rotulo="Comportamento" valor={registro.behavior} />
                   <Par rotulo="Consequência" valor={registro.consequence} />
                 </dl>
+                {/* A duração fica na primeira linha, à direita, e não numa faixa
+                    própria em cima: ela qualifica o episódio, e três linhas de
+                    ABC com um cabeçalho de uma palavra em cima viravam quatro
+                    linhas para dizer três coisas. */}
+                <p className="m-0 shrink-0 whitespace-nowrap text-[0.8125rem] font-semibold text-warn-fg">
+                  <Icon name="fa-stopwatch" /> {registro.minutes} min
+                </p>
               </li>
             ))}
           </ul>
         </section>
       )}
-
     </div>
   );
 }
 
+/**
+ * Um campo do cabeçalho da revisão.
+ *
+ * Preenchimento em vez de contorno, como as linhas das colunas: são quatro
+ * caixas lado a lado, e quatro contornos de 1px numa linha desenham uma grade
+ * que compete com o conteúdo dela. O valor vai em `font-bold`, e não
+ * `font-semibold` — é o dado que a assinatura confere, e o rótulo acima dele já
+ * é negrito em caixa alta.
+ */
 function Campo({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
-    <div className="rounded-card border border-[var(--border-soft)] px-3 py-2">
-      <dt className="text-[0.8125rem] text-[var(--fg-2)]">{rotulo}</dt>
-      <dd className="m-0 break-words text-[0.9375rem] font-semibold text-navy">{valor}</dd>
+    <div className="rounded-card bg-navy/10 px-3 py-2.5">
+      <dt className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+        {rotulo}
+      </dt>
+      <dd className="m-0 break-words text-[0.9375rem] font-bold text-navy">{valor}</dd>
     </div>
   );
 }
 
+/** Um par do ABC: o rótulo na primeira faixa da grade, o valor na segunda. */
 function Par({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
     <div className="contents">
-      <dt className="text-[0.8125rem] text-[var(--fg-2)]">{rotulo}</dt>
-      <dd className="m-0 break-words text-[0.875rem] text-navy">{valor}</dd>
+      <dt className="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--fg-2)]">
+        {rotulo}
+      </dt>
+      <dd className="m-0 break-words text-[0.875rem] font-semibold text-navy">{valor}</dd>
     </div>
   );
 }
