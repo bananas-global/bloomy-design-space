@@ -47,6 +47,16 @@ escurecidos até passar AA.
 | Chip recusado | `#902a2a` / `#fde3e3` | sem mudança | 6.77:1 |
 | Chip em análise | `#dba301` / branco | `#854d0e` / `#fff8e1` | 6.45:1 |
 | Chip pendente | `#cd7445` / `#fdeee1` | `#a8542a` / `#fdeee1` | 4.66:1 |
+| Etiqueta neutra (`tag/1` variante `brand`) | alfa 0.20 / texto alfa 0.80 | alfa **0.08** / texto **cheio** | 12.07:1 |
+
+A etiqueta neutra entrou nesta tabela depois das outras, e por um motivo que não é
+contraste. `tag/1` monta a variante `brand` por opacidade — `bg-brand-purple-dark/20
+text-brand-purple-dark/80`, a única do conjunto que não usa dois tokens —, e o
+`tint`/`brand` do `Button` usa 8% no fundo com o texto cheio. Os dois aparecem lado
+a lado no mesmo cartão: o selo "Padrão" ao lado do botão "Editar". Dois cinzas do
+mesmo token em opacidades diferentes leem como dois tons por engano, não como
+hierarquia, e a etiqueta foi alinhada ao botão. O ganho de contraste — de 5.08:1
+para 12.07:1 — veio junto, e é o que faz a mudança caber aqui.
 
 O ciano de assinatura `#58bada` **permanece** — em superfície escura, onde
 funciona: sobre o navy do drawer ele entrega 6.33:1. O que mudou é que ele deixou

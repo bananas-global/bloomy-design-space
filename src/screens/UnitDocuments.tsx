@@ -26,7 +26,7 @@ import {
 } from "../components/bloomy/Layout.js";
 import { DrawerModal, DropdownMenu } from "../components/bloomy/Overlay.js";
 import { Table, type Coluna } from "../components/bloomy/Table.js";
-import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
+import { ButtonTabs, LazyTabs, type ButtonTab, type LazyTabEntry } from "../components/bloomy/Tabs.js";
 import { Tag } from "../components/bloomy/Tag.js";
 import { UNIT_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
@@ -141,14 +141,18 @@ function comoPasta(data: unknown, id: string | undefined): UnitDocumentsData | n
  * `espelho-do-sistema` é como este repositório marca o que é cópia fiel para que
  * a varredura de acessibilidade não a leia como defeito desta entrega.
  */
-/** Selo "Padrão" dos cartões: cadeado antes do texto, com gap. */
+/**
+ * Selo "Padrão" — a etiqueta do sistema com o cadeado.
+ *
+ * Era um `span` desenhado à parte: pílula, `font-bold`, `px-2.5`, cadeado `solid`
+ * com tamanho próprio. Ficava ao lado da etiqueta de situação, que é `tag/1` de
+ * verdade, e as duas não combinavam em raio, peso, padding nem tamanho — e a
+ * cópia da pasta do profissional ainda divergia desta. O `tag/1` não tem selo
+ * "Padrão" nenhum; o que faltava nele era a posição do ícone, e ela virou regra do
+ * componente: antes do texto, em `regular`.
+ */
 function SeloPadrao({ item = "Padrão" }: { item?: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-brand-purple-dark)]/10 px-2.5 py-0.5 text-sm font-bold text-[var(--fg-2)]">
-      <Icon name="fa-lock" type="solid" className="text-xs" />
-      {item}
-    </span>
-  );
+  return <Etiqueta item={item} variant="brand" icon="fa-lock" />;
 }
 
 function Etiqueta(props: React.ComponentProps<typeof Tag>) {
@@ -220,11 +224,18 @@ function CabecalhoDaUnidade({
             </h1>
 
             <div className="mt-2 flex gap-1.5">
+              {/* O nome do ícone sai sem o `fa-solid` que o original embute
+                  (`icon={if @unit.active, do: "fa-solid fa-circle-check", ...}`).
+                  É a mesma padronização do resto: toda etiqueta com ícone usa o
+                  peso `regular`, e um único `solid` no cabeçalho reabriria o
+                  desencontro que a padronização veio resolver. Para voltar ao
+                  original, devolva o prefixo — o `Icon` respeita o estilo que vem
+                  no nome. */}
               <Etiqueta
                 item={unidade.active ? "Ativo" : "Inativo"}
                 variant={unidade.active ? "green" : "red"}
                 className="rounded-full"
-                icon={unidade.active ? "fa-solid fa-circle-check" : "fa-solid fa-circle-xmark"}
+                icon={unidade.active ? "fa-circle-check" : "fa-circle-xmark"}
               />
             </div>
 
@@ -685,6 +696,14 @@ function Cartoes({
 
 /* ============================================================== conteúdo */
 
+type Visao = "cards" | "tabela";
+
+/** As duas visões da pasta, no trilho de abas do sistema — como no profissional. */
+const VISOES: ButtonTab<Visao>[] = [
+  { id: "cards", label: "Cards", icon: "fa-grip" },
+  { id: "tabela", label: "Tabela", icon: "fa-list" },
+];
+
 function Conteudo({
   context,
   pasta,
@@ -697,7 +716,7 @@ function Conteudo({
   const hoje = pasta.now.slice(0, 10);
   const [aviso, setAviso] = useState("");
   const [editando, setEditando] = useState<Linha | null>(null);
-  const [visao, setVisao] = useState<"cards" | "tabela">("cards");
+  const [visao, setVisao] = useState<Visao>("cards");
 
   /**
    * O que foi salvo nesta sessão.
@@ -807,35 +826,21 @@ function Conteudo({
     <div className="space-y-6">
       <CabecalhoDaUnidade unidade={pasta.unit} podeEditar={podeEditar} />
 
-      <Card className="space-y-6">
-        <SectionHeader
-          variant="small"
+      <Card>
+        {/* O trilho de abas do sistema, como na pasta do profissional. O que
+            estava aqui era um segmento inventado — fundo cinza, botão branco com
+            sombra — que não existe em lugar nenhum do produto. */}
+        <ButtonTabs
+          className="espelho-do-sistema"
+          id="visoes-da-pasta-da-unidade"
+          label="Visões da pasta"
+          tabs={VISOES}
+          value={visao}
+          onChange={setVisao}
+          header={<SectionHeader variant="small">Documentos da unidade</SectionHeader>}
+          panelClassName="space-y-6"
           actions={
-            <div className="flex flex-wrap items-center gap-3">
-              <div
-                className="flex gap-1 rounded-lg bg-[var(--color-brand-purple-dark)]/5 p-1"
-                role="group"
-                aria-label="Visualização"
-              >
-                {(["cards", "tabela"] as const).map((modo) => (
-                  <button
-                    key={modo}
-                    type="button"
-                    aria-pressed={visao === modo}
-                    onClick={() => setVisao(modo)}
-                    className={[
-                      "rounded-md px-3 py-1.5 text-sm font-bold",
-                      visao === modo
-                        ? "bg-white text-[var(--color-brand-purple-dark)] shadow-[var(--shadow-main)]"
-                        : "text-[var(--fg-2)]",
-                    ].join(" ")}
-                  >
-                    <Icon name={modo === "cards" ? "fa-grip" : "fa-list"} className="mr-2" />
-                    {modo === "cards" ? "Cards" : "Tabela"}
-                  </button>
-                ))}
-              </div>
-
+            <>
               <Button className="espelho-do-sistema" variant="tint" rightIcon="fa-file-pdf">
                 Exportar agrupado
               </Button>
@@ -853,54 +858,52 @@ function Conteudo({
               >
                 Adicionar documento
               </Button>
-            </div>
+            </>
           }
         >
-          Documentos da unidade
-        </SectionHeader>
+          <Resumo contagem={contagem} />
 
-        <Resumo contagem={contagem} />
-
-        <FiltrosDaPasta
-          linhas={linhas}
-          insurers={pasta.insurers}
-          hoje={hoje}
-          valores={filtros}
-          onChange={setFiltros}
-        />
-
-        {filtradas.length === 0 ? (
-          <EmptyStateCard icon="fa-filter" text="Nenhum documento nesses filtros">
-            Limpe um dos campos acima para ver o resto da pasta.
-          </EmptyStateCard>
-        ) : visao === "cards" ? (
-          <Cartoes
-            linhas={filtradas}
+          <FiltrosDaPasta
+            linhas={linhas}
             insurers={pasta.insurers}
             hoje={hoje}
-            podeEditar={podeEditar}
-            onAbrir={setEditando}
+            valores={filtros}
+            onChange={setFiltros}
           />
-        ) : (
-          <Table
-            id="documentos-da-unidade"
-            rows={filtradas}
-            rowId={(linha) => linha.key}
-            cols={colunas}
-            actions={(linha) => (
-              <Button
-                size="small"
-                variant="tint"
-                color="brand"
-                leftIcon={linha.doc ? "fa-pen" : "fa-plus"}
-                disabled={!podeEditar}
-                onClick={() => setEditando(linha)}
-              >
-                {linha.doc ? "Editar" : "Anexar"}
-              </Button>
-            )}
-          />
-        )}
+
+          {filtradas.length === 0 ? (
+            <EmptyStateCard icon="fa-filter" text="Nenhum documento nesses filtros">
+              Limpe um dos campos acima para ver o resto da pasta.
+            </EmptyStateCard>
+          ) : visao === "cards" ? (
+            <Cartoes
+              linhas={filtradas}
+              insurers={pasta.insurers}
+              hoje={hoje}
+              podeEditar={podeEditar}
+              onAbrir={setEditando}
+            />
+          ) : (
+            <Table
+              id="documentos-da-unidade"
+              rows={filtradas}
+              rowId={(linha) => linha.key}
+              cols={colunas}
+              actions={(linha) => (
+                <Button
+                  size="small"
+                  variant="tint"
+                  color="brand"
+                  leftIcon={linha.doc ? "fa-pen" : "fa-plus"}
+                  disabled={!podeEditar}
+                  onClick={() => setEditando(linha)}
+                >
+                  {linha.doc ? "Editar" : "Anexar"}
+                </Button>
+              )}
+            />
+          )}
+        </ButtonTabs>
       </Card>
 
       <p className="sr-only" role="status" aria-live="polite">

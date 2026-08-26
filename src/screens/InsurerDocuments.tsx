@@ -18,7 +18,7 @@ import { Input, Select } from "../components/bloomy/Input.js";
 import { Avatar, SectionHeader } from "../components/bloomy/Layout.js";
 import { Dropdown, DrawerModal, DropdownMenu } from "../components/bloomy/Overlay.js";
 import { Table, type Coluna } from "../components/bloomy/Table.js";
-import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
+import { ButtonTabs, LazyTabs, type ButtonTab, type LazyTabEntry } from "../components/bloomy/Tabs.js";
 import { Tag } from "../components/bloomy/Tag.js";
 import { UNIT_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
@@ -105,6 +105,19 @@ function Etiqueta(props: React.ComponentProps<typeof Tag>) {
   );
 }
 
+type Escopo = "professionals" | "units";
+
+/**
+ * Os dois escopos da aba, no trilho de abas do sistema.
+ *
+ * Os ícones são os do menu do produto para cada assunto — `fa-user-md` para
+ * profissionais, `fa-hospital` para unidades —, e não desenhos escolhidos aqui.
+ */
+const ESCOPOS: ButtonTab<Escopo>[] = [
+  { id: "professionals", label: "Profissionais", icon: "fa-user-md" },
+  { id: "units", label: "Unidades", icon: "fa-hospital" },
+];
+
 const TOM = {
   credentialed: "green",
   in_credentialing: "light-blue",
@@ -122,7 +135,7 @@ function Conteudo({
   permissions: string[];
 }) {
   const hoje = ficha.now.slice(0, 10);
-  const [escopo, setEscopo] = useState<"professionals" | "units">("professionals");
+  const [escopo, setEscopo] = useState<Escopo>("professionals");
   const [aviso, setAviso] = useState("");
   const podeEditar = permissions.includes("health_cares.edit");
 
@@ -424,45 +437,21 @@ function Conteudo({
           />
         }
       >
-        <Card className="space-y-6">
-          <SectionHeader
-            variant="small"
-            actions={
-              <div
-                className="inline-flex gap-1 rounded-xl bg-[var(--color-brand-purple-dark)]/5 p-1"
-                role="group"
-                aria-label="Escopo dos documentos"
-              >
-                {/* Só o rótulo. O botão trazia o resumo do credenciamento ao
-                    lado — "1 de 5 credenciados" —, e ele dizia duas vezes o que as
-                    pastilhas abaixo já dizem por estado, dentro de um controle
-                    cuja função é trocar de escopo. */}
-                {(
-                  [
-                    ["professionals", "Profissionais"],
-                    ["units", "Unidades"],
-                  ] as const
-                ).map(([id, rotulo]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-pressed={escopo === id}
-                    onClick={() => setEscopo(id)}
-                    className={`rounded-lg px-3 py-2 text-sm font-bold ${
-                      escopo === id
-                        ? "bg-white text-[var(--color-brand-purple-dark)] shadow-[var(--shadow-main)]"
-                        : "text-[var(--fg-2)]"
-                    }`}
-                  >
-                    {rotulo}
-                  </button>
-                ))}
-              </div>
-            }
+        <Card>
+          {/* O trilho de abas do sistema, como nas outras duas pastas. Aqui ele
+              é mais do que troca de visão: profissionais e unidades são dois
+              conjuntos diferentes, e é exatamente para isso que `button_tabs/1`
+              existe no produto. */}
+          <ButtonTabs
+            className="espelho-do-sistema"
+            id="escopos-da-operadora"
+            label="Escopo dos documentos"
+            tabs={ESCOPOS}
+            value={escopo}
+            onChange={setEscopo}
+            header={<SectionHeader variant="small">Documentos</SectionHeader>}
+            panelClassName="space-y-6"
           >
-            Documentos
-          </SectionHeader>
-
           {escopo === "professionals" ? (
             <>
               <div className="flex flex-wrap gap-2">
@@ -557,6 +546,7 @@ function Conteudo({
               />
             </>
           )}
+          </ButtonTabs>
         </Card>
       </LazyTabs>
 

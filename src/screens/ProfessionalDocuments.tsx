@@ -20,8 +20,8 @@ import { Checkbox, Input, MultiSelect, Select } from "../components/bloomy/Input
 import { Avatar, EmptyStateCard, FieldsetLabel, SectionHeader } from "../components/bloomy/Layout.js";
 import { DrawerModal, Modal } from "../components/bloomy/Overlay.js";
 import { Table, type Coluna } from "../components/bloomy/Table.js";
-import { LazyTabs, type LazyTabEntry } from "../components/bloomy/Tabs.js";
-import { Tag } from "../components/bloomy/Tag.js";
+import { ButtonTabs, LazyTabs, type ButtonTab, type LazyTabEntry } from "../components/bloomy/Tabs.js";
+import { Tag, type TagVariant } from "../components/bloomy/Tag.js";
 import { PROFESSIONAL_DOCUMENT_TYPES } from "../fixtures/documents.js";
 import {
   professionalStatus,
@@ -494,6 +494,20 @@ function passaNoFiltro(linha: Linha, valores: ValoresDeFiltro, hoje: string): bo
 
 /* =============================================================== conteúdo */
 
+type Visao = "cards" | "tabela";
+
+/**
+ * As duas visões da pasta, no trilho de abas do sistema.
+ *
+ * O ícone é a extensão que a decisão 0015 já registrou — `button_tabs/1` renderiza
+ * só o rótulo. Aqui ele carrega peso: "Cards" e "Tabela" são a mesma informação em
+ * duas formas, e a grade e as linhas dizem isso antes da palavra.
+ */
+const VISOES: ButtonTab<Visao>[] = [
+  { id: "cards", label: "Cards", icon: "fa-grip" },
+  { id: "tabela", label: "Tabela", icon: "fa-list" },
+];
+
 function Conteudo({
   context,
   pasta,
@@ -505,7 +519,7 @@ function Conteudo({
 }) {
   const { locale } = context;
   const hoje = pasta.now.slice(0, 10);
-  const [visao, setVisao] = useState<"cards" | "tabela">("cards");
+  const [visao, setVisao] = useState<Visao>("cards");
   const [editando, setEditando] = useState<Linha | null>(null);
   const [exportando, setExportando] = useState(false);
   const [aviso, setAviso] = useState("");
@@ -558,31 +572,23 @@ function Conteudo({
     <div className="space-y-6">
       <CabecalhoDoPerfil pessoa={pasta.professional} hoje={hoje} locale={locale} />
 
-      <Card className="space-y-6">
-        <SectionHeader
-          variant="small"
+      <Card>
+        {/* `ButtonTabs`, e não um par de botões meu: o trilho com marcador móvel
+            é o componente de troca de visão do sistema, e é o que a lista de
+            profissionais já usa em Cadastro · Documentação · Controle de horas.
+            O que estava aqui era um segmento inventado — fundo cinza, botão
+            branco com sombra — que não existe em lugar nenhum do produto. */}
+        <ButtonTabs
+          className="espelho-do-sistema"
+          id="visoes-da-pasta-do-profissional"
+          label="Visões da pasta"
+          tabs={VISOES}
+          value={visao}
+          onChange={setVisao}
+          header={<SectionHeader variant="small">Documentos</SectionHeader>}
+          panelClassName="space-y-6"
           actions={
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex gap-1 rounded-lg bg-[var(--color-brand-purple-dark)]/5 p-1" role="group" aria-label="Visualização">
-                {(["cards", "tabela"] as const).map((modo) => (
-                  <button
-                    key={modo}
-                    type="button"
-                    aria-pressed={visao === modo}
-                    onClick={() => setVisao(modo)}
-                    className={[
-                      "rounded-md px-3 py-1.5 text-sm font-bold",
-                      visao === modo
-                        ? "bg-white text-[var(--color-brand-purple-dark)] shadow-[var(--shadow-main)]"
-                        : "text-[var(--fg-2)]",
-                    ].join(" ")}
-                  >
-                    <Icon name={modo === "cards" ? "fa-grip" : "fa-list"} className="mr-2" />
-                    {modo === "cards" ? "Cards" : "Tabela"}
-                  </button>
-                ))}
-              </div>
-
+            <>
               {/* Tint e não `outline`: exportar é ação secundária da seção, e o
                   contorno a colocava no mesmo peso visual de "Adicionar
                   documento", que é a ação primária. */}
@@ -616,53 +622,51 @@ function Conteudo({
               >
                 Adicionar documento
               </Button>
-            </div>
+            </>
           }
         >
-          Documentos
-        </SectionHeader>
+          {!exportacao.allowed && (
+            <p id="motivo-exportar" className="m-0 text-sm text-[var(--fg-2)]">
+              {exportacao.reason}
+            </p>
+          )}
 
-        {!exportacao.allowed && (
-          <p id="motivo-exportar" className="m-0 text-sm text-[var(--fg-2)]">
-            {exportacao.reason}
-          </p>
-        )}
+          <Resumo contagem={contagem} />
 
-        <Resumo contagem={contagem} />
-
-        <Filtros
-          linhas={linhas}
-          insurers={pasta.insurers}
-          hoje={hoje}
-          valores={filtros}
-          onChange={setFiltros}
-        />
-
-        {linhas.length === 0 ? (
-          <EmptyStateCard icon="fa-folder-open" text="Nenhum documento cadastrado">
-            Os sete tipos padrão aparecem aqui assim que a pasta for aberta, com ou sem arquivo.
-          </EmptyStateCard>
-        ) : filtradas.length === 0 ? (
-          <EmptyStateCard icon="fa-filter" text="Nenhum documento nesses filtros">
-            Limpe um dos campos acima para ver o resto da pasta.
-          </EmptyStateCard>
-        ) : visao === "cards" ? (
-          <Cartoes
-            linhas={filtradas}
+          <Filtros
+            linhas={linhas}
             insurers={pasta.insurers}
             hoje={hoje}
-            podeEditar={podeEditar}
-            onEditar={setEditando}
+            valores={filtros}
+            onChange={setFiltros}
           />
-        ) : (
-          <Tabela
-            linhas={filtradas}
-            insurers={pasta.insurers}
-            hoje={hoje}
-            podeEditar={podeEditar}
-            onEditar={setEditando}
-          />
-        )}
+
+          {linhas.length === 0 ? (
+            <EmptyStateCard icon="fa-folder-open" text="Nenhum documento cadastrado">
+              Os sete tipos padrão aparecem aqui assim que a pasta for aberta, com ou sem arquivo.
+            </EmptyStateCard>
+          ) : filtradas.length === 0 ? (
+            <EmptyStateCard icon="fa-filter" text="Nenhum documento nesses filtros">
+              Limpe um dos campos acima para ver o resto da pasta.
+            </EmptyStateCard>
+          ) : visao === "cards" ? (
+            <Cartoes
+              linhas={filtradas}
+              insurers={pasta.insurers}
+              hoje={hoje}
+              podeEditar={podeEditar}
+              onEditar={setEditando}
+            />
+          ) : (
+            <Tabela
+              linhas={filtradas}
+              insurers={pasta.insurers}
+              hoje={hoje}
+              podeEditar={podeEditar}
+              onEditar={setEditando}
+            />
+          )}
+        </ButtonTabs>
       </Card>
 
       <p className="sr-only" role="status" aria-live="polite">
@@ -718,13 +722,16 @@ function Conteudo({
  * etiqueta os dois não caibam juntos e o selo quebrava para a linha de cima,
  * empurrando o título do documento para baixo em metade dos cartões.
  */
+/**
+ * Selo "Padrão" — `tag/1` com o cadeado antes do texto.
+ *
+ * Era um `span` desenhado à parte, e em `text-xs`: encolhido para caber no cartão
+ * denso. É exatamente o encolhimento que a decisão 0015 recusou fazer no `tag/1`
+ * da etiqueta de situação — e o selo, por não ser do sistema, não teve essa
+ * proteção. Agora os dois saem do mesmo componente e no mesmo tamanho.
+ */
 function SeloPadrao() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--color-brand-purple-dark)]/10 px-1.5 py-0.5 text-xs font-bold text-[var(--fg-2)]">
-      <Icon name="fa-lock" type="solid" className="text-[0.625rem]" />
-      Padrão
-    </span>
-  );
+  return <Etiqueta item="Padrão" variant="brand" icon="fa-lock" />;
 }
 
 /** Duas iniciais, como no cabeçalho do sistema. */
@@ -737,6 +744,21 @@ function iniciais(nome: string): string {
     .join("");
 }
 
+/**
+ * As etiquetas do cabeçalho do perfil — `tag/1` arredondada.
+ *
+ * Era um `span` com paleta própria de cinco tons, que duplicava em parte as dez
+ * variantes de `tag/1` e divergia em quatro delas: verde, vermelho, azul e neutro
+ * apontavam para tokens diferentes dos do sistema. Agora saem de `tag/1`, com o
+ * `rounded-full` que o cabeçalho da unidade já usa — e que vem do original: o
+ * `card_header.ex` da unidade e o da operadora passam `class="rounded-full"` na
+ * própria `.tag`.
+ *
+ * A consequência é que o cabeçalho herda a paleta do sistema, contraste incluído.
+ * É a decisão 0001 valendo aqui também: quem tem `espelho-do-sistema` não é lido
+ * como defeito desta entrega, e a divergência de contraste do `tag/1` está
+ * registrada.
+ */
 function BadgeDoPerfil({
   item,
   tom,
@@ -746,22 +768,15 @@ function BadgeDoPerfil({
   tom: "green" | "red" | "yellow" | "blue" | "neutral";
   icon?: string;
 }) {
-  const cores = {
-    green: "bg-[var(--color-ok-bg)] text-[var(--color-ok-fg)]",
-    red: "bg-[var(--color-red-light)] text-[var(--color-danger-fg)]",
-    yellow: "bg-[var(--color-yellow)]/20 text-[var(--color-yellow-dark)]",
-    blue: "bg-[var(--color-blue-light)] text-[var(--color-blue-dark)]",
-    neutral: "bg-[var(--color-brand-purple-dark)]/10 text-[var(--fg-2)]",
-  }[tom];
+  const variante = {
+    green: "green",
+    red: "red",
+    yellow: "yellow",
+    blue: "light-blue",
+    neutral: "brand",
+  }[tom] as TagVariant;
 
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-bold ${cores}`}
-    >
-      {item}
-      {icon && <Icon name={icon} />}
-    </span>
-  );
+  return <Etiqueta item={item} variant={variante} icon={icon} className="rounded-full" />;
 }
 
 function CabecalhoDoPerfil({
