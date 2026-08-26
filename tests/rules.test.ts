@@ -7711,3 +7711,388 @@ describe("fila de tarefas", () => {
     expect(fila.every((item) => !item.task.done)).toBe(true);
   });
 });
+
+/* ================================================ Supervisão — a equipe */
+
+import type { SupervisionTeamData } from "../src/contracts/index.js";
+import { supervisionTeamFixtures } from "../src/fixtures/supervision.js";
+import { personas } from "../src/personas/index.js";
+import {
+  applicatorAlerts,
+  applicatorsOfPatient,
+  applicatorsOfSupervisor,
+  clearSelection,
+  isPendingSignature,
+  nextUnresolved,
+  patientAlerts,
+  patientsOfApplicator,
+  patientsOfSupervisor,
+  pendingInScope,
+  pendingOfApplicator,
+  pendingOfPair,
+  pendingOfPatient,
+  pendingOfSupervisor,
+  pickApplicator,
+  pickPatient,
+  pickSupervisor,
+  scopeCounters,
+  sessionsToSign,
+  reachesSupervision,
+  scopeOf,
+  supervisionDetour,
+  supervisionReach,
+  supervisorsOfPatient,
+  visibleApplicators,
+  visiblePatients,
+  visibleSupervisors,
+  type SupervisionSelection,
+} from "../src/rules/supervision.js";
+
+const equipeDe = (id: string): SupervisionTeamData => {
+  const fixture = supervisionTeamFixtures.find((item) => item.id === id);
+  if (!fixture) throw new Error(`Fixture inexistente: ${id}`);
+  return (typeof fixture.data === "function" ? fixture.data() : fixture.data) as SupervisionTeamData;
+};
+
+const EQUIPE = equipeDe("supervision-team");
+/** Mesma equipe, sem o vínculo do visitante: o supervisor recém-designado. */
+const SEM_VINCULO = equipeDe("supervision-team-new-supervisor");
+const NADA = new Set<string>();
+/** Coordenação: escolhe supervisor, sem trava. */
+const ESCOPO_ABERTO = { picksSupervisor: true };
+/** Quem supervisiona: sem coluna de supervisores, travado no próprio vínculo. */
+const ESCOPO_TRAVADO = { picksSupervisor: false, lockedTo: "sup-rafael" };
+
+describe("a supervisão é uma relação de três pontas", () => {
+  it("do supervisor chega aos aplicadores e aos pacientes deles", () => {
+    expect(applicatorsOfSupervisor(EQUIPE, "sup-rafael")).toEqual([
+      "apl-marina",
+      "apl-juliana",
+      "apl-bruno",
+    ]);
+    expect(patientsOfSupervisor(EQUIPE, "sup-rafael")).toHaveLength(6);
+  });
+
+  it("do aplicador chega aos pacientes dele", () => {
+    expect(patientsOfApplicator(EQUIPE, "apl-marina")).toEqual(["pac-lucas", "pac-sofia"]);
+  });
+
+  /**
+   * O sentido que a tela portada não tem. Lucas é atendido por duas pessoas de
+   * especialidades diferentes, e nenhum dos dois supervisores responde pelo
+   * trabalho do outro.
+   */
+  it("do paciente chega a quem atende e a quem supervisiona quem atende", () => {
+    expect(applicatorsOfPatient(EQUIPE, "pac-lucas")).toEqual(["apl-marina", "apl-camila"]);
+    expect(supervisorsOfPatient(EQUIPE, "pac-lucas")).toEqual(["sup-rafael", "sup-beatriz"]);
+  });
+
+  it("sem nada selecionado, as três colunas mostram tudo", () => {
+    expect(visibleSupervisors(EQUIPE, {})).toHaveLength(5);
+    expect(visibleApplicators(EQUIPE, {})).toHaveLength(8);
+    expect(visiblePatients(EQUIPE, {})).toHaveLength(12);
+  });
+
+  it("com o supervisor selecionado, as outras duas encolhem", () => {
+    const selecao: SupervisionSelection = { supervisorId: "sup-rafael" };
+    expect(visibleApplicators(EQUIPE, selecao)).toHaveLength(3);
+    expect(visiblePatients(EQUIPE, selecao)).toHaveLength(6);
+  });
+
+  it("com o paciente selecionado, as colunas anteriores encolhem também", () => {
+    const selecao: SupervisionSelection = { patientId: "pac-lucas" };
+    expect(visibleSupervisors(EQUIPE, selecao)).toEqual(["sup-rafael", "sup-beatriz"]);
+    expect(visibleApplicators(EQUIPE, selecao)).toEqual(["apl-marina", "apl-camila"]);
+  });
+});
+
+describe("uma seleção nova apaga o que deixou de valer", () => {
+  it("escolher um aplicador revela o supervisor dele, e não mantém o anterior", () => {
+    const antes: SupervisionSelection = { supervisorId: "sup-rafael" };
+    expect(pickApplicator(EQUIPE, antes, "apl-camila", ESCOPO_ABERTO).supervisorId).toBe("sup-beatriz");
+  });
+
+  it("escolher um paciente que o aplicador não atende limpa o aplicador", () => {
+    const antes: SupervisionSelection = { applicatorId: "apl-marina" };
+    expect(pickPatient(EQUIPE, antes, "pac-gabriel", ESCOPO_ABERTO).applicatorId).toBeUndefined();
+  });
+
+  it("escolher um paciente de outro supervisor limpa o supervisor", () => {
+    const antes: SupervisionSelection = { supervisorId: "sup-tatiane" };
+    expect(pickPatient(EQUIPE, antes, "pac-sofia", ESCOPO_ABERTO).supervisorId).toBeUndefined();
+  });
+
+  it("escolher um paciente que o supervisor alcança preserva o supervisor", () => {
+    const antes: SupervisionSelection = { supervisorId: "sup-rafael" };
+    expect(pickPatient(EQUIPE, antes, "pac-sofia", ESCOPO_ABERTO).supervisorId).toBe("sup-rafael");
+  });
+
+  it("escolher um supervisor que não supervisiona o aplicador limpa o aplicador", () => {
+    const antes: SupervisionSelection = { applicatorId: "apl-larissa" };
+    expect(pickSupervisor(EQUIPE, antes, "sup-rafael", ESCOPO_ABERTO).applicatorId).toBeUndefined();
+  });
+
+  it("clicar no que já está selecionado desmarca", () => {
+    const antes: SupervisionSelection = { applicatorId: "apl-marina" };
+    expect(pickApplicator(EQUIPE, antes, "apl-marina", ESCOPO_ABERTO).applicatorId).toBeUndefined();
+  });
+
+  // Sem isto, a tela diria "nenhum resultado" quando o que houve foi filtro
+  // incompatível — o vazio descrevendo os dados em vez da pergunta.
+  it("nenhuma combinação produzida por uma escolha resulta em coluna vazia", () => {
+    for (const paciente of EQUIPE.patients) {
+      for (const aplicador of EQUIPE.applicators) {
+        const selecao = pickPatient(EQUIPE, { applicatorId: aplicador.id }, paciente.id, ESCOPO_ABERTO);
+        expect(visiblePatients(EQUIPE, selecao).length, paciente.id).toBeGreaterThan(0);
+        expect(visibleApplicators(EQUIPE, selecao).length, paciente.id).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe("a fila de assinaturas segue o escopo selecionado", () => {
+  it("sem nada selecionado, conta a equipe inteira", () => {
+    expect(pendingInScope(EQUIPE, {}, NADA)).toBe(7);
+  });
+
+  it("com um supervisor selecionado, conta só a carteira dele", () => {
+    expect(pendingInScope(EQUIPE, { supervisorId: "sup-rafael" }, NADA)).toBe(3);
+    expect(pendingOfSupervisor(EQUIPE, "sup-rafael", NADA)).toBe(3);
+  });
+
+  /**
+   * O escopo é o supervisor, e não as outras duas colunas. É deliberado: os
+   * indicadores respondem por uma carteira, e refazê-los a cada clique faria
+   * três números piscarem sem que nenhum fosse a resposta.
+   */
+  it("selecionar aplicador ou paciente não muda o escopo dos indicadores", () => {
+    const comAplicador = scopeCounters(
+      EQUIPE,
+      { supervisorId: "sup-rafael", applicatorId: "apl-marina" },
+      NADA,
+    );
+    expect(comAplicador).toEqual(scopeCounters(EQUIPE, { supervisorId: "sup-rafael" }, NADA));
+  });
+
+  it("os três indicadores da equipe são trinta, sete e duas", () => {
+    expect(scopeCounters(EQUIPE, {}, NADA)).toEqual({
+      appointments: 30,
+      toSign: 7,
+      absences: 2,
+    });
+  });
+
+  it("assinar tira o atendimento da fila na hora", () => {
+    const assinado = new Set(["atd-01"]);
+    expect(pendingInScope(EQUIPE, {}, assinado)).toBe(6);
+    expect(pendingOfPatient(EQUIPE, "pac-lucas", assinado)).toBe(1);
+    expect(pendingOfApplicator(EQUIPE, "apl-marina", assinado)).toBe(1);
+    expect(pendingOfPair(EQUIPE, "apl-marina", "pac-lucas", assinado)).toBe(0);
+  });
+
+  it("só atendimento esperando a segunda assinatura entra na fila", () => {
+    const pendentes = EQUIPE.sessions.filter((sessao) => isPendingSignature(sessao, NADA));
+    expect(pendentes.every((sessao) => sessao.status === "pending_supervisor_signature")).toBe(true);
+    expect(pendentes).toHaveLength(7);
+  });
+});
+
+describe("o lote é uma fila de revisão", () => {
+  it("vem do mais recente para o mais antigo", () => {
+    const fila = sessionsToSign(EQUIPE, {}, NADA);
+    const datas = fila.map((sessao) => sessao.start);
+    expect(datas).toEqual([...datas].sort().reverse());
+  });
+
+  it("recorta por aplicador e por paciente", () => {
+    expect(sessionsToSign(EQUIPE, { applicatorIds: ["apl-marina"] }, NADA)).toHaveLength(2);
+    expect(sessionsToSign(EQUIPE, { patientId: "pac-lucas" }, NADA)).toHaveLength(2);
+    expect(
+      sessionsToSign(EQUIPE, { applicatorIds: ["apl-marina"], patientId: "pac-lucas" }, NADA),
+    ).toHaveLength(1);
+  });
+
+  it("todo atendimento da fila tem registro para ser conferido", () => {
+    for (const sessao of sessionsToSign(EQUIPE, {}, NADA)) {
+      expect(sessao.hasRecord, sessao.id).toBe(true);
+      expect(sessao.programs.length, sessao.id).toBeGreaterThan(0);
+      expect(sessao.note, sessao.id).toBeTruthy();
+    }
+  });
+
+  it("avança para o próximo não resolvido", () => {
+    expect(nextUnresolved(["a", "b", "c"], 0, new Set(["a"]))).toBe(1);
+  });
+
+  // Quem pulou três no meio e assinou o resto espera voltar a eles, e não sair
+  // do lote como se tivesse acabado.
+  it("dá a volta quando os de baixo já foram resolvidos", () => {
+    expect(nextUnresolved(["a", "b", "c"], 2, new Set(["c"]))).toBe(0);
+  });
+
+  it("devolve -1 quando não sobrou nenhum", () => {
+    expect(nextUnresolved(["a", "b"], 0, new Set(["a", "b"]))).toBe(-1);
+  });
+});
+
+/**
+ * O alcance por coluna, papel por papel.
+ *
+ * A matriz é derivada das policies do monólito, e não escrita à mão: cada linha
+ * pergunta pelas três permissões que governam as três colunas. Se o gerador de
+ * permissões mudar, é aqui que se descobre.
+ */
+describe("cada coluna tem a permissão dela", () => {
+  const alcanceDe = (papel: string, dados = EQUIPE) => {
+    const persona = personas.find((item) => item.id === papel);
+    if (!persona) throw new Error(`Persona inexistente: ${papel}`);
+    return supervisionReach(persona.permissions, dados, papel);
+  };
+
+  it("coordenação vê as três colunas", () => {
+    for (const papel of ["admin", "clinic_admin", "coordinator"]) {
+      expect(alcanceDe(papel), papel).toEqual({
+        supervisors: true,
+        applicators: true,
+        patients: true,
+      });
+    }
+  });
+
+  // A recepção alcança profissional e paciente, e "quem atende esta criança?" é
+  // a pergunta dela. O que ela não alcança é de quem é a responsabilidade.
+  it("a recepção vê duas colunas, sem supervisores e sem trava", () => {
+    expect(alcanceDe("attendant")).toEqual({
+      supervisors: false,
+      applicators: true,
+      patients: true,
+    });
+  });
+
+  it("People alcança profissionais e não alcança pacientes", () => {
+    const alcance = alcanceDe("people");
+    expect(alcance.applicators).toBe(true);
+    expect(alcance.patients).toBe(false);
+    expect(reachesSupervision(alcance)).toBe(false);
+    expect(supervisionDetour(alcance)).toMatch(/está em Profissionais/);
+  });
+
+  it("Operação e quem é supervisionado alcançam pacientes e mais nada", () => {
+    for (const papel of ["operation", "therapeutic_companion", "specialist", "applicator"]) {
+      const alcance = alcanceDe(papel);
+      expect(alcance.patients, papel).toBe(true);
+      expect(alcance.applicators, papel).toBe(false);
+      expect(reachesSupervision(alcance), papel).toBe(false);
+    }
+    expect(supervisionDetour(alcanceDe("applicator"))).toMatch(/no próprio atendimento/);
+  });
+
+  /**
+   * O vínculo alcança os aplicadores sem `professionals.list` — é o
+   * `supervisor_internships` ampliando o escopo de quem supervisiona. Sem ele, o
+   * mesmo papel não abre a tela: é a regra `supervisor-is-derived-from-links`
+   * outra vez, agora do lado de quem entra.
+   */
+  it("o vínculo é o que abre a tela para quem supervisiona, não o papel", () => {
+    expect(reachesSupervision(alcanceDe("supervisor"))).toBe(true);
+    expect(reachesSupervision(alcanceDe("supervisor", SEM_VINCULO))).toBe(false);
+    expect(supervisionDetour(alcanceDe("supervisor", SEM_VINCULO))).toMatch(
+      /quando o primeiro vínculo existir/,
+    );
+  });
+
+  /**
+   * O vínculo está na fixture para **todas** as personas, e só quem supervisiona
+   * o recebe. Sem isto, o aplicador — que divide as mesmas permissões — herdaria
+   * a carteira do Rafael, e a recepção seria travada nela.
+   */
+  it("o vínculo do visitante não escorre para as outras personas", () => {
+    expect(EQUIPE.viewerSupervisorId).toBe("sup-rafael");
+    for (const papel of ["applicator", "specialist", "therapeutic_companion", "operation"]) {
+      expect(alcanceDe(papel).lockedTo, papel).toBeUndefined();
+      expect(reachesSupervision(alcanceDe(papel)), papel).toBe(false);
+    }
+    expect(alcanceDe("attendant").lockedTo).toBeUndefined();
+    expect(alcanceDe("coordinator").lockedTo).toBeUndefined();
+  });
+
+  // Papéis são acumuláveis no monólito: quem coordena e também supervisiona
+  // continua escolhendo, porque para ela a coluna existe.
+  it("a trava só alcança quem não tem o que escolher", () => {
+    expect(alcanceDe("supervisor").lockedTo).toBe("sup-rafael");
+    expect(alcanceDe("coordinator").lockedTo).toBeUndefined();
+  });
+});
+
+describe("quem supervisiona entra com o escopo travado", () => {
+  const TRAVADO = clearSelection(ESCOPO_TRAVADO);
+
+  it("a coluna de supervisores não existe", () => {
+    expect(
+      supervisionReach(["professionals.list_supervisor"], EQUIPE, "coordinator").supervisors,
+    ).toBe(true);
+    expect(scopeOf(supervisionReach(["patients.list"], EQUIPE, "supervisor"))).toEqual({
+      picksSupervisor: false,
+      lockedTo: "sup-rafael",
+    });
+  });
+
+  it("as outras duas nascem filtradas pelos vínculos dele", () => {
+    expect(visibleApplicators(EQUIPE, TRAVADO)).toHaveLength(3);
+    expect(visiblePatients(EQUIPE, TRAVADO)).toHaveLength(6);
+    expect(pendingInScope(EQUIPE, TRAVADO, NADA)).toBe(3);
+  });
+
+  it("limpar volta para o escopo travado, e não para a clínica", () => {
+    expect(clearSelection(ESCOPO_TRAVADO)).toEqual({ supervisorId: "sup-rafael" });
+    expect(clearSelection(ESCOPO_ABERTO)).toEqual({});
+  });
+
+  it("escolher um aplicador não troca o supervisor travado", () => {
+    const proximo = pickApplicator(EQUIPE, { supervisorId: "sup-rafael" }, "apl-marina", ESCOPO_TRAVADO);
+    expect(proximo.supervisorId).toBe("sup-rafael");
+  });
+});
+
+describe("pontos de atenção", () => {
+  it("programa vem antes de guia, que vem antes de falta", () => {
+    expect(patientAlerts(EQUIPE, "pac-sofia")).toEqual([
+      "Estagnado: Tato de figuras",
+      "Guia vencendo",
+      "2 faltas no período",
+    ]);
+  });
+
+  it("atendimento concluído sem registro é ponto de atenção", () => {
+    expect(patientAlerts(EQUIPE, "pac-manuela")).toEqual([
+      "Regressão: Comportamento social",
+      "Atendimento sem registro",
+    ]);
+  });
+
+  it("programa avançando ou estável não gera nada", () => {
+    expect(patientAlerts(EQUIPE, "pac-lucas")).toEqual([]);
+  });
+
+  /**
+   * Duas guias vencendo em dois pacientes são dois problemas, com dois convênios
+   * e dois prazos. Somá-las numa linha faria a contagem cair pela metade.
+   */
+  it("o aplicador acumula os pontos dos pacientes dele, com o nome de cada um", () => {
+    expect(applicatorAlerts(EQUIPE, "apl-rafael-t")).toEqual([
+      "Estagnado: Tato de figuras · Sofia",
+      "Guia vencendo · Sofia",
+      "2 faltas no período · Sofia",
+      "Guia vencendo · Alice",
+    ]);
+  });
+
+  it("a supervisão que nunca aconteceu aparece, e a recente não", () => {
+    expect(applicatorAlerts(EQUIPE, "apl-paula")).toContain("Nunca supervisionado");
+    expect(applicatorAlerts(EQUIPE, "apl-camila")).toEqual([]);
+  });
+
+  it("mais de trinta dias sem supervisão é ponto de atenção", () => {
+    expect(applicatorAlerts(EQUIPE, "apl-juliana")).toContain("34 dias sem supervisão");
+  });
+});

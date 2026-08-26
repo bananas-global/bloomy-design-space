@@ -23,6 +23,10 @@ const COM_HORARIO = [
   "in-clinic.morning",
   "clinical-hours.week",
   "supervision.awaiting-signature",
+  // `supervision.team` fica de fora **de propósito**: o horário dela só aparece
+  // depois de escolher um paciente, e esta varredura mede a primeira tela. Posta
+  // aqui, ela compararia três strings vazias e passaria sem medir nada. O fuso
+  // dessa tela é verificado em `active-journey.spec.ts`, com o clique.
   "notifications.unread-list",
 ];
 

@@ -27,6 +27,7 @@ import { HourMapScreen } from "../screens/HourMap.js";
 import { Chat } from "../screens/Chat.js";
 import { Notifications } from "../screens/Notifications.js";
 import { Supervision } from "../screens/Supervision.js";
+import { SupervisionTeam } from "../screens/SupervisionTeam.js";
 import { UnitMap } from "../screens/UnitMap.js";
 import { ClinicalHours } from "../screens/ClinicalHours.js";
 import { NewAppointment } from "../screens/NewAppointment.js";
@@ -103,6 +104,9 @@ export const productDefinition: ProductDefinition = {
     { path: "/patients/:id/hour-map", screen: guard(HourMapScreen) },
     { path: "/patients/:id/chat", screen: guard(Chat) },
     { path: "/notifications", screen: guard(Notifications) },
+    // A proposta primeiro, como em `/patients` e `/team`: literal antes do que
+    // é mais curto. `/supervision` continua servindo as cinco situações do porte.
+    { path: "/supervision/team", screen: guard(SupervisionTeam) },
     { path: "/supervision", screen: guard(Supervision) },
     { path: "/unit-map", screen: guard(UnitMap) },
     { path: "/clinical-hours", screen: guard(ClinicalHours) },

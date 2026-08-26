@@ -29,7 +29,7 @@ import { prospectFixtures } from "../fixtures/prospects.js";
 import { leadFixtures } from "../fixtures/leads.js";
 import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
-import { supervisionFixtures } from "../fixtures/supervision.js";
+import { supervisionFixtures, supervisionTeamFixtures } from "../fixtures/supervision.js";
 import { unitMapFixtures } from "../fixtures/unitMap.js";
 import { clinicalHourFixtures } from "../fixtures/clinicalHours.js";
 import { newAppointmentFixtures } from "../fixtures/newAppointment.js";
@@ -99,7 +99,7 @@ import { prospectRules } from "../rules/prospects.js";
 import { leadRules } from "../rules/leads.js";
 import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
-import { supervisionRules } from "../rules/supervision.js";
+import { supervisionRules, supervisionTeamRules } from "../rules/supervision.js";
 import { unitMapRules } from "../rules/unitMap.js";
 import { clinicalHourRules, clinicalHourPaginationRules } from "../rules/clinicalHours.js";
 import { agendaScenarios } from "../scenarios/agenda.js";
@@ -1058,6 +1058,15 @@ export const modules: Module[] = [
       "A tela que leva o nome do supervisor e não abre para ele — uma visão da coordenação.",
     flows: [
       {
+        id: "supervise-the-team",
+        title: "Supervisionar a equipe pelas três pontas da relação",
+        description:
+          "Uma tela: supervisor, aplicador e paciente como três entradas para a mesma relação, com a segunda assinatura revisada uma por uma. As variações — a carteira de quem supervisiona, a fila vazia — ficam no seletor de dados.",
+        steps: [
+          { scenario: "supervision.team", label: "Abrir a equipe e filtrar por qualquer coluna" },
+        ],
+      },
+      {
         id: "follow-the-supervised",
         title: "Acompanhar quem é supervisionado",
         description:
@@ -1210,6 +1219,7 @@ export const fixtures: Fixture[] = [
   ...reportFixtures,
   ...notificationFixtures,
   ...supervisionFixtures,
+  ...supervisionTeamFixtures,
   ...unitMapFixtures,
   ...clinicalHourFixtures,
   ...newAppointmentFixtures,
@@ -1284,6 +1294,7 @@ export const rules: Rule[] = [
   ...reportRules,
   ...notificationRules,
   ...supervisionRules,
+  ...supervisionTeamRules,
   ...unitMapRules,
   ...clinicalHourRules,
   ...clinicalHourPaginationRules,
