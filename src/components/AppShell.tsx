@@ -53,6 +53,15 @@ type NavItem = {
   scenario?: string;
   /** Rota do sistema real, para quem for conferir o espelho. */
   origem: string;
+  /**
+   * A área é **proposta**: não existe no menu do sistema real.
+   *
+   * O marcador existe porque `NAV` é declaradamente um espelho, e um item novo
+   * sem aviso o corromperia — quem for conferir procuraria a rota em
+   * `backoffice.html.heex` e não acharia, sem saber se é lacuna do porte ou
+   * invenção minha. Item com `proposta` tem `origem` dizendo que não há origem.
+   */
+  proposta?: boolean;
 };
 
 /**
@@ -92,6 +101,9 @@ const NAV: NavItem[] = [
   // `path` é a tela nova, por relação. `/supervision` continua existindo e serve
   // as cinco situações portadas — mesmo arranjo de Profissionais e Unidades.
   { label: "Supervisão", path: "/supervision/team", segmentos: ["supervision"], scenario: "supervision.team", icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
+  // Proposta, e por isso no fim do trilho: intercalada na ordem do sistema, ela
+  // faria o menu parecer o de lá. O ícone é o do desenho.
+  { label: "Gestão de Chamadas", path: "/calls", segmentos: ["calls"], scenario: "calls.queue", icon: "fa-tower-broadcast", proposta: true, origem: "não existe no sistema real" },
 ];
 
 /**
@@ -195,12 +207,45 @@ export function AppShell({
         Pular para o conteúdo
       </a>
 
+      {/* O fundo escuro do drawer sobreposto, e só abaixo de `lg`.
+
+          `drawer-overlay` do original: `data-[collapsed=true]:block` mais
+          `lg:hidden`. Acima de `lg` o drawer é uma coluna da página e não tem o
+          que escurecer; abaixo, ele cobre o conteúdo e precisa de um jeito de
+          fechar que não seja procurar o botão. */}
+      {surface === "backoffice" && expandido && (
+        /* `div` e não `button`, como no original: o fundo é atalho de ponteiro,
+           não um controle a mais. Como botão ele duplicava o nome acessível do
+           botão do cabeçalho — dois "Fechar a navegação" na mesma tela, um deles
+           uma área invisível de tela inteira na ordem de foco. Quem navega por
+           teclado fecha pelo mesmo botão que abriu. */
+        <div
+          aria-hidden="true"
+          onClick={() => setExpandido(false)}
+          className="fixed inset-0 z-40 bg-[var(--color-neutral-900)]/80 @desktop:hidden"
+        />
+      )}
+
       {surface === "backoffice" && (
         <nav
           className={[
-            "bloomy-drawer espelho-do-sistema sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[var(--color-brand-blue)]",
+            "bloomy-drawer espelho-do-sistema flex max-h-screen flex-col overflow-hidden bg-[var(--color-brand-blue)]",
             "transition-[width] duration-500",
-            expandido ? "w-64 p-4" : "w-[72px] p-2",
+            /* Abaixo de `lg` o drawer é `fixed` e **fecha em zero**: ele sai da
+               linha do conteúdo e volta por cima quando alguém o abre. A partir
+               de `lg` vira coluna `sticky`, e recolhido é a barra de 72px.
+
+               Estava `sticky` em toda largura, com a barra de 72px sempre
+               presente. Num telefone de 375px isso é um quinto da tela gasto
+               num trilho de um ícone — e as três larguras que sobravam para o
+               conteúdo eram 223px depois dos recuos do `main` e do cartão.
+
+               É o original: `fixed ... data-[collapsed=true]:w-0` e
+               `lg:sticky ... data-[collapsed=true]:lg:w-[72px]`. */
+            "fixed bottom-0 left-0 top-0 z-50",
+            expandido ? "w-64 p-4" : "w-0 p-0",
+            "@desktop:sticky @desktop:h-screen @desktop:shrink-0",
+            expandido ? "@desktop:w-64 @desktop:p-4" : "@desktop:w-[72px] @desktop:p-2",
           ].join(" ")}
           aria-label="Navegação principal"
         >
@@ -263,9 +308,25 @@ export function AppShell({
           um cabeçalho vazio.
         */}
         {surface === "backoffice" && (
-          <header className="sticky top-0 z-40 flex w-full items-center justify-end bg-surface px-4 py-4 shadow-[var(--shadow-main)] md:justify-between lg:px-8">
+          <header className="sticky top-0 z-40 flex items-stretch">
+            {/* O botão do drawer no telefone — `flex lg:hidden` no original, com
+                o símbolo sobre o azul da marca. Sem ele o drawer fechado em zero
+                não teria como abrir abaixo de `lg`: o botão da barra do
+                cabeçalho é `hidden lg:block`, porque acima de `lg` ele alterna
+                entre 72px e 256px, e aqui a alternância é entre nada e tudo. */}
+            <button
+              type="button"
+              onClick={() => setExpandido((antes) => !antes)}
+              aria-expanded={expandido}
+              aria-label={expandido ? "Fechar a navegação" : "Abrir a navegação"}
+              className="flex min-w-20 items-center justify-center bg-[var(--color-brand-blue)] @desktop:hidden"
+            >
+              <img src={simbolo} alt="" className="h-12 w-12" />
+            </button>
+
+            <div className="relative flex w-full items-center justify-end bg-surface px-4 py-4 shadow-[var(--shadow-main)] @tablet:justify-between @desktop:px-8">
             <div className="flex gap-4">
-              <div className="hidden lg:block">
+              <div className="hidden @desktop:block">
                 <button
                   type="button"
                   onClick={() => setExpandido((antes) => !antes)}
@@ -287,7 +348,7 @@ export function AppShell({
                * que eu tinha posto.
                */}
               {breadcrumb && breadcrumb.length > 0 && (
-                <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
+                <nav aria-label="Breadcrumb" className="hidden min-w-0 @tablet:block">
                   <ol className="m-0 flex list-none flex-wrap items-center gap-2 p-0">
                     {breadcrumb.map((crumb, index) => (
                       <li key={crumb.label} className="flex items-center gap-2">
@@ -330,9 +391,9 @@ export function AppShell({
              * motor, e um menu que abre para links mortos seria pior que nenhum.
              * A anatomia visual é a de lá.
              */}
-            <div className="flex shrink-0 items-center gap-x-4 md:gap-x-6">
+            <div className="flex shrink-0 items-center gap-x-4 @tablet:gap-x-6">
               <div className="flex items-center gap-2">
-                <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
+                <p className="espelho-do-sistema m-0 hidden text-end text-sm @tablet:block">
                   {/* Verde do sistema sobre branco: 2,81:1. Reprova AA, e é o
                       valor do produto — achado 99. */}
                   <span className="block text-base/4 font-black text-[var(--color-green)]">
@@ -346,7 +407,7 @@ export function AppShell({
               </div>
 
               <div className="flex items-center gap-2">
-                <p className="m-0 hidden text-end text-sm md:block">
+                <p className="m-0 hidden text-end text-sm @tablet:block">
                   <span className="block text-base/4 font-black text-[var(--color-purple)]">
                     Perfil
                   </span>
@@ -361,7 +422,7 @@ export function AppShell({
                   avatar quadrado. O par do nome dá 3,40:1 e já está registrado
                   como divergência do produto. */}
               <div className="flex items-center gap-2">
-                <p className="espelho-do-sistema m-0 hidden text-end text-sm md:block">
+                <p className="espelho-do-sistema m-0 hidden text-end text-sm @tablet:block">
                   <span className="block text-base/4 font-black text-[var(--color-brand-blue-dark)]">
                     Marcos Vinícius Gimenes
                   </span>
@@ -397,13 +458,14 @@ export function AppShell({
                 </span>
               </a>
             </div>
+            </div>
           </header>
         )}
 
         {/* O título vive **dentro** do conteúdo, como no sistema. Antes ele
             ficava no cabeçalho, fora do `<main>`: quem usava o atalho de pular
             aterrissava depois dele, sem nada para se orientar. */}
-        <main id="conteudo" className="min-w-0 flex-1 px-4 py-6 lg:px-8">
+        <main id="conteudo" className="min-w-0 flex-1 px-4 py-6 @desktop:px-8">
           {showPageHeading ? (
             <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
               <div>

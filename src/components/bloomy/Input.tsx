@@ -1,5 +1,6 @@
 import {
   cloneElement,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -170,12 +171,28 @@ export function Input({
   );
 }
 
-/** `input/1` com `type="textarea"`: fundo mais claro e borda transparente. */
+/**
+ * `input/1` com `type="textarea"`: fundo mais claro e borda transparente.
+ *
+ * **O campo cresce com o conteúdo, em vez de rolar por dentro.** É extensão
+ * sobre o original, que só passa `rows` e deixa o navegador rolar — decisão
+ * 0017.
+ *
+ * O que a rolagem custava: o campo do texto do anúncio tem 120px e a frase
+ * padrão dá quatro linhas num telefone. Ficavam duas visíveis e duas atrás de
+ * uma barra de rolagem de 245px de largura, dentro de uma página que também
+ * rola. Quem edita o anúncio precisa ler a frase inteira antes de mexer, e
+ * ninguém confere o que não vê.
+ *
+ * `rows` continua valendo como altura inicial, e `min-h-24` como piso: o campo
+ * cresce, não encolhe abaixo do tamanho em que foi desenhado.
+ */
 export function Textarea({
   id,
   label,
   errors = [],
   className,
+  onInput,
   ...rest
 }: {
   id?: string;
@@ -184,18 +201,75 @@ export function Textarea({
   className?: string;
 } & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "id">) {
   const temErro = errors.length > 0;
+  const campo = useRef<HTMLTextAreaElement>(null);
+
+  /* Duas armadilhas, e as duas dão erro silencioso.
+     
+     `height: auto` antes de ler `scrollHeight`: com uma altura fixa aplicada,
+     `scrollHeight` devolve o maior entre o conteúdo e a caixa, e o campo que
+     cresceu uma vez nunca mais encolheria ao apagar texto.
+
+     E a borda entra na conta. `scrollHeight` é conteúdo mais recuo e **não**
+     inclui borda; `height` aqui é `border-box`, porque é o padrão do Tailwind.
+     Atribuir um ao outro deixa a caixa 2px curta — a borda de 1px de cada lado
+     —, e com `overflow-hidden` esses 2px comem o rabo da última linha. Medido:
+     texto de 224px de altura na caixa de 224, com 222 de área útil. */
+  const ajustarAltura = useCallback(() => {
+    const elemento = campo.current;
+    if (!elemento) return;
+    elemento.style.height = "auto";
+    const borda = elemento.offsetHeight - elemento.clientHeight;
+    elemento.style.height = `${elemento.scrollHeight + borda}px`;
+  }, []);
+
+  /* Vale para o campo controlado, onde o texto muda sem ninguém digitar — é o
+     caso desta área: escolher outro modelo de anúncio troca o texto inteiro. */
+  useLayoutEffect(() => {
+    ajustarAltura();
+  }, [ajustarAltura, rest.value]);
+
+  /* E vale quando a **largura** muda, porque a quebra de linha muda com ela:
+     o mesmo texto que dá duas linhas no palco largo dá quatro no de 375px. Só
+     largura, e é por isso que a medida anterior fica guardada — a altura quem
+     mexe é este efeito, e reagir a ela seria um laço. */
+  useLayoutEffect(() => {
+    const elemento = campo.current;
+    if (!elemento) return;
+
+    let largura = elemento.clientWidth;
+    const observador = new ResizeObserver(() => {
+      if (elemento.clientWidth === largura) return;
+      largura = elemento.clientWidth;
+      ajustarAltura();
+    });
+    observador.observe(elemento);
+    return () => observador.disconnect();
+  }, [ajustarAltura]);
 
   return (
     <div className={["relative", rest.disabled && "opacity-50", className].filter(Boolean).join(" ")}>
       {label && <Label htmlFor={id}>{label}</Label>}
       <textarea
         id={id}
+        ref={campo}
+        /* `onInput` e não `onChange`: o React dispara `onChange` a cada tecla
+           igual, mas quem usa este componente passa o `onChange` dele, e
+           empilhar o nosso por cima exigiria encadear. `onInput` é o evento
+           nativo e chega antes; o de quem chamou continua sendo chamado. */
+        onInput={(event) => {
+          ajustarAltura();
+          onInput?.(event);
+        }}
         className={[
           "bg-[var(--color-brand-purple-dark)]/5",
           "border focus:ring-0",
           "block w-full min-h-24 font-normal text-[var(--color-brand-purple-dark)]/80 placeholder:text-[var(--color-brand-purple-dark)]/60",
           "outline-hidden transition-colors duration-200",
           "rounded-lg p-4",
+          /* `overflow-hidden` tira a barra que não tem mais o que rolar, e
+             `resize-none` tira a alça: a altura é calculada, e o que fosse
+             arrastado à mão voltaria atrás na tecla seguinte. */
+          "resize-none overflow-hidden",
           label && "mt-2",
           temErro
             ? "border-[var(--color-brand-red)]"

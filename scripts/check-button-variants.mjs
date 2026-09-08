@@ -41,6 +41,12 @@ const EXCECOES = [
     porque:
       "fecha o formulário de documento da unidade sem salvar; não cancela documento nem compartilhamento",
   },
+  {
+    trecho: "Cancelar",
+    arquivo: "src/screens/Calls.tsx",
+    porque:
+      "fecha o painel de nova chamada sem anunciar. Vale a ressalva: `cancelled` é uma situação real de chamada, e o dia em que a tela ganhar a ação de cancelar uma chamada em curso, essa ação é destrutiva e precisa da variante de perigo — esta exceção cobre só o botão do rodapé do painel",
+  },
 ];
 
 const arquivos = readdirSync("src/screens")

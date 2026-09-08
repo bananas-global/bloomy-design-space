@@ -847,7 +847,10 @@ function CabecalhoDoPerfil({
           </div>
         </div>
         <Button className="espelho-do-sistema" variant="ghost" aria-label="Mais ações">
-          <Icon name="fa-ellipsis-vertical" />
+          {/* `self-center`: `button/1` alinha por `items-baseline` no tamanho
+              `normal`, e sem texto o ícone não tem linha de base a seguir. É a
+              convenção do próprio monólito para botão sem texto. */}
+          <Icon name="fa-ellipsis-vertical" className="block self-center" />
         </Button>
       </div>
 
