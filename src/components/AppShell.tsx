@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import type { ScenarioContext } from "@brucesantos/design-space";
 import logotipo from "../assets/bloomy-negative.svg";
 import simbolo from "../assets/bloomy-symbol-negative.svg";
@@ -53,6 +53,15 @@ type NavItem = {
   scenario?: string;
   /** Rota do sistema real, para quem for conferir o espelho. */
   origem: string;
+  /**
+   * A área é **proposta**: não existe no menu do sistema real.
+   *
+   * O marcador existe porque `NAV` é declaradamente um espelho, e um item novo
+   * sem aviso o corromperia — quem for conferir procuraria a rota em
+   * `backoffice.html.heex` e não acharia, sem saber se é lacuna do porte ou
+   * invenção minha. Item com `proposta` tem `origem` dizendo que não há origem.
+   */
+  proposta?: boolean;
 };
 
 /**
@@ -92,6 +101,9 @@ const NAV: NavItem[] = [
   // `path` é a tela nova, por relação. `/supervision` continua existindo e serve
   // as cinco situações portadas — mesmo arranjo de Profissionais e Unidades.
   { label: "Supervisão", path: "/supervision/team", segmentos: ["supervision"], scenario: "supervision.team", icon: "fa-regular fa-people-group", permission: "professionals.list_supervisor", origem: "/backoffice/supervisao" },
+  // Proposta, e por isso no fim do trilho: intercalada na ordem do sistema,
+  // ela faria o menu parecer o de lá. O ícone é o do desenho.
+  { label: "Central de PUSH", path: "/push", segmentos: ["push"], scenario: "push.broadcast", icon: "fa-comment-dots", proposta: true, origem: "não existe no sistema real" },
 ];
 
 /**
@@ -167,6 +179,9 @@ export function AppShell({
    * é um só e tem nome afirmativo — `expandido` —, para não herdar a inversão.
    */
   const [expandido, setExpandido] = useState(false);
+  const [menuMobile, setMenuMobile] = useState(false);
+  const menuId = useId();
+  const logoMobile = useRef<HTMLButtonElement>(null);
   /**
    * O item da aba aberta não passa pelo filtro de permissão.
    *
@@ -183,7 +198,13 @@ export function AppShell({
   );
 
   return (
-    <div className="relative flex min-h-full min-w-0 bg-app">
+    <div className="relative flex min-h-full min-w-0 bg-app"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && menuMobile) {
+          setMenuMobile(false);
+          logoMobile.current?.focus();
+        }
+      }}>
       {/* Primeiro elemento focável da página. Sem ele, cada tela do backoffice
           obriga a atravessar o drawer inteiro por Tab antes de chegar ao
           conteúdo. Nos portais o drawer não existe, e o link continua útil por
@@ -197,6 +218,8 @@ export function AppShell({
 
       {surface === "backoffice" && (
         <nav
+          id={menuId}
+          data-mobile-open={menuMobile}
           className={[
             "bloomy-drawer espelho-do-sistema sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden bg-[var(--color-brand-blue)]",
             "transition-[width] duration-500",
@@ -229,6 +252,7 @@ export function AppShell({
                     aria-current="page"
                     onClick={(event) => {
                       event.preventDefault();
+                      setMenuMobile(false);
                       context.navigate(destino);
                     }}
                     // Recolhido, o rótulo sai da tela mas continua acessível: o
@@ -253,6 +277,7 @@ export function AppShell({
         </nav>
       )}
 
+      {menuMobile && <button type="button" className="bloomy-mobile-backdrop hidden" aria-label="Fechar menu lateral" onClick={() => { setMenuMobile(false); logoMobile.current?.focus(); }} />}
       <div className="flex min-w-0 flex-1 flex-col">
         {/*
           Cabeçalho — espelho de `backoffice.html.heex:141-324`.
@@ -264,6 +289,17 @@ export function AppShell({
         */}
         {surface === "backoffice" && (
           <header className="sticky top-0 z-40 flex w-full items-center justify-end bg-surface px-4 py-4 shadow-[var(--shadow-main)] md:justify-between lg:px-8">
+            <button ref={logoMobile} type="button"
+              className="bloomy-mobile-logo hidden h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand-blue)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]"
+              aria-label={menuMobile ? "Fechar menu Bloomy" : "Abrir menu Bloomy"}
+              aria-expanded={menuMobile} aria-controls={menuId}
+              onClick={() => {
+                setMenuMobile((antes) => !antes);
+                setExpandido(true);
+                if (!menuMobile) requestAnimationFrame(() => document.getElementById(menuId)?.querySelector<HTMLAnchorElement>("a")?.focus());
+              }}>
+              <img src={simbolo} alt="Bloomy" className="h-8 w-8" />
+            </button>
             <div className="flex gap-4">
               <div className="hidden lg:block">
                 <button

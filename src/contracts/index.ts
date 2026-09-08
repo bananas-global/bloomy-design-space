@@ -3320,3 +3320,237 @@ export interface InsurerListData {
   now: string;
   insurers: InsurerListing[];
 }
+
+/* ============================================================ Central de PUSH */
+
+/**
+ * Central de PUSH — o domínio.
+ *
+ * A área é **proposta**. O monólito manda notificação para dentro do backoffice
+ * (`notifications`, quatro remetentes, todos internos) e não tem nada que fale
+ * com o aplicativo da família: sem schema de comunicado, sem token de push, sem
+ * pesquisa, sem worker de disparo. O porte de 2026-08 não achou porque não há.
+ *
+ * O que existe hoje é WhatsApp da recepção. É por isso que a área nasce com
+ * **entrega, visualização e ciência** como três coisas separadas: no WhatsApp
+ * elas são o mesmo tique cinza-azul, e a clínica não sabe dizer quem leu o aviso
+ * de feriado — descobre no dia seguinte, com a família na porta.
+ *
+ * **Mão única, e isso é do desenho.** A família lê e, quando pedido, confirma a
+ * ciência. Não responde. Uma caixa de entrada de duas pontas seria outro
+ * produto, com fila de atendimento, prazo de resposta e quem responde fora do
+ * horário — e é o chat multidisciplinar, que já existe e é interno.
+ */
+
+/** As cinco famílias de comunicado. A etiqueta e o ícone saem daqui. */
+export type PushKind = "operational" | "reminder" | "document" | "campaign" | "individual";
+
+/**
+ * O estado do comunicado.
+ *
+ * Sem `sending`: o desenho tem, e é um estado de milissegundos que nenhuma
+ * fixture determinística consegue mostrar sem mentir sobre quanto ele dura.
+ * Cancelado é o agendamento que alguém desistiu de disparar — o enviado não
+ * volta atrás, porque a notificação já está no aparelho.
+ */
+export type PushStatus = "scheduled" | "sent" | "cancelled";
+
+/**
+ * Um responsável no público da Central.
+ *
+ * `appInstalled` e `pushEnabled` são dois impedimentos diferentes e é por isso
+ * que são dois campos: sem app não há para onde mandar, e com push desligado o
+ * aviso só aparece quando a pessoa abre o aplicativo por conta própria. O
+ * primeiro é caso de recepção ligar; o segundo é caso de contar como entregue e
+ * não esperar leitura no mesmo dia.
+ */
+export interface PushGuardian {
+  id: string;
+  /** O responsável legal — é ele quem recebe. */
+  name: string;
+  /** A criança, porque é por ela que a equipe procura na lista. */
+  patient: string;
+  unit: string;
+  shift: "Manhã" | "Tarde";
+  insurer: string;
+  /** Terapeuta de referência, que é um dos recortes de público. */
+  professional: string;
+  appInstalled: boolean;
+  pushEnabled: boolean;
+}
+
+export type PushDeliveryStatus = "delivered" | "failed" | "pending";
+
+/**
+ * O que aconteceu com um responsável em um comunicado.
+ *
+ * As horas são `HH:MM` da clínica, no dia do disparo. Sem data completa e sem
+ * fuso: a leitura acontece no mesmo dia em que o aviso sai, e o que a tela
+ * responde é "já viu?", não "quando exatamente".
+ */
+export interface PushDelivery {
+  guardianId: string;
+  status: PushDeliveryStatus;
+  /** Por que falhou, na palavra que a recepção vai repetir no telefone. */
+  reason?: string;
+  viewedAt?: string;
+  ackAt?: string;
+  resentAt?: string;
+}
+
+/** O recorte de público, na forma em que a pessoa o montou. */
+export interface PushFilter {
+  units: string[];
+  shifts: string[];
+  insurers: string[];
+  professionals: string[];
+}
+
+/**
+ * O público do comunicado.
+ *
+ * **Guarda a definição, não a lista.** Um comunicado agendado para amanhã cujo
+ * público fosse uma lista de ids congelada deixaria de fora quem entrar na
+ * unidade hoje à tarde — e o aviso de que a unidade não abre é exatamente o que
+ * essa família precisa receber. Ver `the-audience-is-recalculated-at-send-time`.
+ *
+ * `manual` é a exceção declarada: ali a lista **é** a definição, porque alguém
+ * escolheu nome por nome.
+ */
+export interface PushAudience {
+  mode: "filter" | "segment" | "manual";
+  segmentId?: string;
+  ids?: string[];
+  filter: PushFilter;
+}
+
+/** As variáveis que o texto aceita. */
+export type PushVariable =
+  | "responsavel"
+  | "paciente"
+  | "unidade"
+  | "profissional"
+  | "data"
+  | "hora"
+  | "documento";
+
+/** O valor digitado para as variáveis que o cadastro não sabe responder. */
+export type PushValues = Partial<Record<PushVariable, string>>;
+
+export interface PushMessage {
+  id: string;
+  kind: PushKind;
+  templateId?: string;
+  title: string;
+  body: string;
+  values: PushValues;
+  /** Pede o botão "Estou ciente" no aplicativo. */
+  ack: boolean;
+  /** Manda a notificação. Sem isso o aviso espera a pessoa abrir o app. */
+  push: boolean;
+  audience: PushAudience;
+  by: string;
+  /** `DD/MM/AAAA HH:MM`. Em `scheduled`, é quando vai disparar. */
+  at: string;
+  status: PushStatus;
+  deliveries: PushDelivery[];
+  resends?: number;
+  lastResendAt?: string;
+}
+
+/** Texto pronto com variáveis. A equipe escolhe e ajusta só o que falta. */
+export interface PushTemplate {
+  id: string;
+  kind: PushKind;
+  label: string;
+  title: string;
+  body: string;
+  ack: boolean;
+}
+
+/** Recorte de público salvo, reutilizável no comunicado e na pesquisa. */
+export interface PushSegment {
+  id: string;
+  name: string;
+  description: string;
+  filter: PushFilter;
+}
+
+/* --------------------------------------------------------------------- NPS */
+
+export type SurveyBand = "promoter" | "passive" | "detractor";
+
+export type SurveyExtraType = "scale5" | "yesno" | "choice" | "text";
+
+export interface SurveyExtraQuestion {
+  id: string;
+  type: SurveyExtraType;
+  text: string;
+  options?: string[];
+}
+
+/**
+ * A tratativa do detrator.
+ *
+ * Existe porque nota baixa sem dono é pesquisa que vira slide. As três palavras
+ * são o mínimo para responder "alguém falou com essa família?" — e `resolved`
+ * é a única que tira a resposta da fila. Ver
+ * `a-detractor-leaves-the-queue-only-by-a-recorded-treatment`.
+ */
+export type SurveyTreatment = "pending" | "contact" | "resolved";
+
+export interface SurveyResponse {
+  id: string;
+  guardianId: string;
+  /** 0 a 10. A faixa é derivada, nunca gravada — ver `npsBand`. */
+  score: number;
+  comment?: string;
+  /** Resposta das perguntas extras, por id da pergunta. */
+  extras?: Record<string, string | number>;
+  /** `DD/MM/AAAA HH:MM`. */
+  at: string;
+  /** Só existe em detrator: é a fila de tratativa. */
+  treatment?: SurveyTreatment;
+  treatmentNote?: string;
+  treatmentBy?: string;
+}
+
+export interface NpsSurvey {
+  id: string;
+  name: string;
+  question: string;
+  commentLabel: string;
+  commentRequired: boolean;
+  extras: SurveyExtraQuestion[];
+  audience: PushAudience;
+  /** Quem recebeu, congelado no disparo — a pesquisa já saiu. */
+  recipients: string[];
+  responses: SurveyResponse[];
+  status: PushStatus;
+  at: string;
+  by: string;
+}
+
+/**
+ * O que a Central de PUSH recebe.
+ *
+ * `now` e `today` são o relógio **declarado**, como na gestão de chamadas: o
+ * carimbo de um envio feito na tela sai daqui, e não de `new Date()`. Sem isso
+ * o mesmo clique produziria um texto diferente a cada execução da suíte, e o
+ * critério de aceite viraria "algo com dois pontos no meio".
+ */
+export interface PushData {
+  /** `HH:MM` da clínica. */
+  now: string;
+  /** `DD/MM/AAAA`. */
+  today: string;
+  /** A unidade do cabeçalho, para o texto que a nomeia não contradizer o shell. */
+  unit: string;
+  /** Quem está com a tela aberta. Vira o autor do que for disparado aqui. */
+  author: string;
+  guardians: PushGuardian[];
+  messages: PushMessage[];
+  templates: PushTemplate[];
+  segments: PushSegment[];
+  surveys: NpsSurvey[];
+}
