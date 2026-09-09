@@ -147,6 +147,33 @@
   --color-ink-200: #d2cde1;
   --color-ink-300: #c3bdd7;
 
+  /* A mesma escala com o nome que o produto usa — e ela **precisa** existir.
+   *
+   * Os espelhos de `src/components/bloomy/` copiam as classes do monólito
+   * literalmente, e lá elas são `bg-neutral-50`, `text-neutral-600`,
+   * `border-neutral-100`. Sem estas linhas, `--color-neutral-*` caía na escala
+   * padrão do Tailwind, que é cinza de croma zero: `oklch(98.5% 0 none)` no
+   * lugar de `#f0eef5`, `oklch(20.5% 0 none)` no lugar do navy `#2B235B`.
+   *
+   * O sintoma era silencioso e espalhado — nada quebra, tudo fica levemente
+   * lavado. O que o denunciou foi a chave desligada: fundo `neutral-50` e
+   * contorno `neutral-100` saíam em #fafafa sobre #f5f5f5, quase invisíveis
+   * sobre branco, quando o produto os tem tingidos de roxo.
+   *
+   * Duplica `ink-*` e `navy-*` de propósito: aqueles são o vocabulário das telas
+   * antigas desta pasta, estes são o do monólito. Os valores são os mesmos, de
+   * `assets/css/app.css:22-32`. */
+  --color-neutral-50: #f0eef5;
+  --color-neutral-100: #e1deeb;
+  --color-neutral-200: #d2cde1;
+  --color-neutral-300: #c3bdd7;
+  --color-neutral-400: #9d92b8;
+  --color-neutral-500: #776b99;
+  --color-neutral-600: #5d507a;
+  --color-neutral-700: #44365c;
+  --color-neutral-800: #352b47;
+  --color-neutral-900: #2b235b;
+
   /* ------------------------------------------------------- superfícies */
   --color-app: #f0f6f8;
   --color-surface: #ffffff;
@@ -166,6 +193,28 @@
   --color-info-bg: #dbf3fb;
   --color-neutral-fg: #463589;
   --color-neutral-bg: #eae6fb;
+
+  /* --------------------------------------------- pontos de quebra
+     Consultas de **container**, e não de viewport.
+
+     O Design Space renderiza a tela dentro de `.ds-stage`, que o motor já
+     declara como `container-type: inline-size`. Quando alguém escolhe "celular"
+     no controle de viewport, quem encolhe é o palco — a janela do navegador
+     continua larga. Então `md:` e `lg:`, que são consultas de mídia, **não
+     disparam no preview**: a revisão via um menu lateral de 72px, cartões em
+     duas colunas e abas largas dentro de um palco de 375px.
+
+     Estes quatro nomes têm os mesmos valores dos pontos de quebra do Tailwind,
+     e é de propósito: `@tablet` é `md`, `@desktop` é `lg`, `@wide` é `xl`. Numa
+     janela de verdade o palco tem a largura da janela, e os dois jeitos dão o
+     mesmo resultado. No preview, só o container acerta.
+
+     Os espelhos de `bloomy/` continuam com `md:`/`lg:` onde o monólito os tem —
+     são seis ocorrências, todas cosméticas, e trocá-las quebraria a cópia. */
+  --container-phone: 36rem; /* 576px */
+  --container-tablet: 48rem; /* 768px — `md` */
+  --container-desktop: 64rem; /* 1024px — `lg` */
+  --container-wide: 80rem; /* 1280px — `xl` */
 
   /* ------------------------------------------------------------ raios */
   --radius-field: 8px;

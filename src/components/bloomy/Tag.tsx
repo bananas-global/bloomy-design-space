@@ -125,6 +125,7 @@ export function Tag({
   variant = "light-blue",
   icon,
   title,
+  pill = false,
   className,
 }: {
   item: string;
@@ -153,19 +154,31 @@ export function Tag({
    */
   icon?: string;
   title?: string;
+  /** `rounded-full px-3 font-bold` no lugar de `rounded px-1.5 font-semibold`. */
+  pill?: boolean;
   className?: string;
 }) {
   return (
     <span
       title={title}
-      className={["rounded px-1.5 py-0.5 text-sm font-semibold", VARIANTE[variant], className]
+      className={[
+        /* `inline-flex items-center gap-1` é do original, e faltava aqui.
+
+           Sem eles a etiqueta era um `span` de fluxo: ela virava bloco dentro de
+           um contêiner de coluna, e o ícone assentava na **linha de base** do
+           texto em vez de no centro dele — que é o desalinhamento que se via em
+           toda etiqueta com relógio da fila. O espaço em branco entre ícone e
+           texto, que existia aqui para imitar a quebra de linha do HEEx, era
+           contorno do mesmo buraco: quem separa os dois é o `gap-1`. */
+        "inline-flex items-center gap-1 py-0.5 text-sm",
+        pill ? "rounded-full px-3 font-bold" : "rounded px-1.5 font-semibold",
+        VARIANTE[variant],
+        className,
+      ]
         .filter(Boolean)
         .join(" ")}
     >
-      {/* O espaço separa o ícone do texto. No HEEX ele vem da quebra de linha
-          entre as duas tags, que o HTML colapsa em espaço; em JSX a quebra
-          desaparece, e sem isto a etiqueta sai colada — "⚠13". */}
-      {icon && <><Icon name={icon} /> </>}
+      {icon && <Icon name={icon} />}
       {item}
     </span>
   );

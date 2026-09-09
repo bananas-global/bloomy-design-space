@@ -587,7 +587,7 @@ test.describe("Central de PUSH", () => {
         await page.locator(".push-space").evaluate((el) => { (el as HTMLElement).style.width = "390px"; });
       }
       await expect(page.getByRole("navigation", { name: "Navegação principal" })).not.toBeVisible();
-      const logo = page.getByRole("button", { name: "Abrir menu Bloomy" });
+      const logo = page.getByRole("button", { name: "Abrir a navegação" });
       await logo.click();
       await expect(page.getByRole("navigation", { name: "Navegação principal" })).toBeVisible();
       await page.keyboard.press("Escape");

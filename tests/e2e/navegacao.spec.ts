@@ -25,9 +25,19 @@ test("a navegação abre todas as situações ativas sem apagar a tela", async (
   }
 });
 
+/**
+ * O trilho de 72px é comportamento de **desktop**, e por isso este caso abre a
+ * tela com o chrome do Design Space escondido.
+ *
+ * Desde que a tela passou a usar consultas de container, quem decide o layout é
+ * a largura de `.ds-stage`, e não a da janela. Com a barra lateral e o painel
+ * abertos, o palco fica em torno de 620px numa janela de 1280 — e nessa largura
+ * o drawer sai da linha de propósito, como faria num tablet. Ver
+ * `responsivo.spec.ts`.
+ */
 test("a navegação começa recolhida e o botão do cabeçalho a expande", async ({ page }) => {
   expect(scenarios.length, "o catálogo precisa ter ao menos um cenário ativo").toBeGreaterThan(0);
-  await page.goto(pathFor(scenarios[0]!));
+  await page.goto(`${pathFor(scenarios[0]!)}&chrome=0&panel=0`);
 
   const drawer = page.locator(".bloomy-drawer");
   const botao = page.getByRole("button", { name: /a navegação/ });

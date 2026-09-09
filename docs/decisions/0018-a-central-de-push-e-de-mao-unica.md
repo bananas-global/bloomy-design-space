@@ -201,3 +201,14 @@ também permitem fechar o menu.
 O catálogo passa a mostrar apenas Central de PUSH (`push.broadcast`). O cenário
 separado de detratores foi incorporado a essa entrada, com regras, anúncios,
 pré-condições, critérios e jornadas preservados. NPS continua como aba interna.
+
+
+### Integração com Gestão de Chamadas — 09/09/2026
+
+A Central de PUSH usa o drawer responsivo compartilhado que entrou com Gestão
+de Chamadas: o logo abre a navegação sobre o conteúdo abaixo do breakpoint
+`desktop` do container. Sai a sobrescrita local do cabeçalho e do drawer em
+`Push.css`; permanecem os ajustes do conteúdo de PUSH abaixo de 768 px.
+O estado de abertura é único. Escape fecha e devolve o foco ao logo, abrir
+leva o foco ao destino e navegar fecha o drawer. As abas preservam o tratamento
+responsivo compartilhado e o contraste a 72% introduzido nesta proposta.

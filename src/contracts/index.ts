@@ -3321,6 +3321,192 @@ export interface InsurerListData {
   insurers: InsurerListing[];
 }
 
+/* ==================================================== gestão de chamadas */
+
+/**
+ * Gestão de chamadas — os anúncios por voz da unidade.
+ *
+ * **Proposta.** Não há uma linha de Elixir por trás disto: o monólito não tem
+ * integração com dispositivo de voz nenhum, e hoje a recepção grita pelo
+ * corredor ou vai buscar a pessoa a pé. O desenho vem de
+ * "Bloomy — Gestão de Chamadas V2" do projeto de design.
+ *
+ * A clínica tem caixas Alexa espalhadas pelas salas, e a recepção as usa para
+ * duas chamadas que hoje custam uma caminhada cada:
+ *
+ * - **o profissional**, quando a criança faz check-in e está esperando;
+ * - **o responsável**, quando o atendimento termina.
+ *
+ * O que faz a área valer a pena não é o alto-falante, é o **par evento →
+ * chamada**: o check-in e o encerramento já existem na agenda, então a chamada
+ * pode sair sozinha. Daí as duas origens que convivem em tudo aqui — automática,
+ * disparada pelo evento, e manual, escrita por quem está na recepção.
+ */
+
+/** Para quem a caixa toca. Decide onde cada tipo de chamada pode ser anunciado. */
+export type CallAudience = "prof" | "family";
+
+/**
+ * Um dispositivo de voz de uma sala.
+ *
+ * `audience` não é decoração: a caixa da sala de espera das famílias não pode
+ * anunciar o nome de uma criança para a equipe, e a da copa não serve para
+ * chamar um responsável que está do outro lado da parede.
+ */
+export interface CallDevice {
+  id: string;
+  /** O rótulo do aparelho, como a recepção o conhece. */
+  name: string;
+  room: string;
+  audience: CallAudience;
+  unit: string;
+  online: boolean;
+  /** De 1 a 10, como o app da Alexa mostra. */
+  volume: number;
+}
+
+/**
+ * O que aconteceu com a chamada depois de anunciada.
+ *
+ * `played` e `acked` são coisas diferentes de propósito: anunciada é o que o
+ * sistema sabe, atendida é o que alguém confirmou. Achatar as duas apagaria a
+ * única pergunta que a recepção faz de verdade — "a pessoa veio?".
+ */
+export type CallStatus =
+  | "playing"
+  | "played"
+  | "acked"
+  | "no_answer"
+  | "failed"
+  | "cancelled";
+
+/** Quem a chamada procura. `general` não procura ninguém: é aviso de sala. */
+export type CallKind = "professional" | "guardian" | "general";
+
+/**
+ * Um modelo de texto, com os campos entre chaves que a agenda preenche.
+ *
+ * Os campos são `{profissional}`, `{paciente}`, `{responsavel}`, `{sala}` e
+ * `{hora}`. Quem escolhe o modelo não digita nenhum deles — vêm do próximo
+ * atendimento e do cadastro.
+ */
+export interface CallTemplate {
+  id: string;
+  kind: CallKind;
+  label: string;
+  text: string;
+}
+
+/**
+ * Uma regra de automação.
+ *
+ * `delay` e `repeat` existem porque o profissional que não aparece é o caso
+ * comum, e a resposta certa não é chamar mais alto: é chamar de novo, depois de
+ * um tempo, um número declarado de vezes.
+ */
+export interface CallAutomationRule {
+  id: string;
+  label: string;
+  desc: string;
+  kind: CallKind;
+  templateId: string;
+  /**
+   * O texto que a regra fala, quando alguém o reescreveu.
+   *
+   * Ausente, vale o texto do modelo em `templateId` — que é o caso normal, e é
+   * o que troca junto quando alguém troca o modelo. Presente, ele ganha: a
+   * automação passa a falar a frase da clínica, e não a do catálogo.
+   *
+   * Existe porque o campo do anúncio é editável na configuração da regra. Sem
+   * ele, o que fosse digitado ali não teria onde ficar.
+   */
+  text?: string;
+  on: boolean;
+  /** Minutos de espera antes de anunciar. Zero é imediato. */
+  delay: number;
+  /** Quantas vezes repetir sem resposta. Um é não repetir. */
+  repeat: number;
+}
+
+/** O evento da agenda que pede uma chamada. */
+export interface CallEvent {
+  id: string;
+  type: "checkin" | "session_end";
+  /** Hora do evento, `HH:MM` na hora da clínica. */
+  at: string;
+  patient: string;
+  guardian: string;
+  professional: string;
+  room: string;
+  /** Início previsto do atendimento. Só o check-in tem. */
+  start?: string;
+  /** Já anunciado ou resolvido — sai da fila. */
+  done: boolean;
+  /**
+   * Os dois campos do chamado **criado à mão**, e ausentes no que vem da agenda.
+   *
+   * A fila da agenda é derivada: o motivo sai da regra de automação do tipo de
+   * evento e a frase sai do modelo dessa regra. Um chamado que a recepção cria
+   * no painel não tem regra por trás — quem escolheu o motivo e quem escreveu a
+   * frase foi uma pessoa, e as duas escolhas precisam sobreviver até a hora de
+   * chamar. Sem isto, o cartão criado apareceria na fila com o texto padrão do
+   * tipo, descartando em silêncio o que foi digitado.
+   *
+   * Ver `pendingCalls` em `src/rules/calls.ts`, que prefere estes quando existem.
+   */
+  templateId?: string;
+  text?: string;
+}
+
+/** Uma linha do histórico. */
+export interface CallLogEntry {
+  id: string;
+  /** `HH:MM` na hora da clínica. */
+  at: string;
+  kind: CallKind;
+  /** Disparada pela regra, e não por uma pessoa. */
+  auto: boolean;
+  /** O evento que a originou, quando houve um. */
+  eventId?: string;
+  status: CallStatus;
+  patient?: string;
+  guardian?: string;
+  /** Quem a chamada procura, já resolvido em nome. */
+  target: string;
+  deviceIds: string[];
+  text: string;
+  /** Quem anunciou: o nome de uma pessoa, ou "Automático". */
+  by: string;
+  /** Hora da confirmação, quando `status` é `acked`. */
+  ackAt?: string;
+  /** O motivo da falha, quando `status` é `failed`. */
+  error?: string;
+}
+
+export interface CallsData {
+  /**
+   * A referência de agora, `HH:MM`. Declarada, como todo `now` daqui.
+   *
+   * O desenho usa relógio de parede e recalcula a espera a cada segundo. Aqui
+   * não pode: `pnpm test` roda a qualquer hora, e uma fila que muda de cor
+   * conforme o horário da máquina não tem critério de aceite. A espera sai
+   * desta hora, e o cenário declara qual ela é.
+   */
+  now: string;
+  /** A unidade aberta. Dispositivo é por unidade, e a fila também. */
+  unit: string;
+  /** A chave-geral da automação. Desligada, nenhuma regra dispara. */
+  autoMode: boolean;
+  rules: CallAutomationRule[];
+  devices: CallDevice[];
+  events: CallEvent[];
+  log: CallLogEntry[];
+  /** Crianças ativas, para o seletor da chamada manual. */
+  patients: { id: string; name: string; guardian: string }[];
+  /** Profissionais, para quando a criança não tem próximo atendimento. */
+  professionals: { id: string; name: string }[];
+}
+
 /* ============================================================ Central de PUSH */
 
 /**

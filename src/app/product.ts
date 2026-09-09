@@ -61,6 +61,7 @@ import { LeadIntegrations } from "../screens/LeadIntegrations.js";
 import { LeadDashboard } from "../screens/LeadDashboard.js";
 import { LeadTasks } from "../screens/LeadTasks.js";
 import { Push } from "../screens/Push.js";
+import { Calls } from "../screens/Calls.js";
 import { Reports } from "../screens/Reports.js";
 import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
 import { Professionals } from "../screens/Professionals.js";
@@ -163,6 +164,9 @@ export const productDefinition: ProductDefinition = {
     // Central de PUSH — proposta. Uma rota só: as três abas são estado da
     // tela, como no desenho, e o composer é uma gaveta por cima.
     { path: "/push", screen: guard(Push) },
+    // Gestão de chamadas — proposta. Uma rota só: as quatro abas são estado
+    // da tela, como no desenho.
+    { path: "/calls", screen: guard(Calls) },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build

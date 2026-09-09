@@ -22,6 +22,13 @@ import { Icon } from "../Icon.js";
  * E `color="yellow"` no `outline` e no `tint` usa o amarelo como **texto**:
  * `#ffc402` sobre branco dá 1,68:1. Está registrado no achado 101.
  *
+ * **Botão só com ícone pede `self-center` no ícone.** O tamanho `normal` alinha
+ * por `items-baseline`, e um ícone sem texto ao lado não tem linha de base a
+ * seguir: ele sobe alguns pixels acima do centro. Não é defeito do espelho — o
+ * monólito faz o mesmo, e resolve no ponto de uso, com
+ * `<.icon class="self-center" />`. Está assim em `custom_services/update.ex`,
+ * `chat_live/chat_modal.ex` e `skill_acquisition.ex`, entre outros.
+ *
  * O `Button` anterior desta pasta era invenção minha, com `variant="danger"` e
  * `unavailableReason`. Ele continua existindo em `primitives.tsx` enquanto as 48
  * telas não são convertidas — as duas coisas convivem de propósito durante a
@@ -84,7 +91,12 @@ const VARIANTE: Record<ButtonVariant, Record<ButtonColor, string> | string> = {
     brand:
       "bg-[var(--color-brand-purple-dark)]/8 text-[var(--color-brand-purple-dark)] hover:bg-[var(--color-brand-purple-dark)]/12",
   },
-  ghost: "text-[var(--color-neutral-600)]",
+  /* O original é `bg-transparent text-neutral-600 hover:bg-brand-purple-dark/5`.
+     O fundo e o realce de passagem faltavam aqui: sem eles o botão fantasma não
+     respondia ao ponteiro e não se distinguia de um texto solto ao lado de um
+     botão de verdade. */
+  ghost:
+    "bg-transparent text-[var(--color-neutral-600)] hover:bg-[var(--color-brand-purple-dark)]/5",
 };
 
 export function Button({

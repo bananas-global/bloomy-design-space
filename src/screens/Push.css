@@ -6,48 +6,6 @@
 }
 
 @container (max-width: 767px) {
-  .push-space .bloomy-mobile-logo {
-    display: inline-flex;
-  }
-  .push-space .bloomy-mobile-backdrop {
-    display: block;
-    position: absolute;
-    inset: 68px 0 0;
-    z-index: 41;
-    background: rgb(0 0 0 / 25%);
-  }
-  .push-space .bloomy-drawer[data-mobile-open="true"] {
-    display: flex;
-    position: absolute;
-    top: 68px;
-    left: 0;
-    z-index: 42;
-    width: min(256px, 85%);
-    height: auto;
-    min-height: 240px;
-  }
-  .push-space .bloomy-drawer {
-    display: none;
-  }
-  .push-space > div > div > header {
-    position: relative;
-    gap: 16px;
-    padding: 12px 16px;
-  }
-  .push-space > div > div > header > div:first-of-type,
-  .push-space > div > div > header > div:last-child > div:nth-child(2),
-  .push-space > div > div > header > div:last-child > div:nth-child(3) {
-    display: none;
-  }
-  .push-space > div > div > header > div:last-child {
-    min-width: 0;
-    flex: 1;
-    justify-content: space-between;
-  }
-  .push-space > div > div > header > div:last-child > div:first-child p {
-    display: block;
-    text-align: left;
-  }
   .push-space #conteudo {
     padding: 16px 12px;
   }
