@@ -8462,3 +8462,262 @@ describe("quem chamar vem da agenda", () => {
     });
   });
 });
+
+/* ==================================================================== *
+ * Central de PUSH
+ * ==================================================================== */
+
+import type { PushData as DadosPush, PushMessage as Comunicado } from "../src/contracts/index.js";
+import { pushFixtures } from "../src/fixtures/push.js";
+import {
+  audienceLabel as rotuloDoPublico,
+  canResend as podeReenviar,
+  canSend as podeEnviar,
+  canSendSurvey as podeEnviarPesquisa,
+  deliveryStats as numerosDaEntrega,
+  feedOrder as ordemDoFeed,
+  messageOrder as ordemDosComunicados,
+  missingValues as variaveisSemValor,
+  npsByUnit as npsPorUnidade,
+  npsScore as indicadorNps,
+  npsZone as zonaDoNps,
+  openDetractors as detratoresNaFila,
+  renderMessage as montarTexto,
+  resendTargets as alvosDoReenvio,
+  resolveAudience as publicoDe,
+  responseRate as taxaDeResposta,
+  unreachable as foraDeAlcance,
+} from "../src/rules/push.js";
+
+const PUSH = pushFixtures[0]!.data as DadosPush;
+const comunicado = (id: string): Comunicado =>
+  PUSH.messages.find((item) => item.id === id) as Comunicado;
+
+describe("Central de PUSH — o texto e o bloqueio", () => {
+  it("resolve o que o cadastro sabe, por destinatário", () => {
+    const renata = PUSH.guardians.find((pessoa) => pessoa.id === "g1")!;
+    expect(
+      montarTexto("{responsavel}, o atendimento de {paciente} na {unidade}", renata, {}),
+    ).toBe("Renata, o atendimento de Beatriz na Vila Aurora");
+  });
+
+  /**
+   * O ponto da regra: a chave continua visível. Uma frase que sai com um buraco
+   * silencioso não pode ser apontada por ninguém.
+   */
+  it("mantém entre chaves a variável que ninguém preencheu", () => {
+    const renata = PUSH.guardians.find((pessoa) => pessoa.id === "g1")!;
+    expect(montarTexto("Vence em {data}", renata, {})).toBe("Vence em {data}");
+    expect(montarTexto("Vence em {data}", renata, { data: "31/08/2026" })).toBe(
+      "Vence em 31/08/2026",
+    );
+  });
+
+  it("só as variáveis digitáveis entram na conta do que falta", () => {
+    expect(variaveisSemValor("Olá {responsavel}", "Atendimento de {paciente}", {})).toEqual([]);
+    expect(variaveisSemValor("Vence em {data}", "às {hora}", {})).toEqual(["data", "hora"]);
+    expect(variaveisSemValor("Vence em {data}", "às {hora}", { data: "31/08/2026", hora: "19:00" })).toEqual(
+      [],
+    );
+  });
+
+  it("espaço em branco não conta como valor preenchido", () => {
+    expect(variaveisSemValor("Vence em {data}", "", { data: "   " })).toEqual(["data"]);
+  });
+
+  /**
+   * A ordem das verificações é parte da regra — ver o comentário de `canSend`.
+   * Com os três problemas ao mesmo tempo, é o texto que a tela cobra primeiro.
+   */
+  it("cobra o texto antes do público, e o público antes da variável", () => {
+    expect(podeEnviar({ title: "", body: "", values: {}, audienceSize: 0 }).reason).toContain(
+      "título e texto",
+    );
+    expect(
+      podeEnviar({ title: "Aviso", body: "Vence em {data}", values: {}, audienceSize: 0 }).reason,
+    ).toContain("Nenhum responsável");
+    expect(
+      podeEnviar({ title: "Aviso", body: "Vence em {data}", values: {}, audienceSize: 4 }).reason,
+    ).toContain("{data}");
+  });
+
+  it("libera o envio quando o texto, o público e as variáveis estão de pé", () => {
+    expect(
+      podeEnviar({
+        title: "Aviso",
+        body: "Vence em {data}",
+        values: { data: "31/08/2026" },
+        audienceSize: 4,
+      }),
+    ).toEqual({ allowed: true });
+  });
+});
+
+describe("Central de PUSH — o público", () => {
+  it("resolve filtro, segmento e seleção manual", () => {
+    const porFiltro = publicoDe(PUSH.guardians, {
+      mode: "filter",
+      filter: { units: [], shifts: ["Tarde"], insurers: [], professionals: [] },
+    });
+    expect(porFiltro.map((pessoa) => pessoa.id)).toEqual(["g3", "g4", "g6", "g9", "g11"]);
+
+    const porSegmento = publicoDe(
+      PUSH.guardians,
+      { mode: "segment", segmentId: "s-bradesco", filter: { units: [], shifts: [], insurers: [], professionals: [] } },
+      PUSH.segments,
+    );
+    expect(porSegmento.map((pessoa) => pessoa.id)).toEqual(["g1", "g3", "g6", "g11"]);
+
+    const manual = publicoDe(PUSH.guardians, {
+      mode: "manual",
+      ids: ["g5"],
+      filter: { units: [], shifts: [], insurers: [], professionals: [] },
+    });
+    expect(manual.map((pessoa) => pessoa.name)).toEqual(["Bruno Farias"]);
+    expect(
+      rotuloDoPublico({ mode: "manual", ids: ["g5"], filter: { units: [], shifts: [], insurers: [], professionals: [] } }),
+    ).toBe("seleção manual, nome a nome");
+  });
+
+  it("sem filtro nenhum, o público é a base inteira", () => {
+    const todos = publicoDe(PUSH.guardians, {
+      mode: "filter",
+      filter: { units: [], shifts: [], insurers: [], professionals: [] },
+    });
+    expect(todos).toHaveLength(PUSH.guardians.length);
+    expect(rotuloDoPublico({ mode: "filter", filter: { units: [], shifts: [], insurers: [], professionals: [] } })).toBe(
+      "todas as unidades",
+    );
+  });
+
+  /**
+   * Os dois grupos separados são a regra
+   * `who-cannot-receive-is-named-before-and-after-sending`: sem aplicativo é
+   * telefone da recepção, push desligado é entrega que só é lida mais tarde.
+   */
+  it("separa quem não tem aplicativo de quem está com a notificação desligada", () => {
+    const { noApp, pushOff } = foraDeAlcance(PUSH.guardians);
+    expect(noApp.map((pessoa) => pessoa.id)).toEqual(["g4", "g12"]);
+    expect(pushOff.map((pessoa) => pessoa.id)).toEqual(["g2", "g9"]);
+  });
+});
+
+describe("Central de PUSH — a entrega", () => {
+  it("conta entrega, falha, visualização e ciência do aviso de feriado", () => {
+    const stats = numerosDaEntrega(comunicado("m-feriado"));
+    expect(stats).toMatchObject({ total: 12, delivered: 10, failed: 2, viewed: 9, acked: 7 });
+    expect(stats.percent(stats.viewed)).toBe(75);
+  });
+
+  /**
+   * As duas exclusões que a regra pede: quem já viu não é incomodado, e quem
+   * falhou não é reenviado pelo caminho que já falhou.
+   */
+  it("o reenvio alcança só quem recebeu e não visualizou", () => {
+    const feriado = comunicado("m-feriado");
+    expect(alvosDoReenvio(feriado, "unviewed")).toEqual(["g11"]);
+    expect(alvosDoReenvio(feriado, "unviewed")).not.toContain("g4");
+
+    const guia = comunicado("m-guia");
+    expect(alvosDoReenvio(guia, "unviewed")).toEqual(["g3"]);
+    expect(alvosDoReenvio(guia, "unviewed")).not.toContain("g6");
+  });
+
+  it("a cobrança de ciência alcança quem recebeu e não confirmou", () => {
+    expect(alvosDoReenvio(comunicado("m-feriado"), "unacked")).toEqual(["g5", "g9", "g11"]);
+  });
+
+  it("cobrar ciência de quem não pediu ciência é indisponível, com o motivo", () => {
+    const campanha = comunicado("m-grupo");
+    expect(podeReenviar(campanha, "unacked")).toEqual({
+      allowed: false,
+      reason: "Este comunicado não pediu ciência.",
+    });
+    expect(podeReenviar(campanha, "unviewed").allowed).toBe(true);
+  });
+
+  it("nada é reenviado antes do disparo", () => {
+    expect(podeReenviar(comunicado("m-chuva"), "unviewed").reason).toBe(
+      "O comunicado ainda não foi disparado.",
+    );
+  });
+
+  it("o comunicado sem ninguém pendente não oferece reenvio", () => {
+    expect(podeReenviar(comunicado("m-troca"), "unviewed")).toEqual({
+      allowed: false,
+      reason: "Todo mundo que recebeu já visualizou.",
+    });
+  });
+
+  /**
+   * O agendado vem antes do enviado, e não misturado por data: é a única linha
+   * da tela em que ainda cabe uma decisão.
+   */
+  it("os agendados vêm primeiro, pelo que dispara antes; os enviados, do mais recente", () => {
+    const ordem = ordemDosComunicados(PUSH.messages).map((item) => item.id);
+    expect(ordem.slice(0, 2)).toEqual(["m-chuva", "m-autorizacao"]);
+    expect(ordem.slice(2)).toEqual([
+      "m-troca",
+      "m-confirmacao",
+      "m-grupo",
+      "m-guia",
+      "m-feriado",
+    ]);
+  });
+});
+
+describe("Central de PUSH — o NPS", () => {
+  const julho = PUSH.surveys.find((item) => item.id === "n-julho")!;
+
+  it("calcula o indicador da pesquisa aberta", () => {
+    const score = indicadorNps(julho.responses);
+    expect(score).toMatchObject({ n: 9, promoters: 4, passives: 2, detractors: 3, nps: 11 });
+    expect(zonaDoNps(score.nps)).toBe("Zona de aperfeiçoamento");
+  });
+
+  it("as duas famílias sem aplicativo continuam no denominador da taxa de resposta", () => {
+    expect(julho.recipients).toHaveLength(12);
+    expect(taxaDeResposta(julho)).toBe(75);
+  });
+
+  it("a queda tem endereço: a leitura por unidade separa as duas", () => {
+    expect(npsPorUnidade(julho.responses, PUSH.guardians)).toEqual([
+      { unit: "Vila Aurora", score: expect.objectContaining({ n: 6, nps: 34 }) },
+      { unit: "Unidade Centro", score: expect.objectContaining({ n: 3, nps: -33 }) },
+    ]);
+  });
+
+  /**
+   * `contact` continua na fila. Uma fila que zera no "assumi" mede boa vontade,
+   * não tratativa — ver `a-detractor-leaves-the-queue-only-by-a-recorded-treatment`.
+   */
+  it("só a tratativa concluída tira o detrator da fila", () => {
+    expect(detratoresNaFila(julho.responses).map((resposta) => resposta.id)).toEqual([
+      "r-jul-g2",
+      "r-jul-g9",
+    ]);
+  });
+
+  it("o detrator sem tratativa abre o feed, antes de qualquer promotor", () => {
+    const feed = ordemDoFeed(julho.responses).map((resposta) => resposta.id);
+    expect(feed[0]).toBe("r-jul-g2");
+    expect(feed[1]).toBe("r-jul-g9");
+    expect(feed.indexOf("r-jul-g1")).toBeGreaterThan(feed.indexOf("r-jul-g9"));
+  });
+
+  it("a pergunta extra sem enunciado impede o envio da pesquisa", () => {
+    const base = { name: "NPS setembro", question: "De 0 a 10…", audienceSize: 12 };
+    expect(podeEnviarPesquisa({ ...base, extras: [] })).toEqual({ allowed: true });
+    expect(podeEnviarPesquisa({ ...base, extras: [{ text: "  " }] }).reason).toBe(
+      "Toda pergunta extra precisa de enunciado.",
+    );
+    expect(podeEnviarPesquisa({ ...base, name: "", extras: [] }).reason).toContain("nome");
+    expect(podeEnviarPesquisa({ ...base, extras: [], audienceSize: 0 }).reason).toContain(
+      "Nenhum responsável",
+    );
+  });
+
+  it("a evolução das três pesquisas é a que a tela desenha", () => {
+    expect(PUSH.surveys.map((survey) => indicadorNps(survey.responses).nps)).toEqual([14, 43, 11]);
+  });
+});

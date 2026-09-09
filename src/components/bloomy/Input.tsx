@@ -381,7 +381,7 @@ export function Switch({
               "after:absolute after:top-[2px] after:h-[18px] after:w-[18px] after:rounded-full after:bg-white after:shadow-xl after:transition-all after:content-['']",
               checked
                 ? "border-[var(--color-blue-dark)]/60 bg-[var(--color-blue)] after:end-[20px] after:translate-x-full"
-                : "border-[var(--color-neutral-100)] bg-[var(--color-neutral-50)] after:start-[2px]",
+                : "border-[var(--color-neutral-100)] bg-[var(--color-brand-purple-dark)]/10 after:start-[2px]",
             ].join(" ")}
           />
         </div>
@@ -425,7 +425,7 @@ export function SwitchCard({
     >
       <div
         className={[
-          "flex cursor-pointer items-center justify-between rounded-xl border p-3 transition-colors delay-100",
+          "flex cursor-pointer items-center justify-between gap-6 rounded-xl border p-3 transition-colors delay-100",
           disabled && "cursor-not-allowed",
           checked
             ? "border-[var(--color-brand-blue)]/40 bg-[var(--color-brand-blue)]/10"
@@ -457,7 +457,7 @@ export function SwitchCard({
                 "after:absolute after:top-[2px] after:h-[18px] after:w-[18px] after:rounded-full after:bg-white after:shadow-xl after:transition-all after:content-['']",
                 checked
                   ? "border-[var(--color-blue-dark)]/60 bg-[var(--color-blue)] after:end-[20px] after:translate-x-full"
-                  : "border-[var(--color-neutral-100)] bg-[var(--color-neutral-50)] after:start-[2px]",
+                  : "border-[var(--color-neutral-100)] bg-[var(--color-brand-purple-dark)]/10 after:start-[2px]",
               ].join(" ")}
             />
           </div>

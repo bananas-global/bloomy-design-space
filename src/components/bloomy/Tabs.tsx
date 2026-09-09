@@ -171,7 +171,23 @@ export function ButtonTabs<T extends string>({
               disabled={tab.disabled}
               onClick={() => onChange(tab.id)}
               className={[
-                "relative inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-md font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
+                /* O rótulo da aba é o navy a **72%**, e não a 60% do original.
+
+                   É a mesma direção da decisão 0001, e o mesmo movimento que a
+                   variante `brand` do `tag/1` já tinha feito nesta pasta: o tom
+                   é o mesmo, muda a opacidade, e o par sai de reprovado para
+                   aprovado sem que a aba mude de aparência para quem enxerga.
+
+                   A 60% o rótulo dava 3,57:1 sobre o marcador azul da aba ativa
+                   e 3,87:1 sobre o trilho — reprova AA, e não é texto grande:
+                   16px em negrito. A 72% são 4,95:1 e 5,56:1, e este último é o
+                   par já declarado em `src/tokens/contrast.ts` como "rótulo de
+                   ação indisponível", medido sobre o mesmo cinza.
+
+                   Sem isto, a única saída era marcar o `ButtonTabs` inteiro como
+                   `espelho-do-sistema` — e como ele envolve o painel, a varredura
+                   perderia junto todo o conteúdo das abas. Ver decisão 0018. */
+                "relative inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-md font-bold text-[var(--color-brand-purple-dark)]/72 transition-colors",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
                 "disabled:cursor-not-allowed disabled:text-[var(--color-neutral-300)]",
                 size === "normal" ? "px-4 py-2.5 text-lg" : "px-2 py-1.5 text-base",
@@ -216,7 +232,7 @@ export function ButtonTabs<T extends string>({
                   Só vale quando a aba tem ícone. Sem ele não há o que sobrar, e
                   o espelho puro de `button_tabs/1` — que não tem ícone nenhum —
                   continua mostrando o rótulo em qualquer largura. */}
-              <span className={tab.icon ? "@max-phone:sr-only" : undefined}>
+              <span data-tab-label className={tab.icon ? "@max-phone:sr-only" : undefined}>
                 {tab.label}
               </span>
               {tab.badge !== undefined && tab.badge > 0 && (

@@ -60,6 +60,7 @@ import { LeadImport } from "../screens/LeadImport.js";
 import { LeadIntegrations } from "../screens/LeadIntegrations.js";
 import { LeadDashboard } from "../screens/LeadDashboard.js";
 import { LeadTasks } from "../screens/LeadTasks.js";
+import { Push } from "../screens/Push.js";
 import { Calls } from "../screens/Calls.js";
 import { Reports } from "../screens/Reports.js";
 import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
@@ -160,6 +161,9 @@ export const productDefinition: ProductDefinition = {
     { path: "/leads/dashboard", screen: guard(LeadDashboard) },
     { path: "/leads/tasks", screen: guard(LeadTasks) },
     { path: "/leads/:id", screen: guard(LeadProfile) },
+    // Central de PUSH — proposta. Uma rota só: as três abas são estado da
+    // tela, como no desenho, e o composer é uma gaveta por cima.
+    { path: "/push", screen: guard(Push) },
     // Gestão de chamadas — proposta. Uma rota só: as quatro abas são estado
     // da tela, como no desenho.
     { path: "/calls", screen: guard(Calls) },
