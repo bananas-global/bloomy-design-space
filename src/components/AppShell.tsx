@@ -104,6 +104,7 @@ const NAV: NavItem[] = [
   // Proposta, e por isso no fim do trilho: intercalada na ordem do sistema, ela
   // faria o menu parecer o de lá. O ícone é o do desenho.
   { label: "Gestão de Chamadas", path: "/calls", segmentos: ["calls"], scenario: "calls.queue", icon: "fa-tower-broadcast", proposta: true, origem: "não existe no sistema real" },
+  { label: "Central de Transferências", path: "/transfers", segmentos: ["transfers"], scenario: "transfers.queue", icon: "fa-arrow-right-arrow-left", proposta: true, origem: "não existe no sistema real" },
 ];
 
 /**

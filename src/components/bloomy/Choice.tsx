@@ -43,7 +43,7 @@ export function Checkgroup({ id, label, name, values, options, errors = [], vari
   const errorId = errors.length ? `${id}-errors` : undefined;
   const toggle = (value: string) => onChange?.(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
   return <fieldset className={["relative min-w-0 border-0 p-0", className].filter(Boolean).join(" ")} aria-describedby={errorId}>
-    {label && <legend className="text-sm/4 font-bold text-[var(--color-brand-blue)]">{label}</legend>}
+    {label && <legend className="text-sm/4 font-bold text-[var(--color-action)]">{label}</legend>}
     <div className={["mt-2 flex flex-col items-start gap-2", innerClassName].filter(Boolean).join(" ")}>
       {options.map((option) => <label key={option.value} className="inline-flex items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-neutral-900)] transition-colors has-[input:checked]:bg-[var(--color-blue-light)]">
         <input type="checkbox" id={`${id}-${fieldName}-${option.value}`} name={resolvedName} value={option.value} checked={selected.includes(option.value)} disabled={disabled || option.disabled} onChange={() => toggle(option.value)} className="rounded border-[var(--color-neutral-100)] text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0" />
@@ -59,7 +59,7 @@ export function FakeRadioGroup({ id, label, selectedValue, options, variant = "d
   id: string; label?: string; selectedValue?: string; options: (Opcao & { name: string })[]; variant?: ChoiceVariant; className?: string;
 }) {
   return <fieldset className={["min-w-0 border-0 p-0", className].filter(Boolean).join(" ")}>
-    {label && <legend className={["text-sm/4 font-bold", variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-brand-blue)]"].join(" ")}>{label}</legend>}
+    {label && <legend className={["text-sm/4 font-bold", variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-action)]"].join(" ")}>{label}</legend>}
     <div className="mt-2 w-full space-x-2">
       {options.map((option, index) => <label key={`${option.name}-${option.value}`} className={["inline-flex cursor-pointer items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-neutral-900)] transition-colors", variant === "purple" ? "has-[input:checked]:bg-[var(--color-purple)]/20" : "has-[input:checked]:bg-[var(--color-blue-light)]"].join(" ")}>
         <input type="radio" name={option.name} id={`${id}-${option.name}-${index}`} value={option.value} checked={option.value === selectedValue} disabled={option.value !== selectedValue} readOnly className={["border-[var(--color-neutral-100)] focus:ring-0", variant === "purple" ? "text-[var(--color-purple)] checked:border-[var(--color-purple)]" : "text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)]"].join(" ")} />
@@ -103,7 +103,7 @@ export function RadioGroup({
         <legend
           className={[
             "text-sm/4 font-bold",
-            variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-brand-blue)]",
+            variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-action)]",
           ].join(" ")}
         >
           {label}

@@ -3506,3 +3506,100 @@ export interface CallsData {
   /** Profissionais, para quando a criança não tem próximo atendimento. */
   professionals: { id: string; name: string }[];
 }
+
+/* ============================================ central de transferências */
+
+/**
+ * Central de Transferências — a movimentação em bloco de mapas de horas.
+ *
+ * **Proposta.** O monólito sabe transferir **um agendamento**: existe
+ * `Notify.notify/4` para "agendamento transferido", e é uma das quatro
+ * notificações do sistema inteiro (ver o achado 21 do log do porte). O que não
+ * existe é o movimento que a coordenação faz de verdade antes de inativar uma
+ * pessoa ou mexer numa escala — pegar os mapas de horas dela e distribuí-los
+ * entre quem sobra. Hoje isso é feito mapa a mapa, na tela do paciente, com a
+ * lista de quem falta anotada num papel. O desenho vem de
+ * "Bloomy — Central de Transferências" do projeto de design.
+ *
+ * **A unidade de movimentação é o mapa de horas, não o agendamento.** É a
+ * decisão que carrega a área: o mapa é o desenho da semana pretendida do
+ * paciente — segunda às 8h com a Marina, quarta às 8h também —, e é ele que a
+ * agenda materializa. Mover agendamento a agendamento resolveria a semana que
+ * vem e deixaria a seguinte igualmente órfã.
+ *
+ * **Mapa sem profissional é o assunto, não a exceção.** Quando alguém é
+ * inativado, os mapas dela não somem: ficam sem responsável, continuam gerando
+ * agendamentos que ninguém atende, e ninguém tem uma lista deles. Por isso eles
+ * ficam na **mesma** lista dos mapas ativos — uma tela separada para "mapas
+ * órfãos" seria uma tela que só se abre depois de o problema já ter aparecido
+ * na agenda.
+ */
+
+/** Segunda a sexta. A clínica não atende fim de semana. */
+export type TransferWeekday = 1 | 2 | 3 | 4 | 5;
+
+/** Uma faixa de horário de um dia da semana, `HH:MM` na hora da clínica. */
+export interface TransferSlot {
+  weekday: TransferWeekday;
+  start: string;
+  end: string;
+}
+
+/**
+ * Um profissional da unidade, como a transferência precisa dele.
+ *
+ * `availability` é a agenda padrão — a escala. É o que separa "não cabe junto"
+ * de "não cabe": um horário fora da escala não é disputa de agenda, é uma
+ * pessoa que não trabalha àquela hora.
+ *
+ * `room` é a sala fixa, e existe aqui porque mover mapa move ocupação de sala.
+ * Sem ela, a simulação diria que a transferência cabe e a alocação de salas
+ * descobriria o contrário depois de aplicada.
+ */
+export interface TransferProfessional {
+  id: string;
+  name: string;
+  specialty: string;
+  room: string;
+  availability: TransferSlot[];
+}
+
+/** O mapa de horas de um paciente, na leitura da transferência. */
+export interface TransferMap {
+  id: string;
+  patient: string;
+  specialty: string;
+  /** `null` é o mapa sem profissional — o assunto da área, não um dado faltando. */
+  professionalId: string | null;
+  /** Desde quando está com quem está. ISO. */
+  since: string;
+  slots: TransferSlot[];
+  /** Quem deixou o mapa, quando ele ficou sem responsável. */
+  leftBy?: string;
+  /** Por que ficou sem: inativação, escala alterada, mapa criado sem ninguém. */
+  reason?: string;
+}
+
+/**
+ * A vigência da transferência.
+ *
+ * `whole` leva o mapa inteiro, incluindo os atendimentos já agendados.
+ * `from` corta numa data: até ela seguem com quem está, dali em diante passam.
+ * São coisas diferentes na agenda e na fatura, e a tela não escolhe por ninguém.
+ */
+export type TransferScope = "whole" | "from";
+
+export interface TransfersData {
+  unit: string;
+  /**
+   * A data de referência, ISO. Declarada, como todo "agora" daqui.
+   *
+   * O desenho fixa `2026-08-21` numa constante do módulo e usa a mesma data como
+   * `min` do campo de vigência. Aqui ela é dado de cenário: é ela que decide a
+   * primeira data que a transferência parcial aceita, e uma tela que lê o
+   * relógio da máquina não tem critério de aceite.
+   */
+  today: string;
+  professionals: TransferProfessional[];
+  maps: TransferMap[];
+}

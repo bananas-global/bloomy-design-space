@@ -42,6 +42,12 @@ const EXCECOES = [
       "fecha o formulário de documento da unidade sem salvar; não cancela documento nem compartilhamento",
   },
   {
+    trecho: "Encerrar movimentação",
+    arquivo: "src/screens/TransferCenter.tsx",
+    porque:
+      "fecha a movimentação corrente e limpa a fila da tela; as rodadas já aplicadas continuam aplicadas, e nada é desfeito. O rótulo destrutivo desta área seria desfazer uma transferência, que a tela ainda não faz — quando fizer, essa ação precisa da variante de perigo e esta exceção não a cobre",
+  },
+  {
     trecho: "Cancelar",
     arquivo: "src/screens/Calls.tsx",
     porque:

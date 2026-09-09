@@ -8462,3 +8462,519 @@ describe("quem chamar vem da agenda", () => {
     });
   });
 });
+
+/* ============================================ central de transferências */
+
+import type { TransfersData } from "../src/contracts/index.js";
+import { transferFixtures } from "../src/fixtures/transfers.js";
+import {
+  MIN_EXCEPTION_REASON,
+  agendaBlocks,
+  applyRound,
+  canApply as canApplyRound,
+  canSimulate,
+  canUseFromDate,
+  destinationOptions,
+  evaluateBatch,
+  evaluateMap,
+  filterMaps,
+  formatHours,
+  isCrossSpecialty,
+  mapsWithoutProfessional,
+  professionalOf,
+  roomImpact,
+  scopeMessage,
+  selectedSpecialties,
+  suggestDestination,
+  weeklyHours,
+} from "../src/rules/transfers.js";
+
+const transferenciasDe = (id: string): TransfersData => {
+  const fixture = transferFixtures.find((item) => item.id === id);
+  if (!fixture) throw new Error(`Fixture inexistente: ${id}`);
+  return (typeof fixture.data === "function" ? fixture.data() : fixture.data) as TransfersData;
+};
+
+/** A semana da unidade depois da inativação de Juliana Reis. */
+const SEMANA = transferenciasDe("transfers-week");
+
+const mapaDe = (id: string) => {
+  const encontrado = SEMANA.maps.find((map) => map.id === id);
+  if (!encontrado) throw new Error(`Mapa inexistente na fixture: ${id}`);
+  return encontrado;
+};
+
+const profissionalDe = (id: string) => {
+  const encontrado = professionalOf(SEMANA, id);
+  if (!encontrado) throw new Error(`Profissional inexistente na fixture: ${id}`);
+  return encontrado;
+};
+
+/** Os três mapas que a inativação deixou. Mesmo horário, mesma especialidade. */
+const DE_JULIANA = ["map-sofia-psi", "map-manuela-psi", "map-bernardo-psi"].map(mapaDe);
+/** Os dois mapas da única psicopedagoga da unidade. */
+const DE_LARISSA = ["map-laura-psp", "map-bernardo-psp"].map(mapaDe);
+
+describe("a lista de mapas de horas", () => {
+  it("mantém o mapa sem profissional na mesma lista, e o conta no cabeçalho", () => {
+    expect(filterMaps(SEMANA, {})).toHaveLength(17);
+    expect(mapsWithoutProfessional(SEMANA)).toBe(6);
+    expect(filterMaps(SEMANA, { status: "orphan" })).toHaveLength(6);
+    expect(filterMaps(SEMANA, { status: "assigned" })).toHaveLength(11);
+  });
+
+  /**
+   * A busca é a consulta que a movimentação por inativação faz de verdade:
+   * quem abre a área acabou de inativar alguém e procura pelo nome dela — que
+   * nos mapas órfãos já não está em `professionalId` nenhum.
+   */
+  it("a busca alcança quem deixou o mapa, e não só quem o detém", () => {
+    expect(filterMaps(SEMANA, { term: "juliana" }).map((map) => map.id)).toEqual([
+      "map-sofia-psi",
+      "map-manuela-psi",
+      "map-bernardo-psi",
+    ]);
+    expect(filterMaps(SEMANA, { term: "marina" }).map((map) => map.id)).toEqual([
+      "map-miguel-psi",
+    ]);
+  });
+
+  it("filtra por especialidade e por profissional atual", () => {
+    expect(filterMaps(SEMANA, { specialty: "Psicopedagogia" })).toHaveLength(3);
+    expect(filterMaps(SEMANA, { professionalId: "prof-larissa" }).map((map) => map.id)).toEqual([
+      "map-laura-psp",
+      "map-bernardo-psp",
+    ]);
+  });
+});
+
+describe("o que cabe no destino", () => {
+  /**
+   * As duas recusas pedem ações opostas, e é por isso que elas não são a mesma
+   * palavra. Helena não trabalha de manhã; Rafael trabalha e está ocupado.
+   */
+  it("separa fora da escala de horário disputado", () => {
+    const foraDaEscala = evaluateMap(
+      mapaDe("map-sofia-psi"),
+      profissionalDe("prof-helena-m"),
+      SEMANA.maps,
+    );
+    expect(foraDaEscala.fit).toBe("bad");
+    expect(foraDaEscala.issues[0]).toEqual({
+      kind: "availability",
+      text: "Ter 08:00–09:00 fora da escala de Helena",
+    });
+
+    const disputado = evaluateMap(
+      mapaDe("map-sofia-psi"),
+      profissionalDe("prof-rafael"),
+      SEMANA.maps,
+    );
+    expect(disputado.fit).toBe("warn");
+    expect(disputado.issues[0]).toEqual({
+      kind: "clash",
+      text: "Ter 08:00–09:00 já ocupado por Lucas Almeida Ferreira",
+    });
+  });
+
+  it("o destino livre e na escala recebe o mapa", () => {
+    expect(
+      evaluateMap(mapaDe("map-sofia-psi"), profissionalDe("prof-marina"), SEMANA.maps).fit,
+    ).toBe("ok");
+  });
+
+  /** Quem já é o responsável não é sucesso nem impedimento: é nada a fazer. */
+  it("o destino que já detém o mapa é “sem mudança”", () => {
+    const avaliacao = evaluateMap(
+      mapaDe("map-lucas-psi"),
+      profissionalDe("prof-rafael"),
+      SEMANA.maps,
+    );
+    expect(avaliacao.fit).toBe("same");
+    expect(avaliacao.issues).toEqual([]);
+  });
+
+  /** Mapa da própria seleção está saindo de onde estava: não ocupa nada. */
+  it("um mapa da seleção não conflita consigo mesmo no destino atual", () => {
+    expect(
+      evaluateMap(mapaDe("map-laura-psp"), profissionalDe("prof-paulo"), SEMANA.maps, [
+        "map-laura-psp",
+      ]).fit,
+    ).toBe("ok");
+  });
+});
+
+describe("a seleção disputa consigo mesma", () => {
+  /**
+   * O achado da área. Três mapas no mesmo horário, um destino livre: o primeiro
+   * cabe e os outros dois passam a disputar com ele. Avaliados isoladamente, os
+   * três diriam "cabe" — e a agenda descobriria o contrário depois de aplicada.
+   */
+  it("o primeiro mapa de um horário cabe, os seguintes disputam com ele", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps);
+    expect(avaliacoes.map((avaliacao) => avaliacao.fit)).toEqual(["ok", "warn", "warn"]);
+    expect(avaliacoes[1]?.issues).toEqual([
+      { kind: "batch", text: "Ter 08:00–09:00 disputado com 1 mapa desta seleção" },
+    ]);
+    expect(avaliacoes[2]?.issues[0]?.text).toBe(
+      "Ter 08:00–09:00 disputado com 1 mapa desta seleção",
+    );
+  });
+
+  /**
+   * A ordem é declarada — dia, hora, nome —, e não a dos cliques. Sem isso,
+   * duas pessoas com a mesma seleção veriam resultados diferentes, e reordenar
+   * a lista mudaria a simulação.
+   */
+  it("a ordem de avaliação é declarada, e é ela que decide quem cabe", () => {
+    const direta = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps);
+    const invertida = evaluateBatch(
+      [...DE_JULIANA].reverse(),
+      profissionalDe("prof-marina"),
+      SEMANA.maps,
+    );
+    expect(direta.map((avaliacao) => avaliacao.map.id)).toEqual([
+      "map-bernardo-psi",
+      "map-manuela-psi",
+      "map-sofia-psi",
+    ]);
+    expect(invertida.map((avaliacao) => avaliacao.map.id)).toEqual(
+      direta.map((avaliacao) => avaliacao.map.id),
+    );
+  });
+
+  /**
+   * Mapa recusado não reserva horário. Se reservasse, o segundo mapa recusado
+   * ganharia um impedimento a mais — inventado por um mapa que nem vai ficar
+   * ali.
+   */
+  it("o mapa que não cabe não reserva o horário para si", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-rafael"), SEMANA.maps);
+    expect(avaliacoes.map((avaliacao) => avaliacao.fit)).toEqual(["warn", "warn", "warn"]);
+    for (const avaliacao of avaliacoes) {
+      expect(avaliacao.issues.map((issue) => issue.kind)).toEqual(["clash"]);
+    }
+  });
+
+  it("fora da escala, o lote inteiro é recusado sem virar disputa", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-helena-m"), SEMANA.maps);
+    expect(avaliacoes.map((avaliacao) => avaliacao.fit)).toEqual(["bad", "bad", "bad"]);
+    expect(
+      avaliacoes.flatMap((avaliacao) => avaliacao.issues.map((issue) => issue.kind)),
+    ).toEqual(["availability", "availability", "availability"]);
+  });
+});
+
+describe("a sugestão de destino", () => {
+  /**
+   * Empatados em mapas que cabem — Marina e Bruno recebem um cada —, ganha quem
+   * está menos carregado. Marina tem 2h na semana, Bruno tem 3h.
+   */
+  it("prefere a mesma especialidade, depois quem recebe mais, depois quem carrega menos", () => {
+    const sugestao = suggestDestination(DE_JULIANA, SEMANA, false);
+    expect(sugestao?.professional.name).toBe("Marina Costa");
+    expect(sugestao?.fits).toBe(1);
+    expect(sugestao?.load).toBe(2);
+    expect(sugestao?.sameSpecialty).toBe(true);
+  });
+
+  it("sem outro profissional da especialidade, não há sugestão a dar", () => {
+    expect(suggestDestination(DE_LARISSA, SEMANA, false)).toBeUndefined();
+    expect(suggestDestination(DE_LARISSA, SEMANA, true)?.professional.specialty).not.toBe(
+      "Psicopedagogia",
+    );
+  });
+
+  it("seleção vazia não sugere nada", () => {
+    expect(suggestDestination([], SEMANA, true)).toBeUndefined();
+  });
+});
+
+describe("a exceção de especialidade", () => {
+  it("a única psicopedagoga da unidade não deixa destino dentro da especialidade", () => {
+    const opcoes = destinationOptions(DE_LARISSA, SEMANA.professionals);
+    expect(selectedSpecialties(DE_LARISSA)).toEqual(["Psicopedagogia"]);
+    expect(opcoes.same).toEqual([]);
+    expect(opcoes.others.map((professional) => professional.id)).not.toContain("prof-larissa");
+  });
+
+  /** Quem detém parte da seleção continua elegível: esses mapas viram `same`. */
+  it("quem detém parte da seleção continua na lista de destinos", () => {
+    const opcoes = destinationOptions(
+      [mapaDe("map-lucas-psi"), mapaDe("map-sofia-psi")],
+      SEMANA.professionals,
+    );
+    expect(opcoes.same.map((professional) => professional.id)).toContain("prof-rafael");
+  });
+
+  it("a ordem das verificações é seleção, destino e só então o motivo", () => {
+    expect(
+      canSimulate({ selection: [], destination: undefined, crossSpecialty: false, reason: "" })
+        .reason,
+    ).toBe("Selecione ao menos um mapa de horas na lista.");
+    expect(
+      canSimulate({
+        selection: DE_LARISSA,
+        destination: undefined,
+        crossSpecialty: false,
+        reason: "",
+      }).reason,
+    ).toBe("Escolha o profissional de destino.");
+  });
+
+  it("sem a exceção marcada, o destino de outra especialidade é recusado", () => {
+    expect(
+      canSimulate({
+        selection: DE_LARISSA,
+        destination: profissionalDe("prof-paulo"),
+        crossSpecialty: false,
+        reason: "",
+      }),
+    ).toEqual({
+      allowed: false,
+      reason: "Marque a exceção para transferir para outra especialidade.",
+    });
+  });
+
+  it("marcada a exceção, o motivo curto mantém o bloqueio e diz o mínimo", () => {
+    const curto = canSimulate({
+      selection: DE_LARISSA,
+      destination: profissionalDe("prof-paulo"),
+      crossSpecialty: true,
+      reason: "urgen",
+    });
+    expect(curto.allowed).toBe(false);
+    expect(curto.reason).toContain(String(MIN_EXCEPTION_REASON));
+  });
+
+  it("com o motivo escrito, a simulação libera", () => {
+    expect(
+      canSimulate({
+        selection: DE_LARISSA,
+        destination: profissionalDe("prof-paulo"),
+        crossSpecialty: true,
+        reason: "Licença médica da única psicopedagoga da unidade",
+      }),
+    ).toEqual({ allowed: true });
+  });
+
+  it("dentro da especialidade, nada disso é perguntado", () => {
+    expect(
+      canSimulate({
+        selection: DE_JULIANA,
+        destination: profissionalDe("prof-marina"),
+        crossSpecialty: false,
+        reason: "",
+      }),
+    ).toEqual({ allowed: true });
+  });
+
+  /** Seleção mista sai da especialidade por definição: nenhum destino é de todas. */
+  it("seleção com duas especialidades é exceção com ou sem a caixa marcada", () => {
+    const mista = [mapaDe("map-sofia-psi"), mapaDe("map-alice-fono")];
+    expect(isCrossSpecialty(mista, profissionalDe("prof-marina"))).toBe(true);
+    expect(isCrossSpecialty(DE_JULIANA, profissionalDe("prof-marina"))).toBe(false);
+    expect(isCrossSpecialty(DE_LARISSA, profissionalDe("prof-paulo"))).toBe(true);
+  });
+});
+
+describe("a transferência é parcial por natureza", () => {
+  it("a rodada move o que cabe e devolve o resto à fila", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps);
+    const aplicada = applyRound(SEMANA, avaliacoes, {
+      destination: profissionalDe("prof-marina"),
+      scope: "whole",
+      crossSpecialty: false,
+    });
+
+    expect(aplicada.movedIds).toEqual(["map-bernardo-psi"]);
+    expect(aplicada.round).toMatchObject({
+      destinationName: "Marina Costa",
+      moved: 1,
+      left: 2,
+      scope: "whole",
+      crossSpecialty: false,
+    });
+
+    const movido = aplicada.maps.find((map) => map.id === "map-bernardo-psi");
+    expect(movido?.professionalId).toBe("prof-marina");
+    expect(movido?.reason).toBeUndefined();
+    // Quem deixou o mapa continua registrado: ele não passou por mais ninguém.
+    expect(movido?.leftBy).toBe("Juliana Reis");
+    expect(aplicada.maps.find((map) => map.id === "map-sofia-psi")?.professionalId).toBeNull();
+  });
+
+  it("o mapa que muda de dono registra quem o entregou", () => {
+    const avaliacoes = evaluateBatch(DE_LARISSA, profissionalDe("prof-paulo"), SEMANA.maps);
+    const aplicada = applyRound(SEMANA, avaliacoes, {
+      destination: profissionalDe("prof-paulo"),
+      scope: "whole",
+      crossSpecialty: true,
+    });
+    expect(aplicada.movedIds).toHaveLength(2);
+    expect(aplicada.maps.find((map) => map.id === "map-laura-psp")?.leftBy).toBe("Larissa Gomes");
+    expect(aplicada.round.crossSpecialty).toBe(true);
+  });
+
+  it("a vigência parcial reescreve a data do mapa; a inteira não", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps);
+    const parcial = applyRound(SEMANA, avaliacoes, {
+      destination: profissionalDe("prof-marina"),
+      scope: "from",
+      fromDate: "2026-08-03",
+      crossSpecialty: false,
+    });
+    expect(parcial.maps.find((map) => map.id === "map-bernardo-psi")?.since).toBe("2026-08-03");
+    expect(parcial.round.fromDate).toBe("2026-08-03");
+
+    const inteira = applyRound(SEMANA, avaliacoes, {
+      destination: profissionalDe("prof-marina"),
+      scope: "whole",
+      fromDate: "2026-08-03",
+      crossSpecialty: false,
+    });
+    expect(inteira.maps.find((map) => map.id === "map-bernardo-psi")?.since).toBe("2026-07-24");
+    expect(inteira.round.fromDate).toBeUndefined();
+  });
+
+  it("sem nenhum mapa que caiba, aplicar é impedimento e diz o que fazer", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-helena-m"), SEMANA.maps);
+    expect(canApplyRound(avaliacoes)).toEqual({
+      allowed: false,
+      reason: "Nenhum mapa desta seleção cabe no destino escolhido. Escolha outro profissional.",
+    });
+    expect(canApplyRound(evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps))).toEqual(
+      { allowed: true },
+    );
+  });
+
+  /**
+   * Três rodadas zeram a fila que uma só deixaria pela metade.
+   *
+   * É a movimentação inteira, e é a única forma de provar que a fila fecha:
+   * cada destino absorve um mapa da terça das 8h, porque cada um só tem aquela
+   * hora livre uma vez.
+   */
+  it("a rodada seguinte parte do que a anterior deixou, até a fila zerar", () => {
+    let estado: TransfersData = SEMANA;
+    let fila = DE_JULIANA;
+    const rodadas = [];
+
+    for (const destino of ["prof-marina", "prof-bruno", "prof-clara"]) {
+      const aplicada = applyRound(
+        estado,
+        evaluateBatch(fila, profissionalDe(destino), estado.maps),
+        { destination: profissionalDe(destino), scope: "whole", crossSpecialty: false },
+      );
+      rodadas.push(aplicada.round);
+      estado = { ...estado, maps: aplicada.maps };
+      fila = estado.maps.filter(
+        (map) => DE_JULIANA.some((item) => item.id === map.id) && !map.professionalId,
+      );
+    }
+
+    expect(rodadas.map((rodada) => rodada.moved)).toEqual([1, 1, 1]);
+    expect(rodadas.map((rodada) => rodada.left)).toEqual([2, 1, 0]);
+    expect(fila).toEqual([]);
+    expect(
+      estado.maps
+        .filter((map) => DE_JULIANA.some((item) => item.id === map.id))
+        .map((map) => map.professionalId)
+        .sort(),
+    ).toEqual(["prof-bruno", "prof-clara", "prof-marina"]);
+  });
+});
+
+describe("o impacto nas salas", () => {
+  it("soma só o que vai ser aplicado, e mostra os dois lados", () => {
+    const avaliacoes = evaluateBatch(DE_LARISSA, profissionalDe("prof-paulo"), SEMANA.maps);
+    expect(roomImpact(SEMANA, avaliacoes, profissionalDe("prof-paulo"))).toEqual([
+      { room: "Sala 5", hours: 2 },
+      { room: "Sala 6", hours: -2 },
+    ]);
+  });
+
+  /** Mapa órfão não libera sala: ele já não tinha uma. Os lados não se anulam. */
+  it("o mapa sem profissional só ocupa, não libera", () => {
+    const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps);
+    expect(roomImpact(SEMANA, avaliacoes, profissionalDe("prof-marina"))).toEqual([
+      { room: "Sala 3", hours: 1 },
+    ]);
+  });
+});
+
+describe("a vigência da transferência", () => {
+  it("não retroage", () => {
+    expect(canUseFromDate(SEMANA.today, SEMANA.today)).toEqual({ allowed: true });
+    expect(canUseFromDate("2026-08-10", SEMANA.today)).toEqual({ allowed: true });
+    const passado = canUseFromDate("2026-07-01", SEMANA.today);
+    expect(passado.allowed).toBe(false);
+    expect(passado.reason).toContain("30/07/2026");
+  });
+
+  it("diz o que acontece com o que já está agendado", () => {
+    expect(scopeMessage("whole", SEMANA.today)).toContain("incluindo os atendimentos já agendados");
+    expect(scopeMessage("from", "2026-08-03")).toContain("até 03/08/2026");
+  });
+});
+
+describe("a semana em blocos", () => {
+  /**
+   * Oito mapas na mesma faixa não viram oito fatias: viram um bloco-resumo. É o
+   * que torna a grade legível num volume que a clínica tem todo dia.
+   */
+  it("o horário lotado vira um bloco-resumo com a contagem por especialidade", () => {
+    const semana = agendaBlocks(SEMANA.maps);
+    const terca = semana[2];
+    const resumo = terca.find((entrada) => entrada.kind === "cluster");
+    expect(resumo?.kind).toBe("cluster");
+    if (resumo?.kind !== "cluster") throw new Error("esperava um bloco-resumo na terça");
+    expect(resumo.items).toHaveLength(8);
+    expect(resumo.slot).toEqual({ weekday: 2, start: "08:00", end: "09:00" });
+    expect(resumo.orphans).toBe(5);
+    expect(resumo.specialties).toEqual([
+      { specialty: "Psicologia", count: 4 },
+      { specialty: "Fonoaudiologia", count: 2 },
+      { specialty: "Terapia ocupacional", count: 2 },
+    ]);
+  });
+
+  it("até três simultâneos continuam sendo blocos próprios, lado a lado", () => {
+    const quarta = agendaBlocks(SEMANA.maps)[3];
+    expect(quarta.every((entrada) => entrada.kind === "map")).toBe(true);
+    expect(quarta).toHaveLength(3);
+    for (const entrada of quarta) {
+      if (entrada.kind !== "map") continue;
+      expect(entrada.lanes).toBe(3);
+    }
+  });
+
+  it("o que não se sobrepõe ocupa a coluna inteira", () => {
+    const segunda = agendaBlocks(SEMANA.maps)[1];
+    expect(segunda).toHaveLength(2);
+    for (const entrada of segunda) {
+      if (entrada.kind !== "map") continue;
+      expect(entrada.lanes).toBe(1);
+    }
+  });
+
+  it("a grade responde ao filtro, e não à lista inteira", () => {
+    const somenteOrfaos = agendaBlocks(filterMaps(SEMANA, { status: "orphan" }));
+    const resumo = somenteOrfaos[2][0];
+    expect(resumo?.kind).toBe("cluster");
+    if (resumo?.kind !== "cluster") throw new Error("esperava um bloco-resumo na terça");
+    // Os cinco órfãos da terça, sem os três mapas que têm responsável.
+    expect(resumo.items).toHaveLength(5);
+    expect(resumo.orphans).toBe(5);
+  });
+});
+
+describe("as horas do mapa", () => {
+  it("soma a semana e escreve com vírgula", () => {
+    expect(weeklyHours(mapaDe("map-miguel-psi").slots)).toBe(2);
+    expect(weeklyHours(mapaDe("map-theo-psi").slots)).toBe(3);
+    expect(formatHours(3)).toBe("3h");
+    expect(formatHours(1.5)).toBe("1,5h");
+    expect(formatHours(0.5)).toBe("0,5h");
+  });
+});

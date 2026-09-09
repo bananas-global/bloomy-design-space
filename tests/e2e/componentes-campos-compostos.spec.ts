@@ -51,7 +51,10 @@ test.describe("catálogo — campos compostos e somente leitura", () => {
     await expect(wrapper.getByText("Unidade Girassol", { exact: true })).toBeVisible();
     await expect(wrapper.locator("input, select, textarea, button")).toHaveCount(0);
     await expect(wrapper.getByText("Paciente", { exact: true })).toHaveClass(/neutral-400/);
-    await expect(wrapper.getByText("Unidade", { exact: true })).toHaveClass(/brand-blue/);
+    // O rótulo azul é `--color-action`, e não o ciano de assinatura: o original
+    // usa `#58bada` como texto sobre branco, que dá 2,22:1. Ver `Label` em
+    // `src/components/bloomy/Input.tsx`. As duas cores continuam sendo duas.
+    await expect(wrapper.getByText("Unidade", { exact: true })).toHaveClass(/color-action/);
   });
 
   test("input_switch_card alterna pela chave real e mantém nome e valor", async ({ page }) => {
