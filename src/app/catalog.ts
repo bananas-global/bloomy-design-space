@@ -27,6 +27,7 @@ import { hourMapFixtures } from "../fixtures/hourMap.js";
 import { chatFixtures } from "../fixtures/chat.js";
 import { prospectFixtures } from "../fixtures/prospects.js";
 import { leadFixtures } from "../fixtures/leads.js";
+import { callFixtures } from "../fixtures/calls.js";
 import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
 import { supervisionFixtures, supervisionTeamFixtures } from "../fixtures/supervision.js";
@@ -97,6 +98,7 @@ import { hourMapRules, hourMapExpiryRules } from "../rules/hourMap.js";
 import { chatRules } from "../rules/chat.js";
 import { prospectRules } from "../rules/prospects.js";
 import { leadRules } from "../rules/leads.js";
+import { callRules } from "../rules/calls.js";
 import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
 import { supervisionRules, supervisionTeamRules } from "../rules/supervision.js";
@@ -123,6 +125,7 @@ import { hourMapScenarios } from "../scenarios/hourMap.js";
 import { chatScenarios } from "../scenarios/chat.js";
 import { prospectScenarios } from "../scenarios/prospects.js";
 import { leadScenarios } from "../scenarios/leads.js";
+import { callScenarios } from "../scenarios/calls.js";
 import { reportScenarios } from "../scenarios/reports.js";
 import { notificationScenarios } from "../scenarios/notifications.js";
 import { supervisionScenarios } from "../scenarios/supervision.js";
@@ -1139,6 +1142,31 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "calls",
+    name: "Gestão de Chamadas",
+    description:
+      "Os anúncios por voz da unidade: quem chamar, por qual motivo, e em qual caixa a frase é falada.",
+    flows: [
+      {
+        id: "call-who-is-waiting",
+        title: "Chamar quem está esperando",
+        description:
+          "A fila ordenada por espera, com a frase pronta em cada cartão antes de qualquer ação.",
+        /* Um passo, e sem ramificação: a situação do campo em falta deixou de
+           ser cenário próprio na revisão de 08/09 e virou critério de
+           `calls.queue`. Uma ramificação que aponta para cenário inexistente é
+           erro duro do `validateProduct`, e apontar para o próprio passo seria
+           laço — então a decisão saiu junto com o destino dela. */
+        steps: [
+          {
+            scenario: "calls.queue",
+            label: "Ler a fila por tempo de espera",
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -1163,6 +1191,7 @@ export const scenarios: Scenario[] = [
   ...chatScenarios,
   ...prospectScenarios,
   ...leadScenarios,
+  ...callScenarios,
   ...reportScenarios,
   ...notificationScenarios,
   ...supervisionScenarios,
@@ -1216,6 +1245,7 @@ export const fixtures: Fixture[] = [
   ...chatFixtures,
   ...prospectFixtures,
   ...leadFixtures,
+  ...callFixtures,
   ...reportFixtures,
   ...notificationFixtures,
   ...supervisionFixtures,
@@ -1291,6 +1321,7 @@ export const rules: Rule[] = [
   ...chatRules,
   ...prospectRules,
   ...leadRules,
+  ...callRules,
   ...reportRules,
   ...notificationRules,
   ...supervisionRules,

@@ -45,11 +45,21 @@ test("o contraste do espelho é o do sistema, e está registrado", async ({ page
 
     return {
       drawer: razao(getComputedStyle(link).color, getComputedStyle(drawer).backgroundColor),
+      // O fundo é o do primeiro ancestral que **pinta** alguma coisa, e não o de
+      // um elemento escolhido pelo nome. O cabeçalho passou a ser uma linha sem
+      // fundo com a barra branca dentro — e apontar para \`header\` media contra
+      // transparente, que devolve o contraste do que estiver atrás.
       unidade: razao(
         getComputedStyle(rotuloUnidade).color,
-        getComputedStyle(document.body).backgroundColor === "rgba(0, 0, 0, 0)"
-          ? "rgb(255, 255, 255)"
-          : getComputedStyle(rotuloUnidade.closest("header")).backgroundColor,
+        (() => {
+          let no = rotuloUnidade.parentElement;
+          while (no) {
+            const fundo = getComputedStyle(no).backgroundColor;
+            if (fundo && fundo !== "rgba(0, 0, 0, 0)" && fundo !== "transparent") return fundo;
+            no = no.parentElement;
+          }
+          return "rgb(255, 255, 255)";
+        })(),
       ),
     };
   })()`);

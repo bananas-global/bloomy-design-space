@@ -8096,3 +8096,369 @@ describe("pontos de atenção", () => {
     expect(applicatorAlerts(EQUIPE, "apl-juliana")).toContain("34 dias sem supervisão");
   });
 });
+
+/* ==================================================== gestão de chamadas */
+
+import type { CallsData } from "../src/contracts/index.js";
+import { CALL_TEMPLATES as MODELOS_DE_CHAMADA, callFixtures } from "../src/fixtures/calls.js";
+import {
+  audienceOfKind,
+  callOutcome,
+  canAnnounce,
+  canQueue,
+  canToggleRule,
+  devicesForKind,
+  fillTemplate,
+  hasUnfilledFields,
+  humanWait,
+  pendingCalls,
+  resolveTarget,
+  ruleFires,
+  waitingTone,
+  waitingToneLabel,
+} from "../src/rules/calls.js";
+
+const chamadasDe = (id: string): CallsData => {
+  const fixture = callFixtures.find((item) => item.id === id);
+  if (!fixture) throw new Error(`Fixture inexistente: ${id}`);
+  return (typeof fixture.data === "function" ? fixture.data() : fixture.data) as CallsData;
+};
+
+/** A fila das 10:40. A hora vem da fixture, e é ela que faz a ordem. */
+const DIA_DE_CHAMADAS = chamadasDe("calls-day");
+
+describe("a fila de chamadas", () => {
+  /**
+   * A hora é declarada, e é ela que faz a fila. Se um dia alguém trocar `now`
+   * na fixture, é este teste que avisa que a ordem e as cores mudaram.
+   */
+  it("ordena por espera decrescente, e não pela hora do evento", () => {
+    const fila = pendingCalls(DIA_DE_CHAMADAS, MODELOS_DE_CHAMADA);
+    expect(fila.map((item) => item.id)).toEqual(["ev-5", "ev-6", "ev-7", "ev-8"]);
+    expect(fila.map((item) => item.waiting)).toEqual([40, 35, 10, 2]);
+  });
+
+  it("só traz o que não foi anunciado nem dispensado", () => {
+    const semDispensa = pendingCalls(DIA_DE_CHAMADAS, MODELOS_DE_CHAMADA);
+    const comDispensa = pendingCalls(DIA_DE_CHAMADAS, MODELOS_DE_CHAMADA, ["ev-5"]);
+    expect(semDispensa).toHaveLength(4);
+    expect(comDispensa.map((item) => item.id)).toEqual(["ev-6", "ev-7", "ev-8"]);
+  });
+
+  /** O tempo passar não tira nada da fila — é o que a impede de mentir. */
+  it("o evento futuro entra com espera zero, e não sai da fila", () => {
+    const daquiAPouco: CallsData = { ...DIA_DE_CHAMADAS, now: "09:50" };
+    const fila = pendingCalls(daquiAPouco, MODELOS_DE_CHAMADA);
+    expect(fila).toHaveLength(4);
+    expect(fila.find((item) => item.id === "ev-8")?.waiting).toBe(0);
+  });
+
+  it("a frase do cartão já vem preenchida pela agenda", () => {
+    const fila = pendingCalls(DIA_DE_CHAMADAS, MODELOS_DE_CHAMADA);
+    expect(fila.find((item) => item.id === "ev-6")?.text).toBe(
+      "Denise Portela, Caio Ribeiro chegou e está aguardando na recepção.",
+    );
+  });
+
+  it("conta os anúncios já feitos para o mesmo evento", () => {
+    const fila = pendingCalls(
+      { ...DIA_DE_CHAMADAS, events: DIA_DE_CHAMADAS.events.map((e) => ({ ...e, done: false })) },
+      MODELOS_DE_CHAMADA,
+    );
+    // `ev-4` foi chamado duas vezes: sem resposta às 09:35 e atendido às 09:41.
+    expect(fila.find((item) => item.id === "ev-4")?.already).toBe(2);
+  });
+});
+
+describe("a temperatura da espera", () => {
+  it("tem três faixas, e as duas quentes têm palavra", () => {
+    expect(waitingTone(0)).toBe("calm");
+    expect(waitingTone(4)).toBe("calm");
+    expect(waitingTone(5)).toBe("warm");
+    expect(waitingTone(14)).toBe("warm");
+    expect(waitingTone(15)).toBe("hot");
+    expect(waitingToneLabel("calm")).toBeUndefined();
+    expect(waitingToneLabel("warm")).toBe("Atenção");
+    expect(waitingToneLabel("hot")).toBe("Urgente");
+  });
+
+  it("escreve a espera longa em horas", () => {
+    expect(humanWait(0)).toBe("agora");
+    expect(humanWait(-3)).toBe("agora");
+    expect(humanWait(40)).toBe("40 min");
+    expect(humanWait(60)).toBe("1h00");
+    expect(humanWait(95)).toBe("1h35");
+  });
+});
+
+describe("o texto do anúncio", () => {
+  const CONTEXTO = {
+    professional: "Marina Okabe",
+    patient: "Beatriz Ferraz",
+    room: "Sala Girassol - 2",
+    start: "10:45",
+  };
+
+  it("preenche o que a agenda sabe", () => {
+    expect(
+      fillTemplate("{profissional}, a {sala} está liberada para o atendimento de {paciente}.", CONTEXTO),
+    ).toBe("Marina Okabe, a Sala Girassol - 2 está liberada para o atendimento de Beatriz Ferraz.");
+  });
+
+  /**
+   * O campo que falta fica visível. Virar vazio produziria "responsável por
+   * Beatriz, favor comparecer" sem dizer quem é chamado — falado em voz alta.
+   */
+  it("mantém o campo que falta entre colchetes em vez de esvaziá-lo", () => {
+    const frase = fillTemplate(
+      "{responsavel}, responsável por {paciente}, o atendimento foi encerrado.",
+      { patient: "Beatriz Ferraz" },
+      true,
+    );
+    expect(frase).toBe(
+      "[responsável], responsável por Beatriz Ferraz, o atendimento foi encerrado.",
+    );
+    expect(hasUnfilledFields(frase)).toBe(true);
+  });
+
+  it("sem colchetes, a frase está pronta", () => {
+    expect(hasUnfilledFields("Marina Okabe, Beatriz Ferraz chegou.")).toBe(false);
+  });
+});
+
+describe("o bloqueio do anúncio", () => {
+  const PRONTA = {
+    kind: "professional" as const,
+    patient: "Beatriz Ferraz",
+    target: "Marina Okabe",
+    text: "Marina Okabe, Beatriz Ferraz chegou e está aguardando na recepção.",
+    deviceIds: ["dev-prof-sala"],
+  };
+
+  it("libera a chamada completa", () => {
+    expect(canAnnounce(PRONTA)).toEqual({ allowed: true });
+  });
+
+  it("campo em falta barra, com o motivo que a tela mostra", () => {
+    const decisao = canAnnounce({
+      ...PRONTA,
+      text: "[profissional], Beatriz Ferraz chegou e está aguardando na recepção.",
+    });
+    expect(decisao.allowed).toBe(false);
+    expect(decisao.reason).toBe("Complete os dados acima para a mensagem ficar pronta.");
+  });
+
+  /**
+   * A ordem das verificações é parte da regra: sem criança a frase está
+   * incompleta **e** sem destinatário, e mandar escolher o dispositivo antes
+   * faria configurar onde anunciar uma frase que não existe.
+   */
+  it("pede a criança antes de qualquer outra coisa", () => {
+    expect(
+      canAnnounce({ kind: "professional", patient: "", target: "", text: "", deviceIds: [] }).reason,
+    ).toBe("Escolha a criança da chamada.");
+  });
+
+  it("pede o destinatário antes do texto", () => {
+    expect(canAnnounce({ ...PRONTA, target: "", text: "" }).reason).toBe(
+      "Escolha o profissional que será chamado.",
+    );
+  });
+
+  it("o aviso geral não pede criança nem destinatário", () => {
+    expect(
+      canAnnounce({
+        kind: "general",
+        patient: "",
+        target: "Sala de espera",
+        text: "O estacionamento está com uma vaga bloqueada.",
+        deviceIds: ["dev-fam-espera"],
+      }),
+    ).toEqual({ allowed: true });
+  });
+
+  it("sem dispositivo escolhido, barra por último", () => {
+    expect(canAnnounce({ ...PRONTA, deviceIds: [] }).reason).toBe(
+      "Escolha pelo menos um dispositivo online.",
+    );
+  });
+});
+
+/**
+ * Criar o chamado é preparar, não falar. As duas diferenças de `canAnnounce`
+ * são o que separa uma coisa da outra, e as duas têm teste próprio: sem elas o
+ * botão viraria um segundo Anunciar com outro rótulo.
+ */
+describe("criar o chamado sem anunciar", () => {
+  const PARA_A_FILA = {
+    kind: "professional" as const,
+    patient: "Beatriz Ferraz",
+    target: "Marina Okabe",
+    text: "Marina Okabe, Beatriz Ferraz chegou e está aguardando na recepção.",
+  };
+
+  it("libera o chamado completo", () => {
+    expect(canQueue(PARA_A_FILA)).toEqual({ allowed: true });
+  });
+
+  it("não pede dispositivo — nada vai tocar agora", () => {
+    expect(canQueue(PARA_A_FILA)).toEqual({ allowed: true });
+    expect(canAnnounce({ ...PARA_A_FILA, deviceIds: [] }).allowed).toBe(false);
+  });
+
+  it("recusa o aviso geral: não há quem espere na fila", () => {
+    const decisao = canQueue({
+      kind: "general",
+      patient: "",
+      target: "Sala de espera",
+      text: "O estacionamento está com uma vaga bloqueada.",
+    });
+    expect(decisao.allowed).toBe(false);
+    expect(decisao.reason).toBe(
+      "Um aviso geral não tem quem espere na fila: é anunciado na hora ou não é.",
+    );
+  });
+
+  it("campo em falta barra igual, porque o erro só fica adiado", () => {
+    expect(
+      canQueue({
+        ...PARA_A_FILA,
+        text: "[profissional], Beatriz Ferraz chegou e está aguardando na recepção.",
+      }).reason,
+    ).toBe("Complete os dados acima para a mensagem ficar pronta.");
+  });
+
+  it("mantém a ordem das verificações de `canAnnounce`", () => {
+    expect(canQueue({ kind: "professional", patient: "", target: "", text: "" }).reason).toBe(
+      "Escolha a criança da chamada.",
+    );
+  });
+});
+
+describe("onde a chamada toca", () => {
+  it("o público do dispositivo recorta o alcance", () => {
+    expect(devicesForKind("professional", DIA_DE_CHAMADAS).map((d) => d.id)).toEqual([
+      "dev-prof-sala",
+      "dev-prof-copa",
+      "dev-prof-corredor",
+    ]);
+    expect(devicesForKind("guardian", DIA_DE_CHAMADAS).map((d) => d.id)).toEqual([
+      "dev-fam-recepcao",
+      "dev-fam-espera",
+    ]);
+  });
+
+  /** A divergência declarada: o público de `general` é `family`, e o alcance é todo. */
+  it("o aviso geral alcança a unidade inteira, e mantém o público declarado", () => {
+    expect(devicesForKind("general", DIA_DE_CHAMADAS)).toHaveLength(5);
+    expect(audienceOfKind("general")).toBe("family");
+  });
+
+  it("nunca alcança dispositivo de outra unidade", () => {
+    const daOutra = devicesForKind("general", DIA_DE_CHAMADAS).filter(
+      (device) => device.unit !== DIA_DE_CHAMADAS.unit,
+    );
+    expect(daOutra).toEqual([]);
+  });
+});
+
+describe("o resultado do anúncio", () => {
+  const CAIXAS = DIA_DE_CHAMADAS.devices;
+
+  it("um dispositivo online entre vários é suficiente", () => {
+    expect(callOutcome(CAIXAS, ["dev-prof-sala", "dev-prof-corredor"])).toEqual({
+      status: "playing",
+    });
+  });
+
+  it("todos offline é falha, com o motivo", () => {
+    expect(callOutcome(CAIXAS, ["dev-prof-corredor"])).toEqual({
+      status: "failed",
+      error: "Dispositivo offline",
+    });
+  });
+});
+
+describe("a automação de chamadas", () => {
+  it("a chave-geral desligada silencia até a regra marcada", () => {
+    const marcada = DIA_DE_CHAMADAS.rules.find((rule) => rule.id === "on_checkin")!;
+    expect(marcada.on).toBe(true);
+    expect(ruleFires(marcada, true)).toBe(true);
+    expect(ruleFires(marcada, false)).toBe(false);
+  });
+
+  it("a regra desligada não dispara nem com a chave-geral ligada", () => {
+    const desligada = DIA_DE_CHAMADAS.rules.find((rule) => rule.id === "on_late")!;
+    expect(ruleFires(desligada, true)).toBe(false);
+  });
+
+  /** Desligada, a fila para de se dizer automática — mas continua existindo. */
+  it("desligar a chave-geral não esvazia a fila, só o automático dela", () => {
+    const semAuto: CallsData = { ...DIA_DE_CHAMADAS, autoMode: false };
+    const fila = pendingCalls(semAuto, MODELOS_DE_CHAMADA);
+    expect(fila).toHaveLength(4);
+    expect(fila.every((item) => item.auto === false)).toBe(true);
+  });
+
+  it("o interruptor individual explica por que está travado", () => {
+    expect(canToggleRule(true)).toEqual({ allowed: true });
+    expect(canToggleRule(false).reason).toBe(
+      "A automação geral está desligada. Ligue-a para configurar as regras.",
+    );
+  });
+});
+
+describe("quem chamar vem da agenda", () => {
+  it("o profissional sai do próximo atendimento em aberto da criança", () => {
+    const alvo = resolveTarget("professional", "Beatriz Ferraz", DIA_DE_CHAMADAS);
+    expect(alvo).toEqual({
+      target: "Marina Okabe",
+      professional: "Marina Okabe",
+      room: "Sala Girassol - 2",
+      start: "10:45",
+      fromAgenda: true,
+    });
+  });
+
+  /**
+   * Sem check-in em aberto, o mais recente ainda nomeia quem atendeu — é a
+   * diferença entre "chegou agora" e "chame quem estava com ela".
+   */
+  it("sem atendimento em aberto, o último check-in ainda responde", () => {
+    const fechado: CallsData = {
+      ...DIA_DE_CHAMADAS,
+      events: DIA_DE_CHAMADAS.events.map((event) => ({ ...event, done: true })),
+    };
+    expect(resolveTarget("professional", "Júlia Prado", fechado)).toMatchObject({
+      target: "Clara Vidigal",
+      fromAgenda: true,
+    });
+  });
+
+  it("o responsável sai do cadastro da criança", () => {
+    expect(resolveTarget("guardian", "Pedro Antunes", DIA_DE_CHAMADAS)).toEqual({
+      target: "Vicente Antunes",
+      guardian: "Vicente Antunes",
+      fromAgenda: true,
+    });
+  });
+
+  /** Sem resposta da agenda, o seletor manual aparece — e é isto que o sinaliza. */
+  it("criança sem agenda e sem cadastro devolve alvo vazio, fora da agenda", () => {
+    expect(resolveTarget("professional", "Ninguém Conhecido", DIA_DE_CHAMADAS)).toEqual({
+      target: "",
+      fromAgenda: false,
+    });
+    expect(resolveTarget("guardian", "Ninguém Conhecido", DIA_DE_CHAMADAS)).toEqual({
+      target: "",
+      fromAgenda: false,
+    });
+  });
+
+  it("o aviso geral não procura ninguém", () => {
+    expect(resolveTarget("general", "", DIA_DE_CHAMADAS)).toEqual({
+      target: "Sala de espera",
+      fromAgenda: false,
+    });
+  });
+});

@@ -79,9 +79,18 @@ export function ButtonTabs<T extends string>({
     const activeMarker = marker.current;
     if (!list || !activeButton || !activeMarker) return;
 
+    /* Mede as **quatro** medidas do botão ativo, e não só as duas horizontais.
+       A altura era `h-10`/`h-12` fixa no marcador, e só uma delas casava: em
+       `normal` o botão dá exatamente 48px, em `small` dá 36 contra os 40 do
+       marcador — e no telefone, onde a aba fica só com o ícone e não há texto
+       para dar a altura de linha, dá 28. O marcador de 40 sobrava 12px numa
+       caixa de 28 e escapava por cima e por baixo do trilho, como uma aba solta
+       fora da moldura. Medir resolve em qualquer tamanho e nos dois modos. */
     const reposition = () => {
       activeMarker.style.width = `${activeButton.offsetWidth}px`;
+      activeMarker.style.height = `${activeButton.offsetHeight}px`;
       activeMarker.style.left = `${activeButton.offsetLeft}px`;
+      activeMarker.style.top = `${activeButton.offsetTop}px`;
       activeMarker.classList.remove("hidden");
     };
 
@@ -123,7 +132,12 @@ export function ButtonTabs<T extends string>({
             ações andam juntos no canto direito. */}
         <div
           className={[
-            "flex flex-wrap items-center gap-3",
+            /* `min-w-0`: sem ele este item de flex tem tamanho mínimo igual
+               ao conteúdo — e o conteúdo é o trilho inteiro, 431px com quatro
+               abas —, e o grupo esticava além do cartão. Com ele o grupo cede,
+               e é o `flex-wrap` que joga o trilho para a linha de baixo quando
+               ele não cabe ao lado das ações. */
+            "flex min-w-0 flex-wrap items-center gap-3",
             header ? undefined : "flex-1 justify-between",
           ]
             .filter(Boolean)
@@ -131,7 +145,7 @@ export function ButtonTabs<T extends string>({
         >
         <div
           ref={tabList}
-          className="thin-scrollbar relative inline-flex max-w-full gap-2 overflow-auto rounded-xl bg-[var(--color-brand-purple-dark)]/5 p-2 text-[var(--color-brand-purple-dark)]"
+          className="relative inline-flex gap-2 rounded-xl bg-[var(--color-brand-purple-dark)]/5 p-2 text-[var(--color-brand-purple-dark)]"
           role="tablist"
           aria-label={label}
           onKeyDown={moveFocus}
@@ -140,10 +154,7 @@ export function ButtonTabs<T extends string>({
             ref={marker}
             aria-hidden="true"
             data-button-tab-marker
-            className={[
-              "pointer-events-none absolute left-0 hidden text-[var(--color-brand-blue)]/40 transition-[left,width] duration-300 ease-out",
-              size === "normal" ? "h-12" : "h-10",
-            ].join(" ")}
+            className="pointer-events-none absolute left-0 top-0 hidden text-[var(--color-brand-blue)]/40 transition-[left,top,width,height] duration-300 ease-out"
           >
             <div className="h-full w-full rounded-lg bg-[var(--color-brand-blue)]/30 shadow-[var(--shadow-top-inset)]" />
           </div>
@@ -164,12 +175,75 @@ export function ButtonTabs<T extends string>({
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
                 "disabled:cursor-not-allowed disabled:text-[var(--color-neutral-300)]",
                 size === "normal" ? "px-4 py-2.5 text-lg" : "px-2 py-1.5 text-base",
-              ].join(" ")}
+                /* Sem rótulo, o botão é **quadrado**, e o lado é a altura que
+                   ele tem com rótulo: 36px em `small`, 48px em `normal`. Com o
+                   recuo horizontal e nada mais, a largura passava a ser a do
+                   glifo — `fa-users` dá 36, `fa-clock` dá 32 —, e três abas em
+                   sequência ficavam de tamanhos diferentes.
+
+                   `justify-center` porque o quadrado é mais largo que o ícone,
+                   e `px-0 py-0` porque o lado agora vem de `size-*`; são as
+                   mesmas propriedades do recuo acima, e variante vem depois de
+                   utilitário puro na folha, então sobrescrevem. */
+                tab.icon
+                  ? size === "normal"
+                    ? "@max-phone:size-12 @max-phone:justify-center @max-phone:px-0 @max-phone:py-0"
+                    : "@max-phone:size-9 @max-phone:justify-center @max-phone:px-0 @max-phone:py-0"
+                  : undefined,
+              ]
+                .filter(Boolean)
+                .join(" ")}
             >
               {tab.icon && <Icon name={tab.icon} />}
-              {tab.label}
+              {/* No telefone a aba fica só com o ícone; de `@phone` para cima
+                  mostra o rótulo.
+
+                  Com quatro abas e rótulo, o trilho pede 431px — mais que a
+                  largura útil de um telefone. Como o trilho não rola (ver
+                  acima), rótulo em telefone transbordaria o cartão.
+
+                  A regra é `@max-phone:sr-only`, e não `sr-only` com
+                  `@phone:not-sr-only`: `not-sr-only` dentro de variante de
+                  container não gera CSS nenhum no Tailwind 4 — era o que fazia
+                  o rótulo desaparecer em **toda** largura, inclusive no
+                  desktop. Esconder no caso estreito é uma regra só, e o caso
+                  largo é o padrão sem variante.
+
+                  `sr-only` e não `hidden`: o rótulo continua no DOM e continua
+                  sendo o nome acessível da aba. Uma aba que anuncia só o ícone
+                  não anuncia nada — `Icon` é `aria-hidden`.
+
+                  Só vale quando a aba tem ícone. Sem ele não há o que sobrar, e
+                  o espelho puro de `button_tabs/1` — que não tem ícone nenhum —
+                  continua mostrando o rótulo em qualquer largura. */}
+              <span className={tab.icon ? "@max-phone:sr-only" : undefined}>
+                {tab.label}
+              </span>
               {tab.badge !== undefined && tab.badge > 0 && (
-                <span className="rounded-full bg-[var(--color-red-light)] px-2 text-xs font-bold text-[var(--color-danger-fg)]">
+                /* No telefone o contador sai da linha e vira canto.
+
+                   Inline ele é o que impedia o quadrado: a aba com contador
+                   media 65px contra 36 e 32 das vizinhas. Sumir com ele custaria
+                   a informação — a Documentação do profissional é a única tela
+                   onde esse número aparece —, então ele vira sobreposição de
+                   canto, que é o tratamento que o sistema já dá ao contador de
+                   botão: `notification_badge` do `button/1` é `absolute -left-1
+                   -top-1` no sino do cabeçalho. Aqui é à direita porque a
+                   esquerda de uma aba encosta na vizinha.
+
+                   `-top-1` e `-right-1` ficam dentro do `p-2` do trilho, e o
+                   trilho não recorta mais nada — outra coisa que só é possível
+                   depois de tirar o `overflow-auto`. */
+                <span
+                  className={[
+                    "rounded-full bg-[var(--color-red-light)] px-2 text-xs font-bold text-[var(--color-danger-fg)]",
+                    tab.icon
+                      ? "@max-phone:absolute @max-phone:-right-1 @max-phone:-top-1 @max-phone:px-1.5 @max-phone:leading-4"
+                      : undefined,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
                   {tab.badge}
                 </span>
               )}
