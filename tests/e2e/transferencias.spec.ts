@@ -131,43 +131,21 @@ test("a rodada leva o que cabe e devolve o resto à fila", async ({ page }) => {
   await expect(page.locator('[data-transfer-map="map-bernardo-psi"]')).toContainText(
     "Marina Costa",
   );
-  await expect(page.locator("#conteudo")).toContainText("5 mapas sem profissional");
+  await expect(page.locator("#conteudo")).not.toContainText("mapas sem profissional · Vila Aurora");
 });
 
-/**
- * O horário lotado não vira oito fatias de dois pixels.
- *
- * Oito mapas na mesma faixa passam do limite de três da grade e viram um bloco
- * que diz quantas sessões agrupa — e abre a lista, onde a seleção por
- * especialidade é o gesto real de quem movimenta uma inativação.
- */
-test("o horário lotado vira um bloco que abre a lista das oito sessões", async ({ page }) => {
+test("a central apresenta somente a lista, com o título dentro do card", async ({ page }) => {
   await page.goto(TELA);
-  await semColetor(page);
-  await page.locator('label:has(input[value="agenda"])').click();
-
-  const resumo = page.locator("[data-transfer-cluster]");
-  await expect(resumo).toHaveCount(1);
-  await expect(resumo).toContainText("8 sessões");
-  // A etiqueta visível é a acionável — quantos estão sem profissional. A
-  // contagem por especialidade não cabe na coluna de um dia em toda largura, e
-  // por isso ela é afirmada onde sempre está inteira: o `title`.
-  await expect(resumo).toContainText("5 sem prof.");
-  await expect(resumo).toHaveAttribute(
-    "title",
-    "8 sessões em Ter 08:00–09:00 · 4 de Psicologia · 2 de Fonoaudiologia · 2 de Terapia ocupacional · 5 sem profissional",
-  );
-
-  await resumo.click();
-  const dialogo = page.getByRole("dialog");
-  await expect(dialogo).toContainText("Ter · 08:00–09:00 · 8 sessões");
-  await expect(dialogo.locator('input[type="checkbox"]')).toHaveCount(8);
-
-  await dialogo.getByRole("button", { name: /4 Psicologia/ }).click();
-  await dialogo.getByRole("button", { name: "Concluir" }).click();
-
-  await expect(page.locator("#conteudo")).toContainText("4 selecionados");
-  await expect(page.locator("aside")).toContainText("4 mapas selecionados");
+  await expect(page.locator('[data-transfer-view="list"]')).toBeVisible();
+  await expect(page.locator('input[value="agenda"]')).toHaveCount(0);
+  // Pelo id, e não subindo um nível a partir da lista: a lista mora dentro da
+  // própria moldura dela, e o salto posicional quebrava a cada vez que a
+  // estrutura interna do card mudava. O que o teste quer saber é outra coisa —
+  // que o título e a lista estão no mesmo card, e que o card tem recuo.
+  const card = page.locator("#transfers-card");
+  await expect(card.locator('[data-transfer-view="list"]')).toBeVisible();
+  await expect(card.locator("header")).toContainText("Central de transferências");
+  expect(await card.evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft))).toBeGreaterThan(0);
 });
 
 /**
@@ -203,7 +181,87 @@ test("a exceção de especialidade exige a marcação e um motivo escrito", asyn
   await page.locator("#transfers-simular").click();
   const linhas = await veredito(page);
   expect(linhas.map((linha) => linha.fit)).toEqual(["ok", "ok"]);
-  for (const linha of linhas) expect(linha.texto).toContain("exceção");
-  await expect(painel).toContainText("Motivo registrado");
-  await expect(painel).toContainText("Sala 6");
+  for (const linha of linhas) expect(linha.texto).toContain("Exceção");
+  await expect(painel.getByRole("button", { name: "Exceção (2)", exact: true })).toBeVisible();
+});
+
+test("o filtro da lista define a rodada e preserva as outras especialidades na fila", async ({ page }) => {
+  await page.goto(TELA);
+  await semColetor(page);
+  await selecionar(page, ["map-sofia-psi", "map-alice-fono"]);
+  await expect(page.locator("#transfers-rodada-trigger")).toHaveCount(0);
+  await expect(page.locator("aside")).toContainText("A seleção reúne especialidades diferentes");
+  await page.locator("#transfers-especialidade-trigger").click();
+  await page.getByRole("option", { name: "Psicologia", exact: true }).click();
+  await expect(page.getByRole("checkbox", { name: "Exceção: permitir profissional de outra especialidade" })).not.toBeChecked();
+  await expect(page.locator("#transfers-motivo")).toHaveCount(0);
+  await escolherDestino(page, "Marina Costa");
+  await page.locator("#transfers-simular").click();
+  await expect(page.locator("#transfers-aplicar")).toContainText("manter 1 na fila");
+  await page.locator("#transfers-aplicar").click();
+  await page.locator("#transfers-especialidade-trigger").click();
+  await page.getByRole("option", { name: "Fonoaudiologia", exact: true }).click();
+  await expect(page.locator('[data-transfer-map="map-alice-fono"] input')).toBeChecked();
+  await page.getByRole("button", { name: "Pausar com 1 pendente" }).click();
+  await expect(page.locator("aside")).toContainText("Movimentação pausada · 1 mapa pendente");
+  await page.getByRole("button", { name: "Retomar 1 mapa pendente" }).click();
+  await expect(page.locator("#transfers-destino-trigger")).toBeVisible();
+});
+
+test("priorizar recalcula a disputa antes de aplicar", async ({ page }) => {
+  await page.goto(TELA);
+  await semColetor(page);
+  await selecionar(page, DE_JULIANA);
+  await escolherDestino(page, "Marina Costa");
+  await page.locator("#transfers-simular").click();
+  await page.getByRole("button", { name: "Priorizar Sofia Ribeiro Lopes", exact: true }).click();
+  await expect(page.locator('[data-transfer-evaluation="map-sofia-psi"]')).toHaveAttribute("data-transfer-fit", "ok");
+  await expect(page.locator('[data-transfer-evaluation="map-sofia-psi"]')).toBeFocused();
+  await expect(page.getByRole("status").filter({ hasText: "Prioridade alterada" })).toHaveClass("sr-only");
+  await expect(page.locator('[data-transfer-evaluation="map-bernardo-psi"]')).toHaveAttribute("data-transfer-fit", "warn");
+  await expect(page.locator("aside")).toContainText("Atendimentos anteriores ou já realizados permanecem");
+  await expect(page.locator("aside")).not.toContainText("Saldo de horas por sala");
+  await page.locator("#transfers-aplicar").click();
+  await expect(page.locator('[data-transfer-map="map-sofia-psi"] input')).not.toBeChecked();
+});
+
+
+test("no celular a revisão é alcançável e os checkboxes mantêm área de toque", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(TELA);
+  await semColetor(page);
+  await selecionar(page, DE_JULIANA);
+  const checkbox = page.locator('[data-transfer-map="map-sofia-psi"] input');
+  await expect(checkbox).toHaveCSS("width", "16px");
+  const label = await checkbox.evaluate((input: HTMLInputElement) => {
+    const box = input.labels![0]!.getBoundingClientRect();
+    return { width: box.width, height: box.height };
+  });
+  expect(label.width).toBeGreaterThanOrEqual(24);
+  expect(label.height).toBeGreaterThanOrEqual(24);
+  await page.getByRole("button", { name: "Revisar 3 mapas" }).click();
+  await expect(page.getByRole("complementary", { name: "Revisão da transferência" })).toBeFocused();
+  await expect(page.locator("#transfers-destino-trigger")).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0);
+});
+
+
+test("pílulas filtram a simulação sem alterar o que será aplicado", async ({ page }) => {
+  await page.goto(TELA);
+  await semColetor(page);
+  await selecionar(page, DE_JULIANA);
+  await escolherDestino(page, "Marina Costa");
+  await page.locator("#transfers-simular").click();
+  const filters = page.getByRole("group", { name: "Filtrar resultados da simulação" });
+  await filters.getByRole("button", { name: "Não cabe junto (2)", exact: true }).click();
+  await expect(page.locator("[data-transfer-evaluation]")).toHaveCount(2);
+  await expect(page.locator("#transfers-aplicar")).toContainText("Transferir 1 e manter 2 na fila");
+  await filters.getByRole("button", { name: "Não cabe (0)", exact: true }).click();
+  await expect(page.locator("aside")).toContainText("Nenhum mapa com este status");
+  await filters.getByRole("button", { name: "Não cabe junto (2)", exact: true }).click();
+  await page.getByRole("button", { name: "Priorizar Sofia Ribeiro Lopes", exact: true }).click();
+  await expect(filters.getByRole("button", { name: "Todos (3)", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator('[data-transfer-evaluation="map-sofia-psi"]')).toBeFocused();
+  await expect(page.getByRole("status").filter({ hasText: "Prioridade alterada" })).toHaveClass("sr-only");
+  await expect(page.locator('[data-transfer-evaluation="map-sofia-psi"]')).toHaveAttribute("data-transfer-fit", "ok");
 });

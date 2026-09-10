@@ -8485,6 +8485,7 @@ import {
   roomImpact,
   scopeMessage,
   selectedSpecialties,
+  rankDestinations,
   suggestDestination,
   weeklyHours,
 } from "../src/rules/transfers.js";
@@ -8688,6 +8689,45 @@ describe("a sugestão de destino", () => {
   it("seleção vazia não sugere nada", () => {
     expect(suggestDestination([], SEMANA, true)).toBeUndefined();
   });
+
+  /**
+   * A tabela inteira, que antes era calculada e descartada.
+   *
+   * `suggestDestination` sempre pontuou todos os elegíveis para devolver o
+   * primeiro. Estes casos prendem duas coisas: que a sugestão continua sendo a
+   * cabeça do ranking — se um dia divergirem, a tela passa a recomendar um e
+   * destacar outro — e que a ordem completa é a mesma regra do desempate, não
+   * só a do vencedor.
+   */
+  it("o ranking devolve todos os elegíveis, e a sugestão é a cabeça dele", () => {
+    const ranking = rankDestinations(DE_JULIANA, SEMANA, false);
+    expect(ranking.length).toBeGreaterThan(1);
+    expect(ranking[0]).toEqual(suggestDestination(DE_JULIANA, SEMANA, false));
+  });
+
+  it("o ranking ordena por mapas que cabem e, no empate, por quem carrega menos", () => {
+    const ranking = rankDestinations(DE_JULIANA, SEMANA, false);
+
+    // Nunca sobe quem recebe menos.
+    const cabem = ranking.map((item) => item.fits);
+    expect(cabem).toEqual([...cabem].sort((a, b) => b - a));
+
+    // Marina e Bruno recebem um cada; Marina carrega 2h, Bruno 3h.
+    const marina = ranking.findIndex((item) => item.professional.name === "Marina Costa");
+    const bruno = ranking.findIndex((item) => item.professional.name === "Bruno Farias");
+    expect(marina).toBeLessThan(bruno);
+  });
+
+  it("a mesma especialidade vem antes, mesmo que a de fora receba mais", () => {
+    const ranking = rankDestinations(DE_JULIANA, SEMANA, true);
+    const primeiroDeFora = ranking.findIndex((item) => !item.sameSpecialty);
+    const ultimoDaCasa = ranking.map((item) => item.sameSpecialty).lastIndexOf(true);
+    expect(ultimoDaCasa).toBeLessThan(primeiroDeFora);
+  });
+
+  it("seleção vazia não tem ranking", () => {
+    expect(rankDestinations([], SEMANA, true)).toEqual([]);
+  });
 });
 
 describe("a exceção de especialidade", () => {
@@ -8816,7 +8856,7 @@ describe("a transferência é parcial por natureza", () => {
     expect(aplicada.round.crossSpecialty).toBe(true);
   });
 
-  it("a vigência parcial reescreve a data do mapa; a inteira não", () => {
+  it("a vigência começa na data escolhida ou hoje, sem retroagir", () => {
     const avaliacoes = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps);
     const parcial = applyRound(SEMANA, avaliacoes, {
       destination: profissionalDe("prof-marina"),
@@ -8833,8 +8873,8 @@ describe("a transferência é parcial por natureza", () => {
       fromDate: "2026-08-03",
       crossSpecialty: false,
     });
-    expect(inteira.maps.find((map) => map.id === "map-bernardo-psi")?.since).toBe("2026-07-24");
-    expect(inteira.round.fromDate).toBeUndefined();
+    expect(inteira.maps.find((map) => map.id === "map-bernardo-psi")?.since).toBe(SEMANA.today);
+    expect(inteira.round.fromDate).toBe(SEMANA.today);
   });
 
   it("sem nenhum mapa que caiba, aplicar é impedimento e diz o que fazer", () => {
@@ -8913,8 +8953,8 @@ describe("a vigência da transferência", () => {
   });
 
   it("diz o que acontece com o que já está agendado", () => {
-    expect(scopeMessage("whole", SEMANA.today)).toContain("incluindo os atendimentos já agendados");
-    expect(scopeMessage("from", "2026-08-03")).toContain("até 03/08/2026");
+    expect(scopeMessage("whole", SEMANA.today)).toContain("Atendimentos anteriores ou já realizados permanecem");
+    expect(scopeMessage("from", "2026-08-03")).toContain("A partir de 03/08/2026");
   });
 });
 
@@ -8976,5 +9016,25 @@ describe("as horas do mapa", () => {
     expect(formatHours(3)).toBe("3h");
     expect(formatHours(1.5)).toBe("1,5h");
     expect(formatHours(0.5)).toBe("0,5h");
+  });
+});
+
+
+describe("transferências com decisão explícita", () => {
+  it("seleção mista não autoriza exceção automaticamente", () => {
+    expect(canSimulate({ selection: [mapaDe("map-sofia-psi"), mapaDe("map-alice-fono")], destination: profissionalDe("prof-marina"), crossSpecialty: false, reason: "Justificativa preenchida" }).allowed).toBe(false);
+  });
+  it("a coordenação pode escolher quem recebe o horário disputado", () => {
+    const result = evaluateBatch(DE_JULIANA, profissionalDe("prof-marina"), SEMANA.maps, "map-sofia-psi");
+    expect(result.find((item) => item.map.id === "map-sofia-psi")?.fit).toBe("ok");
+    expect(result.filter((item) => item.fit === "ok")).toHaveLength(1);
+  });
+  it("priorizar não toma o horário de um mapa que já pertence ao destino", () => {
+    const result = evaluateBatch([mapaDe("map-lucas-psi"), mapaDe("map-sofia-psi")], profissionalDe("prof-rafael"), SEMANA.maps, "map-sofia-psi");
+    expect(result.find((item) => item.map.id === "map-sofia-psi")?.fit).toBe("warn");
+  });
+  it("a justificativa fica disponível no registro da rodada", () => {
+    const result = applyRound(SEMANA, evaluateBatch(DE_LARISSA, profissionalDe("prof-paulo"), SEMANA.maps), { destination: profissionalDe("prof-paulo"), scope: "whole", crossSpecialty: true, reason: "Cobertura excepcional autorizada" });
+    expect(result.round.reason).toBe("Cobertura excepcional autorizada");
   });
 });

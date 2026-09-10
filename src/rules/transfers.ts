@@ -55,7 +55,7 @@ export const transferRules: Rule[] = [
   {
     id: "the-selection-competes-with-itself",
     statement:
-      "A simulação avalia a seleção acumulando a ocupação que ela própria cria no destino: o primeiro mapa de um horário cabe, os seguintes disputam o mesmo horário com ele.",
+      "A simulação avalia a seleção acumulando a ocupação que ela própria cria no destino: a ordem inicial é dia, horário e nome; a coordenação pode priorizar um mapa em disputa, preservando os horários que já pertencem ao destino.",
     rationale:
       "É o que separa esta tela de uma lista de verificações independentes. Numa unidade em que trinta e cinco sessões começam às 08:00 de terça, avaliar cada mapa isoladamente contra a agenda de quem recebe diz “cabe” trinta e cinco vezes — e a coordenação aplica, a agenda gera trinta e quatro conflitos, e o erro só aparece depois de os responsáveis já terem sido avisados da troca.",
     source: "src/rules/transfers.ts",
@@ -76,17 +76,9 @@ export const transferRules: Rule[] = [
     source: "src/rules/transfers.ts",
   },
   {
-    id: "moving-a-map-moves-the-room",
-    statement:
-      "A simulação mostra o saldo de horas por sala antes de aplicar: quantas saem da sala de quem entrega e quantas entram na sala de quem recebe.",
-    rationale:
-      "Mapa não é só gente, é lugar. A transferência que cabe na agenda do profissional pode não caber na sala dele, e a coordenação só descobriria isso quando a alocação devolvesse os horários sem sala para o Mapa da Unidade — depois de aplicada, com as famílias já avisadas. O saldo por sala é a única parte do impacto que não está na lista de mapas, e é a que muda o destino escolhido.",
-    source: "src/rules/transfers.ts",
-  },
-  {
     id: "a-map-without-a-professional-is-listed-with-the-others",
     statement:
-      "Mapa sem profissional aparece na mesma lista dos mapas ativos, com o motivo de ter ficado sem e o nome de quem o deixou. O filtro nasce em “todos os mapas”, e a contagem de mapas sem profissional fica no cabeçalho da área.",
+      "Mapa sem profissional aparece na mesma lista dos mapas ativos, com o motivo de ter ficado sem e o nome de quem o deixou. O filtro nasce em “todos os mapas”, e permite localizar os mapas sem profissional.",
     rationale:
       "O mapa órfão continua existindo e continua gerando agendamento — o que ele perdeu foi quem atende, não a vigência. Numa tela separada, ele só seria procurado por quem já soubesse que ele existe, e quem sabe é quem inativou o profissional na semana passada. Na mesma lista, ele é encontrado por quem abriu a área para outra coisa, que é como estes mapas de fato aparecem.",
     source: "src/rules/transfers.ts",
@@ -252,6 +244,7 @@ export function evaluateBatch(
   selection: TransferMap[],
   professional: TransferProfessional,
   maps: TransferMap[],
+  priorityId?: string,
 ): TransferEvaluation[] {
   const selecionados = selection.map((map) => map.id);
   const reservas: { slot: TransferSlot; patient: string }[] = [];
@@ -268,7 +261,7 @@ export function evaluateBatch(
     );
 
   return [...selection]
-    .sort(ordemDeAvaliacao)
+    .sort((a, b) => Number(b.professionalId === professional.id) - Number(a.professionalId === professional.id) || Number(b.id === priorityId) - Number(a.id === priorityId) || ordemDeAvaliacao(a, b))
     .map((map) => {
       const base = evaluateMap(map, professional, maps, selecionados);
       if (base.fit === "same") {
@@ -378,7 +371,7 @@ export function canSimulate(input: {
     return { allowed: false, reason: "Escolha o profissional de destino." };
   }
   if (!isCrossSpecialty(input.selection, input.destination)) return { allowed: true };
-  if (!input.crossSpecialty && selectedSpecialties(input.selection).length === 1) {
+  if (!input.crossSpecialty) {
     return {
       allowed: false,
       reason: "Marque a exceção para transferir para outra especialidade.",
@@ -413,12 +406,25 @@ export interface TransferSuggestion {
  * quem absorve mais de uma vez — dividir bem entre quatro pessoas é o problema
  * da segunda rodada, e a sugestão é refeita a cada uma delas.
  */
-export function suggestDestination(
+/**
+ * Todos os destinos elegíveis, do melhor para o pior.
+ *
+ * Isto **já era** o corpo de `suggestDestination`: ele montava a tabela inteira
+ * — quantos mapas cabem em cada profissional, quanto cada um já carrega — e
+ * devolvia só a primeira linha. A tela pagava o cálculo de todo mundo e mostrava
+ * um nome, e quem usava descobria o segundo colocado escolhendo, simulando e
+ * recomeçando.
+ *
+ * A ordem é a mesma de antes, e é ela que define "melhor": mesma especialidade
+ * primeiro, depois quem absorve mais mapas, depois quem carrega menos horas, e
+ * o nome como desempate para a lista não dançar entre execuções.
+ */
+export function rankDestinations(
   selection: TransferMap[],
   data: TransfersData,
   allowCrossSpecialty: boolean,
-): TransferSuggestion | undefined {
-  if (selection.length === 0) return undefined;
+): TransferSuggestion[] {
+  if (selection.length === 0) return [];
   const especialidades = selectedSpecialties(selection);
   const selecionados = selection.map((map) => map.id);
   const mesmaEspecialidade = (professional: TransferProfessional) =>
@@ -445,7 +451,16 @@ export function suggestDestination(
         b.fits - a.fits ||
         a.load - b.load ||
         a.professional.name.localeCompare(b.professional.name, "pt-BR"),
-    )[0];
+    );
+}
+
+/** O primeiro de `rankDestinations`. Assinatura e resultado inalterados. */
+export function suggestDestination(
+  selection: TransferMap[],
+  data: TransfersData,
+  allowCrossSpecialty: boolean,
+): TransferSuggestion | undefined {
+  return rankDestinations(selection, data, allowCrossSpecialty)[0];
 }
 
 /* ============================================================== as rodadas */
@@ -460,6 +475,7 @@ export interface TransferRound {
   scope: TransferScope;
   fromDate?: string;
   crossSpecialty: boolean;
+  reason?: string;
 }
 
 export interface AppliedRound {
@@ -494,6 +510,7 @@ export function applyRound(
     scope: TransferScope;
     fromDate?: string;
     crossSpecialty: boolean;
+    reason?: string;
   },
 ): AppliedRound {
   const movedIds = evaluations
@@ -510,7 +527,7 @@ export function applyRound(
          profissional, quem o deixou não muda: ele não passou por ninguém. */
       leftBy: anterior ? anterior.name : map.leftBy,
       reason: undefined,
-      since: options.scope === "from" && options.fromDate ? options.fromDate : map.since,
+      since: options.scope === "from" && options.fromDate ? options.fromDate : data.today,
     } satisfies TransferMap;
   });
 
@@ -525,8 +542,9 @@ export function applyRound(
         (avaliacao) => avaliacao.fit !== "ok" && avaliacao.fit !== "same",
       ).length,
       scope: options.scope,
-      fromDate: options.scope === "from" ? options.fromDate : undefined,
+      fromDate: options.scope === "from" ? options.fromDate : data.today,
       crossSpecialty: options.crossSpecialty,
+      reason: options.crossSpecialty ? options.reason : undefined,
     },
   };
 }
@@ -540,7 +558,7 @@ export interface RoomImpact {
 }
 
 /**
- * Implementação de `moving-a-map-moves-the-room`.
+ * Cálculo de referência do saldo de horas; retirado da interface na revisão 0020.
  *
  * Só o que cabe entra na conta: a simulação mostra o impacto do que vai ser
  * aplicado, e somar o que não se move faria a sala de destino parecer mais
@@ -574,9 +592,7 @@ export function roomImpact(
 
 /** A frase que explica o que a vigência escolhida faz com o que já está agendado. */
 export function scopeMessage(scope: TransferScope, fromDate: string): string {
-  return scope === "whole"
-    ? "O mapa passa integralmente para o novo profissional, incluindo os atendimentos já agendados."
-    : `Os atendimentos até ${formatNumericDate(fromDate)} seguem com o profissional atual; a partir dessa data passam para o novo responsável.`;
+  return `A partir de ${formatNumericDate(fromDate)}${scope === "whole" ? " (hoje)" : ""}, os horários passam para o novo profissional. Atendimentos anteriores ou já realizados permanecem com o responsável original.`;
 }
 
 /** A vigência parcial não retroage: a primeira data possível é hoje. */
