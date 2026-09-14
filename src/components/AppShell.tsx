@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import type { ScenarioContext } from "@brucesantos/design-space";
 import logotipo from "../assets/bloomy-negative.svg";
 import simbolo from "../assets/bloomy-symbol-negative.svg";
@@ -105,6 +105,7 @@ const NAV: NavItem[] = [
   // faria o menu parecer o de lá. O ícone é o do desenho.
   { label: "Gestão de Chamadas", path: "/calls", segmentos: ["calls"], scenario: "calls.queue", icon: "fa-tower-broadcast", proposta: true, origem: "não existe no sistema real" },
   { label: "Central de Transferências", path: "/transfers", segmentos: ["transfers"], scenario: "transfers.queue", icon: "fa-arrow-right-arrow-left", proposta: true, origem: "não existe no sistema real" },
+  { label: "Central de PUSH", path: "/push", segmentos: ["push"], scenario: "push.broadcast", icon: "fa-comment-dots", proposta: true, origem: "não existe no sistema real" },
 ];
 
 /**
@@ -180,6 +181,8 @@ export function AppShell({
    * é um só e tem nome afirmativo — `expandido` —, para não herdar a inversão.
    */
   const [expandido, setExpandido] = useState(false);
+  const menuId = useId();
+  const logoMobile = useRef<HTMLButtonElement>(null);
   /**
    * O item da aba aberta não passa pelo filtro de permissão.
    *
@@ -196,7 +199,13 @@ export function AppShell({
   );
 
   return (
-    <div className="relative flex min-h-full min-w-0 bg-app">
+    <div className="relative flex min-h-full min-w-0 bg-app"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && expandido) {
+          setExpandido(false);
+          logoMobile.current?.focus();
+        }
+      }}>
       {/* Primeiro elemento focável da página. Sem ele, cada tela do backoffice
           obriga a atravessar o drawer inteiro por Tab antes de chegar ao
           conteúdo. Nos portais o drawer não existe, e o link continua útil por
@@ -222,13 +231,14 @@ export function AppShell({
            teclado fecha pelo mesmo botão que abriu. */
         <div
           aria-hidden="true"
-          onClick={() => setExpandido(false)}
+          onClick={() => { setExpandido(false); logoMobile.current?.focus(); }}
           className="fixed inset-0 z-40 bg-[var(--color-neutral-900)]/80 @desktop:hidden"
         />
       )}
 
       {surface === "backoffice" && (
         <nav
+          id={menuId}
           className={[
             "bloomy-drawer espelho-do-sistema flex max-h-screen flex-col overflow-hidden bg-[var(--color-brand-blue)]",
             "transition-[width] duration-500",
@@ -275,6 +285,7 @@ export function AppShell({
                     aria-current="page"
                     onClick={(event) => {
                       event.preventDefault();
+                      setExpandido(false);
                       context.navigate(destino);
                     }}
                     // Recolhido, o rótulo sai da tela mas continua acessível: o
@@ -317,7 +328,12 @@ export function AppShell({
                 entre 72px e 256px, e aqui a alternância é entre nada e tudo. */}
             <button
               type="button"
-              onClick={() => setExpandido((antes) => !antes)}
+              ref={logoMobile}
+              aria-controls={menuId}
+              onClick={() => {
+                setExpandido((antes) => !antes);
+                if (!expandido) requestAnimationFrame(() => document.getElementById(menuId)?.querySelector<HTMLAnchorElement>("a")?.focus());
+              }}
               aria-expanded={expandido}
               aria-label={expandido ? "Fechar a navegação" : "Abrir a navegação"}
               className="flex min-w-20 items-center justify-center bg-[var(--color-brand-blue)] @desktop:hidden"

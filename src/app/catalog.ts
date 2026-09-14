@@ -27,6 +27,7 @@ import { hourMapFixtures } from "../fixtures/hourMap.js";
 import { chatFixtures } from "../fixtures/chat.js";
 import { prospectFixtures } from "../fixtures/prospects.js";
 import { leadFixtures } from "../fixtures/leads.js";
+import { pushFixtures } from "../fixtures/push.js";
 import { callFixtures } from "../fixtures/calls.js";
 import { transferFixtures } from "../fixtures/transfers.js";
 import { reportFixtures } from "../fixtures/reports.js";
@@ -99,6 +100,7 @@ import { hourMapRules, hourMapExpiryRules } from "../rules/hourMap.js";
 import { chatRules } from "../rules/chat.js";
 import { prospectRules } from "../rules/prospects.js";
 import { leadRules } from "../rules/leads.js";
+import { pushRules } from "../rules/push.js";
 import { callRules } from "../rules/calls.js";
 import { transferRules } from "../rules/transfers.js";
 import { reportRules } from "../rules/reports.js";
@@ -127,6 +129,7 @@ import { hourMapScenarios } from "../scenarios/hourMap.js";
 import { chatScenarios } from "../scenarios/chat.js";
 import { prospectScenarios } from "../scenarios/prospects.js";
 import { leadScenarios } from "../scenarios/leads.js";
+import { pushScenarios } from "../scenarios/push.js";
 import { callScenarios } from "../scenarios/calls.js";
 import { transferScenarios } from "../scenarios/transfers.js";
 import { reportScenarios } from "../scenarios/reports.js";
@@ -1146,6 +1149,33 @@ export const modules: Module[] = [
     ],
   },
   {
+    id: "push",
+    name: "Central de PUSH",
+    description:
+      "O que a clínica fala com as famílias pelo aplicativo: o aviso que sai, quem leu, quem deu ciência — e a pesquisa que vira fila de tratativa.",
+    flows: [
+      {
+        id: "say-something-to-every-family",
+        title: "Avisar as famílias",
+        description:
+          "Do texto com variável até a entrega conferida, com o único bloqueio duro da área no meio do caminho.",
+        steps: [
+          {
+            scenario: "push.broadcast",
+            label: "Escrever, escolher o público e disparar",
+          },
+        ],
+      },
+      {
+        id: "work-the-detractors",
+        title: "Trabalhar os detratores",
+        description:
+          "A nota baixa com dono: entra na fila, muda de estado, e só sai por tratativa concluída.",
+        steps: [{ scenario: "push.broadcast", label: "Ler a queda e assumir o contato" }],
+      },
+    ],
+  },
+  {
     id: "calls",
     name: "Gestão de Chamadas",
     description:
@@ -1218,6 +1248,7 @@ export const scenarios: Scenario[] = [
   ...chatScenarios,
   ...prospectScenarios,
   ...leadScenarios,
+  ...pushScenarios,
   ...callScenarios,
   ...transferScenarios,
   ...reportScenarios,
@@ -1273,6 +1304,7 @@ export const fixtures: Fixture[] = [
   ...chatFixtures,
   ...prospectFixtures,
   ...leadFixtures,
+  ...pushFixtures,
   ...callFixtures,
   ...transferFixtures,
   ...reportFixtures,
@@ -1350,6 +1382,7 @@ export const rules: Rule[] = [
   ...chatRules,
   ...prospectRules,
   ...leadRules,
+  ...pushRules,
   ...callRules,
   ...transferRules,
   ...reportRules,

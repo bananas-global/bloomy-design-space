@@ -38,6 +38,11 @@ export const contrastPairs: ContrastPair[] = [
   // importante do módulo não depender do glifo mais apagado disponível.
   { name: "texto secundário sobre banda ink-50", foreground: "rgba(43,35,91,0.72)", background: "#f0eef5" }, // 5.38
 
+  /* O trilho de `button_tabs/1` e o marcador da aba ativa. O rótulo a 72% do
+     navy é o que aprova os dois — ver o comentário em `Tabs.tsx`. */
+  { name: "rótulo de aba sobre o trilho", foreground: "rgba(43,35,91,0.72)", background: "#f4f4f7" }, // 5.55
+  { name: "rótulo da aba ativa sobre o marcador", foreground: "rgba(43,35,91,0.72)", background: "#c5e3ee" }, // 4.95
+
   /* ---------------------------------------------------------------- ação */
   { name: "link sobre superfície", foreground: "#276e8c", background: "#ffffff" }, // 5.68
   { name: "link sobre fundo do app", foreground: "#276e8c", background: "#f0f6f8" }, // 5.21
@@ -55,6 +60,7 @@ export const contrastPairs: ContrastPair[] = [
   { name: "etiqueta green do tag/1", foreground: "#256a23", background: "#e7f4d1" }, // 5.77
   { name: "etiqueta orange do tag/1", foreground: "#854d0e", background: "#fcebdf" }, // 5.90
   { name: "etiqueta yellow do tag/1", foreground: "#854d0e", background: "#fff3cc" }, // 6.18
+  { name: "etiqueta purple do tag/1", foreground: "#ffffff", background: "#7459e4" }, // 4.89
   /* As invertidas deste produto: fundo no tom escuro, texto no tom claro. */
   { name: "etiqueta solid-red do produto", foreground: "#fde3e3", background: "#902a2a" }, // 6.77
   { name: "etiqueta solid-green do produto", foreground: "#e2f3e1", background: "#256a23" }, // 5.73

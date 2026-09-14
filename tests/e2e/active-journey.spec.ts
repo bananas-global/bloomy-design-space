@@ -437,3 +437,285 @@ test.describe("Listas gerenciais", () => {
     expect(results.violations).toEqual([]);
   });
 });
+
+/**
+ * Central de PUSH — proposta.
+ *
+ * O que é sobre a leitura da área mora aqui; o que é sobre a conta mora em
+ * `tests/rules.test.ts`, que roda em milissegundos e não precisa de navegador.
+ * Estes cinco casos são os que só existem na tela: a ordem da lista, o botão
+ * que bloqueia sem sumir, a contagem do público, o reenvio que sabe para quem
+ * vai, e a fila de detratores que não zera por conta própria.
+ */
+test.describe("Central de PUSH", () => {
+  test("os agendados abrem a lista, antes do que já saiu", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+
+    const titulos = page.locator("#conteudo article h2 button");
+    await expect(titulos.first()).toBeVisible();
+
+    const estados = await page
+      .locator("#conteudo article")
+      .evaluateAll((cartoes) => cartoes.map((cartao) => cartao.textContent?.includes("Agendado")));
+
+    expect(estados.slice(0, 2), "os dois agendados no topo").toEqual([true, true]);
+    expect(estados.slice(2).some(Boolean), "nenhum agendado depois deles").toBe(false);
+  });
+
+  /**
+   * O bloqueio da regra `a-variable-left-unfilled-cannot-be-sent`, e a forma
+   * dele: `aria-disabled` em vez de `disabled`, motivo associado por
+   * `aria-describedby`, e o controle ainda alcançável pelo teclado.
+   */
+  test("a variável sem valor bloqueia o envio sem tirar o botão do teclado", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.getByRole("button", { name: "Novo comunicado" }).click();
+
+    const enviar = page.locator("#push-enviar");
+    await expect(enviar).toHaveAttribute("aria-disabled", "true");
+    // `aria-disabled`, e **não** `disabled`: o atributo nativo tiraria o botão
+    // da ordem de foco, e o impedimento seria descoberto por eliminação.
+    expect(await enviar.evaluate((el) => el.hasAttribute("disabled"))).toBe(false);
+    await expect(enviar).toHaveAttribute("aria-describedby", "push-enviar-motivo");
+    await expect(page.locator("#push-enviar-motivo")).toContainText("{data} ainda não tem valor");
+
+    await enviar.focus();
+    await expect(enviar).toBeFocused();
+
+    await page.locator("#push-valor-data").fill("04/08/2026");
+    await expect(enviar).not.toHaveAttribute("aria-disabled", "true");
+    await expect(page.locator("#push-enviar-motivo")).toHaveCount(0);
+  });
+
+  test("o público separa quem não tem aplicativo de quem está sem notificação", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.getByRole("button", { name: "Novo comunicado" }).click();
+    await page.locator('#push-composer-abas [data-button-tab="publico"]').click();
+
+    await expect(page.getByText("12 responsáveis vão receber")).toBeVisible();
+    await expect(page.getByText(/2 sem aplicativo instalado/)).toBeVisible();
+    await expect(page.getByText(/2 com a notificação desligada/)).toBeVisible();
+  });
+
+  /**
+   * O número no botão é o da parcela, e não o do público: reenviar para todos é
+   * o que ensina a família a ignorar a notificação da clínica.
+   */
+  test("o reenvio alcança só quem não visualizou, e diz o que fez", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.getByRole("button", { name: "Não haverá atendimento em 04/08" }).click();
+
+    const reenviar = page.locator("#push-reenviar");
+    await expect(reenviar).toContainText("Reenviar a quem não viu (1)");
+    await expect(reenviar).not.toHaveAttribute("aria-disabled", "true");
+    await reenviar.click();
+
+    await expect(page.getByRole("status")).toContainText(
+      "Reenviado para 1 responsável que ainda não visualizou",
+    );
+  });
+
+  /**
+   * A pesquisa nova, e as duas coisas que ela não deixa sair pela metade: sem
+   * nome ela não entra na evolução, e a pergunta extra sem enunciado chega ao
+   * aplicativo como um campo de resposta sem pergunta.
+   */
+  test("a pesquisa nova cobra o nome e o enunciado da pergunta extra", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.locator('#push-abas [data-button-tab="nps"]').click();
+    await page.getByRole("button", { name: "Nova pesquisa" }).click();
+
+    const enviar = page.locator("#push-enviar-pesquisa");
+    await expect(enviar).toHaveAttribute("aria-disabled", "true");
+    await expect(page.locator("#push-enviar-pesquisa-motivo")).toContainText("nome à pesquisa");
+
+    await page.locator("#push-pesquisa-nome").fill("NPS trimestral — setembro");
+    await expect(enviar).not.toHaveAttribute("aria-disabled", "true");
+
+    await page.getByRole("button", { name: "Múltipla escolha" }).click();
+    await expect(page.locator("#push-enviar-pesquisa-motivo")).toContainText(
+      "Toda pergunta extra precisa de enunciado",
+    );
+
+    await page.getByLabel("Enunciado").fill("O que devemos melhorar primeiro?");
+    await expect(enviar).not.toHaveAttribute("aria-disabled", "true");
+
+    await enviar.click();
+    await expect(page.getByRole("status")).toContainText("Pesquisa enviada para 12 responsáveis");
+    await expect(page.getByText("NPS · 0 respostas de 12 enviadas")).toBeVisible();
+  });
+
+  /**
+   * A segunda passagem de axe, e por que ela existe.
+   *
+   * A varredura por cenário exclui `.espelho-do-sistema`, e nesta área a marca
+   * está no botão azul do produto e em cada campo — que é onde mora o rótulo
+   * azul do `input/1`. A exclusão remove a subárvore inteira, então rótulo,
+   * campo e nome acessível saem junto com a cor. Aqui a tela é varrida **sem** a
+   * exclusão e com `color-contrast` desligado: o que a marca esconde volta a ser
+   * verificado, menos exatamente aquilo que ela declara — a cor do produto.
+   */
+  test("a semântica da tela passa no axe mesmo sem a exclusão do espelho", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.waitForLoadState("networkidle");
+
+    const resultado = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .include("#conteudo")
+      .disableRules(["color-contrast"])
+      .analyze();
+
+    expect(
+      resultado.violations
+        .filter((violacao) => ["serious", "critical"].includes(violacao.impact ?? ""))
+        .map((violacao) => `${violacao.id}: ${violacao.help}`),
+    ).toEqual([]);
+  });
+
+  test("mobile e preview estreito não transbordam nas três abas", async ({ page }) => {
+    for (const viewport of [{ width: 390, height: 844 }, { width: 1864, height: 1003 }]) {
+      await page.setViewportSize(viewport);
+      await page.goto(urlFor("push.broadcast"));
+      await semColetor(page);
+      if (viewport.width > 767) {
+        await page.locator(".push-space").evaluate((el) => { (el as HTMLElement).style.width = "390px"; });
+      }
+      await expect(page.getByRole("navigation", { name: "Navegação principal" })).not.toBeVisible();
+      const logo = page.getByRole("button", { name: "Abrir a navegação" });
+      await logo.click();
+      await expect(page.getByRole("navigation", { name: "Navegação principal" })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(logo).toBeFocused();
+      await expect(page.getByRole("navigation", { name: "Navegação principal" })).not.toBeVisible();
+      for (const aba of ["Comunicados", "NPS", "Modelos e segmentos"]) {
+        await page.getByRole("tab", { name: aba, exact: true }).click();
+        expect(await page.locator(".push-space").evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+      }
+      if (viewport.width < 767) {
+        await page.getByRole("tab", { name: "Comunicados", exact: true }).click();
+        await page.getByRole("button", { name: "Novo comunicado", exact: true }).click();
+        for (const etapa of ["texto", "publico", "entrega"]) {
+          await page.locator(`#push-composer-abas [data-button-tab="${etapa}"]`).click();
+          expect(await page.locator("#push-composer-content").evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+        }
+      }
+    }
+  });
+
+  test("seleção manual busca por nome e preserva selecionados fora dos resultados", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.getByRole("button", { name: "Novo comunicado", exact: true }).click();
+    await expect(page.getByRole("region", { name: "Prévia do que a família recebe" })).toHaveCount(0);
+    await page.locator('#push-composer-abas [data-button-tab="publico"]').click();
+    await page.getByRole("button", { name: "Seleção manual", exact: true }).click();
+    const busca = page.getByRole("textbox", { name: "Buscar por nome", exact: true });
+    await busca.fill("Renata");
+    await page.getByRole("button", { name: "Selecionar todos os resultados", exact: true }).click();
+    await expect(page.getByRole("checkbox", { name: /Renata Ferraz/ })).toBeChecked();
+    await busca.fill("Paulo");
+    await page.getByRole("button", { name: "Selecionar todos os resultados", exact: true }).click();
+    await page.getByRole("button", { name: "Desmarcar resultados", exact: true }).click();
+    await busca.fill("");
+    await expect(page.getByRole("checkbox", { name: /Renata Ferraz/ })).toBeChecked();
+    await expect(page.getByRole("checkbox", { name: /Paulo Nunes/ })).not.toBeChecked();
+    await busca.fill("Inexistente");
+    await expect(page.getByText("Nenhum responsável encontrado.")).toBeVisible();
+  });
+
+  test("drawers mantêm largura e altura ao trocar etapas", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    for (const [aba, botao, id] of [
+      ["Comunicados", "Novo comunicado", "push-composer"],
+      ["NPS", "Nova pesquisa", "push-pesquisa"],
+    ]) {
+      await page.getByRole("tab", { name: aba, exact: true }).click();
+      await page.getByRole("button", { name: botao, exact: true }).click();
+      const painel = page.locator(`#${id}-container`);
+      await expect(painel).toBeVisible();
+      const tamanho = await painel.evaluate((el) => ({ width: el.clientWidth, height: el.clientHeight }));
+      for (const etapa of ["publico", "entrega", "texto"]) {
+        await page.locator(`#${id}-abas [data-button-tab="${etapa}"]`).click();
+        expect(await painel.evaluate((el) => ({ width: el.clientWidth, height: el.clientHeight }))).toEqual(tamanho);
+      }
+      await page.keyboard.press("Escape");
+    }
+  });
+
+  test("criar mantém tamanho e posição entre abas e a biblioteca abre opções por teclado", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    const original = await page.getByRole("button", { name: "Novo comunicado", exact: true }).boundingBox();
+    for (const [aba, acao] of [["NPS", "Nova pesquisa"], ["Modelos e segmentos", "Novo"]]) {
+      await page.getByRole("tab", { name: aba, exact: true }).click();
+      expect(await page.getByRole("button", { name: acao, exact: true }).boundingBox()).toEqual(original);
+    }
+    const novo = page.getByRole("button", { name: "Novo", exact: true });
+    await novo.focus();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Novo modelo", exact: true })).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(novo).toBeFocused();
+    await expect(novo).toHaveAttribute("aria-expanded", "false");
+    for (const opcao of ["Novo modelo", "Novo segmento"]) {
+      await novo.click();
+      await page.getByRole("button", { name: opcao, exact: true }).click();
+      await expect(page.getByRole("dialog", { name: opcao, exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
+    }
+  });
+
+  test("o status combina com busca e faixa sem alterar os indicadores", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.locator('#push-abas [data-button-tab="nps"]').click();
+    const fila = page.getByRole("region", { name: "Fila de detratores e comentários" });
+    const status = page.getByRole("combobox", { name: "Status", exact: true });
+    for (const [opcao, nome] of [
+      ["Sem tratativa", "Bruna Kishimoto"],
+      ["Em contato", "Paulo Nunes Ferreira"],
+      ["Resolvido", "Larissa Gomes"],
+    ]) {
+      await status.click();
+      await page.getByRole("option", { name: opcao, exact: true }).click();
+      await expect(fila.locator("article")).toHaveCount(1);
+      await expect(fila.getByRole("heading", { name: nome, exact: true })).toBeVisible();
+      await expect(page.getByText("2 detratores na fila")).toBeVisible();
+    }
+    await page.getByRole("textbox", { name: "Buscar", exact: true }).fill("Bruna");
+    await expect(fila.getByText("Nenhuma resposta neste recorte")).toBeVisible();
+    await status.click();
+    await page.getByRole("option", { name: "Todos", exact: true }).click();
+    await expect(fila.locator("article")).toHaveCount(1);
+    await page.getByRole("combobox", { name: "Faixa", exact: true }).click();
+    await page.getByRole("option", { name: "Promotores (9 a 10)", exact: true }).click();
+    await expect(fila.getByText("Nenhuma resposta neste recorte")).toBeVisible();
+  });
+
+  test("a tratativa concluída é o que tira o detrator da fila", async ({ page }) => {
+    await page.goto(urlFor("push.broadcast"));
+    await semColetor(page);
+    await page.locator('#push-abas [data-button-tab="nps"]').click();
+
+    await expect(page.getByText("2 detratores na fila")).toBeVisible();
+
+    // A resposta sem tratativa é a de Bruna Kishimoto, nota 5.
+    const semTratativa = page.locator("#conteudo article", { hasText: "Bruna Kishimoto" });
+    await semTratativa.getByRole("button", { name: "Assumir contato" }).click();
+
+    await expect(page.getByRole("status")).toContainText("Contato assumido com Bruna Kishimoto");
+    await expect(page.getByText("2 detratores na fila"), "assumir não tira da fila").toBeVisible();
+
+    await semTratativa.getByRole("button", { name: "Concluir tratativa" }).click();
+    await expect(page.getByRole("status")).toContainText("Tratativa de Bruna Kishimoto concluída");
+    await expect(page.getByText("1 detrator na fila")).toBeVisible();
+  });
+});
