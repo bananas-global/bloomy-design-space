@@ -62,6 +62,7 @@ import { LeadDashboard } from "../screens/LeadDashboard.js";
 import { LeadTasks } from "../screens/LeadTasks.js";
 import { Push } from "../screens/Push.js";
 import { Calls } from "../screens/Calls.js";
+import { TransferCenter } from "../screens/TransferCenter.js";
 import { Reports } from "../screens/Reports.js";
 import { ProfessionalDocuments } from "../screens/ProfessionalDocuments.js";
 import { Professionals } from "../screens/Professionals.js";
@@ -167,6 +168,10 @@ export const productDefinition: ProductDefinition = {
     // Gestão de chamadas — proposta. Uma rota só: as quatro abas são estado
     // da tela, como no desenho.
     { path: "/calls", screen: guard(Calls) },
+    // Central de transferências — proposta. Uma rota só: a lista, a grade da
+    // semana e o painel de movimentação são estados da mesma tela, como no
+    // desenho.
+    { path: "/transfers", screen: guard(TransferCenter) },
   ],
 
   // O motor é uma biblioteca já compilada e não consegue ler o ambiente de build

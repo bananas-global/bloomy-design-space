@@ -45,7 +45,10 @@ test("nenhum alvo abaixo de 24px e nenhuma rolagem horizontal a 375px", async ({
 
         // Controle visualmente escondido dentro de um label: o alvo é o label.
         const escondido = elemento.classList.contains("sr-only");
-        const alvo = escondido ? (elemento.closest("label") ?? elemento) : elemento;
+        const rotuloNativo = elemento instanceof HTMLInputElement && ["checkbox", "radio"].includes(elemento.type)
+          ? elemento.labels?.[0]
+          : undefined;
+        const alvo = rotuloNativo ?? (escondido ? (elemento.closest("label") ?? elemento) : elemento);
 
         const caixa = alvo.getBoundingClientRect();
         if (caixa.width < 24 || caixa.height < 24) {

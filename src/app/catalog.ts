@@ -29,6 +29,7 @@ import { prospectFixtures } from "../fixtures/prospects.js";
 import { leadFixtures } from "../fixtures/leads.js";
 import { pushFixtures } from "../fixtures/push.js";
 import { callFixtures } from "../fixtures/calls.js";
+import { transferFixtures } from "../fixtures/transfers.js";
 import { reportFixtures } from "../fixtures/reports.js";
 import { notificationFixtures } from "../fixtures/notifications.js";
 import { supervisionFixtures, supervisionTeamFixtures } from "../fixtures/supervision.js";
@@ -101,6 +102,7 @@ import { prospectRules } from "../rules/prospects.js";
 import { leadRules } from "../rules/leads.js";
 import { pushRules } from "../rules/push.js";
 import { callRules } from "../rules/calls.js";
+import { transferRules } from "../rules/transfers.js";
 import { reportRules } from "../rules/reports.js";
 import { notificationRules } from "../rules/notifications.js";
 import { supervisionRules, supervisionTeamRules } from "../rules/supervision.js";
@@ -129,6 +131,7 @@ import { prospectScenarios } from "../scenarios/prospects.js";
 import { leadScenarios } from "../scenarios/leads.js";
 import { pushScenarios } from "../scenarios/push.js";
 import { callScenarios } from "../scenarios/calls.js";
+import { transferScenarios } from "../scenarios/transfers.js";
 import { reportScenarios } from "../scenarios/reports.js";
 import { notificationScenarios } from "../scenarios/notifications.js";
 import { supervisionScenarios } from "../scenarios/supervision.js";
@@ -1197,6 +1200,30 @@ export const modules: Module[] = [
       },
     ],
   },
+  {
+    id: "transfers",
+    name: "Central de Transferências",
+    description:
+      "A movimentação em bloco dos mapas de horas: quem recebe o quê, o que não cabe, e o que fica na fila para a próxima rodada.",
+    flows: [
+      {
+        id: "move-what-an-inactivation-left",
+        title: "Movimentar o que uma inativação deixou",
+        description:
+          "Da lista com os mapas sem profissional até a fila zerada — passando pela descoberta de que a seleção disputa consigo mesma.",
+        steps: [
+          {
+            scenario: "transfers.queue",
+            label: "Selecionar, simular e aplicar a rodada",
+            decision: "E se não houver outro profissional da especialidade?",
+            branches: {
+              "Registrar a exceção e o motivo": "transfers.cross-specialty",
+            },
+          },
+        ],
+      },
+    ],
+  },
 ];
 
 export const scenarios: Scenario[] = [
@@ -1223,6 +1250,7 @@ export const scenarios: Scenario[] = [
   ...leadScenarios,
   ...pushScenarios,
   ...callScenarios,
+  ...transferScenarios,
   ...reportScenarios,
   ...notificationScenarios,
   ...supervisionScenarios,
@@ -1278,6 +1306,7 @@ export const fixtures: Fixture[] = [
   ...leadFixtures,
   ...pushFixtures,
   ...callFixtures,
+  ...transferFixtures,
   ...reportFixtures,
   ...notificationFixtures,
   ...supervisionFixtures,
@@ -1355,6 +1384,7 @@ export const rules: Rule[] = [
   ...leadRules,
   ...pushRules,
   ...callRules,
+  ...transferRules,
   ...reportRules,
   ...notificationRules,
   ...supervisionRules,

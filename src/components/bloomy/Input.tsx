@@ -31,8 +31,8 @@ import { Icon } from "../Icon.js";
  * 1. **O erro é posicionado por fora do fluxo** (`absolute -bottom-6`). O campo
  *    não muda de altura ao errar, então a página não pula — mas o espaço tem de
  *    estar reservado por quem usa.
- * 2. **O rótulo é azul, não cinza** (`text-brand-blue`), e em negrito. É a cor
- *    de marca fazendo trabalho de hierarquia.
+ * 2. **O rótulo é azul, não cinza**, e em negrito. É a cor de marca fazendo
+ *    trabalho de hierarquia. O tom, porém, é o corrigido: ver `Label` abaixo.
  * 3. **O campo tem fundo, não borda visível** (`bg-brand-purple-dark/10` com
  *    borda da mesma cor). A borda só aparece no foco, em `brand-blue`, e no erro,
  *    em `brand-red`.
@@ -41,6 +41,25 @@ import { Icon } from "../Icon.js";
  * é como o sistema mostra unidade ("horas", "R$") sem um segundo campo.
  */
 
+/**
+ * `label/1` — o rótulo de campo.
+ *
+ * **A cor é `--color-action`, e não `--color-brand-blue`.** O original usa o
+ * ciano de assinatura como texto sobre branco, onde ele entrega **2,22:1** —
+ * menos da metade do mínimo de AA. É exatamente o caso que a decisão 0001 já
+ * tinha decidido: `#58bada` é cor de marca, permanece em superfície escura, e
+ * deixou de ser cor de texto e de ação; para isso existe `--color-action`
+ * (`#276e8c`, 5,68:1), que é o mesmo tom já usado em link e botão daqui.
+ *
+ * A correção estava escrita e não tinha chegado a este componente: até agora
+ * nenhuma situação **ativa** mostrava um campo com rótulo visível, então o axe
+ * nunca passou por aqui — os cenários `ported` não entram na varredura. A
+ * Central de Transferências tem quatro filtros rotulados na primeira tela, e o
+ * defeito apareceu na primeira execução.
+ *
+ * A hierarquia do original é preservada inteira: continua azul, continua em
+ * negrito, continua distinguindo rótulo de dado. O que mudou é o tom.
+ */
 export function Label({
   htmlFor,
   color = "default",
@@ -58,7 +77,7 @@ export function Label({
       className={[
         "block text-sm/4 font-bold",
         className,
-        color === "default" ? "text-[var(--color-brand-blue)]" : "text-[var(--color-purple)]",
+        color === "default" ? "text-[var(--color-action)]" : "text-[var(--color-purple)]",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -696,7 +715,15 @@ export function Select({
             inputClassName,
           ].filter(Boolean).join(" ")}
         >
-          <span className={["truncate font-normal", selected ? "text-[var(--color-brand-purple-dark)]/80" : "text-[var(--color-brand-purple-dark)]/60"].join(" ")}>
+          {/* A frase do `prompt` sai a **72%**, e não a 60%.
+
+              60% sobre o fundo do campo — que é o mesmo navy a 10% — dá
+              **3,75:1**, abaixo dos 4,5:1 de AA, e o `prompt` é texto: é ele que
+              diz o que o campo espera enquanto ninguém escolheu nada. 72% é o
+              alfa que a decisão 0001 já fixou para texto secundário, e sobre
+              este fundo entrega 5,25:1. O par está declarado em
+              `src/tokens/contrast.ts`. */}
+          <span className={["truncate font-normal", selected ? "text-[var(--color-brand-purple-dark)]/80" : "text-[var(--color-brand-purple-dark)]/72"].join(" ")}>
             {selected?.label ?? prompt}
           </span>
         </button>
@@ -1136,7 +1163,7 @@ export function InputWithSelect({ label, textId, textName, textValue, textErrors
 /** `fake_input/1`: valor estático com a mesma caixa visual de um campo. */
 export function FakeInput({ value, label, labelColor = "default", className, ...rest }: { value: ReactNode; label?: string; labelColor?: "default" | "blue"; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
   return <div className={className} {...rest}>
-    {label && <p className={["m-0 block text-sm/4 font-bold", labelColor === "blue" ? "text-[var(--color-brand-blue)]" : "text-[var(--color-neutral-400)]"].join(" ")}>{label}</p>}
+    {label && <p className={["m-0 block text-sm/4 font-bold", labelColor === "blue" ? "text-[var(--color-action)]" : "text-[var(--color-neutral-400)]"].join(" ")}>{label}</p>}
     <div className={["flex min-h-12 w-full items-center rounded-lg border border-[var(--color-neutral-100)] bg-[var(--color-neutral-500)]/5 px-4 font-normal leading-6 text-[var(--color-neutral-500)]", label && "mt-2"].filter(Boolean).join(" ")}>{value}</div>
   </div>;
 }

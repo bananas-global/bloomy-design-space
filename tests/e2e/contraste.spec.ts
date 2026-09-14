@@ -72,3 +72,60 @@ test("o contraste do espelho é o do sistema, e está registrado", async ({ page
     unidade: 2.81,
   });
 });
+
+/**
+ * O contraste dos **botões** espelhados.
+ *
+ * `button/1` foi copiado com as cores do sistema, e o primário reprova como
+ * texto: branco sobre o ciano de assinatura, 2,22:1. Por isso os pontos de uso
+ * dele levam `espelho-do-sistema` — e por isso o número fica aqui.
+ *
+ * A decisão 0001 já tinha decidido o contrário para os **tokens**: `#58bada` é
+ * cor de marca, não de ação, e existe `--color-action` para isso. O componente
+ * é de 0015 e reintroduziu o original. Enquanto as duas decisões convivem, o
+ * mínimo é a medida estar escrita: se alguém corrigir o `Button`, este teste
+ * falha e as marcações de espelho saem junto.
+ *
+ * **O `outline` saiu desta conta, e é o mecanismo funcionando.** Ele media
+ * 2,47:1 — `--color-blue` como texto sobre branco — e o único ponto de uso dele
+ * nesta rota era o "Sugerir" da Central de Transferências. O botão passou para
+ * `tint`, que é `blue-dark` sobre `blue-light` e mede 5,25:1: passa AA, não
+ * reproduz par reprovado nenhum e por isso perdeu a marcação de espelho. É a
+ * medida que este arquivo continua prendendo, agora do lado de cá da régua.
+ */
+test("o contraste dos botões espelhados está registrado", async ({ page }) => {
+  await page.goto("/transfers?scenario=transfers.queue&chrome=0");
+  await page.locator("#conteudo").waitFor();
+  // O painel — e com ele o Sugerir — só existe com seleção.
+  await page.locator('[data-transfer-map="map-sofia-psi"] input').check();
+  await page.locator("#transfers-sugerir").waitFor();
+
+  const medido = await page.evaluate(`(() => {
+    const razao = ${RAZAO};
+    const sugerir = document.querySelector("#transfers-sugerir");
+    // O primário não está na tela até haver seleção: monta-se um fora do fluxo,
+    // com as mesmas classes, para medir o par e não o estado.
+    const primario = document.createElement("button");
+    primario.className = "bg-[var(--color-brand-blue)] text-white";
+    document.body.appendChild(primario);
+    const dele = getComputedStyle(primario);
+    const par = { fg: dele.color, bg: dele.backgroundColor };
+    primario.remove();
+
+    return {
+      primario: razao(par.fg, par.bg),
+      // O tint pinta o próprio fundo, então o par é lido no botão mesmo.
+      tint: sugerir
+        ? razao(getComputedStyle(sugerir).color, getComputedStyle(sugerir).backgroundColor)
+        : null,
+    };
+  })()`);
+
+  // AA pede 4,5:1 para texto normal, e os botões são 16px em negrito — abaixo
+  // dos 18,66px que valeriam como texto grande. O primário reprova e por isso
+  // segue marcado como espelho; o `tint` passa e por isso não segue.
+  expect(medido, "Contraste dos botões espelhados").toEqual({
+    primario: 2.22,
+    tint: 5.25,
+  });
+});
