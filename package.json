@@ -18,7 +18,7 @@
   "dependencies": {
     "@brucesantos/design-space": "^0.6.0",
     "react": "^19.3.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -30,7 +30,7 @@
     "@types/babel__core": "^7.20.5",
     "@types/node": "^26.5.1",
     "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.2.7",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "axe-core": "^4.13.0",
     "feedback-collector": "^0.3.1",
