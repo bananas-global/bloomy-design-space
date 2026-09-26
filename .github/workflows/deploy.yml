@@ -1,22 +1,8 @@
-# Publica na Vercel pelo GitHub Actions, não pela integração Git da Vercel.
-#
-# Por quê: no plano Pro, a Vercel só publica um commit se o **autor** do commit for
-# membro pago do time. Com um só assento, isso significa que apenas os commits do
-# dono viram deploy. Aqui quem publica é o token — então o autor do commit deixa de
-# importar, e o time inteiro continua sem consumir assento.
-#
-# A troca: `vercel.json` desliga o deploy automático da Vercel (`deploymentEnabled:
-# false`). Se este workflow parar de rodar, nada é publicado. É deslocamento de
-# responsabilidade, não redundância.
-#
-# Consequência que já foi tratada: sem a integração Git, a Vercel não emite mais o
-# evento `deployment_status` do GitHub. O antigo `preview-tests.yml` dependia dele e
-# nunca mais dispararia, então a jornada Playwright passou a rodar aqui, contra a
-# URL que este mesmo job acabou de publicar.
+# Publicação manual de contingência. O deploy automático da main usa a integração Git.
 name: Publicar e verificar
 
 on:
-  push:
+  workflow_dispatch:
 
 # Um deploy por branch de cada vez. Push em sequência cancela o anterior em vez de
 # publicar os dois fora de ordem.
