@@ -1,318 +1,347 @@
-import { useId, useRef, useState, type DragEvent } from "react";
+import { useRef, useState, type DragEvent, type InputHTMLAttributes } from "react";
+import { Button } from "./Button.js";
 import { Icon } from "./Icon.js";
-import { Label } from "./Input.js";
+import { Progress } from "./Layout.js";
 
 /**
- * Área de arraste e arquivo escolhido — espelho de
- * `BloomyWeb.FileUploaderComponents`, variante `simplified`.
+ * `file_uploader_components.ex` → `BloomyWeb.FileUploaderComponents`
+ * (`render/1` e `item/1`).
  *
- * É o componente que o próprio sistema usa no modal de documento do
- * profissional (`add_document_professional_modal.ex` e `edit_document_modal.ex`
- * passam `variant={:simplified}`), então a moldura tracejada, o ícone
- * `fa-file-arrow-up`, a frase e o cartão do arquivo escolhido vêm de lá, não de
- * uma escolha nova.
- *
- * Três diferenças em relação ao original, todas deliberadas:
- *
- * 1. **"Escolha um arquivo" é um `button`, não um `span` com `phx-click`.** No
- *    sistema, quem navega por teclado não alcança o gatilho: o `span` não é
- *    focável. A aparência é a mesma — negrito, sublinhado, cor de marca.
- * 2. **A área de arraste tem rótulo e descrição associados ao input.** O
- *    original deixa o `live_file_input` escondido sem nome acessível; aqui o
- *    input escondido continua sendo o alvo do clique e do teclado, com `label` e
- *    `aria-describedby`.
- * 3. **Um arquivo por documento.** O modal real permite seis (`max_entries: 6`),
- *    e um documento com vários anexos não é o modelo desta especificação:
- *    `ProfessionalDocument.file` é um arquivo só, e é o que as regras de
- *    exportação e compartilhamento leem.
- *
- * Sem progresso e sem cancelar em andamento: o upload aqui é imediato e local,
- * então a barra do original — que existe porque o LiveView envia em pedaços —
- * não teria o que mostrar.
+ * Diferença inevitável: o `UploadConfig` do LiveView vira `upload`, e as
+ * entradas escolhidas ficam no estado do componente, com `progress` 0 e
+ * `done?` falso — é como elas ficam no sistema até o formulário consumir.
  */
 
-/** `format_byte/1`: base 1000, duas casas, como o original. */
-export function formatByte(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  if (bytes < 1000) return `${bytes} B`;
+export type UploadError = "too_large" | "not_accepted";
 
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1000 && unit < units.length - 1) {
-    value = value / 1000;
-    unit += 1;
-  }
-  return `${Math.round(value * 100) / 100} ${units[unit]}`;
-}
-
-export type FileUploaderProps = {
-  id?: string;
-  name?: string;
-  /** Lista de extensões aceitas, no formato do atributo `accept`. */
-  accept?: string;
-  /** Rótulo do campo. Fica acima da área, como nos outros campos do formulário. */
-  label?: string;
-  /** O que vale a pena saber antes de escolher: formatos, tamanho, consequência. */
-  hint?: string;
-  /** Nome do arquivo já anexado — o documento que voltou do servidor. */
-  fileName?: string;
-  /** Tamanho em bytes, quando conhecido. `0` esconde a linha. */
-  fileSize?: number;
-  /**
-   * `simplified` é o espelho: área de arraste alta, e o cartão do arquivo
-   * **abaixo** dela quando há anexo. `inline` é uma caixa só que troca de
-   * estado — vazia, ela convida; preenchida, ela mostra o arquivo e oferece
-   * trocar. Não existe no original, e é da decisão 0015.
-   *
-   * O motivo é altura. O drawer de documento tem seis campos, e a área de
-   * arraste do sistema gasta 120px para dizer uma coisa que o clique já diz.
-   * Com o cartão somado, o campo de arquivo passava de 200px e empurrava o
-   * compartilhamento — que é a parte do formulário que decide credenciamento —
-   * para fora da primeira tela.
-   */
-  variant?: "simplified" | "inline";
-  errors?: string[];
-  className?: string;
-  onFileChange?: (file: File | undefined) => void;
+export type UploadEntry = {
+  ref: string;
+  clientName: string;
+  clientSize: number;
+  progress: number;
+  done: boolean;
+  errors?: UploadError[];
 };
 
-export function FileUploader({
-  id: providedId,
-  name,
-  accept = ".pdf,.jpg,.jpeg,.png",
-  label,
-  hint,
-  fileName,
-  fileSize = 0,
-  variant = "simplified",
-  errors = [],
-  className,
-  onFileChange,
-}: FileUploaderProps) {
-  const generatedId = useId();
-  const id = providedId ?? `file-uploader-${generatedId.replace(/:/g, "")}`;
-  const hintId = hint ? `${id}-hint` : undefined;
-  const errorId = errors.length > 0 ? `${id}-errors` : undefined;
-  const statusId = `${id}-status`;
-  const input = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
+export type UploadConfig = {
+  /** O `ref` do upload: vira o `id` do `live_file_input`. */
+  ref: string;
+  name?: string;
+  accept?: string;
+  maxEntries?: number;
+  maxFileSize?: number;
+  /** Entradas vindas de fora; sem elas, o componente guarda as escolhidas. */
+  entries?: UploadEntry[];
+};
 
-  function choose(file: File | undefined) {
-    if (!file) return;
-    onFileChange?.(file);
+const UNITS = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+/** `format_byte/1`: base 1000, e o `Float.round/2` do Elixir escreve `1.0`. */
+export function formatByte(bytes: number): string {
+  if (bytes < 1000) return `${bytes} B`;
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1000) {
+    value /= 1000;
+    unit += 1;
   }
+  const rounded = String(Math.round(value * 100) / 100);
+  return `${rounded.includes(".") ? rounded : `${rounded}.0`} ${UNITS[unit]}`;
+}
 
-  function drop(event: DragEvent<HTMLElement>) {
-    event.preventDefault();
-    setDragging(false);
-    choose(event.dataTransfer.files?.[0]);
+function errorToString(error: UploadError, upload: UploadConfig) {
+  if (error === "too_large") return `Arquivo muito grande, o tamanho máximo é ${formatByte(upload.maxFileSize ?? 0)}`;
+  return "Tipo do arquivo não permitido";
+}
+
+function validate(file: File, upload: UploadConfig): UploadError[] {
+  const errors: UploadError[] = [];
+  if (upload.maxFileSize !== undefined && file.size > upload.maxFileSize) errors.push("too_large");
+  if (upload.accept) {
+    const accepted = upload.accept.split(",").map((item) => item.trim().toLowerCase());
+    const name = file.name.toLowerCase();
+    if (!accepted.some((ext) => (ext.startsWith(".") ? name.endsWith(ext) : file.type === ext))) errors.push("not_accepted");
   }
+  return errors;
+}
 
-  /**
-   * O campo escondido é sempre o mesmo, nas duas variantes: é ele que recebe o
-   * clique, o teclado e o `accept`, e é nele que o rótulo e a descrição se
-   * penduram. Nenhuma das duas molduras é focável por si.
-   */
-  const campo = (
+/** Entradas controladas por `upload.entries` ou guardadas aqui, como faria o LiveView. */
+export function useUploadEntries(upload: UploadConfig, onChange?: (files: File[]) => void) {
+  const [own, setOwn] = useState<UploadEntry[]>([]);
+  const counter = useRef(0);
+  const entries = upload.entries ?? own;
+  const add = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const list = Array.from(files);
+    const added = list.map((file) => ({
+      ref: String(counter.current++),
+      clientName: file.name,
+      clientSize: file.size,
+      progress: 0,
+      done: false,
+      errors: validate(file, upload),
+    }));
+    setOwn((current) => [...current, ...added].slice(-(upload.maxEntries ?? Infinity)));
+    onChange?.(list);
+  };
+  const cancel = (ref: string) => setOwn((current) => current.filter((entry) => entry.ref !== ref));
+  return { entries, add, cancel };
+}
+
+function LiveFileInput({
+  upload,
+  onFiles,
+  ...rest
+}: { upload: UploadConfig; onFiles: (files: FileList | null) => void } & InputHTMLAttributes<HTMLInputElement>) {
+  return (
     <input
-      ref={input}
-      id={id}
-      name={name}
       type="file"
-      accept={accept}
-      className="sr-only"
-      aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined}
-      aria-invalid={errors.length > 0 || undefined}
-      onChange={(event) => choose(event.currentTarget.files?.[0])}
+      id={upload.ref}
+      name={upload.name}
+      accept={upload.accept}
+      multiple={(upload.maxEntries ?? 1) > 1}
+      onChange={(event) => {
+        onFiles(event.currentTarget.files);
+        event.currentTarget.value = "";
+      }}
+      {...rest}
     />
   );
+}
 
-  const erros = errors.length > 0 && (
-    <div id={errorId}>
-      {errors.map((message) => (
-        <p key={message} className="m-0 mt-2 text-sm font-bold text-[var(--color-danger-fg)]">
-          {message}
-        </p>
-      ))}
-    </div>
-  );
+function Picker({
+  variant,
+  upload,
+  rest,
+  onFiles,
+}: {
+  variant: "default" | "simplified";
+  upload: UploadConfig;
+  rest: InputHTMLAttributes<HTMLInputElement>;
+  onFiles: (files: FileList | null) => void;
+}) {
+  const choose = () => document.getElementById(upload.ref)?.click();
+  const drop = {
+    onDragOver: (event: DragEvent) => event.preventDefault(),
+    onDrop: (event: DragEvent) => {
+      event.preventDefault();
+      onFiles(event.dataTransfer.files);
+    },
+  };
 
-  const anuncio = (
-    <span id={statusId} role="status" className="sr-only">
-      {fileName ? `${fileName} selecionado.` : ""}
-    </span>
-  );
-
-  if (variant === "inline") {
+  if (variant === "default") {
     return (
-      <div className={className}>
-        {label && <Label htmlFor={id}>{label}</Label>}
+      <section className="bg-blue/5 py-6 rounded-lg border-2 border-dashed border-blue/30 flex flex-col items-center text-blue-dark" {...drop}>
+        <LiveFileInput upload={upload} onFiles={onFiles} className="hidden" {...rest} />
+        <Icon name="fa-image" className="text-4xl mb-6 text-neutral-400" />
+        <p className="font-bold text-2xl mb-2">Arquivos</p>
+        <p className="mb-6">Arraste os arquivos diretamente para a área destacada e solte-os</p>
+        <Button type="button" onClick={choose}>
+          Escolher Arquivos
+        </Button>
+      </section>
+    );
+  }
 
-        <div
-          onDragOver={(event) => {
-            event.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={drop}
-          className={[
-            "mt-2 flex items-center gap-3 rounded-lg border p-4 transition-colors",
-            // Um estado por vez, e cada um com a sua borda: o vazio é tracejado
-            // porque ainda não há nada; o preenchido é sólido e verde porque a
-            // condição de salvar está cumprida.
-            errors.length > 0
-              ? "border-dashed border-[var(--color-brand-red)] bg-[var(--color-brand-red)]/5"
-              : fileName
-                ? "border-[var(--color-brand-green)]/40 bg-[var(--color-brand-green)]/10"
-                : dragging
-                  ? "border-dashed border-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/20"
-                  : "border-dashed border-[var(--color-brand-purple-dark)]/20",
-          ].join(" ")}
-        >
-          {campo}
+  return (
+    <section className="bg-brand-blue/10 py-6 rounded-lg border-2 border-dashed border-brand-blue/40 flex flex-col items-center text-blue-dark" {...drop}>
+      <LiveFileInput upload={upload} onFiles={onFiles} className="hidden" {...rest} />
+      <Icon type="solid" name="fa-file-arrow-up" className="text-4xl mb-4 text-brand-blue-dark" />
+      <p className="text-brand-purple-dark/80">
+        Arraste e solte o arquivo aqui ou{" "}
+        <span className="font-bold text-brand-blue-dark underline cursor-pointer" onClick={choose}>
+          Escolha um arquivo
+        </span>
+      </p>
+    </section>
+  );
+}
 
-          <div
-            className={[
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded",
-              fileName
-                ? "bg-[var(--color-brand-green)]/20"
-                : "bg-[var(--color-brand-blue)]/20",
-            ].join(" ")}
-          >
-            <Icon
-              name={fileName ? "fa-file-circle-check" : "fa-cloud-arrow-up"}
-              type="solid"
-              className={
-                fileName
-                  ? "text-[var(--color-brand-green-dark)]"
-                  : "text-[var(--color-blue-dark)]"
-              }
-            />
-          </div>
+function FileStatus({
+  entry,
+  upload,
+  validateEntryDone,
+  variant,
+  onCancel,
+}: {
+  entry: UploadEntry;
+  upload: UploadConfig;
+  validateEntryDone: boolean;
+  variant: "default" | "simplified";
+  onCancel: () => void;
+}) {
+  const errors = entry.errors ?? [];
+  const progressVariant = errors.length === 0 ? "default" : "error";
+  const cancel = (validateEntryDone ? !entry.done : true) && (
+    <Button variant="tint" type="button" aria-label="cancel" onClick={onCancel}>
+      <Icon name="fa-times" className="block w-4 h-4 self-center" />
+    </Button>
+  );
+  const errorLines = errors.map((err) => (
+    <p key={err} className="text-red">
+      {errorToString(err, upload)}
+    </p>
+  ));
 
-          <div className="min-w-0 flex-1">
-            {fileName ? (
-              <>
-                <p className="m-0 truncate font-bold text-[var(--color-brand-purple-dark)]">
-                  {fileName}
-                </p>
-                <p id={hintId} className="m-0 text-sm text-[var(--fg-2)]">
-                  {fileSize > 0 ? formatByte(fileSize) : hint}
-                </p>
-              </>
-            ) : (
-              <>
-                {/* O gatilho é o texto, não a caixa: caixa clicável sem função
-                    não chega ao teclado, e é o que o `span` do original faz. */}
-                <button
-                  type="button"
-                  onClick={() => input.current?.click()}
-                  className="m-0 cursor-pointer border-0 bg-transparent p-0 text-left font-bold text-[var(--color-brand-purple-dark)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]"
-                >
-                  Selecionar arquivo
-                </button>
-                <p id={hintId} className="m-0 text-sm text-[var(--fg-2)]">
-                  {hint}
-                </p>
-              </>
-            )}
-          </div>
-
-          {fileName && (
-            // "Trocar" e não "Remover": no formulário de documento, arquivo é
-            // condição de salvar. Remover deixaria o formulário num estado que
-            // ele não aceita, e a ação que a pessoa quer é substituir.
-            <button
-              type="button"
-              onClick={() => {
-                if (input.current) input.current.value = "";
-                input.current?.click();
-              }}
-              className="shrink-0 cursor-pointer border-0 bg-transparent p-0 font-bold text-[var(--color-action)] hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]"
-            >
-              Trocar
-            </button>
-          )}
+  if (variant === "default") {
+    return (
+      <div className="border border-neutral-100 p-4 rounded-lg flex items-center gap-6">
+        <div className="w-12 h-12 rounded-lg bg-blue-light flex items-center justify-center flex-shrink-0">
+          <Icon name="fa-file" className="text-blue-dark" />
         </div>
-
-        {erros}
-        {anuncio}
+        <div className="text-blue-dark flex-1">
+          <p className="font-bold text-lg">{entry.clientName}</p>
+          <p>{formatByte(entry.clientSize)}</p>
+          <Progress value={entry.progress} variant={progressVariant} />
+          {errorLines}
+        </div>
+        {cancel}
       </div>
     );
   }
 
   return (
-    <div className={className}>
-      {/* Mesmo par de `label/1` e descrição dos outros campos do formulário. */}
-      {label && <Label htmlFor={id}>{label}</Label>}
-      {hint && (
-        <p id={hintId} className="m-0 mt-1 text-sm text-[var(--fg-2)]">{hint}</p>
+    <div className="flex items-start gap-2">
+      <div className="flex-1">
+        <FileItem fileName={entry.clientName} size={entry.clientSize} variant={variant} />
+        <Progress className="mt-2" value={entry.progress} variant={progressVariant} />
+        {errorLines}
+      </div>
+      {cancel}
+    </div>
+  );
+}
+
+export function FileUploader({
+  upload,
+  rest = {},
+  validateEntryDone = true,
+  variant = "default",
+  entriesFirst = false,
+  onChange,
+  onCancel,
+}: {
+  upload: UploadConfig;
+  target?: unknown;
+  rest?: InputHTMLAttributes<HTMLInputElement>;
+  validateEntryDone?: boolean;
+  variant?: "default" | "simplified";
+  entriesFirst?: boolean;
+  /** Os arquivos escolhidos: o `phx-change` do formulário. */
+  onChange?: (files: File[]) => void;
+  /** O `cancel-upload` com `phx-value-ref`. */
+  onCancel?: (ref: string) => void;
+}) {
+  const { entries, add, cancel } = useUploadEntries(upload, onChange);
+  const visible = entries.filter((entry) => (validateEntryDone ? !entry.done : true));
+  const statuses = visible.map((entry) => (
+    <FileStatus
+      key={entry.ref}
+      entry={entry}
+      upload={upload}
+      validateEntryDone={validateEntryDone}
+      variant={variant}
+      onCancel={() => {
+        cancel(entry.ref);
+        onCancel?.(entry.ref);
+      }}
+    />
+  ));
+  const picker = <Picker variant={variant} upload={upload} rest={rest} onFiles={add} />;
+
+  return (
+    <div>
+      {entriesFirst ? (
+        <>
+          {entries.length > 0 && <div className="flex flex-col gap-3 mb-3">{statuses}</div>}
+          {picker}
+        </>
+      ) : (
+        <>
+          {picker}
+          {entries.length > 0 && <div className="flex flex-col-reverse gap-6 mt-4">{statuses}</div>}
+        </>
       )}
+    </div>
+  );
+}
 
-      <section
-        // `phx-drop-target` do original: a área inteira recebe o arquivo solto.
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={drop}
-        className={[
-          "mt-2 flex flex-col items-center rounded-lg border-2 border-dashed py-6 text-[var(--color-blue-dark)] transition-colors",
-          // Um estado por vez: duas classes de cor de borda no mesmo elemento
-          // dependeriam da ordem no CSS gerado, não da ordem escrita aqui.
-          errors.length > 0
-            ? "border-[var(--color-brand-red)] bg-[var(--color-brand-red)]/5"
-            : dragging
-              ? "border-[var(--color-brand-blue)] bg-[var(--color-brand-blue)]/20"
-              : "border-[var(--color-brand-blue)]/40 bg-[var(--color-brand-blue)]/10",
-        ].join(" ")}
-      >
-        {campo}
+const CATEGORIES = {
+  normal: "Normal",
+  certificate: "Certificado",
+  administrative: "Administrativo",
+  clinical: "Clínico",
+  personal: "Pessoal",
+} as const;
 
-        <Icon
-          name="fa-file-arrow-up"
-          type="solid"
-          className="mb-4 text-4xl text-[var(--color-brand-blue-dark)]"
-        />
+function downloadAttributes(fileName: string) {
+  return [".jpg", ".jpeg", ".png", ".pdf", ".xml"].some((ext) => fileName.includes(ext)) ? { target: "_blank" } : { download: "" };
+}
 
-        <p className="m-0 text-center text-[var(--color-brand-purple-dark)]/80">
-          Arraste e solte o arquivo aqui ou{" "}
-          <button
-            type="button"
-            onClick={() => input.current?.click()}
-            className="cursor-pointer border-0 bg-transparent p-0 font-bold text-[var(--color-brand-blue-dark)] underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]"
-          >
-            Escolha um arquivo
-          </button>
-        </p>
-      </section>
-
-      {fileName && (
-        <div className="mt-2 flex items-center gap-2 rounded-lg bg-[var(--color-brand-purple-dark)]/5 p-3">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-[var(--color-brand-blue)]/20">
-            <Icon name="fa-file" className="text-[var(--color-brand-blue-dark)]" />
+/** `file_uploader_components.ex` → `item/1`. */
+export function FileItem({
+  fileName,
+  size,
+  url,
+  removeEvent,
+  removeId,
+  category,
+  variant = "default",
+}: {
+  fileName: string;
+  size: number;
+  url?: string;
+  removeEvent?: (id: unknown) => void;
+  removeId?: unknown;
+  target?: unknown;
+  category?: keyof typeof CATEGORIES;
+  variant?: "default" | "simplified";
+}) {
+  if (variant === "default") {
+    return (
+      <div className="border border-neutral-100 p-4 rounded-lg flex items-center gap-6">
+        <a href={url} {...downloadAttributes(fileName)}>
+          <div className="w-12 h-12 rounded-lg bg-blue-light flex items-center justify-center">
+            <Icon name="fa-file" className="text-blue-dark" />
           </div>
-          <div className="min-w-0 flex-1 text-[var(--color-brand-purple-dark)]/80">
-            <p className="m-0 truncate text-base font-bold">{fileName}</p>
-            {fileSize > 0 && <p className="m-0 text-sm">{formatByte(fileSize)}</p>}
-          </div>
-          <button
-            type="button"
-            aria-label={`Remover ${fileName}`}
-            onClick={() => {
-              if (input.current) input.current.value = "";
-              onFileChange?.(undefined);
-            }}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--color-brand-red)] transition-all hover:bg-[var(--color-brand-purple-dark)]/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]"
-          >
-            <Icon name="fa-trash-alt" className="block h-4 w-4 self-center" />
-          </button>
+        </a>
+        <div className="text-blue-dark flex-1">
+          <p className="font-bold text-lg">{fileName}</p>
+          {size > 0 && <p>{formatByte(size)}</p>}
+          {category && <p>Tipo: {CATEGORIES[category]}</p>}
         </div>
-      )}
+        {removeEvent && (
+          <Button variant="tint" color="red" type="button" onClick={() => removeEvent(removeId)}>
+            <Icon name="fa-trash" className="block w-4 h-4 self-center" />
+          </Button>
+        )}
+      </div>
+    );
+  }
 
-      {erros}
-      {anuncio}
+  return (
+    <div className="bg-brand-purple-dark/5 p-3 rounded-lg flex items-center gap-2">
+      <a href={url} {...downloadAttributes(fileName)} className="flex items-center gap-2 flex-1">
+        <div className="w-7 h-7 rounded bg-brand-blue/20 flex items-center justify-center">
+          <Icon name="fa-file" className="text-brand-blue-dark" />
+        </div>
+        <div className="text-brand-purple-dark/80 flex-1">
+          <p className="font-bold text-base">{fileName}</p>
+          {size > 0 && <p className="text-sm">{formatByte(size)}</p>}
+          {category && <p className="text-sm">Tipo: {CATEGORIES[category]}</p>}
+        </div>
+      </a>
+      {removeEvent && (
+        <button
+          type="button"
+          onClick={() => removeEvent(removeId)}
+          data-confirm="Confirmar ação"
+          data-confirm-body={`"Deseja confirmar a remoção do arquivo "${fileName}"?"`}
+          className={["w-8 h-8 rounded-lg flex items-center justify-center", "text-brand-red hover:bg-brand-purple-dark/10 transition-all "].join(" ")}
+        >
+          <Icon name="fa-trash-alt" className="block w-4 h-4 self-center" />
+        </button>
+      )}
     </div>
   );
 }

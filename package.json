@@ -15,9 +15,11 @@
     "sync:tokens": "node scripts/sync-tokens.mjs"
   },
   "dependencies": {
-    "@brucesantos/design-space": "^0.6.0",
+    "@brucesantos/design-space": "link:../design-space/packages/core",
+    "flatpickr": "^4.6.13",
+    "quill": "^2.0.3",
     "react": "^19.3.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@babel/core": "^8.0.5",

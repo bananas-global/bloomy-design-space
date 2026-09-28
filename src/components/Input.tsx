@@ -1,1180 +1,1302 @@
 import {
-  cloneElement,
-  useCallback,
   useEffect,
-  useId,
   useLayoutEffect,
   useRef,
   useState,
-  type KeyboardEvent,
-  type ReactElement,
+  type ChangeEvent,
+  type InputHTMLAttributes,
   type ReactNode,
-  type RefObject,
 } from "react";
-import { createPortal } from "react-dom";
 import { Icon } from "./Icon.js";
+import { Tag, type TagVariant } from "./Tag.js";
+import { MultiSelectSearch } from "./MultiSelectSearch.js";
+import { MultiTagSelect } from "./MultiTagSelect.js";
+import { RichText, type AiGenerate, type TextPattern } from "./RichText.js";
+import { SelectSearch } from "./SelectSearch.js";
 
 /**
- * Campo, rótulo e erro — espelho de `input/1`, `label/1` e `error/1`.
+ * `core_components.ex` → `input/1`, `label/1`, `error/1`, `input_with_select/1`,
+ * `checkgroup/1`, `fake_input/1`, `input_switch_card/1`, `switch_card/1`, e
+ * `custom_select_component.ex` → `CustomSelectComponent`.
  *
- * O `input/1` do sistema é **treze cláusulas** casadas por tipo — `checkbox`,
- * `checkgroup`, `slider`, `select`, `textarea`, `switch`, `value_switch`,
- * `rich_text`, `tags`, `custom_select`, `select_search`,
- * `multi_select_search`, `counter` — mais a cláusula final que atende todos os
- * tipos nativos do HTML. Aqui elas viram componentes irmãos com o mesmo nome de
- * lá, porque um componente React com treze modos seria mais difícil de conferir
- * contra o original do que treze componentes.
+ * `<Input type="…">` despacha para a mesma cláusula do `input/1`. Os atributos
+ * têm o nome do Phoenix em camelCase (`input_class` → `inputClass`); `class` e
+ * `for` viram `className` e `htmlFor`.
  *
- * Três coisas do original que sobreviveram à cópia por serem decisões, não
- * acidentes:
- *
- * 1. **O erro é posicionado por fora do fluxo** (`absolute -bottom-6`). O campo
- *    não muda de altura ao errar, então a página não pula — mas o espaço tem de
- *    estar reservado por quem usa.
- * 2. **O rótulo é azul, não cinza**, e em negrito. É a cor de marca fazendo
- *    trabalho de hierarquia. O tom, porém, é o corrigido: ver `Label` abaixo.
- * 3. **O campo tem fundo, não borda visível** (`bg-brand-purple-dark/10` com
- *    borda da mesma cor). A borda só aparece no foco, em `brand-blue`, e no erro,
- *    em `brand-red`.
- *
- * O `hint` é um apêndice colado à direita do campo, com o canto esquerdo reto —
- * é como o sistema mostra unidade ("horas", "R$") sem um segundo campo.
+ * Diferença inevitável: no Phoenix o valor volta pelo `phx-change` do form e o
+ * servidor re-renderiza. Aqui cada campo guarda o próprio estado a partir de
+ * `value` e avisa por `onChange` — evento nativo nos tipos nativos, o valor nos
+ * live components (`select`, `select_search`, `multi_select_search`,
+ * `checkgroup`, `tags`, `rich_text`, `slider`). `error/1` se chama `FieldError`
+ * porque `Error` sombrearia o construtor global.
  */
 
+export type ClassValue = string | false | null | undefined | 0 | ClassValue[];
+
+/** Lista de classes como a do HEEx: aninhada, com `false`/`nil` descartados. */
+export function cx(...values: ClassValue[]): string {
+  const out: string[] = [];
+  const walk = (value: ClassValue) => {
+    if (!value) return;
+    if (Array.isArray(value)) value.forEach(walk);
+    else out.push(value);
+  };
+  values.forEach(walk);
+  return out.join(" ");
+}
+
+/** O que um `Phoenix.HTML.FormField` entrega ao componente. */
+export type FormField = { id: string; name: string; value?: unknown; errors?: string[] };
+
+export type SelectOption = { label: string; value: unknown; color?: string; [key: string]: unknown };
+export type SelectGroup = { group: string; items: SelectItem[]; color?: string };
+export type SelectItem = SelectOption | SelectGroup;
+export type OptionTuple = readonly [string, unknown];
+
+export function isGroup(item: SelectItem): item is SelectGroup {
+  return "items" in item && Array.isArray((item as SelectGroup).items);
+}
+
+/** `parse_value/1` dos live components de seleção. */
+export function parseValue(value: unknown): string {
+  if (value === true) return "true";
+  if (value === false) return "false";
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
 /**
- * `label/1` — o rótulo de campo.
- *
- * **A cor é `--color-action`, e não `--color-brand-blue`.** O original usa o
- * ciano de assinatura como texto sobre branco, onde ele entrega **2,22:1** —
- * menos da metade do mínimo de AA. É exatamente o caso que a decisão 0001 já
- * tinha decidido: `#58bada` é cor de marca, permanece em superfície escura, e
- * deixou de ser cor de texto e de ação; para isso existe `--color-action`
- * (`#276e8c`, 5,68:1), que é o mesmo tom já usado em link e botão daqui.
- *
- * A correção estava escrita e não tinha chegado a este componente: até agora
- * nenhuma situação **ativa** mostrava um campo com rótulo visível, então o axe
- * nunca passou por aqui — os cenários `ported` não entram na varredura. A
- * Central de Transferências tem quatro filtros rotulados na primeira tela, e o
- * defeito apareceu na primeira execução.
- *
- * A hierarquia do original é preservada inteira: continua azul, continua em
- * negrito, continua distinguindo rótulo de dado. O que mudou é o tom.
+ * Estado local que acompanha a prop: a prop manda quando muda (o servidor
+ * re-renderizou), o estado manda entre uma mudança e outra (o DOM do navegador).
  */
+export function useMirror<T>(value: T): [T, (next: T) => void] {
+  const key = JSON.stringify(value ?? null);
+  const [state, setState] = useState({ key, value });
+  const set = (next: T) => setState({ key, value: next });
+  if (state.key !== key) {
+    setState({ key, value });
+    return [value, set];
+  }
+  return [state.value, set];
+}
+
+/**
+ * Posição do painel `fixed` das seleções, como o `computePosition` dos hooks:
+ * `bottom-start`, `offset(4)`, `flip` para cima, `shift({padding: 16})` e
+ * `size` limitando largura e altura. Medir com `left/top = 0` dá a origem do
+ * bloco de contenção, então funciona também dentro de um ancestral com
+ * `transform` (o `drawer_modal`).
+ */
+export function placeFloating(reference: HTMLElement, floating: HTMLElement, container: HTMLElement) {
+  const style = floating.style;
+  Object.assign(style, { display: "block", visibility: "hidden", left: "0px", top: "0px", maxHeight: "" });
+  const origin = floating.getBoundingClientRect();
+  const rect = reference.getBoundingClientRect();
+  const width = container.clientWidth;
+  style.maxWidth = `${width}px`;
+
+  const height = floating.offsetHeight;
+  const below = window.innerHeight - rect.bottom - 4;
+  const above = rect.top - 4;
+  const flip = height > below && above > below;
+  const y = flip ? rect.top - 4 - Math.min(height, above) : rect.bottom + 4;
+  const w = Math.min(width, floating.offsetWidth);
+  const x = Math.min(Math.max(rect.left, 16), Math.max(16, window.innerWidth - w - 16));
+
+  Object.assign(style, {
+    maxHeight: `${flip ? above : below}px`,
+    left: `${x - origin.left}px`,
+    top: `${y - origin.top}px`,
+    visibility: "visible",
+  });
+}
+
+/** Abre, fecha, reposiciona e fecha no clique de fora — o miolo dos hooks de seleção. */
+export function useFloatingPanel(
+  open: boolean,
+  setOpen: (open: boolean) => void,
+  refs: {
+    reference: React.RefObject<HTMLElement | null>;
+    container: React.RefObject<HTMLElement | null>;
+    panel: React.RefObject<HTMLElement | null>;
+  },
+  inside: (target: Node) => boolean,
+) {
+  const place = () => {
+    const { reference, container, panel } = refs;
+    if (reference.current && container.current && panel.current) {
+      placeFloating(reference.current, panel.current, container.current);
+    }
+  };
+
+  useLayoutEffect(() => {
+    if (open) place();
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: MouseEvent) => {
+      if (!inside(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("click", outside);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      document.removeEventListener("click", outside);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
+}
+
+/** Navegação por teclado dos hooks: setas, Tab, Enter escolhe, Esc fecha. */
+export function useOptionKeys(
+  open: boolean,
+  count: number,
+  highlight: number,
+  setHighlight: (index: number) => void,
+  choose: (index: number) => void,
+  close: () => void,
+  target?: React.RefObject<HTMLElement | null>,
+) {
+  const state = useRef({ count, highlight, setHighlight, choose, close });
+  state.current = { count, highlight, setHighlight, choose, close };
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      const s = state.current;
+      if (["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"].includes(event.key)) event.preventDefault();
+      const down = event.key === "ArrowDown" || (event.key === "Tab" && !event.shiftKey);
+      const up = event.key === "ArrowUp" || (event.key === "Tab" && event.shiftKey);
+      if (down) s.setHighlight(Math.min(s.highlight + 1, s.count - 1));
+      else if (up) s.setHighlight(Math.max(s.highlight - 1, 0));
+      else if (event.key === "Enter" && s.highlight >= 0) s.choose(s.highlight);
+      else if (event.key === "Escape") s.close();
+    };
+    const el: HTMLElement | Document = target?.current ?? document;
+    el.addEventListener("keydown", onKey as EventListener);
+    return () => el.removeEventListener("keydown", onKey as EventListener);
+  }, [open]);
+}
+
+/** `core_components.ex` → `label/1`. */
 export function Label({
   htmlFor,
-  color = "default",
   className,
+  color = "default",
   children,
 }: {
   htmlFor?: string;
-  color?: "default" | "purple";
   className?: string;
-  children: ReactNode;
+  color?: string;
+  children?: ReactNode;
 }) {
   return (
     <label
       htmlFor={htmlFor}
-      className={[
+      className={cx(
         "block text-sm/4 font-bold",
         className,
-        color === "default" ? "text-[var(--color-action)]" : "text-[var(--color-purple)]",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+        color === "default" && "text-brand-blue",
+        color === "purple" && "text-purple",
+      )}
     >
       {children}
     </label>
   );
 }
 
-export function FieldError({ message, className }: { message: string; className?: string }) {
+/** `core_components.ex` → `error/1`. */
+export function FieldError({
+  className,
+  message,
+  children,
+}: {
+  className?: string;
+  message?: string;
+  children?: ReactNode;
+}) {
   return (
-    <p
-      className={[
-        "mt-1 flex items-baseline gap-1 text-sm leading-6 text-[var(--color-brand-red)]",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
+    <p className={cx("mt-1 flex items-baseline gap-1 text-sm leading-6 text-brand-red", className)}>
       <Icon name="fa-circle-exclamation" className="mt-0.5 h-5 w-5 flex-none" />
       <span className="line-clamp-2" title={message}>
-        {message}
+        {children ?? message}
       </span>
     </p>
   );
 }
 
-function classeIcone(temErro: boolean): string {
-  return [
-    "h-6 w-6 flex items-center justify-center absolute top-1/2 -translate-y-1/2",
-    temErro
-      ? "text-[var(--color-brand-red)]"
-      : "text-[var(--color-brand-purple-dark)]/60 peer-focus:text-[var(--color-brand-blue)]",
-  ].join(" ");
+function errorList(errors: string[], className: string) {
+  return errors.map((msg) => (
+    <FieldError key={msg} className={className} message={msg}>
+      {msg}
+    </FieldError>
+  ));
 }
 
-/** A cláusula final do `input/1`: todos os tipos nativos do HTML. */
-export function Input({
-  id,
-  label,
-  type = "text",
-  errors = [],
-  leftIcon,
-  rightIcon,
-  hint,
-  className,
-  ...rest
-}: {
+type InputType =
+  | "checkbox" | "color" | "date" | "datetime-local" | "email" | "file" | "month" | "number"
+  | "password" | "tags" | "range" | "slider" | "search" | "select" | "tel" | "text" | "textarea"
+  | "time" | "url" | "week" | "switch" | "rich_text" | "hidden" | "select_search"
+  | "multi_select_search" | "custom_select" | "value_switch" | "counter" | "checkgroup";
+
+type InputAttrs = {
   id?: string;
+  name?: string;
   label?: string;
-  type?: string;
-  errors?: string[];
+  value?: unknown;
+  inputValue?: unknown;
+  className?: string;
+  inputClass?: string;
+  innerClass?: string;
+  callback?: (search: string) => SelectItem[];
+  removable?: (value: unknown) => (() => void) | null | undefined | false;
+  searchAction?: () => void;
+  hint?: string;
+  color?: "default" | "default_darker" | "purple";
+  variant?: "default" | "rounded_left" | "rounded_right";
   leftIcon?: string;
   rightIcon?: string;
-  /** Apêndice colado à direita: unidade, moeda, sufixo. */
-  hint?: string;
-  className?: string;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "id">) {
-  const temErro = errors.length > 0;
+  clear?: boolean;
+  field?: FormField;
+  errors?: string[];
+  checked?: boolean;
+  prompt?: string;
+  options?: readonly (SelectItem | OptionTuple)[];
+  createOptions?: readonly SelectItem[];
+  classOptions?: string;
+  multiple?: boolean;
+  errorTag?: Record<string, string>;
+  aiGenerate?: AiGenerate;
+  patternModule?: string;
+  /** Os padrões de texto que `Bloomy.TextPatterns` devolveria para `patternModule`. */
+  patterns?: TextPattern[];
+  showHeadings?: boolean;
+  tagLabel?: string;
+  rows?: number;
+  cols?: number;
+  children?: ReactNode;
+};
 
+type HtmlRest = Omit<InputHTMLAttributes<HTMLInputElement>, keyof InputAttrs | "type" | "onChange" | "defaultValue">;
+
+type NativeType = Exclude<
+  InputType,
+  "textarea" | "select" | "custom_select" | "select_search" | "slider" | "multi_select_search" | "checkgroup" | "tags" | "rich_text"
+>;
+
+export type InputProps = InputAttrs &
+  HtmlRest &
+  (
+    | { type?: NativeType; onChange?: (event: ChangeEvent<HTMLInputElement>) => void }
+    | { type: "textarea"; onChange?: (event: ChangeEvent<HTMLTextAreaElement>) => void }
+    | { type: "select" | "custom_select" | "select_search" | "slider"; onChange?: (value: string | null) => void }
+    | { type: "multi_select_search" | "checkgroup" | "tags"; onChange?: (values: string[]) => void }
+    | { type: "rich_text"; onChange?: (html: string) => void }
+  );
+
+type Assigns = Omit<InputAttrs, "field"> & {
+  type: InputType;
+  field?: undefined;
+  errors: string[];
+  errorTag: Record<string, string>;
+  color: NonNullable<InputAttrs["color"]>;
+  variant: NonNullable<InputAttrs["variant"]>;
+  clear: boolean;
+  multiple: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onChange?: (...args: any[]) => void;
+  rest: Record<string, unknown>;
+};
+
+const ATTR_KEYS = [
+  "id", "name", "label", "value", "inputValue", "className", "inputClass", "innerClass", "callback",
+  "removable", "searchAction", "hint", "color", "variant", "leftIcon", "rightIcon", "clear", "field",
+  "errors", "checked", "prompt", "options", "createOptions", "classOptions", "multiple", "errorTag",
+  "aiGenerate", "patternModule", "patterns", "showHeadings", "tagLabel", "children", "type", "onChange",
+] as const;
+
+/** A primeira cláusula do `input/1`: desmonta o `field` em id, nome, valor e erros. */
+function assign(props: InputProps): Assigns {
+  const source = props as Record<string, unknown>;
+  const rest: Record<string, unknown> = {};
+  for (const key of Object.keys(source)) {
+    if (!(ATTR_KEYS as readonly string[]).includes(key)) rest[key] = source[key];
+  }
+  const multiple = props.multiple ?? false;
+  const base: Assigns = {
+    ...(props as InputAttrs),
+    type: props.type ?? "text",
+    field: undefined,
+    errors: props.errors ?? [],
+    errorTag: props.errorTag ?? {},
+    color: props.color ?? "default",
+    variant: props.variant ?? "default",
+    clear: props.clear ?? true,
+    multiple,
+    onChange: props.onChange,
+    rest,
+  };
+  const field = props.field;
+  if (!field) return base;
+  const errors = field.errors ?? [];
+  return {
+    ...base,
+    id: props.id ?? field.id,
+    errors,
+    name: props.name ?? (multiple ? `${field.name}[]` : field.name),
+    value: props.value !== undefined ? props.value : field.value,
+    errorTag: errors.length === 0 ? {} : { "with-error": "true" },
+  };
+}
+
+function normalizeValue(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined;
+  return String(value);
+}
+
+function asList(value: unknown): string[] {
+  if (value === null || value === undefined || value === "") return [];
+  return (Array.isArray(value) ? value : [value]).map(String);
+}
+
+function toPairs(options: InputAttrs["options"]): { label: string; value: unknown }[] {
+  return (options ?? []).map((option) =>
+    Array.isArray(option) ? { label: option[0], value: option[1] } : (option as SelectOption),
+  );
+}
+
+/** A cláusula `select` só converte tuplas `{label, value}`; mapas e grupos passam direto. */
+function selectOptions(options: InputAttrs["options"]): SelectItem[] {
+  const list = options ?? [];
+  if (list.length > 0 && Array.isArray(list[0])) {
+    return list.map((option) => {
+      const [label, value] = option as OptionTuple;
+      return { label, value };
+    });
+  }
+  return list as SelectItem[];
+}
+
+export function Input(props: InputProps) {
+  const a = assign(props);
+  switch (a.type) {
+    case "checkbox": return <CheckboxInput {...a} />;
+    case "checkgroup": return <CheckgroupInput {...a} />;
+    case "slider": return <SliderInput {...a} />;
+    case "select": return <SelectInput {...a} />;
+    case "textarea": return <TextareaInput {...a} />;
+    case "switch": return <SwitchInput {...a} />;
+    case "value_switch": return <ValueSwitchInput {...a} />;
+    case "rich_text": return <RichTextInput {...a} />;
+    case "tags": return <TagsInput {...a} />;
+    case "custom_select": return <CustomSelectInput {...a} />;
+    case "select_search": return <SelectSearchInput {...a} />;
+    case "multi_select_search": return <MultiSelectSearchInput {...a} />;
+    case "counter": return <CounterInput {...a} />;
+    default: return <DefaultInput {...a} />;
+  }
+}
+
+function CheckboxInput(a: Assigns) {
+  const initial = a.checked ?? (a.value === true || a.value === "true");
+  const [checked, setChecked] = useMirror(initial);
   return (
-    <div className={["relative", rest.disabled && "opacity-50", className].filter(Boolean).join(" ")}>
-      {label && <Label htmlFor={id}>{label}</Label>}
-
-      <div className={["relative flex w-full", label && "mt-2"].filter(Boolean).join(" ")}>
+    <div className={cx("relative", a.className)}>
+      <label className="inline-flex items-center gap-3.5 rounded-lg p-4 text-brand-purple-dark has-[input:checked]:bg-brand-blue/20 transition-colors text-base/4">
+        <input type="hidden" name={a.name} value="false" />
         <input
-          type={type}
-          id={id}
-          className={[
-            "bg-[var(--color-brand-purple-dark)]/10",
-            "border focus:ring-0",
-            "block w-full h-12 font-normal text-[var(--color-brand-purple-dark)]/80 placeholder:text-[var(--color-brand-purple-dark)]/60",
-            "outline-hidden transition-colors duration-200",
-            "peer",
-            hint ? "rounded-l-lg" : "rounded-lg",
-            leftIcon && "pl-10",
-            rightIcon && "pr-10",
-            type !== "color" && "px-4",
-            temErro
-              ? "border-[var(--color-brand-red)]"
-              : "border-[var(--color-brand-purple-dark)]/10 focus:border-[var(--color-brand-blue)]",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          {...rest}
+          type="checkbox"
+          id={a.id}
+          name={a.name}
+          value={a.inputValue ? String(a.inputValue) : "true"}
+          checked={checked}
+          onChange={(event) => {
+            setChecked(event.target.checked);
+            a.onChange?.(event);
+          }}
+          className="rounded border-2 border-brand-purple-dark/10 checked:border-brand-blue text-brand-blue focus:ring-0"
+          {...a.rest}
+          {...a.errorTag}
         />
+        {a.label}
+      </label>
+      {errorList(a.errors, "absolute -bottom-6")}
+    </div>
+  );
+}
 
-        {leftIcon && (
-          <div className={`${classeIcone(temErro)} left-3`}>
-            <Icon name={leftIcon} />
+function CheckgroupInput(a: Assigns) {
+  const [values, setValues] = useMirror(asList(a.value));
+  const toggle = (value: string) => {
+    const next = values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+    setValues(next);
+    a.onChange?.(next);
+  };
+  return (
+    <div className={cx("relative", a.className)}>
+      <Label color={a.color} htmlFor={a.id}>{a.label}</Label>
+      <div className={cx("flex flex-col items-start gap-2 mt-2", a.innerClass)}>
+        {toPairs(a.options).map(({ label, value }) => {
+          const removable = a.removable?.(value);
+          const key = String(value);
+          return (
+            <label
+              key={key}
+              className={cx(
+                "relative",
+                "inline-flex items-center gap-3.5 rounded-lg p-4 text-neutral-900 transition-colors text-base/4",
+                removable && "pr-10",
+                a.color === "purple" && "has-[input:checked]:bg-purple/20",
+                a.color === "default" && "has-[input:checked]:bg-blue-light",
+              )}
+            >
+              <input
+                type="checkbox"
+                id={`${a.id ?? ""}-${a.name ?? ""}-${key}`}
+                name={a.name}
+                value={key}
+                checked={values.includes(key)}
+                onChange={() => toggle(key)}
+                className={cx(
+                  "rounded border-neutral-100 checked:border-blue focus:ring-0",
+                  a.color === "purple" && "text-purple",
+                  a.color === "default" && "text-blue",
+                )}
+                {...a.rest}
+                {...a.errorTag}
+              />
+              {label}
+              {removable && (
+                <button
+                  type="button"
+                  aria-label={`Remover ${label}`}
+                  onClick={removable}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 transition-colors hover:text-purple"
+                >
+                  <Icon name="fa-times" className="size-3" />
+                </button>
+              )}
+            </label>
+          );
+        })}
+      </div>
+      {errorList(a.errors, "absolute -bottom-6")}
+    </div>
+  );
+}
+
+function SliderInput(a: Assigns) {
+  const options = toPairs(a.options);
+  const initial = Math.max(0, options.findIndex((option) => option.value === a.value));
+  const [index, setIndex] = useMirror(initial);
+  const maxIdx = options.length - 1;
+  return (
+    <div className={cx("gap-4 space-y-4", a.className)}>
+      {a.label && (
+        <h2 className="text-xl text-brand-purple-dark font-bold">
+          {a.label}
+          {a.tagLabel && <Tag item={a.tagLabel} variant={a.color as TagVariant} />}
+        </h2>
+      )}
+      <div className="w-full px-20 relative items-center">
+        <div className="relative w-full">
+          <input
+            type="range"
+            min={0}
+            max={maxIdx}
+            value={index}
+            step="1"
+            id={a.name}
+            className="w-full h-3 bg-brand-blue/10 rounded-lg appearance-none relative z-20 -ml-[0.70rem]"
+            style={{ width: "calc(100% + 1.5rem)" }}
+            name={a.name}
+            disabled={Boolean(a.rest.disabled)}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              setIndex(next);
+              a.onChange?.(normalizeValue(options[next]?.value) ?? null);
+            }}
+          />
+          <div className="relative w-full -mt-5 h-2">
+            {options.map((option, idx) => (
+              <div
+                key={String(option.value)}
+                className="absolute w-2 h-2 bg-brand-blue/50 rounded-full"
+                style={{ left: `${(idx * 100) / maxIdx}%`, transform: "translateX(-50%)", top: "50%" }}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="relative w-full mt-4 h-6">
+          {options.map((option, idx) => (
+            <label
+              key={String(option.value)}
+              className="absolute text-center"
+              style={{ left: `${(idx * 100) / maxIdx}%`, transform: "translateX(-50%)", top: 0 }}
+            >
+              {option.label}
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SelectInput(a: Assigns) {
+  return (
+    <div className={cx("relative", a.className)}>
+      <CustomSelect
+        id={a.id ?? a.name ?? ""}
+        label={a.label}
+        options={selectOptions(a.options)}
+        createOptions={a.createOptions}
+        errors={a.errors}
+        name={a.name}
+        value={a.value}
+        variant={a.variant}
+        color={a.color}
+        disabled={Boolean(a.rest.readOnly || a.rest.disabled)}
+        classOptions={a.classOptions}
+        prompt={a.prompt ?? ""}
+        errorTag={a.errorTag}
+        inputClass={a.inputClass}
+        clear={a.clear}
+        onChange={a.onChange}
+      />
+      {errorList(a.errors, "absolute -bottom-6 font-normal leading-none")}
+    </div>
+  );
+}
+
+function TextareaInput(a: Assigns) {
+  const controlled = a.onChange !== undefined;
+  const value = normalizeValue(a.value);
+  return (
+    <div className={cx("relative", Boolean(a.rest.disabled) && "opacity-50", a.className)}>
+      {a.label && <Label htmlFor={a.id}>{a.label}</Label>}
+      <textarea
+        id={a.id}
+        name={a.name}
+        {...(controlled ? { value: value ?? "", onChange: a.onChange } : { defaultValue: value })}
+        className={cx(
+          "bg-brand-purple-dark/5",
+          "border border-transparent focus:border-brand-blue focus:ring-0",
+          "block w-full min-h-24 font-normal text-brand-purple-dark/80 placeholder:text-brand-purple-dark/60",
+          "outline-hidden transition-colors duration-200 focus:border-brand-blue",
+          "rounded-lg p-4",
+          a.label && "mt-2",
+          a.errors.length === 0 && "border-transparent focus:border-brand-blue",
+          a.errors.length > 0 && "border-brand-red",
+        )}
+        rows={a.rows}
+        cols={a.cols}
+        {...(a.rest as React.TextareaHTMLAttributes<HTMLTextAreaElement>)}
+        {...a.errorTag}
+      />
+      {errorList(a.errors, "absolute -bottom-6")}
+    </div>
+  );
+}
+
+function switchTrack(activated: boolean) {
+  return cx(
+    "relative w-12 h-6 border rounded-full transition-all cursor-pointer",
+    "after:content-[''] after:absolute after:top-[2px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-all after:shadow-xl",
+    !activated && "bg-neutral-50 border-neutral-100 after:start-[2px]",
+    activated && "bg-blue border-blue-dark/60 after:translate-x-full after:end-[20px]",
+  );
+}
+
+function SwitchInput(a: Assigns) {
+  const [activated, setActivated] = useMirror([true, "on", "true"].includes(a.value as never));
+  return (
+    <div className="relative">
+      {a.label && <Label>{a.label}</Label>}
+      <label className="inline-block">
+        <div className="h-12 flex items-center">
+          <Input
+            id={a.id}
+            type="checkbox"
+            className="sr-only peer"
+            name={a.name}
+            checked={activated}
+            onChange={(event) => {
+              setActivated(event.target.checked);
+              a.onChange?.(event);
+            }}
+            {...(a.rest as HtmlRest)}
+          />
+          <div className={switchTrack(activated)} />
+        </div>
+      </label>
+      {errorList(a.errors, "absolute -bottom-5 font-normal leading-none")}
+    </div>
+  );
+}
+
+function ValueSwitchInput(a: Assigns) {
+  const own = normalizeValue(a.inputValue) ?? "";
+  const [activated, setActivated] = useMirror(asList(a.value).includes(own));
+  return (
+    <div className="relative">
+      {a.label && <Label>{a.label}</Label>}
+      <label className="inline-block">
+        <div className="h-12 flex items-center">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            name={`${a.name ?? ""}[]`}
+            value={own}
+            checked={activated}
+            onChange={(event) => {
+              setActivated(event.target.checked);
+              a.onChange?.(event);
+            }}
+            {...a.rest}
+          />
+          <div className={switchTrack(activated)} />
+        </div>
+      </label>
+      {errorList(a.errors, "absolute -bottom-5 font-normal leading-none")}
+    </div>
+  );
+}
+
+function RichTextInput(a: Assigns) {
+  return (
+    <div className={cx("relative", a.className)}>
+      {a.label && <Label className="mb-2">{a.label}</Label>}
+      <RichText
+        className={a.className}
+        id={a.id ?? ""}
+        name={a.name}
+        value={normalizeValue(a.value)}
+        readonly={a.rest.readOnly ? "true" : ""}
+        disabled={Boolean(a.rest.disabled)}
+        aiGenerate={a.aiGenerate}
+        patternModule={a.patternModule}
+        patterns={a.patterns}
+        showHeadings={a.showHeadings}
+        onChange={a.onChange}
+      />
+      {errorList(a.errors, "absolute -bottom-6 font-normal leading-none")}
+    </div>
+  );
+}
+
+function TagsInput(a: Assigns) {
+  return (
+    <div className={cx("relative", a.className)}>
+      {a.label && <Label className="mb-2">{a.label}</Label>}
+      <MultiTagSelect
+        id={a.id}
+        name={a.name ?? ""}
+        value={asList(a.value)}
+        readonly={Boolean(a.rest.readOnly)}
+        onChange={a.onChange}
+      />
+      {errorList(a.errors, "absolute -bottom-6 font-normal leading-none")}
+    </div>
+  );
+}
+
+function CustomSelectInput(a: Assigns) {
+  return (
+    <div className={cx("relative", a.className)}>
+      <CustomSelect
+        id={a.id ?? ""}
+        label={a.label}
+        options={(a.options ?? []) as SelectItem[]}
+        createOptions={a.createOptions}
+        errors={a.errors}
+        name={a.name}
+        value={a.value}
+        disabled={Boolean(a.rest.disabled)}
+        classOptions={a.classOptions}
+        prompt={a.prompt ?? ""}
+        onChange={a.onChange}
+      />
+      {errorList(a.errors, "absolute -bottom-6 font-normal leading-none")}
+    </div>
+  );
+}
+
+function SelectSearchInput(a: Assigns) {
+  return (
+    <div className={cx("relative", a.className)}>
+      <SelectSearch
+        id={a.id ?? ""}
+        label={a.label}
+        options={(a.options ?? []) as SelectItem[]}
+        createOptions={a.createOptions}
+        callback={a.callback}
+        errors={a.errors}
+        name={a.name}
+        value={a.value}
+        disabled={Boolean(a.rest.disabled)}
+        classOptions={a.classOptions}
+        prompt={a.prompt ?? ""}
+        className={a.className}
+        leftIcon={a.leftIcon}
+        searchAction={a.searchAction}
+        onChange={a.onChange}
+      />
+      {errorList(a.errors, "absolute -bottom-6 font-normal leading-none")}
+    </div>
+  );
+}
+
+function MultiSelectSearchInput(a: Assigns) {
+  return (
+    <div className={cx("relative", a.className)}>
+      <MultiSelectSearch
+        id={a.id ?? ""}
+        label={a.label}
+        options={(a.options ?? []) as SelectItem[]}
+        createOptions={a.createOptions}
+        callback={a.callback}
+        errors={a.errors}
+        name={a.name ?? ""}
+        value={asList(a.value)}
+        disabled={Boolean(a.rest.disabled)}
+        classOptions={a.classOptions}
+        prompt={a.prompt ?? ""}
+        leftIcon={a.leftIcon}
+        searchAction={a.searchAction}
+        onChange={a.onChange}
+      />
+      {errorList(a.errors, "absolute -bottom-6 font-normal leading-none")}
+    </div>
+  );
+}
+
+/**
+ * O HEEx emite `type="counter"` antes de `type="number"`; o navegador fica com o
+ * primeiro, que é inválido, e o campo vira texto. Aqui sai `type="text"`.
+ */
+function CounterInput(a: Assigns) {
+  const [value, setValue] = useMirror(normalizeValue(a.value) ?? "");
+  const max = a.rest.max !== undefined ? Number(a.rest.max) : undefined;
+  const update = (next: string) => {
+    setValue(next);
+    a.onChange?.({ target: { value: next, name: a.name } } as ChangeEvent<HTMLInputElement>);
+  };
+  const step = (delta: number) => {
+    const current = Number.isNaN(Number(value)) ? 0 : Number(value);
+    const next = current + delta;
+    if (max && next >= max) return update(String(max));
+    update(String(next < 0 ? 0 : next));
+  };
+  return (
+    <div id={`${a.id ?? ""}counter-input`} className={cx("relative", a.className)}>
+      <Label htmlFor={a.id}>{a.label}</Label>
+      <div className={cx("flex w-full relative h-12", a.label && "mt-2")}>
+        <button
+          data-dec
+          type="button"
+          onClick={() => step(-1)}
+          className="text-blue absolute left-4 top-1/2 -translate-y-1/2 hover:bg-blue-light/50 rounded-full h-6 w-6"
+        >
+          <Icon name="fa-minus" />
+        </button>
+        <input
+          type="text"
+          name={a.name}
+          id={a.id}
+          data-input
+          value={value}
+          onChange={(event) => update(Number.isNaN(Number(event.target.value)) ? event.target.value.replace(/\D/g, "") : event.target.value)}
+          className={cx(
+            "block w-full h-12 text-center border font-normal text-neutral-900 placeholder:text-neutral-500",
+            "border-neutral-100 focus:border-blue focus:ring-0",
+            "outline-hidden transition-colors duration-200 focus:border-blue disabled:bg-neutral-900/[0.02] rounded-lg",
+            a.errors.length === 0 && "border-neutral-100 focus:border-blue",
+            a.errors.length > 0 && "border-red",
+          )}
+          {...a.rest}
+          {...a.errorTag}
+        />
+        <button
+          data-inc
+          type="button"
+          onClick={() => step(1)}
+          className="text-blue absolute right-4 top-1/2 -translate-y-1/2 hover:bg-blue-light/50 rounded-full h-6 w-6"
+        >
+          <Icon name="fa-plus" />
+        </button>
+      </div>
+      {errorList(a.errors, "absolute -bottom-6")}
+    </div>
+  );
+}
+
+function inputIconClass(errors: string[]) {
+  return cx(
+    "h-6 w-6 flex items-center justify-center absolute top-1/2 -translate-y-1/2",
+    errors.length === 0 && "text-brand-purple-dark/60 peer-focus:text-brand-blue",
+    errors.length > 0 && "text-brand-red",
+  );
+}
+
+/** A última cláusula: todos os tipos nativos do HTML. */
+function DefaultInput(a: Assigns) {
+  const controlled = a.onChange !== undefined || a.type === "hidden";
+  const value = normalizeValue(a.value);
+  return (
+    <div className={cx("relative", Boolean(a.rest.disabled) && "opacity-50", a.type === "hidden" && "hidden", a.className)}>
+      <Label htmlFor={a.id}>{a.label}</Label>
+      <div className={cx("flex w-full relative", a.label && "mt-2")}>
+        <input
+          type={a.type}
+          name={a.name}
+          id={a.id}
+          {...(controlled ? { value: value ?? "", onChange: a.onChange } : { defaultValue: value })}
+          className={cx(
+            "bg-brand-purple-dark/10",
+            "border border-brand-purple-dark/10 focus:border-brand-blue focus:ring-0",
+            "block w-full h-12 font-normal text-brand-purple-dark/80 placeholder:text-brand-purple-dark/60",
+            "outline-hidden transition-colors duration-200 focus:border-brand-blue",
+            "peer",
+            a.inputClass,
+            a.hint ? "rounded-l-lg" : "rounded-lg",
+            a.leftIcon && "pl-10",
+            a.rightIcon && "pr-10",
+            a.type !== "color" && "px-4",
+            a.errors.length === 0 && "border-brand-purple-dark/10 focus:border-brand-blue",
+            a.errors.length > 0 && "border-brand-red",
+          )}
+          {...a.rest}
+          {...a.errorTag}
+        />
+        {a.leftIcon && (
+          <div className={cx(inputIconClass(a.errors), "left-3")}>
+            <Icon name={a.leftIcon} />
           </div>
         )}
-        {rightIcon && (
-          <div className={`${classeIcone(temErro)} right-3`}>
-            <Icon name={rightIcon} />
+        {a.rightIcon && (
+          <div className={cx(inputIconClass(a.errors), "right-3")}>
+            <Icon name={a.rightIcon} />
           </div>
         )}
-
-        {hint && (
-          <p className="m-0 flex h-12 items-center justify-center text-nowrap rounded-r-lg border border-l-0 border-transparent bg-[var(--color-brand-purple-dark)]/10 px-4 text-[var(--color-brand-purple-dark)]/80 transition-colors duration-200 peer-focus-within:border-[var(--color-brand-blue)]">
-            {hint}
+        {a.hint && (
+          <p
+            className={cx(
+              "h-12 rounded-r-lg border-l-0 border border-transparent peer-focus-within:border-brand-blue px-4 bg-brand-purple-dark/10 text-nowrap",
+              "transition-colors duration-200",
+              "flex items-center justify-center",
+              "text-brand-purple-dark/80",
+            )}
+          >
+            {a.hint}
           </p>
         )}
       </div>
-
-      {errors.map((msg) => (
-        <FieldError key={msg} className="absolute -bottom-6" message={msg} />
-      ))}
+      {errorList(a.errors, "absolute -bottom-6")}
     </div>
   );
 }
 
-/**
- * `input/1` com `type="textarea"`: fundo mais claro e borda transparente.
- *
- * **O campo cresce com o conteúdo, em vez de rolar por dentro.** É extensão
- * sobre o original, que só passa `rows` e deixa o navegador rolar — decisão
- * 0017.
- *
- * O que a rolagem custava: o campo do texto do anúncio tem 120px e a frase
- * padrão dá quatro linhas num telefone. Ficavam duas visíveis e duas atrás de
- * uma barra de rolagem de 245px de largura, dentro de uma página que também
- * rola. Quem edita o anúncio precisa ler a frase inteira antes de mexer, e
- * ninguém confere o que não vê.
- *
- * `rows` continua valendo como altura inicial, e `min-h-24` como piso: o campo
- * cresce, não encolhe abaixo do tamanho em que foi desenhado.
- */
-export function Textarea({
-  id,
+/** `core_components.ex` → `input_with_select/1`. */
+export function InputWithSelect({
   label,
-  errors = [],
+  textField,
+  selectField,
+  options = [],
+  disabled = false,
   className,
-  onInput,
-  ...rest
 }: {
-  id?: string;
   label?: string;
-  errors?: string[];
-  className?: string;
-} & Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, "id">) {
-  const temErro = errors.length > 0;
-  const campo = useRef<HTMLTextAreaElement>(null);
-
-  /* Duas armadilhas, e as duas dão erro silencioso.
-     
-     `height: auto` antes de ler `scrollHeight`: com uma altura fixa aplicada,
-     `scrollHeight` devolve o maior entre o conteúdo e a caixa, e o campo que
-     cresceu uma vez nunca mais encolheria ao apagar texto.
-
-     E a borda entra na conta. `scrollHeight` é conteúdo mais recuo e **não**
-     inclui borda; `height` aqui é `border-box`, porque é o padrão do Tailwind.
-     Atribuir um ao outro deixa a caixa 2px curta — a borda de 1px de cada lado
-     —, e com `overflow-hidden` esses 2px comem o rabo da última linha. Medido:
-     texto de 224px de altura na caixa de 224, com 222 de área útil. */
-  const ajustarAltura = useCallback(() => {
-    const elemento = campo.current;
-    if (!elemento) return;
-    elemento.style.height = "auto";
-    const borda = elemento.offsetHeight - elemento.clientHeight;
-    elemento.style.height = `${elemento.scrollHeight + borda}px`;
-  }, []);
-
-  /* Vale para o campo controlado, onde o texto muda sem ninguém digitar — é o
-     caso desta área: escolher outro modelo de anúncio troca o texto inteiro. */
-  useLayoutEffect(() => {
-    ajustarAltura();
-  }, [ajustarAltura, rest.value]);
-
-  /* E vale quando a **largura** muda, porque a quebra de linha muda com ela:
-     o mesmo texto que dá duas linhas no palco largo dá quatro no de 375px. Só
-     largura, e é por isso que a medida anterior fica guardada — a altura quem
-     mexe é este efeito, e reagir a ela seria um laço. */
-  useLayoutEffect(() => {
-    const elemento = campo.current;
-    if (!elemento) return;
-
-    let largura = elemento.clientWidth;
-    const observador = new ResizeObserver(() => {
-      if (elemento.clientWidth === largura) return;
-      largura = elemento.clientWidth;
-      ajustarAltura();
-    });
-    observador.observe(elemento);
-    return () => observador.disconnect();
-  }, [ajustarAltura]);
-
-  return (
-    <div className={["relative", rest.disabled && "opacity-50", className].filter(Boolean).join(" ")}>
-      {label && <Label htmlFor={id}>{label}</Label>}
-      <textarea
-        id={id}
-        ref={campo}
-        /* `onInput` e não `onChange`: o React dispara `onChange` a cada tecla
-           igual, mas quem usa este componente passa o `onChange` dele, e
-           empilhar o nosso por cima exigiria encadear. `onInput` é o evento
-           nativo e chega antes; o de quem chamou continua sendo chamado. */
-        onInput={(event) => {
-          ajustarAltura();
-          onInput?.(event);
-        }}
-        className={[
-          "bg-[var(--color-brand-purple-dark)]/5",
-          "border focus:ring-0",
-          "block w-full min-h-24 font-normal text-[var(--color-brand-purple-dark)]/80 placeholder:text-[var(--color-brand-purple-dark)]/60",
-          "outline-hidden transition-colors duration-200",
-          "rounded-lg p-4",
-          /* `overflow-hidden` tira a barra que não tem mais o que rolar, e
-             `resize-none` tira a alça: a altura é calculada, e o que fosse
-             arrastado à mão voltaria atrás na tecla seguinte. */
-          "resize-none overflow-hidden",
-          label && "mt-2",
-          temErro
-            ? "border-[var(--color-brand-red)]"
-            : "border-transparent focus:border-[var(--color-brand-blue)]",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-        {...rest}
-      />
-      {errors.map((msg) => (
-        <FieldError key={msg} className="absolute -bottom-6" message={msg} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * `input/1` com `type="checkbox"`.
- *
- * O rótulo inteiro é a área clicável, e ganha fundo azul quando marcado —
- * `has-[input:checked]:bg-brand-blue/20`. É seleção que se vê de longe.
- *
- * **Correção intencional do Design Space:** a caixa recebe 24px. Sem tamanho
- * declarado, o navegador desenha 13×13 — abaixo do mínimo de alvo da WCAG 2.5.8,
- * e a área grande do rótulo não resolve isso para quem mira a caixa. O original
- * não declara tamanho; aqui ele é declarado, e a varredura de toque fixa a
- * medida.
- */
-export function Checkbox({
-  id,
-  label,
-  errors = [],
-  className,
-  ...rest
-}: {
-  id?: string;
-  label: string;
-  errors?: string[];
-  className?: string;
-} & Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "id">) {
-  return (
-    <div className={["relative", className].filter(Boolean).join(" ")}>
-      <label className="inline-flex items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-brand-purple-dark)] transition-colors has-[input:checked]:bg-[var(--color-brand-blue)]/20">
-        <input
-          type="checkbox"
-          id={id}
-          className="h-6 w-6 shrink-0 rounded border-2 border-[var(--color-brand-purple-dark)]/10 text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0"
-          {...rest}
-        />
-        {label}
-      </label>
-      {errors.map((msg) => (
-        <FieldError key={msg} className="absolute -bottom-6" message={msg} />
-      ))}
-    </div>
-  );
-}
-
-/**
- * `input/1` com `type="switch"`.
- *
- * A caixa de seleção real fica em `sr-only peer` e o desenho é uma `<div>` que
- * reage a ela. Quem usa teclado e leitor de tela continua operando uma caixa de
- * seleção de verdade — a chave é só aparência.
- */
-export function Switch({
-  id,
-  label,
-  checked,
-  onChange,
-  disabled,
-  name,
-  value,
-  "aria-label": ariaLabel,
-  "aria-labelledby": ariaLabelledby,
-}: {
-  id?: string;
-  label?: string;
-  checked: boolean;
-  onChange?: (marcado: boolean) => void;
+  textField: FormField;
+  selectField: FormField;
+  options?: readonly (SelectItem | OptionTuple)[];
   disabled?: boolean;
-  name?: string;
-  value?: string;
-  "aria-label"?: string;
-  "aria-labelledby"?: string;
+  className?: string;
 }) {
   return (
-    <div className="relative">
-      {label && <Label>{label}</Label>}
-
-      <label className="inline-block">
-        <div className="flex h-12 items-center">
-          {name && <input type="hidden" name={name} value="false" />}
-          <input
-            id={id}
-            type="checkbox"
-            className="peer sr-only"
-            checked={checked}
-            disabled={disabled}
-            name={name}
-            value={value}
-            aria-label={ariaLabel}
-            aria-labelledby={ariaLabelledby}
-            onChange={(e) => onChange?.(e.target.checked)}
-          />
-          <div
-            className={[
-              "relative h-6 w-12 cursor-pointer rounded-full border transition-all",
-              "after:absolute after:top-[2px] after:h-[18px] after:w-[18px] after:rounded-full after:bg-white after:shadow-xl after:transition-all after:content-['']",
-              checked
-                ? "border-[var(--color-blue-dark)]/60 bg-[var(--color-blue)] after:end-[20px] after:translate-x-full"
-                : "border-[var(--color-neutral-100)] bg-[var(--color-brand-purple-dark)]/10 after:start-[2px]",
-            ].join(" ")}
-          />
-        </div>
-      </label>
+    <div className={cx("relative", disabled && "opacity-50", className)}>
+      <Label>{label}</Label>
+      <div className={cx("flex w-full relative", label && "mt-2")}>
+        <Input field={textField} disabled={disabled} className="flex-1" inputClass="rounded-r-none!" />
+        <Input
+          type="select"
+          options={options}
+          field={selectField}
+          disabled={disabled}
+          className="flex-1"
+          clear={false}
+          inputClass="rounded-l-none! bg-brand-purple-dark/10!"
+        />
+      </div>
     </div>
   );
 }
 
-/** `switch_card/1`: título, descrição e chave formam uma única área clicável. */
+/**
+ * `core_components.ex` → `checkgroup/1`. Repassa `variant`, mas a cláusula
+ * `checkgroup` do `input/1` lê `color` — no original a variante não tem efeito.
+ */
+export function Checkgroup({
+  variant = "default",
+  ...props
+}: Omit<InputAttrs, "variant"> & {
+  variant?: "default" | "purple";
+  disabled?: boolean;
+  form?: string;
+  readOnly?: boolean;
+  onChange?: (values: string[]) => void;
+}) {
+  void variant;
+  return <Input {...props} multiple type="checkgroup" />;
+}
+
+/** `core_components.ex` → `fake_input/1`. */
+export function FakeInput({
+  value,
+  label,
+  labelColor = "default",
+  rightIcon,
+  className,
+  ...rest
+}: {
+  value?: ReactNode;
+  label?: string;
+  labelColor?: "default" | "blue";
+  rightIcon?: string;
+  className?: string;
+} & Omit<React.HTMLAttributes<HTMLDivElement>, "className">) {
+  return (
+    <div className={className} {...rest}>
+      {label && (
+        <p
+          className={cx(
+            "block text-sm/4 font-bold",
+            labelColor === "default" && "text-neutral-400",
+            labelColor === "blue" && "text-brand-blue",
+          )}
+        >
+          {label}
+        </p>
+      )}
+      <div
+        className={cx(
+          "block w-full min-h-12 rounded-lg font-normal px-4 leading-6",
+          "bg-neutral-500/5 text-neutral-500 ",
+          "border border-neutral-100",
+          "flex items-center justify-between gap-x-4",
+          label && "mt-2",
+        )}
+      >
+        {value}
+        {rightIcon && (
+          <div>
+            <Icon name={rightIcon} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** `core_components.ex` → `input_switch_card/1`. */
+export function InputSwitchCard({
+  label,
+  active,
+  className,
+  children,
+}: {
+  label: string;
+  active: FormField;
+  className?: string;
+  children?: ReactNode;
+}) {
+  const isActive = [true, "on", "true"].includes(active.value as never);
+  return (
+    <div
+      className={cx(
+        "flex items-center justify-center gap-x-2 rounded-lg px-2 border transition-colors",
+        !isActive && "bg-brand-purple-dark/10 border-brand-purple-dark/10",
+        isActive && "bg-blue-light border-blue/40",
+        className,
+      )}
+    >
+      <p className="text-brand-purple-dark font-bold">{label}</p>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * `core_components.ex` → `switch_card/1`. Como no original, `multiple` e
+ * `inputValue` são aceitos mas não chegam à chave, que recebe só o `field`.
+ */
 export function SwitchCard({
-  id,
-  name,
-  inputValue,
-  multiple = false,
+  field,
+  className,
   title,
   description,
-  checked,
   onChange,
-  disabled,
-  className,
 }: {
-  id: string;
-  name: string;
-  inputValue?: string;
+  id?: string;
+  field: FormField;
+  inputValue?: unknown;
+  className?: string;
   multiple?: boolean;
   title: string;
   description: string;
-  checked: boolean;
-  onChange?: (checked: boolean) => void;
-  disabled?: boolean;
-  className?: string;
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const [activated, setActivated] = useMirror([true, "on", "true"].includes(field.value as never));
   return (
-    <div
-      className={["inline-block w-full", disabled && "opacity-50", className].filter(Boolean).join(" ")}
-      onClick={(event) => {
-        if (disabled || event.target instanceof HTMLInputElement) return;
-        onChange?.(!checked);
-        document.getElementById(id)?.focus();
-      }}
-    >
+    <label className={cx("inline-block w-full", className)} htmlFor={field.id}>
       <div
-        className={[
-          "flex cursor-pointer items-center justify-between gap-6 rounded-xl border p-3 transition-colors delay-100",
-          disabled && "cursor-not-allowed",
-          checked
-            ? "border-[var(--color-brand-blue)]/40 bg-[var(--color-brand-blue)]/10"
-            : "border-transparent bg-[var(--color-brand-purple-dark)]/5",
-        ].filter(Boolean).join(" ")}
+        className={cx(
+          "p-3 flex items-center justify-between rounded-xl border transition-colors delay-100",
+          activated && "bg-brand-blue/10 border-brand-blue/40",
+          !activated && "bg-brand-purple-dark/5 border-transparent",
+        )}
       >
         <div>
-          <h3 id={`${id}-title`} className="m-0 font-extrabold text-[var(--color-brand-purple-dark)]">{title}</h3>
-          <p id={`${id}-description`} className="m-0 text-sm text-[var(--color-brand-purple-dark)]/60">{description}</p>
+          <h3 className="text-brand-purple-dark font-extrabold">{title}</h3>
+          <p className="text-sm text-brand-purple-dark/60">{description}</p>
         </div>
-        <div className="relative">
-          <div className="flex h-12 items-center">
-            <input
-              id={id}
-              name={multiple ? `${name}[]` : name}
-              value={inputValue ?? "true"}
-              type="checkbox"
-              className="peer sr-only"
-              checked={checked}
-              disabled={disabled}
-              aria-labelledby={`${id}-title`}
-              aria-describedby={`${id}-description`}
-              onChange={(event) => onChange?.(event.target.checked)}
-            />
-            <div
-              aria-hidden="true"
-              className={[
-                "relative h-6 w-12 cursor-pointer rounded-full border transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--color-brand-blue)]",
-                "after:absolute after:top-[2px] after:h-[18px] after:w-[18px] after:rounded-full after:bg-white after:shadow-xl after:transition-all after:content-['']",
-                checked
-                  ? "border-[var(--color-blue-dark)]/60 bg-[var(--color-blue)] after:end-[20px] after:translate-x-full"
-                  : "border-[var(--color-neutral-100)] bg-[var(--color-brand-purple-dark)]/10 after:start-[2px]",
-              ].join(" ")}
-            />
+        <Input
+          type="switch"
+          field={{ ...field, value: activated }}
+          onChange={(event) => {
+            setActivated(event.target.checked);
+            onChange?.(event);
+          }}
+        />
+      </div>
+    </label>
+  );
+}
+
+/* ---------- custom_select_component.ex ---------- */
+
+function findSelectedLabel(options: readonly SelectItem[], value: unknown): string | undefined {
+  for (const item of options) {
+    if (isGroup(item)) {
+      const found = findSelectedLabel(item.items, value);
+      if (found !== undefined) return found;
+    } else if (item.value === value || item.value === String(value)) {
+      return item.label;
+    }
+  }
+  return undefined;
+}
+
+export function flattenOptions(options: readonly SelectItem[]): SelectOption[] {
+  return options.flatMap((item) => (isGroup(item) ? flattenOptions(item.items) : [item]));
+}
+
+function emptyValue(value: unknown) {
+  return value === null || value === undefined || value === "";
+}
+
+/** `custom_select_component.ex` → `BloomyWeb.CustomSelectComponent`. */
+export function CustomSelect({
+  id,
+  options = [],
+  createOptions = [],
+  name,
+  prompt = "",
+  label,
+  disabled = false,
+  errorTag = {},
+  inputClass,
+  clear = true,
+  value: valueProp,
+  onChange,
+}: {
+  id: string;
+  options?: readonly SelectItem[];
+  createOptions?: readonly SelectItem[];
+  errors?: string[];
+  name?: string;
+  prompt?: string;
+  label?: string;
+  disabled?: boolean;
+  errorTag?: Record<string, string>;
+  inputClass?: string;
+  clear?: boolean;
+  value?: unknown;
+  variant?: string;
+  color?: string;
+  classOptions?: string;
+  onChange?: (value: string | null) => void;
+}) {
+  const [value, setValue] = useMirror<unknown>(valueProp);
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState(-1);
+  const root = useRef<HTMLDivElement>(null);
+  const container = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  const selectedLabel = emptyValue(value) ? undefined : findSelectedLabel([...createOptions, ...options], value);
+  const flat = flattenOptions(options);
+
+  const close = () => setOpen(false);
+  const choose = (option: SelectOption) => {
+    const next = parseValue(option.value);
+    setValue(next);
+    onChange?.(next);
+    close();
+    setHighlight(-1);
+  };
+
+  useFloatingPanel(open, setOpen, { reference: root, container, panel }, (target) =>
+    Boolean(panel.current?.contains(target) || container.current?.contains(target)),
+  );
+  useOptionKeys(open, flat.length, highlight, setHighlight, (index) => flat[index] && choose(flat[index]), close);
+  useEffect(() => {
+    panel.current?.querySelector("[data-highlighted]")?.scrollIntoView({ block: "nearest" });
+  }, [highlight]);
+
+  let counter = 0;
+  // Como no `option_item/1`: no topo cada item usa a própria cor; dentro de um
+  // grupo, a cor do grupo.
+  const renderItems = (items: readonly SelectItem[], passed?: string, top = true): ReactNode[] =>
+    items.map((item, index) => {
+      const color = (top ? item.color : passed) ?? "purple";
+      if (isGroup(item)) {
+        return (
+          <GroupItems key={`g-${item.group}`} group={item} color={color}>
+            {renderItems(item.items, item.color, false)}
+          </GroupItems>
+        );
+      }
+      const flatIndex = counter++;
+      const selected = parseValue(item.value) === parseValue(value);
+      return (
+        <li
+          key={`${index}-${parseValue(item.value)}`}
+          data-options
+          data-index={index}
+          data-highlighted={flatIndex === highlight ? "true" : undefined}
+          className={cx(
+            "px-4 py-2 transition-colors rounded-lg font-bold",
+            color === "purple" && "text-brand-purple-dark/60",
+            color === "orange" && "text-brand-orange-dark",
+            color === "red" && "text-red-dark",
+            (selected && [
+              color === "purple" && "bg-brand-purple-dark/10",
+              color === "orange" && "bg-brand-orange-dark/10",
+              color === "red" && "bg-red-dark/10",
+            ]) || [
+              "bg-white",
+              color === "purple" && "hover:bg-brand-purple-dark/5 data-[highlighted]:bg-brand-purple-dark/10",
+              color === "orange" && "hover:bg-brand-orange-dark/5 data-[highlighted]:bg-brand-orange-dark/10",
+              color === "red" && "hover:bg-red-dark/5 data-[highlighted]:bg-red-dark/10",
+            ],
+            "flex justify-between items-center",
+            "cursor-pointer",
+          )}
+          onClick={() => choose(item)}
+        >
+          {item.label}
+          {selected && <Icon name="fa-check" />}
+        </li>
+      );
+    });
+
+  return (
+    <div id={id} className={cx(disabled && "opacity-60 cursor-not-allowed")}>
+      {label && <Label htmlFor={id}>{label}</Label>}
+      <div
+        ref={root}
+        className="relative w-full"
+        id={`input-container-${id}`}
+        data-input-name={name}
+        data-disabled={disabled ? "true" : "false"}
+      >
+        <div
+          ref={container}
+          data-container
+          className={cx(
+            "relative flex items-center",
+            "px-4 rounded-lg flex items-center justify-between h-12 cursor-pointer overflow-hidden",
+            "bg-brand-purple-dark/10",
+            "border border-brand-purple-dark/10 data-[open=true]:border-brand-blue",
+            "group",
+            inputClass,
+            label && "mt-2",
+          )}
+          data-open={open ? "true" : "false"}
+          onClick={(event) => {
+            const fieldset = root.current?.closest("fieldset");
+            if (disabled || fieldset?.disabled) return;
+            if ((event.target as HTMLElement).closest("button[data-ignore-open]")) return;
+            setHighlight(-1);
+            setOpen(!open);
+          }}
+        >
+          <p className={cx("font-normal truncate", (selectedLabel && "text-brand-purple-dark/80") || "text-brand-purple-dark/60")}>
+            {selectedLabel || prompt}
+          </p>
+          <div className="flex items-center gap-2">
+            {clear && !emptyValue(value) && (
+              <button
+                disabled={disabled}
+                type="button"
+                title="Limpar seleção"
+                className="transition-all hover:bg-brand-purple-dark/10 w-6 rounded-full"
+                data-ignore-open
+                onClick={() => {
+                  setValue(null);
+                  onChange?.(null);
+                  close();
+                }}
+              >
+                <Icon className="text-brand-red" name="fa-times" />
+              </button>
+            )}
+            <Icon className="text-brand-purple-dark/40 group-data-[open=true]:text-brand-blue" name="fa-chevron-down" />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-export type SelectOption = { label: string; value: string };
+        <input type="hidden" name={name} value={parseValue(value)} {...errorTag} />
 
-/**
- * Posicionamento do painel flutuante, comum a `Select` e `MultiSelect`.
- *
- * O painel é `fixed` e vai para o `body` por portal. As duas coisas juntas são o
- * requisito: `fixed` para não ser cortado por um pai com `overflow`, e portal
- * porque `fixed` sozinho não basta — um ancestral com `transform` ou `translate`
- * passa a ser o bloco de contenção do painel, e aí as coordenadas de viewport
- * apontam para o lugar errado. É exatamente o caso do `DrawerModal`, que anima a
- * entrada com `translate`: sem o portal o menu abre fora da tela.
- *
- * Em troca, o painel precisa medir o gatilho, decidir se abre para baixo ou para
- * cima e refazer a conta quando a página rola ou muda de tamanho.
- */
-function useFloatingMenu(
-  open: boolean,
-  close: () => void,
-  refs: {
-    root: RefObject<HTMLDivElement | null>;
-    trigger: RefObject<HTMLButtonElement | null>;
-    menu: RefObject<HTMLDivElement | null>;
-  },
-) {
-  const [position, setPosition] = useState({ left: 0, top: 0, width: 0, maxHeight: 256 });
-  const closeRef = useRef(close);
-  closeRef.current = close;
-
-  function positionMenu() {
-    const button = refs.trigger.current;
-    if (!button) return;
-
-    const rect = button.getBoundingClientRect();
-    const menuHeight = Math.min(refs.menu.current?.offsetHeight ?? 256, 256);
-    const below = window.innerHeight - rect.bottom - 16;
-    const above = rect.top - 16;
-    const opensAbove = below < Math.min(menuHeight, 192) && above > below;
-    const top = opensAbove ? Math.max(16, rect.top - menuHeight - 4) : rect.bottom + 4;
-    const left = Math.min(Math.max(16, rect.left), Math.max(16, window.innerWidth - rect.width - 16));
-
-    setPosition({
-      left,
-      top,
-      width: rect.width,
-      maxHeight: Math.max(96, opensAbove ? above - 4 : below),
-    });
-  }
-
-  useLayoutEffect(() => {
-    if (open) positionMenu();
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const closeOutside = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (!refs.root.current?.contains(target) && !refs.menu.current?.contains(target)) {
-        closeRef.current();
-      }
-    };
-    const reposition = () => positionMenu();
-
-    /**
-     * Esc com a lista aberta fecha a lista, e só ela.
-     *
-     * Fica na captura da janela porque o alvo da tecla depende de onde a pessoa
-     * clicou por último — nas opções o foco não muda, mas basta um clique no
-     * painel para o alvo ser o `body`, e aí o `keydown` do `DrawerModal` fecharia
-     * o formulário inteiro em vez de fechar a lista.
-     */
-    const escape = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
-      closeRef.current();
-    };
-
-    document.addEventListener("pointerdown", closeOutside);
-    window.addEventListener("keydown", escape, true);
-    window.addEventListener("resize", reposition);
-    // `true` para pegar a rolagem de qualquer contêiner, não só a da janela.
-    window.addEventListener("scroll", reposition, true);
-    return () => {
-      document.removeEventListener("pointerdown", closeOutside);
-      window.removeEventListener("keydown", escape, true);
-      window.removeEventListener("resize", reposition);
-      window.removeEventListener("scroll", reposition, true);
-    };
-  }, [open]);
-
-  return position;
-}
-
-/**
- * A cláusula `input/1` com `type="select"` usa o `CustomSelectComponent` do
- * sistema: gatilho próprio, opções flutuantes e seleção visível com check.
- * Não é um `<select>` nativo estilizado.
- */
-export function Select({
-  id: providedId,
-  name,
-  label,
-  ariaLabel,
-  prompt = "Selecione uma opção",
-  value = "",
-  options,
-  disabled = false,
-  clear = true,
-  errors = [],
-  className,
-  inputClassName,
-  onChange,
-}: {
-  id?: string;
-  name?: string;
-  label?: string;
-  ariaLabel?: string;
-  prompt?: string;
-  value?: string;
-  options: SelectOption[];
-  disabled?: boolean;
-  clear?: boolean;
-  errors?: string[];
-  className?: string;
-  inputClassName?: string;
-  onChange?: (value: string) => void;
-}) {
-  const generatedId = useId();
-  const id = providedId ?? `select-${generatedId.replace(/:/g, "")}`;
-  const triggerId = `${id}-trigger`;
-  const listboxId = `${id}-options`;
-  const errorId = errors.length > 0 ? `${id}-errors` : undefined;
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(-1);
-  const position = useFloatingMenu(open, () => setOpen(false), { root, trigger, menu });
-  const selectedIndex = options.findIndex((option) => option.value === value);
-  const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
-
-  function openMenu() {
-    if (disabled) return;
-    setHighlighted(selectedIndex >= 0 ? selectedIndex : -1);
-    setOpen(true);
-  }
-
-  function choose(option: SelectOption) {
-    onChange?.(option.value);
-    setOpen(false);
-    setHighlighted(-1);
-    trigger.current?.focus();
-  }
-
-  function keyboard(event: KeyboardEvent<HTMLButtonElement>) {
-    if (!open) {
-      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openMenu();
-      }
-      return;
-    }
-
-    if (event.key === "Escape" || event.key === "Tab") {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        // Fecha a lista sem fechar o diálogo que contém o campo.
-        event.stopPropagation();
-      }
-      setOpen(false);
-      return;
-    }
-
-    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
-      event.preventDefault();
-      const next =
-        event.key === "Home"
-          ? 0
-          : event.key === "End"
-            ? options.length - 1
-            : Math.min(
-                Math.max(highlighted + (event.key === "ArrowDown" ? 1 : -1), 0),
-                options.length - 1,
-              );
-      setHighlighted(next);
-      menu.current?.querySelector<HTMLElement>(`[data-option-index="${next}"]`)?.scrollIntoView({ block: "nearest" });
-      return;
-    }
-
-    if (event.key === "Enter" && highlighted >= 0) {
-      event.preventDefault();
-      const option = options[highlighted];
-      if (option) choose(option);
-    }
-  }
-
-  return (
-    <div ref={root} id={id} className={["relative", disabled && "cursor-not-allowed opacity-60", className].filter(Boolean).join(" ")}>
-      {label && <Label htmlFor={triggerId}>{label}</Label>}
-
-      <div className={["relative w-full", label && "mt-2"].filter(Boolean).join(" ")}>
-        <button
-          ref={trigger}
-          id={triggerId}
-          type="button"
-          role="combobox"
-          aria-label={ariaLabel}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-activedescendant={open && highlighted >= 0 ? `${id}-option-${highlighted}` : undefined}
-          aria-describedby={errorId}
-          aria-invalid={errors.length > 0 || undefined}
-          data-open={open}
-          data-container
-          data-value={value}
-          disabled={disabled}
-          onClick={() => open ? setOpen(false) : openMenu()}
-          onKeyDown={keyboard}
-          className={[
-            "group flex h-12 w-full cursor-pointer items-center justify-between overflow-hidden rounded-lg border px-4 text-left",
-            "border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/10",
-            "data-[open=true]:border-[var(--color-brand-blue)]",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
-            "disabled:cursor-not-allowed",
-            clear && selected && "pr-20",
-            inputClassName,
-          ].filter(Boolean).join(" ")}
-        >
-          {/* A frase do `prompt` sai a **72%**, e não a 60%.
-
-              60% sobre o fundo do campo — que é o mesmo navy a 10% — dá
-              **3,75:1**, abaixo dos 4,5:1 de AA, e o `prompt` é texto: é ele que
-              diz o que o campo espera enquanto ninguém escolheu nada. 72% é o
-              alfa que a decisão 0001 já fixou para texto secundário, e sobre
-              este fundo entrega 5,25:1. O par está declarado em
-              `src/tokens/contrast.ts`. */}
-          <span className={["truncate font-normal", selected ? "text-[var(--color-brand-purple-dark)]/80" : "text-[var(--color-brand-purple-dark)]/72"].join(" ")}>
-            {selected?.label ?? prompt}
-          </span>
-        </button>
-
-        <Icon
-          name="fa-chevron-down"
-          className={[
-            "pointer-events-none absolute right-4 top-1/2 -translate-y-1/2",
-            open ? "text-[var(--color-brand-blue)]" : "text-[var(--color-brand-purple-dark)]/40",
-          ].join(" ")}
-        />
-
-        {clear && selected && !disabled && (
-          <button
-            type="button"
-            title="Limpar seleção"
-            aria-label={`Limpar ${label ?? "seleção"}`}
-            onClick={() => {
-              onChange?.("");
-              setOpen(false);
-              trigger.current?.focus();
-            }}
-            className="absolute right-10 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--color-brand-red)] transition-colors hover:bg-[var(--color-brand-purple-dark)]/10 focus-visible:outline-2 focus-visible:outline-[var(--color-action)]"
-          >
-            <Icon name="fa-times" />
-          </button>
-        )}
-
-        <input type="hidden" name={name} value={value} />
-      </div>
-
-      {open && createPortal(
         <div
-          ref={menu}
+          ref={panel}
           data-options-container
-          className="fixed z-[9999] overflow-hidden rounded-lg border border-[var(--color-neutral-100)] bg-white shadow"
-          style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}
-        >
-          <ul id={listboxId} role="listbox" aria-label={label ?? ariaLabel} className="thin-scrollbar m-0 max-h-64 list-none overflow-y-auto p-4">
-            {options.length === 0 && <li className="bg-white px-4 py-2 text-center text-[var(--color-blue-dark)]/80">Nenhuma opção encontrada</li>}
-            {options.map((option, index) => {
-              const isSelected = option.value === value;
-              const isHighlighted = index === highlighted;
-              return (
-                <li
-                  key={option.value}
-                  id={`${id}-option-${index}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  data-option-index={index}
-                  data-options
-                  data-highlighted={isHighlighted || undefined}
-                  onPointerMove={() => setHighlighted(index)}
-                  onClick={() => choose(option)}
-                  className={[
-                    "flex cursor-pointer items-center justify-between rounded-lg px-4 py-2 font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
-                    isSelected || isHighlighted ? "bg-[var(--color-brand-purple-dark)]/10" : "bg-white hover:bg-[var(--color-brand-purple-dark)]/5",
-                  ].join(" ")}
-                >
-                  <span>{option.label}</span>
-                  {isSelected && <Icon name="fa-check" />}
-                </li>
-              );
-            })}
-          </ul>
-        </div>,
-        document.body,
-      )}
-
-      {errors.length > 0 && (
-        <div id={errorId}>
-          {errors.map((message) => <FieldError key={message} className="absolute -bottom-6 font-normal leading-none" message={message} />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export type MultiSelectOption = SelectOption & {
-  /** Anotação curta ao lado do rótulo na lista. Não entra na etiqueta. */
-  hint?: string;
-  disabled?: boolean;
-  /** Por que a opção está indisponível. Fica visível abaixo do campo. */
-  reason?: string;
-};
-
-/**
- * A cláusula `input/1` com `type="multi_select_search"`: um gatilho só, as
- * escolhidas viram etiquetas dentro dele e o painel continua aberto enquanto a
- * pessoa marca.
- *
- * Três decisões que vieram da convenção do produto, não do visual:
- *
- * 1. **Opção indisponível continua na lista**, desabilitada, e o motivo fica
- *    visível abaixo do campo — não dentro do painel, que fecha. A opção aponta
- *    para o motivo por `aria-describedby`. É a decisão 0003: ação bloqueada
- *    alcança o teclado e diz por quê.
- * 2. **A etiqueta não tem botão de remover.** Botão dentro de botão não é HTML
- *    válido, e um `div` clicável no lugar do gatilho perderia teclado. Desmarcar
- *    é reabrir a lista e clicar de novo; "Limpar" zera tudo.
- * 3. **O painel não fecha ao marcar.** Escolha múltipla que fecha a cada clique
- *    obriga a reabrir uma vez por operadora.
- */
-export function MultiSelect({
-  id: providedId,
-  name,
-  label,
-  ariaLabel,
-  description,
-  note,
-  prompt = "Selecione uma ou mais opções",
-  values,
-  options,
-  disabled = false,
-  clear = true,
-  errors = [],
-  className,
-  inputClassName,
-  onChange,
-}: {
-  id?: string;
-  name?: string;
-  label?: string;
-  ariaLabel?: string;
-  description?: string;
-  /** Consequência da seleção atual. Anunciado quando aparece; não é erro. */
-  note?: string;
-  prompt?: string;
-  values: string[];
-  options: MultiSelectOption[];
-  disabled?: boolean;
-  clear?: boolean;
-  errors?: string[];
-  className?: string;
-  inputClassName?: string;
-  onChange?: (values: string[]) => void;
-}) {
-  const generatedId = useId();
-  const id = providedId ?? `multi-select-${generatedId.replace(/:/g, "")}`;
-  const triggerId = `${id}-trigger`;
-  const listboxId = `${id}-options`;
-  const errorId = errors.length > 0 ? `${id}-errors` : undefined;
-  const descriptionId = description ? `${id}-description` : undefined;
-  const noteId = note ? `${id}-note` : undefined;
-  const root = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const menu = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(-1);
-  const position = useFloatingMenu(open, () => setOpen(false), { root, trigger, menu });
-
-  const selected = options.filter((option) => values.includes(option.value));
-
-  /**
-   * Motivos agrupados: quando a mesma condição bloqueia várias opções — falta o
-   * arquivo, falta a permissão — repetir a frase uma vez por opção enche o painel
-   * com o mesmo texto. Agrupado, o campo tem uma linha por causa, não por opção.
-   */
-  const blocked = options.reduce<{ reason: string; labels: string[]; values: string[] }[]>(
-    (grupos, option) => {
-      if (!option.disabled || !option.reason) return grupos;
-      const grupo = grupos.find((item) => item.reason === option.reason);
-      if (grupo) {
-        grupo.labels.push(option.label);
-        grupo.values.push(option.value);
-      } else {
-        grupos.push({ reason: option.reason, labels: [option.label], values: [option.value] });
-      }
-      return grupos;
-    },
-    [],
-  );
-  const reasonId = (value: string) =>
-    `${id}-reason-${blocked.findIndex((grupo) => grupo.values.includes(value))}`;
-
-  function openMenu() {
-    if (disabled) return;
-    setHighlighted(options.findIndex((option) => !option.disabled));
-    setOpen(true);
-  }
-
-  function toggle(option: MultiSelectOption) {
-    if (option.disabled) return;
-    onChange?.(
-      values.includes(option.value)
-        ? values.filter((value) => value !== option.value)
-        : [...values, option.value],
-    );
-  }
-
-  function keyboard(event: KeyboardEvent<HTMLButtonElement>) {
-    if (!open) {
-      if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        openMenu();
-      }
-      return;
-    }
-
-    if (event.key === "Escape" || event.key === "Tab") {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        // O Esc aqui fecha a lista, não o diálogo que contém o campo. Sem isto o
-        // `DrawerModal` também ouve a tecla e a pessoa perde o formulário inteiro
-        // ao desistir de uma opção.
-        event.stopPropagation();
-      }
-      setOpen(false);
-      return;
-    }
-
-    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
-      event.preventDefault();
-      const next =
-        event.key === "Home"
-          ? 0
-          : event.key === "End"
-            ? options.length - 1
-            : Math.min(
-                Math.max(highlighted + (event.key === "ArrowDown" ? 1 : -1), 0),
-                options.length - 1,
-              );
-      setHighlighted(next);
-      menu.current?.querySelector<HTMLElement>(`[data-option-index="${next}"]`)?.scrollIntoView({ block: "nearest" });
-      return;
-    }
-
-    // Enter e espaço marcam sem fechar: a lista existe para escolher mais de uma.
-    if ((event.key === "Enter" || event.key === " ") && highlighted >= 0) {
-      event.preventDefault();
-      const option = options[highlighted];
-      if (option) toggle(option);
-    }
-  }
-
-  return (
-    <div ref={root} id={id} className={["relative", disabled && "cursor-not-allowed opacity-60", className].filter(Boolean).join(" ")}>
-      {label && <Label htmlFor={triggerId}>{label}</Label>}
-      {description && (
-        <p id={descriptionId} className="m-0 mt-1 text-sm text-[var(--fg-2)]">{description}</p>
-      )}
-
-      <div className={["relative w-full", (label || description) && "mt-2"].filter(Boolean).join(" ")}>
-        <button
-          ref={trigger}
-          id={triggerId}
-          type="button"
-          role="combobox"
-          aria-label={ariaLabel}
-          aria-haspopup="listbox"
-          aria-expanded={open}
-          aria-controls={listboxId}
-          aria-activedescendant={open && highlighted >= 0 ? `${id}-option-${highlighted}` : undefined}
-          aria-describedby={[descriptionId, noteId, errorId].filter(Boolean).join(" ") || undefined}
-          aria-invalid={errors.length > 0 || undefined}
-          data-open={open}
-          data-container
-          disabled={disabled}
-          onClick={() => (open ? setOpen(false) : openMenu())}
-          onKeyDown={keyboard}
-          className={[
-            // `h-12` e `overflow-hidden`, como o `data-container` do original:
-            // altura fixa, sem quebra de linha, excedente cortado. Era
-            // `min-h-12` com `flex-wrap`, e o campo crescia a cada escolha.
-            "group flex h-12 w-full cursor-pointer items-center justify-between gap-2 overflow-hidden rounded-lg border pl-4 text-left",
-            "border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/10",
-            "data-[open=true]:border-[var(--color-brand-blue)]",
-            "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-action)]",
-            "disabled:cursor-not-allowed",
-            clear && selected.length > 0 ? "pr-20" : "pr-12",
-            inputClassName,
-          ].filter(Boolean).join(" ")}
-        >
-          {selected.length === 0 ? (
-            <span className="truncate font-normal text-[var(--color-brand-purple-dark)]/60">{prompt}</span>
-          ) : (
-            /**
-             * As escolhidas em fila única, como no original: `flex items-center
-             * gap-2` dentro de um gatilho de altura fixa com `overflow-hidden`.
-             * Elas **não** quebram linha — o excedente é cortado pela borda, e a
-             * altura do campo não muda com a quantidade.
-             *
-             * A etiqueta é a do componente Phoenix, `uppercase` incluído:
-             * `bg-brand-blue/20 text-brand-blue-dark font-semibold text-sm
-             * py-0.5 px-1.5 rounded whitespace-nowrap truncate`.
-             *
-             * Só a cor do texto diverge. `--brand-blue-dark` (#4094bb) sobre o
-             * azul a 20% dá 2,83:1; `--blue-dark` é o mesmo azul já corrigido
-             * para AA, como na decisão 0001. Aqui a correção vale porque o campo
-             * também é usado fora de `espelho-do-sistema`.
-             */
-            <span className="flex items-center gap-2 overflow-hidden">
-              {selected.map((option) => (
-                <span
-                  key={option.value}
-                  title={option.label}
-                  className="truncate whitespace-nowrap rounded bg-[var(--color-brand-blue)]/20 px-1.5 py-0.5 text-sm font-semibold uppercase text-[var(--color-blue-dark)]"
-                >
-                  {option.label}
-                </span>
-              ))}
-            </span>
+          className={cx(
+            "bg-white rounded-lg overflow-hidden",
+            "border border-neutral-100 shadow",
+            "fixed left-0 right-0 z-[9999] will-change-transform",
           )}
-        </button>
-
-        <Icon
-          name="fa-chevron-down"
-          className={[
-            "pointer-events-none absolute right-4 top-6 -translate-y-1/2",
-            open ? "text-[var(--color-brand-blue)]" : "text-[var(--color-brand-purple-dark)]/40",
-          ].join(" ")}
-        />
-
-        {clear && selected.length > 0 && !disabled && (
-          <button
-            type="button"
-            title="Limpar seleção"
-            aria-label={`Limpar ${label ?? "seleção"}`}
-            onClick={() => {
-              onChange?.([]);
-              trigger.current?.focus();
-            }}
-            className="absolute right-10 top-6 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[var(--color-brand-red)] transition-colors hover:bg-[var(--color-brand-purple-dark)]/10 focus-visible:outline-2 focus-visible:outline-[var(--color-action)]"
-          >
-            <Icon name="fa-times" />
-          </button>
-        )}
-
-        {values.map((value) => <input key={value} type="hidden" name={name ? `${name}[]` : undefined} value={value} />)}
-      </div>
-
-      {note && (
-        <p
-          id={noteId}
-          role="status"
-          className="m-0 mt-2 flex gap-2 text-sm text-[var(--fg-2)]"
+          style={{ display: open ? "block" : "none" }}
         >
-          <Icon name="fa-circle-info" className="mt-1 text-[var(--color-brand-blue-dark)]" />
-          <span>{note}</span>
-        </p>
-      )}
-
-      {blocked.length > 0 && (
-        <ul className="m-0 mt-2 list-none space-y-1 p-0">
-          {blocked.map((grupo, index) => (
-            <li key={grupo.reason} id={`${id}-reason-${index}`} className="text-sm text-[var(--fg-2)]">
-              <span className="font-bold">{grupo.labels.join(", ")}</span> — {grupo.reason}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {open && createPortal(
-        <div
-          ref={menu}
-          data-options-container
-          className="fixed z-[9999] overflow-hidden rounded-lg border border-[var(--color-neutral-100)] bg-white shadow"
-          style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}
-        >
-          <ul
-            id={listboxId}
-            role="listbox"
-            aria-multiselectable="true"
-            aria-label={label ?? ariaLabel}
-            className="thin-scrollbar m-0 max-h-64 list-none overflow-y-auto p-4"
-          >
-            {options.length === 0 && <li className="bg-white px-4 py-2 text-center text-[var(--color-blue-dark)]/80">Nenhuma opção encontrada</li>}
-            {options.map((option, index) => {
-              const isSelected = values.includes(option.value);
-              const isHighlighted = index === highlighted;
-              return (
-                <li
-                  key={option.value}
-                  id={`${id}-option-${index}`}
-                  role="option"
-                  aria-selected={isSelected}
-                  aria-disabled={option.disabled || undefined}
-                  aria-describedby={option.disabled && option.reason ? reasonId(option.value) : undefined}
-                  data-option-index={index}
-                  data-options
-                  data-highlighted={isHighlighted || undefined}
-                  onPointerMove={() => setHighlighted(index)}
-                  // Marcar não tira o foco do gatilho: o painel é um portal no
-                  // `body`, e sem isto o foco iria para lá e o teclado perderia
-                  // o campo depois do primeiro clique.
-                  onPointerDown={(event) => event.preventDefault()}
-                  onClick={() => toggle(option)}
-                  className={[
-                    "flex items-center justify-between gap-3 rounded-lg px-4 py-2 font-bold text-[var(--color-brand-purple-dark)]/60 transition-colors",
-                    option.disabled
-                      ? "cursor-not-allowed bg-white opacity-60"
-                      : "cursor-pointer " + (isSelected || isHighlighted ? "bg-[var(--color-brand-purple-dark)]/10" : "bg-white hover:bg-[var(--color-brand-purple-dark)]/5"),
-                  ].join(" ")}
-                >
-                  <span className="min-w-0">
-                    {option.label}
-                    {option.hint && <span className="font-normal"> — {option.hint}</span>}
-                  </span>
-                  {isSelected ? <Icon name="fa-check" /> : option.disabled ? <Icon name="fa-lock" /> : null}
-                </li>
-              );
-            })}
+          <ul className="p-4 max-h-64 overflow-y-auto thin-scrollbar">
+            {options.length === 0 && <li className="px-4 py-2 bg-white text-blue-dark/80 text-center">Nenhuma opção encontrada</li>}
+            {renderItems(options)}
           </ul>
-        </div>,
-        document.body,
-      )}
-
-      {errors.length > 0 && (
-        <div id={errorId}>
-          {errors.map((message) => <FieldError key={message} className="absolute -bottom-6 font-normal leading-none" message={message} />)}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-/** `input_with_select/1`: dois campos unidos sob o mesmo rótulo visual. */
-export function InputWithSelect({ label, textId, textName, textValue, textErrors = [], selectId, selectName, selectValue, selectErrors = [], options, disabled = false, onTextChange, onSelectChange, className }: {
-  label?: string; textId: string; textName: string; textValue: string; selectId: string; selectName: string; selectValue: string;
-  textErrors?: string[]; selectErrors?: string[]; options: SelectOption[]; disabled?: boolean; onTextChange?: (value: string) => void; onSelectChange?: (value: string) => void; className?: string;
-}) {
-  const textErrorId = textErrors.length ? `${textId}-errors` : undefined;
-  return <div className={["relative", disabled && "opacity-50", className].filter(Boolean).join(" ")}>
-    {label && <Label><span>{label}</span></Label>}
-    <div className={["relative flex w-full", label && "mt-2"].filter(Boolean).join(" ")}>
-      <div className="relative min-w-0 flex-1">
-        <input id={textId} name={textName} value={textValue} disabled={disabled} aria-label={label ? `${label}: valor` : undefined} aria-describedby={textErrorId} aria-invalid={textErrors.length ? true : undefined} onChange={(event) => onTextChange?.(event.target.value)} className={["h-12 w-full rounded-l-lg border bg-[var(--color-brand-purple-dark)]/10 px-4 text-[var(--color-brand-purple-dark)]/80 outline-hidden transition-colors focus:border-[var(--color-brand-blue)] focus:ring-0", textErrors.length ? "border-[var(--color-brand-red)]" : "border-[var(--color-brand-purple-dark)]/10"].join(" ")} />
-        {textErrors.length > 0 && <div id={textErrorId}>{textErrors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
-      </div>
-      <div className="relative min-w-0 flex-1">
-        <Select id={selectId} name={selectName} value={selectValue} disabled={disabled} ariaLabel={label ? `${label}: critério` : undefined} errors={selectErrors} options={options} clear={false} inputClassName="rounded-l-none" onChange={onSelectChange} />
-      </div>
-    </div>
-  </div>;
-}
-
-/** `fake_input/1`: valor estático com a mesma caixa visual de um campo. */
-export function FakeInput({ value, label, labelColor = "default", className, ...rest }: { value: ReactNode; label?: string; labelColor?: "default" | "blue"; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={className} {...rest}>
-    {label && <p className={["m-0 block text-sm/4 font-bold", labelColor === "blue" ? "text-[var(--color-action)]" : "text-[var(--color-neutral-400)]"].join(" ")}>{label}</p>}
-    <div className={["flex min-h-12 w-full items-center rounded-lg border border-[var(--color-neutral-100)] bg-[var(--color-neutral-500)]/5 px-4 font-normal leading-6 text-[var(--color-neutral-500)]", label && "mt-2"].filter(Boolean).join(" ")}>{value}</div>
-  </div>;
-}
-
-/** `input_switch_card/1`: estado do campo colore o cartão que contém a chave. */
-export function InputSwitchCard({ label, active, children, className }: { label: string; active: boolean | string; children: ReactElement<{ "aria-labelledby"?: string }>; className?: string }) {
-  const isActive = active === true || active === "on" || active === "true";
-  const generatedId = useId();
-  const labelId = `input-switch-card-${generatedId.replace(/:/g, "")}-label`;
-  const labelledBy = [children.props["aria-labelledby"], labelId].filter(Boolean).join(" ");
-  return <div className={["flex items-center justify-center gap-x-2 rounded-lg border px-2 transition-colors", isActive ? "border-[var(--color-brand-blue)]/40 bg-[var(--color-blue-light)]" : "border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/10", className].filter(Boolean).join(" ")}>
-    <p id={labelId} className="m-0 font-bold text-[var(--color-brand-purple-dark)]">{label}</p>{cloneElement(children, { "aria-labelledby": labelledBy })}
-  </div>;
+function GroupItems({ group, color, children }: { group: SelectGroup; color: string; children: ReactNode }) {
+  return (
+    <>
+      <li
+        className={cx(
+          "text-xs font-bold py-1 uppercase",
+          color === "purple" && "text-brand-purple-dark/60",
+          color === "orange" && "text-orange",
+          color === "red" && "text-brand-red",
+        )}
+      >
+        {group.group}
+      </li>
+      {group.items.length === 0 && (
+        <li className="px-4 py-2 bg-white text-blue-dark/80 text-center">Nenhuma opção encontrada</li>
+      )}
+      {children}
+    </>
+  );
 }

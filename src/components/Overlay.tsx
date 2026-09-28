@@ -1,433 +1,483 @@
-import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { Icon } from "./Icon.js";
 import { Button } from "./Button.js";
+import { Avatar } from "./Layout.js";
 
 /**
- * Sobreposições — espelho de `modal/1`, `dropdown/1`, `dropdown_menu/1` e
- * `tooltip/1`.
+ * `core_components.ex` → `modal/1`, `drawer_modal/1`, `modal_content/1`,
+ * `dropdown/1`, `dropdown_menu/1`.
  *
- * No sistema o comportamento vem de hooks JavaScript (`ModalHook`,
- * `DropdownController`) e de `JS.exec` do LiveView. Aqui ele é estado de React.
- * **O que precisa ser igual é o que a pessoa vê e o que o teclado faz**, e é o
- * que está portado: fechar com Esc, fechar clicando no fundo, foco preso dentro
- * do diálogo, e o menu fechando ao clicar fora.
- *
- * O tamanho do diálogo vem do original — `extra_small` a `large` — e o
- * fechamento fica num botão `tint`, como lá.
+ * Os hooks (`ModalHook`, `DrawerHook`, `DropdownController`) e o `JS.show`/`JS.hide`
+ * viram estado React: `show` abre, `onCancel` é o `on_cancel`. `target` e
+ * `trigger_show` são mecânica do LiveView e não existem aqui.
  */
 
-export type ModalVariant = "extra_small" | "small" | "medium" | "large";
-export type DrawerVariant = "extra_small" | "small" | "medium" | "large" | "custom";
+const cx = (...classes: unknown[]) => (classes.flat(3) as unknown[]).filter(Boolean).join(" ");
 
-const LARGURA: Record<ModalVariant, string> = {
-  extra_small: "max-w-xl",
-  small: "max-w-3xl",
-  medium: "max-w-5xl",
-  large: "max-w-7xl",
-};
-
-export function Modal({
-  id,
-  open,
-  onClose,
-  title,
-  variant = "small",
-  children,
-}: {
-  id: string;
-  open: boolean;
-  onClose: () => void;
-  title?: string;
-  variant?: ModalVariant;
-  children: ReactNode;
-}) {
-  const caixa = useRef<HTMLDivElement>(null);
-  const retorno = useRef<HTMLElement | null>(null);
-
-  // Esc fecha, como o `phx-window-keydown` com `phx-key="escape"` do original.
-  useEffect(() => {
-    if (!open) return;
-    const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
-  }, [open, onClose]);
-
-  // `focus_wrap` do LiveView: o Tab circula dentro do diálogo e não escapa para
-  // a página atrás. Sem isto, quem navega por teclado sai do diálogo sem saber.
-  useEffect(() => {
-    if (!open || !caixa.current) return;
-    retorno.current = document.activeElement as HTMLElement | null;
-    document.body.classList.add("overflow-hidden");
-    const foco = caixa.current.querySelectorAll<HTMLElement>(
-      'a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])',
-    );
-    foco[0]?.focus();
-
-    const prender = (e: KeyboardEvent) => {
-      if (e.key !== "Tab" || foco.length === 0) return;
-      const primeiro = foco[0]!;
-      const ultimo = foco[foco.length - 1]!;
-      if (e.shiftKey && document.activeElement === primeiro) {
-        e.preventDefault();
-        ultimo.focus();
-      } else if (!e.shiftKey && document.activeElement === ultimo) {
-        e.preventDefault();
-        primeiro.focus();
-      }
-    };
-    const no = caixa.current;
-    no.addEventListener("keydown", prender);
-    return () => {
-      no.removeEventListener("keydown", prender);
-      document.body.classList.remove("overflow-hidden");
-      retorno.current?.focus();
-    };
-  }, [open]);
-
-  if (!open) return null;
-
-  return (
-    <div id={id} className="relative z-50">
-      <div
-        className="fixed inset-0"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? `${id}-title` : undefined}
-      >
-        <div
-          id={`${id}-bg`}
-          className="fixed inset-0 bg-[var(--color-neutral-900)]/30 transition-opacity"
-          aria-hidden="true"
-          onClick={onClose}
-        />
-
-        <div className="flex h-full items-center justify-center">
-          <div
-            ref={caixa}
-            className={[
-              "relative m-2 max-h-[85%] w-full overflow-y-auto rounded-2xl bg-white transition md:m-0",
-              LARGURA[variant],
-            ].join(" ")}
-          >
-            {/*
-              O `p-6` vale com ou sem título. Ele estava condicionado ao título,
-              e um `modal/1` sem título — o resumo de uma fila, por exemplo —
-              nascia com o botão de fechar encostado no canto arredondado, sem
-              margem nenhuma. Sem título ele também vai para a direita: com um
-              filho só, `justify-between` o joga para a esquerda.
-            */}
-            <div
-              className={[
-                "flex items-center p-6",
-                title
-                  ? "justify-between border-b border-[var(--color-neutral-100)]"
-                  : "justify-end pb-0",
-              ].join(" ")}
-            >
-              {title && (
-                <h1 id={`${id}-title`} className="m-0 text-2xl font-bold">
-                  {title}
-                </h1>
-              )}
-              <Button variant="tint" size="medium" onClick={onClose} aria-label="Fechar">
-                <Icon name="fa-times" className="block h-4 w-4 self-center" />
-              </Button>
-            </div>
-            <div className="p-6">{children}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-const DRAWER_WIDTH: Record<Exclude<DrawerVariant, "custom">, string> = {
-  extra_small: "max-w-md",
-  small: "max-w-xl",
-  medium: "max-w-3xl",
-  large: "max-w-5xl",
-};
-
-const DRAWER_NOOP = () => {};
-
-/**
- * `drawer_modal/1`: diálogo lateral com os mesmos ids e divisões do HEEx.
- *
- * Uma diferença deliberada em relação ao original: lá o painel inteiro rola
- * junto (`overflow-y-auto` no container), então em formulário longo o título sai
- * de vista e as ações ficam depois do fim do conteúdo. Aqui quem rola é só o
- * miolo — cabeçalho e `footer` ficam presos nas bordas do painel. É decisão de
- * layout registrada em `docs/decisions/0014-o-drawer-longo-perde-titulo-e-acoes.md`,
- * não descuido do porte.
- *
- * O `footer` é opcional: sem ele o painel tem exatamente as duas divisões do
- * HEEx, e as ações continuam podendo morar no fim do conteúdo.
- */
-export function DrawerModal({
-  id, show = false, onCancel = DRAWER_NOOP, title, titleClassName = "text-blue-dark", avatarUrl,
-  target, triggerShow, placement = "right", variant = "small", customSize, contentClassName,
-  customTitle, customTitleClassName, footer, children, className, ...rest
-}: HTMLAttributes<HTMLDivElement> & {
-  id: string; show?: boolean; onCancel?: () => void; title?: string;
-  titleClassName?: string; avatarUrl?: string; target?: string; triggerShow?: string;
-  placement?: "left" | "right"; variant?: DrawerVariant; customSize?: string;
-  contentClassName?: string; customTitle?: ReactNode; customTitleClassName?: string;
-  footer?: ReactNode; children: ReactNode;
-}) {
-  const container = useRef<HTMLDivElement>(null);
-  const content = useRef<HTMLDivElement>(null);
-  const returnFocus = useRef<HTMLElement | null>(null);
-  const onCancelRef = useRef(onCancel);
-  onCancelRef.current = onCancel;
-  const isOpen = show;
+/** Montado durante a transição de saída, como o `JS.hide` com `time: 200`. */
+function usePresence(show: boolean) {
   const [mounted, setMounted] = useState(show);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     let frame: number | undefined;
-    let exitTimer: number | undefined;
+    let timer: number | undefined;
     if (show) {
       setMounted(true);
       frame = window.requestAnimationFrame(() => setVisible(true));
     } else {
       setVisible(false);
-      exitTimer = window.setTimeout(() => setMounted(false), 200);
+      timer = window.setTimeout(() => setMounted(false), 200);
     }
     return () => {
       if (frame !== undefined) window.cancelAnimationFrame(frame);
-      if (exitTimer !== undefined) window.clearTimeout(exitTimer);
+      if (timer !== undefined) window.clearTimeout(timer);
     };
   }, [show]);
 
+  return { mounted, visible };
+}
+
+/** `focus_wrap/1`, `phx-window-keydown` de Esc e `overflow-hidden` no `body`. */
+function useDialog(active: boolean, container: RefObject<HTMLElement | null>, onCancel: () => void) {
+  const cancel = useRef(onCancel);
+  cancel.current = onCancel;
+
   useEffect(() => {
-    if (!isOpen || !mounted) return;
-    returnFocus.current = document.activeElement as HTMLElement | null;
+    if (!active) return;
     document.body.classList.add("overflow-hidden");
-    // Quem rola é o miolo; o container é a moldura fixa.
-    content.current?.scrollTo(0, 0);
-    const focusables = () => Array.from(container.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])') ?? []);
-    focusables()[0]?.focus();
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); onCancelRef.current(); return; }
-      if (event.key !== "Tab") return;
-      const items = focusables();
+      if (event.key === "Escape") {
+        cancel.current();
+        return;
+      }
+      if (event.key !== "Tab" || !container.current) return;
+      const items = Array.from(
+        container.current.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
       if (!items.length) return;
-      const first = items[0]!; const last = items[items.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      const first = items[0]!;
+      const last = items[items.length - 1]!;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", keydown);
     return () => {
       window.removeEventListener("keydown", keydown);
       document.body.classList.remove("overflow-hidden");
-      returnFocus.current?.focus();
     };
-  }, [isOpen, mounted]);
-
-  if (!mounted) return null;
-  const width = variant === "custom" ? customSize : DRAWER_WIDTH[variant];
-  const offscreen = placement === "right" ? "translate-x-full" : "-translate-x-full";
-  return <div id={id} data-trigger-show={triggerShow} data-placement={placement} className={["relative z-50", className].filter(Boolean).join(" ")} {...(target ? { "phx-target": target } : {})} {...rest}>
-    <div className="fixed inset-0 overflow-hidden" role="dialog" aria-modal="true" aria-labelledby={title ? `${id}-title` : undefined} aria-describedby={`${id}-description`} tabIndex={0}>
-      <div id={`${id}-bg`} className={["fixed inset-0 bg-[var(--color-neutral-900)]/30 transition-all transform", visible ? "opacity-100 ease-out duration-300" : "opacity-0 ease-in duration-200"].join(" ")} aria-hidden="true" onClick={onCancel} />
-      <div className={["fixed inset-y-0 flex max-w-full", placement === "right" ? "right-0" : "left-0"].join(" ")}>
-        {/*
-          O original arredonda o canto interno (`rounded-l-2xl` à direita,
-          `rounded-r-2xl` à esquerda). Aqui o painel é reto: decisão de design
-          registrada em `docs/decisions/0014-o-drawer-longo-perde-titulo-e-acoes.md`.
-        */}
-        <div ref={container} id={`${id}-container`} className={["relative flex h-full w-full flex-col overflow-hidden bg-white shadow-main transition-transform ease-in-out", visible ? "translate-x-0 duration-300" : `${offscreen} duration-200`, width].filter(Boolean).join(" ")}>
-          <div className="flex shrink-0 items-center justify-between border-b border-neutral-100 p-6">
-            <div className="flex min-w-0 items-center">
-              {avatarUrl && <img src={avatarUrl} alt="" className="mr-2 h-7 w-7 rounded-full object-cover" />}
-              {title ? <div className="min-w-0"><h1 id={`${id}-title`} className={["m-0 truncate text-2xl font-bold", titleClassName].filter(Boolean).join(" ")}>{title}</h1></div> : <div className={customTitleClassName}>{customTitle}</div>}
-            </div>
-            <Button id={`${id}-btn-close`} data-drawer-id={id} data-close-drawer type="button" variant="tint" aria-label="Fechar" onClick={onCancel}><Icon name="fa-times" className="block h-4 w-4 self-center" /></Button>
-          </div>
-          {/*
-            `tabIndex={0}` no miolo que rola.
-            Quem rola aqui é este bloco, e o cabeçalho e o rodapé ficam presos nas
-            bordas — então um conteúdo mais alto que o painel só é alcançável pela
-            roda do mouse ou pelo dedo. Com o Tab, o foco pulava do botão de fechar
-            para o rodapé e o miolo inteiro ficava sem como ser rolado; num registro
-            de atendimento longo, a pessoa assinava o que não teve como ler.
-            É a remediação que a 2.1.1 pede, e é o que o axe cobra na regra
-            `scrollable-region-focusable` — ela apareceu na Supervisão no dia em que
-            o cabeçalho da revisão passou a ocupar duas linhas.
-            O custo é uma parada de Tab a mais nos drawers curtos, entre o botão de
-            fechar e o primeiro campo.
-          */}
-          <div ref={content} id={`${id}-content`} tabIndex={0} className={["min-h-0 flex-1 overflow-y-auto p-6", contentClassName].filter(Boolean).join(" ")}>{children}</div>
-          {footer && <div id={`${id}-footer`} className="shrink-0 border-t border-neutral-100 p-6">{footer}</div>}
-        </div>
-      </div>
-    </div>
-  </div>;
+  }, [active, container]);
 }
 
-/** Conteúdo secundário do `MultiStepModal`; quem envolve controla a tela ativa. */
-export function ModalContent({ title, className, onClose, children, ...rest }: HTMLAttributes<HTMLDivElement> & { title: string; onClose: () => void; children: ReactNode }) {
-  return <div className="z-10 w-full rounded-2xl bg-white" {...rest}>
-    <div className="flex h-full max-h-full flex-col">
-      <div className="flex items-center justify-between border-b border-neutral-100 p-6">
-        <h1 className="m-0 text-2xl font-bold text-blue-dark">{title}</h1>
-        <Button type="button" variant="tint" data-close-screen aria-label="Voltar" onClick={onClose}><Icon name="fa-arrow-turn-down-left" className="block h-4 w-4 self-center" /></Button>
-      </div>
-      <div className={["flex-1 overflow-y-scroll p-6", className].filter(Boolean).join(" ")}>{children}</div>
-    </div>
-  </div>;
-}
+const NOOP = () => {};
 
-/**
- * `dropdown/1`: painel ancorado num gatilho livre.
- *
- * O painel é **posicionado por `fixed` num portal para o `body`**, e não por
- * `absolute` dentro da raiz. A diferença aparece no único lugar em que ela
- * importa: dentro de uma tabela. O container de `Table` tem `overflow-x-auto`
- * para a rolagem horizontal, e um painel absoluto ali é cortado pela borda da
- * tabela — o menu abre e some pela metade. É a mesma solução que `LazyTabs` já
- * usa para os menus de grupo, pelo mesmo motivo.
- *
- * A consequência é que o painel precisa **acompanhar o gatilho**: sem isso ele
- * fica onde estava quando a página rolar, o que é pior que o corte. Daí o
- * reposicionamento no `scroll` e no `resize`.
- */
-export function Dropdown({
+export type ModalVariant = "extra_small" | "small" | "medium" | "large" | "custom";
+
+/** Slot `custom_title`, com o `attr :class` dele. */
+export type CustomTitleSlot = { className?: string; children: ReactNode };
+
+export function Modal({
   id,
-  trigger,
+  show = false,
+  title,
+  titleClass = "text-blue-dark",
+  avatarUrl,
+  onCancel = NOOP,
+  variant = "small",
+  customSize,
+  withPadding = true,
+  customTitle,
   children,
-  className,
+  ...rest
 }: {
   id: string;
-  trigger: ReactNode;
+  show?: boolean;
+  title?: string;
+  titleClass?: string;
+  avatarUrl?: string;
+  onCancel?: () => void;
+  variant?: ModalVariant;
+  customSize?: string;
+  withPadding?: boolean;
+  customTitle?: CustomTitleSlot;
   children: ReactNode;
-  className?: string;
-}) {
-  const [aberto, setAberto] = useState(false);
-  const [posicao, setPosicao] = useState({ left: 0, top: 0 });
-  const raiz = useRef<HTMLDivElement>(null);
-  const gatilho = useRef<HTMLButtonElement>(null);
+} & Omit<HTMLAttributes<HTMLDivElement>, "id" | "title" | "children">) {
+  const container = useRef<HTMLDivElement>(null);
+  const { mounted, visible } = usePresence(show);
+  useDialog(show && mounted, container, onCancel);
 
-  useEffect(() => {
-    if (!aberto) return;
+  if (!mounted) return null;
 
-    /**
-     * Encostado na direita, o painel entra para dentro da janela.
-     *
-     * A largura mínima é a mesma do painel (`min-w-56`, 224px). Um menu de linha
-     * de tabela nasce quase sempre na borda direita, e sem este limite ele abriria
-     * metade fora da tela.
-     */
-    const reposicionar = () => {
-      const rect = gatilho.current?.getBoundingClientRect();
-      if (!rect) return;
-      const largura = 224;
-      const left = Math.min(rect.left, window.innerWidth - largura - 8);
-      setPosicao({ left: Math.max(8, left), top: rect.bottom + 4 });
-    };
-
-    const foraDaqui = (e: MouseEvent) => {
-      const alvo = e.target as Node;
-      const painel = document.getElementById(`${id}-menu`);
-      if (!raiz.current?.contains(alvo) && !painel?.contains(alvo)) setAberto(false);
-    };
-
-    reposicionar();
-    window.addEventListener("resize", reposicionar);
-    window.addEventListener("scroll", reposicionar, true);
-    document.addEventListener("mousedown", foraDaqui);
-    return () => {
-      window.removeEventListener("resize", reposicionar);
-      window.removeEventListener("scroll", reposicionar, true);
-      document.removeEventListener("mousedown", foraDaqui);
-    };
-  }, [aberto, id]);
+  const closeButton = (buttonId: string) => (
+    <Button
+      className={title == null ? "hidden" : undefined}
+      id={buttonId}
+      data-modal-id={id}
+      data-close-modal
+      onClick={onCancel}
+      type="button"
+      variant="tint"
+      aria-label="close"
+    >
+      <Icon name="fa-times" className="block w-4 h-4 self-center" />
+    </Button>
+  );
 
   return (
-    <div id={id} ref={raiz} className={["relative", className].filter(Boolean).join(" ")}>
-      <button
-        ref={gatilho}
-        type="button"
-        className="cursor-pointer border-0 bg-transparent p-0"
-        aria-expanded={aberto}
-        aria-haspopup="menu"
-        onClick={() => setAberto((a) => !a)}
+    <div id={id} className="relative z-50" {...rest}>
+      <div
+        className="fixed inset-0"
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-description`}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={0}
       >
-        {trigger}
-      </button>
+        <div
+          id={`${id}-bg`}
+          onClick={onCancel}
+          className={cx(
+            "bg-neutral-900/30 fixed inset-0 transition-opacity",
+            visible ? "transition-all transform ease-out duration-300 opacity-100" : "transition-all transform ease-in duration-200 opacity-0",
+          )}
+          aria-hidden="true"
+        />
 
-      {aberto &&
-        createPortal(
-          <nav
-            id={`${id}-menu`}
-            className="fixed z-[9999]"
-            style={{ left: posicao.left, top: posicao.top }}
-            // Escolher uma ação fecha o menu. Sem isto ele fica aberto atrás do
-            // que a ação abriu — um drawer, por exemplo —, e reaparece por cima
-            // quando o drawer fecha.
-            onClick={() => setAberto(false)}
+        <div className="flex h-full items-center justify-center">
+          <div
+            ref={container}
+            id={`${id}-container`}
+            className={cx(
+              "relative rounded-2xl bg-white transition max-h-[85%] overflow-y-auto w-full",
+              "m-2 md:m-0",
+              variant === "extra_small" && "max-w-xl",
+              variant === "small" && "max-w-3xl",
+              variant === "medium" && "max-w-5xl",
+              variant === "large" && "max-w-7xl",
+              variant === "custom" && customSize,
+              visible
+                ? "transition-all transform ease-out duration-300 opacity-100 translate-y-0 sm:scale-100"
+                : "transition-all transform ease-in duration-200 opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+            )}
           >
-            <div className="min-w-56 rounded-md border border-[var(--color-neutral-200)]/70 bg-white p-1 text-[var(--color-neutral-900)] shadow-md">
+            <div className={cx("flex justify-between items-center ", title && "border-b border-neutral-100 p-6")}>
+              <div className="flex items-center">
+                {avatarUrl && <Avatar imageUrl={avatarUrl} size="custom" className="h-7 w-7 mr-2" />}
+                {title && <h1 className={cx("font-bold text-2xl", titleClass)}>{title}</h1>}
+              </div>
+              {title == null && <div className={customTitle?.className}>{customTitle?.children}</div>}
+
+              {closeButton(`${id}-btn-close`)}
+            </div>
+            {title == null && closeButton(`${id}-btn-close-hidden`)}
+            <div id={`${id}-content`} className={withPadding ? "p-6" : undefined}>
               {children}
             </div>
-          </nav>,
-          document.body,
-        )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-/** `dropdown_menu/1`: os três pontinhos e uma lista de ações. */
-export function DropdownMenu({ id, items }: { id: string; items: ReactNode[] }) {
-  const [aberto, setAberto] = useState(false);
-  const raiz = useRef<HTMLDivElement>(null);
+export type DrawerVariant = ModalVariant;
 
+export function DrawerModal({
+  id,
+  show = false,
+  title,
+  titleClass = "text-blue-dark",
+  avatarUrl,
+  onCancel = NOOP,
+  placement = "right",
+  variant = "small",
+  customSize,
+  headerClass = "items-center",
+  contentClass,
+  customTitle,
+  children,
+  ...rest
+}: {
+  id: string;
+  show?: boolean;
+  title?: string;
+  titleClass?: string;
+  avatarUrl?: string;
+  onCancel?: () => void;
+  placement?: "left" | "right";
+  variant?: DrawerVariant;
+  customSize?: string;
+  headerClass?: string;
+  contentClass?: string;
+  customTitle?: CustomTitleSlot;
+  children: ReactNode;
+} & Omit<HTMLAttributes<HTMLDivElement>, "id" | "title" | "children">) {
+  const container = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const { mounted, visible } = usePresence(show);
+  useDialog(show && mounted, container, onCancel);
+
+  // `phx:drawerScrollTop`: o conteúdo volta ao topo quando abre.
   useEffect(() => {
-    if (!aberto) return;
-    const foraDaqui = (e: MouseEvent) => {
-      if (raiz.current && !raiz.current.contains(e.target as Node)) setAberto(false);
-    };
-    document.addEventListener("mousedown", foraDaqui);
-    return () => document.removeEventListener("mousedown", foraDaqui);
-  }, [aberto]);
+    if (show && mounted) content.current?.scrollTo(0, 0);
+  }, [show, mounted]);
+
+  if (!mounted) return null;
+
+  const hidden = placement === "left" ? "-translate-x-full" : "translate-x-full";
 
   return (
-    <div id={id} ref={raiz} className="relative">
-      <button
-        type="button"
-        className="cursor-pointer border-0 bg-transparent"
-        aria-expanded={aberto}
-        aria-label="Mais ações"
-        onClick={() => setAberto((a) => !a)}
+    <div id={id} data-placement={placement} className="relative z-50" {...rest}>
+      <div
+        className="fixed inset-0 overflow-hidden"
+        aria-labelledby={title ? `${id}-title` : undefined}
+        aria-describedby={`${id}-description`}
+        role="dialog"
+        aria-modal="true"
+        tabIndex={0}
       >
-        <div className="flex items-center justify-center p-3 transition-transform">
-          <Icon name="fa-ellipsis-vertical" className="text-xl font-semibold" />
+        <div
+          id={`${id}-bg`}
+          onClick={onCancel}
+          className={cx(
+            "bg-neutral-900/30 fixed inset-0 transition-opacity",
+            visible ? "transition-all transform ease-out duration-300 opacity-100" : "transition-all transform ease-in duration-200 opacity-0",
+          )}
+          aria-hidden="true"
+        />
+
+        <div
+          className={cx(
+            "fixed inset-y-0 flex w-screen max-w-full",
+            placement === "right" && "right-0 justify-end",
+            placement === "left" && "left-0 justify-start",
+          )}
+        >
+          <div
+            ref={container}
+            id={`${id}-container`}
+            className={cx(
+              "relative h-full w-full bg-white shadow-main overflow-hidden",
+              "flex flex-col",
+              placement === "right" && "rounded-l-2xl",
+              placement === "left" && "rounded-r-2xl",
+              variant === "extra_small" && "max-w-md",
+              variant === "small" && "max-w-xl",
+              variant === "medium" && "max-w-3xl",
+              variant === "large" && "max-w-5xl",
+              variant === "custom" && customSize,
+              "transition-transform ease-in-out",
+              visible ? "duration-300 translate-x-0" : `duration-200 ${hidden}`,
+            )}
+          >
+            <div id={`${id}-header`} className={cx("flex shrink-0 justify-between border-b border-neutral-100 p-6", headerClass)}>
+              <div className="flex items-center min-w-0">
+                {avatarUrl && <Avatar imageUrl={avatarUrl} size="custom" className="h-7 w-7 mr-2" />}
+
+                {title && (
+                  <div className="min-w-0">
+                    <h1 id={`${id}-title`} className={cx("font-bold text-2xl truncate", titleClass)}>
+                      {title}
+                    </h1>
+                  </div>
+                )}
+
+                {title == null && <div className={customTitle?.className}>{customTitle?.children}</div>}
+              </div>
+
+              <Button
+                id={`${id}-btn-close`}
+                data-drawer-id={id}
+                data-close-drawer
+                onClick={onCancel}
+                type="button"
+                variant="tint"
+                aria-label="close"
+              >
+                <Icon name="fa-times" className="block w-4 h-4 self-center" />
+              </Button>
+            </div>
+
+            <div ref={content} id={`${id}-content`} className={cx("min-h-0 flex-1 overflow-y-auto p-6", contentClass)}>
+              {children}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Tela secundária de um modal de várias telas. O botão de voltar tem
+ * `data-close-screen`, que o `MultiStepModal` escuta; aqui é `onClose`.
+ */
+export function ModalContent({
+  title,
+  className,
+  onClose,
+  children,
+  ...rest
+}: {
+  title: string;
+  className?: string;
+  onClose?: () => void;
+  children: ReactNode;
+} & Omit<HTMLAttributes<HTMLDivElement>, "title" | "children">) {
+  return (
+    <div className="w-full bg-white rounded-2xl z-10" {...rest}>
+      <div className="flex flex-col max-h-full h-full">
+        <div className="flex justify-between items-center p-6 border-b border-neutral-100">
+          <h1 className="font-bold text-2xl text-blue-dark">{title}</h1>
+          <Button type="button" variant="tint" data-close-screen onClick={onClose}>
+            <Icon name="fa-arrow-turn-down-left" className="block w-4 h-4 self-center" />
+          </Button>
+        </div>
+
+        <div className={cx("p-6 overflow-y-scroll flex-1", className)}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
+export type DropdownPlacement = "bottom-end" | "bottom-start" | "bottom";
+
+/**
+ * `DropdownController`: Floating UI com `strategy: "fixed"`, `offset(4)`,
+ * `flip()` e `shift({ padding: 8 })`. O `phx-click-away` do gatilho fecha o
+ * menu em qualquer clique fora dele, inclusive num item.
+ */
+function useDropdown(placement: DropdownPlacement) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const trigger = useRef<HTMLElement | null>(null);
+  const menu = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const update = () => {
+      const t = trigger.current?.getBoundingClientRect();
+      const m = menu.current?.getBoundingClientRect();
+      if (!t || !m) return;
+      let left =
+        placement === "bottom-start"
+          ? t.left
+          : placement === "bottom-end"
+            ? t.right - m.width
+            : t.left + t.width / 2 - m.width / 2;
+      let top = t.bottom + 4;
+      if (top + m.height > window.innerHeight && t.top - 4 - m.height >= 0) top = t.top - 4 - m.height;
+      left = Math.max(8, Math.min(left, window.innerWidth - m.width - 8));
+      setPosition({ left, top });
+    };
+    const clickAway = (event: MouseEvent) => {
+      if (!trigger.current?.contains(event.target as Node)) setOpen(false);
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    document.addEventListener("click", clickAway);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+      document.removeEventListener("click", clickAway);
+    };
+  }, [open, placement]);
+
+  const style = {
+    display: open ? "block" : "none",
+    ...(open && position ? { position: "fixed" as const, left: `${position.left}px`, top: `${position.top}px` } : {}),
+  };
+
+  return { open, toggle: () => setOpen((value) => !value), trigger, menu, style };
+}
+
+export function Dropdown({
+  id,
+  className,
+  dropdownClass,
+  placement = "bottom-end",
+  items,
+  children,
+}: {
+  id?: string;
+  className?: string;
+  dropdownClass?: string;
+  placement?: DropdownPlacement;
+  items: ReactNode;
+  children: ReactNode;
+}) {
+  const { open, toggle, trigger, menu, style } = useDropdown(placement);
+
+  return (
+    <div id={id} className={cx("relative", className)} data-placement={placement}>
+      <div
+        ref={(node) => { trigger.current = node; }}
+        data-button
+        aria-expanded={open}
+        className="cursor-pointer"
+        onClick={toggle}
+      >
+        {children}
+      </div>
+
+      <nav ref={(node) => { menu.current = node; }} className={cx("absolute z-[9999]", dropdownClass)} style={style} data-dropdown-menu>
+        <div className="p-1 mt-1 bg-white border rounded-md shadow-md border-neutral-200/70 text-neutral-900 min-w-56">{items}</div>
+      </nav>
+    </div>
+  );
+}
+
+export function DropdownMenu({ id, items }: { id: string; items: ReactNode[] }) {
+  const { open, toggle, trigger, menu, style } = useDropdown("bottom");
+
+  return (
+    <div id={id} className="relative">
+      <button
+        ref={(node) => { trigger.current = node; }}
+        type="button"
+        data-button
+        aria-expanded={open}
+        className="cursor-pointer"
+        onClick={toggle}
+      >
+        <div className="transition-transform p-3 flex items-center justify-center">
+          <Icon className="font-semibold text-xl" name="fa-ellipsis-vertical" />
         </div>
       </button>
 
-      {aberto && (
-        // `right-0`, e não só `absolute` como no HEEx. O original é posicionado
-        // pelo `DropdownController`, que usa Floating UI com `flip()` e
-        // `shift({ padding: 8 })` — no canto direito de um cartão, o efeito do
-        // `shift` é exatamente puxar o menu de volta para dentro. Sem isso, o
-        // menu alinha pela esquerda do gatilho e sai da tela, que é onde o botão
-        // de ações quase sempre está.
-        <nav className="absolute right-0 z-[9999]">
-          <ul className="m-0 mt-1 min-w-48 list-none rounded border border-[var(--color-neutral-200)]/70 bg-white p-0 shadow">
-            {items.map((item, i) => (
-              <li
-                key={i}
-                className="text-neutral/70 hover:bg-[var(--color-brand-purple-dark)]/10 [&>*]:block [&>*]:h-full [&>*]:w-full [&>*]:cursor-pointer [&>*]:px-4 [&>*]:py-2 [&>*]:text-left"
-              >
-                {item}
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
+      <nav ref={(node) => { menu.current = node; }} className="absolute z-[9999]" style={style} data-dropdown-menu>
+        <ul className="mt-1 bg-white shadow rounded border border-neutral-200/70 min-w-48">
+          {items.map((item, index) => (
+            <li
+              key={index}
+              className={cx(
+                "[&>*]:px-4 [&>*]:py-2 text-neutral/70 hover:bg-brand-purple-dark/10",
+                "[&>*]:block [&>*]:text-left [&>*]:w-full [&>*]:h-full",
+                "[&>*]:text-left [&>*]:w-full [&>*]:h-full",
+                "[&>*]:cursor-pointer",
+              )}
+            >
+              {item}
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 }

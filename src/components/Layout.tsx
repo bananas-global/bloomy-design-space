@@ -1,99 +1,63 @@
-import type { ReactNode } from "react";
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import { Icon } from "./Icon.js";
 
-/**
- * Estrutura e apoio — espelho de `header/1`, `list/1`, `back/1`, `meta_info/1`,
- * `inside_card/1`, `empty_state_card/1` e `loading_card/1`.
- *
- * São os componentes que dão forma à página entre o cartão e o campo. Nenhum
- * tem lógica; o que eles têm é medida — e é a medida que faz uma tela parecer
- * com o sistema ou não.
- */
+function cx(...classes: (string | false | null | undefined)[]) {
+  return classes.filter(Boolean).join(" ");
+}
 
-/** `header/1`: título com três tamanhos e ações à direita. */
-export function SectionHeader({
+/** `core_components.ex` → `header/1`. */
+export function Header({
+  className,
   variant = "default",
+  children,
   subtitle,
   actions,
-  className,
-  children,
 }: {
+  className?: string;
   variant?: "small" | "default" | "large";
+  children: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
-  className?: string;
-  children: ReactNode;
 }) {
   return (
     <header
-      className={[
-        actions && "flex flex-col items-center justify-between gap-6 md:flex-row",
-        "text-[var(--color-brand-purple-dark)]",
+      className={cx(
+        actions != null && "flex flex-col md:flex-row items-center justify-between gap-6",
+        "text-brand-purple-dark",
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
     >
       <div>
         <h1
-          className={[
-            variant === "large" ? "font-extrabold" : "font-bold",
+          className={cx(
+            (variant === "small" || variant === "default") && "font-bold",
+            variant === "large" && "font-extrabold",
             variant === "small" && "text-lg",
             variant === "default" && "text-2xl",
             variant === "large" && "text-3xl",
-          ]
-            .filter(Boolean)
-            .join(" ")}
+          )}
         >
           {children}
         </h1>
-        {subtitle && (
-          <p className="mt-2 text-sm leading-6 text-[var(--color-neutral-900)]">{subtitle}</p>
-        )}
+        {subtitle != null && <p className="mt-2 text-sm leading-6 text-neutral-900">{subtitle}</p>}
       </div>
-      {actions && <div className="flex-none space-x-4">{actions}</div>}
+      <div className="flex-none space-x-4">{actions}</div>
     </header>
   );
 }
 
-/**
- * Rótulo de grupo de campos.
- *
- * **Não existe no monólito** — é da decisão 0015. O sistema tem um rótulo só,
- * `label/1`, para campo e para grupo, e num formulário curto isso basta. No
- * drawer de documento há três grupos — o tipo, o arquivo e o compartilhamento —
- * e cada um contém mais de um controle; com `label/1` nos dois níveis, o rótulo
- * do grupo ficava do mesmo tamanho e da mesma cor do rótulo do campo, e a
- * hierarquia do formulário desaparecia.
- *
- * Caixa alta e cinza de propósito: o grupo é orientação, o campo é o dado. Não é
- * cabeçalho de seção da página — por isso `span`, e não `h2`. Quem nomeia o
- * grupo para leitor de tela é o `fieldset`/`legend` de cada controle.
- */
-export function FieldsetLabel({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={[
-        "block text-xs font-bold uppercase tracking-wide text-[var(--color-brand-purple-dark)]/50",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {children}
-    </span>
-  );
-}
+/** O slot `:item` de `list/1`: `title` e o conteúdo. */
+export type ListItem = { title: string; children: ReactNode };
 
-/** `list/1`: lista de descrição, termo à esquerda em um quarto da largura. */
-export function DescriptionList({ items }: { items: { title: string; content: ReactNode }[] }) {
+/** `core_components.ex` → `list/1`. */
+export function List({ item }: { item: ListItem[] }) {
   return (
     <div className="mt-14">
-      <dl className="-my-4 divide-y divide-[var(--color-neutral-100)]">
-        {items.map((item) => (
-          <div key={item.title} className="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
-            <dt className="w-1/4 flex-none text-[var(--color-neutral-500)]">{item.title}</dt>
-            <dd className="m-0 text-[var(--color-neutral-700)]">{item.content}</dd>
+      <dl className="-my-4 divide-y divide-neutral-100">
+        {item.map((it, index) => (
+          <div key={index} className="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
+            <dt className="w-1/4 flex-none text-neutral-500">{it.title}</dt>
+            <dd className="text-neutral-700">{it.children}</dd>
           </div>
         ))}
       </dl>
@@ -101,87 +65,68 @@ export function DescriptionList({ items }: { items: { title: string; content: Re
   );
 }
 
-/** `back/1`: link de voltar, com seta. */
-export function Back({ href, children }: { href: string; children: ReactNode }) {
+/** `core_components.ex` → `back/1`. `<.link navigate>` vira `<a href>`. */
+export function Back({ navigate, children }: { navigate: string; children: ReactNode }) {
   return (
     <div className="mt-16">
-      <a
-        href={href}
-        className="text-sm font-semibold leading-6 text-[var(--color-neutral-900)] no-underline hover:text-[var(--color-neutral-700)]"
-      >
+      <a href={navigate} className="text-sm font-semibold leading-6 text-neutral-900 hover:text-neutral-700">
         <Icon name="fa-arrow-left" className="h-3 w-3" /> {children}
       </a>
     </div>
   );
 }
 
-/**
- * `meta_info/1`: o rodapé de paginação.
- *
- * A conta do início é `current_offset + 1`, **exceto** quando o total é zero —
- * aí é zero. Sem essa exceção a lista vazia diria "Mostrando 1 até 0 de 0".
- */
-export function MetaInfo({
-  currentOffset,
-  pageSize,
-  totalCount,
-}: {
-  currentOffset: number;
-  pageSize: number;
-  totalCount: number;
-}) {
-  const inicio = totalCount === 0 ? 0 : currentOffset + 1;
-  const fim = Math.min(currentOffset + pageSize, totalCount);
+/** Os campos de `Flop.Meta` que `meta_info/1` lê. */
+export type Meta = { totalCount: number; currentOffset: number; pageSize: number };
+
+/** `core_components.ex` → `meta_info/1`. */
+export function MetaInfo({ meta }: { meta: Meta }) {
+  const startCount = meta.totalCount === 0 ? 0 : meta.currentOffset + 1;
+  const endCount = Math.min(meta.currentOffset + meta.pageSize, meta.totalCount);
 
   return (
-    <p className="m-0 text-[var(--color-brand-purple-dark)]/80">
-      Mostrando {inicio} até {fim} de {totalCount} registros
+    <p className="text-brand-purple-dark/80">
+      Mostrando {startCount} até {endCount} de {meta.totalCount} registros
     </p>
   );
 }
 
-/** `inside_card/1`: cartão aninhado com ícone, título, subtítulo e valor. */
+/** `core_components.ex` → `inside_card/1`. */
 export function InsideCard({
-  icon,
   title,
   subtitle,
   value,
   className,
+  icon,
 }: {
-  icon: string;
-  title: string;
+  title?: string;
   subtitle?: string;
   value?: string;
   className?: string;
+  icon?: string;
 }) {
   return (
     <div
-      className={[
-        "flex w-full items-center justify-between rounded-xl border border-[var(--color-brand-purple-dark)]/10 bg-[var(--color-brand-purple-dark)]/5 p-4",
+      className={cx(
+        "flex items-center justify-between bg-brand-purple-dark/5 rounded-xl border border-brand-purple-dark/10 w-full p-4",
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
     >
       <div className="flex items-center gap-x-2">
-        <div className="flex h-[1.875rem] w-[1.875rem] items-center justify-center text-2xl text-[var(--color-brand-purple-dark)]/60">
-          <Icon name={icon} />
+        <div className="flex justify-center items-center text-2xl text-brand-purple-dark/60 w-7.5 h-7.5">
+          {icon && <Icon name={icon} type="regular" />}
         </div>
         <div>
-          <p className="m-0 text-base/4 font-bold text-[var(--color-brand-purple-dark)]/90">
-            {title}
-          </p>
-          {subtitle && (
-            <p className="m-0 text-xs text-[var(--color-brand-purple-dark)]/60">{subtitle}</p>
-          )}
+          <p className="text-base/4 font-bold text-brand-purple-dark/90">{title}</p>
+          <p className="text-xs text-brand-purple-dark/60">{subtitle}</p>
         </div>
       </div>
-      <div className="text-2xl font-bold text-[var(--color-brand-purple-dark)]">{value}</div>
+      <div className="text-2xl font-bold text-brand-purple-dark">{value}</div>
     </div>
   );
 }
 
-/** `empty_state_card/1`: ícone grande em círculo, frase forte, apoio opcional. */
+/** `core_components.ex` → `empty_state_card/1`. */
 export function EmptyStateCard({
   icon,
   text,
@@ -194,155 +139,143 @@ export function EmptyStateCard({
   children?: ReactNode;
 }) {
   return (
-    <div
-      className={["flex flex-col items-center p-6 text-center", className].filter(Boolean).join(" ")}
-    >
-      <div className="mb-6 flex h-32 w-32 items-center justify-center rounded-full bg-[var(--color-neutral-50)] text-[var(--color-neutral-400)]">
+    <div className={cx("p-6 flex flex-col items-center text-center", className)}>
+      <div className="w-32 h-32 flex items-center justify-center rounded-full bg-neutral-50 text-neutral-400 mb-6">
         <Icon name={icon} className="text-6xl" />
       </div>
-      <p className="m-0 max-w-4xl text-2xl font-extrabold text-[var(--color-brand-purple-dark)]">
-        {text}
-      </p>
-      {children && (
-        <div className="mt-2 text-[var(--color-brand-purple-dark)]/80">{children}</div>
-      )}
+
+      <p className="text-2xl font-extrabold text-brand-purple-dark max-w-4xl">{text}</p>
+
+      {children != null && <div className="text-brand-purple-dark/80 mt-2">{children}</div>}
     </div>
   );
 }
 
-/** `loading_card/1`: mensagem e roda girando. */
+/** `core_components.ex` → `loading_card/1`. */
 export function LoadingCard({ message }: { message: string }) {
   return (
-    <div className="flex items-center justify-center gap-4 rounded-2xl border border-[var(--color-brand-purple-dark)]/10 p-4">
-      <p className="m-0 text-[var(--color-brand-purple-dark)]/60">{message}</p>
-      <Icon name="fa-spinner-third" className="animate-spin text-4xl text-[var(--color-brand-blue)]" />
+    <div className={cx("flex items-center justify-center gap-4", "border p-4 border-brand-purple-dark/10 rounded-2xl")}>
+      <p className="text-brand-purple-dark/60">{message}</p>
+      <Icon className="animate-spin text-brand-blue text-4xl" name="fa-spinner-third" />
     </div>
   );
 }
 
-export type TimelineItem = {
-  icon: string;
-  color: "blue" | "green";
-  content: ReactNode;
-};
+/** O slot `:item` de `timeline_list/1`: `icon`, `color` e o conteúdo. */
+export type TimelineListItem = { icon?: string; color?: "blue" | "green"; children: ReactNode };
 
-/** `timeline_list/1`: lista cronológica com marcador azul ou verde. */
-export function TimelineList({ items, className }: { items: TimelineItem[]; className?: string }) {
+/** `core_components.ex` → `timeline_list/1`. */
+export function TimelineList({ item }: { item: TimelineListItem[] }) {
   return (
-    <ol
-      className={["relative border-s border-[var(--color-brand-purple-dark)]/10", className]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      {items.map((item, index) => (
+    <ol className="relative border-s border-brand-purple-dark/10">
+      {item.map((it, index) => (
         <li key={index} className="mb-10 ms-6">
-          <div className="absolute -start-4 rounded-full bg-white">
+          <div className="absolute -start-4 bg-white rounded-full">
             <span
-              className={[
-                "relative flex h-8 w-8 items-center justify-center rounded-full ring-8 ring-white",
-                item.color === "blue" &&
-                  "bg-[var(--color-brand-blue)]/20 text-[var(--color-brand-blue-dark)]",
-                item.color === "green" &&
-                  "bg-[var(--color-brand-green)]/20 text-[var(--color-brand-green-dark)]",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+              className={cx(
+                "relative flex items-center justify-center w-8 h-8 rounded-full ring-8 ring-white",
+                it.color === "blue" && "bg-brand-blue/20 text-brand-blue-dark",
+                it.color === "green" && "bg-brand-green/20 text-brand-green-dark",
+              )}
             >
-              <Icon name={item.icon} className="text-sm" />
+              {it.icon && <Icon name={it.icon} className="text-sm" />}
             </span>
           </div>
-          {item.content}
+
+          {it.children}
         </li>
       ))}
     </ol>
   );
 }
 
-/** `avatar/1`: dois formatos, seis tamanhos, fundo azul quando não há foto. */
+export type AvatarSize = "extra_small" | "small" | "medium" | "extra_medium" | "large" | "extra_large" | "custom";
+
+/**
+ * `core_components.ex` → `avatar/1`.
+ * Os átomos do Phoenix (`:small`, `:round`) viram strings.
+ */
 export function Avatar({
   imageUrl,
-  title,
+  size = "small",
   shape = "round",
-  size = "medium",
+  title,
   className,
+  style,
 }: {
   imageUrl?: string;
-  title?: string;
+  size?: AvatarSize;
   shape?: "round" | "square";
-  size?: "extra_small" | "small" | "medium" | "extra_medium" | "large" | "extra_large";
+  title?: string;
   className?: string;
+  style?: CSSProperties;
 }) {
-  const TAMANHO = {
-    extra_small: "h-4 w-4",
-    small: "h-5 w-5",
-    medium: "h-10 w-10",
-    extra_medium: "h-12 w-12",
-    large: "h-20 w-20",
-    extra_large: "h-24 w-24",
-  } as const;
-
   return (
     <div
       title={title}
-      className={[
-        "flex-shrink-0 overflow-hidden bg-[var(--color-blue)]",
-        shape === "round" ? "rounded-full" : "rounded-lg",
-        TAMANHO[size],
+      style={style}
+      className={cx(
+        "bg-blue overflow-hidden flex-shrink-0",
+        shape === "round" && "rounded-full",
+        shape === "square" && "rounded-lg",
+        size === "extra_small" && "h-4 w-4",
+        size === "small" && "h-5 w-5",
+        size === "medium" && "h-10 w-10",
+        size === "extra_medium" && "h-12 w-12",
+        size === "large" && "h-20 w-20",
+        size === "extra_large" && "h-24 w-24",
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
     >
-      {imageUrl && <img src={imageUrl} alt="" className="h-full w-full object-cover" />}
+      {imageUrl && <img src={imageUrl} className="w-full h-full object-cover" />}
     </div>
   );
 }
 
-/**
- * `progress/1`: barra com percentual ao lado.
- *
- * O trilho tem cor para `default`, `accent` e `error`, e **não tem para
- * `purple`** — nessa variante ele cai no `bg-blue/20` da classe base, com a
- * barra roxa por cima. Copiado assim; ver achado 105.
- */
+/** `core_components.ex` → `progress/1`. */
 export function Progress({
   value,
   variant = "default",
   showPercentage = true,
   className,
+  ...rest
 }: {
   value: number;
-  /** `green` não existe em `progress/1` — extensão da decisão 0015. */
-  variant?: "default" | "error" | "purple" | "accent" | "green";
+  variant?: "default" | "error" | "purple" | "accent";
   showPercentage?: boolean;
   className?: string;
-}) {
-  const trilho = {
-    default: "bg-[var(--color-blue)]/20",
-    accent: "bg-[var(--color-brand-accent)]/20",
-    error: "bg-[var(--color-red)]/20",
-    green: "bg-[var(--color-brand-green)]/20",
-    // Sem ramo próprio no original: fica com o trilho azul da classe base.
-    purple: "bg-[var(--color-blue)]/20",
-  }[variant];
-
-  const barra = {
-    default: "bg-[var(--color-blue)]",
-    purple: "bg-[var(--color-purple)]",
-    accent: "bg-[var(--color-brand-accent)]",
-    error: "bg-[var(--color-red)]",
-    green: "bg-[var(--color-brand-green)]",
-  }[variant];
-
+} & Omit<HTMLAttributes<HTMLDivElement>, "className" | "children">) {
   return (
-    <div className={["flex items-baseline gap-3", className].filter(Boolean).join(" ")}>
-      <div className={`h-2 w-full rounded-full ${trilho}`}>
+    <div className={cx("flex items-baseline gap-3", className)} {...rest}>
+      <div
+        className={cx(
+          "w-full bg-blue/20 rounded-full h-2",
+          variant === "default" && "bg-blue/20",
+          variant === "accent" && "bg-brand-accent/20",
+          variant === "error" && "bg-red/20",
+        )}
+      >
         <div
-          className={`h-2 rounded-full transition-all duration-1000 ease-linear ${barra}`}
+          className={cx(
+            "bg-blue h-2 rounded-full transition-all duration-1000 ease-linear",
+            variant === "default" && "bg-blue",
+            variant === "purple" && "bg-purple",
+            variant === "accent" && "bg-brand-accent",
+            variant === "error" && "bg-red",
+          )}
           style={{ width: `${value}%` }}
-        />
+        ></div>
       </div>
-      {showPercentage && <p className="m-0 text-[var(--color-blue-dark)]">{value}%</p>}
+      {showPercentage && <p className="text-blue-dark">{value}%</p>}
     </div>
+  );
+}
+
+/** `core_components.ex` → `kbd/1`. */
+export function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="font-extrabold text-[9.5px] tracking-wider uppercase h-4.5 leading-4.5 bg-white rounded-md border border-brand-purple-dark/20 text-brand-purple-dark/50 px-1">
+      {children}
+    </kbd>
   );
 }

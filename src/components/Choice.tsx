@@ -1,274 +1,196 @@
-import { useId, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon.js";
-import { FieldError, Label } from "./Input.js";
+import { Label, cx, useMirror, type FormField } from "./Input.js";
 
 /**
- * Escolha — espelho de `radio_group/1`, `radio_selector/1` e `checkbox_group/1`.
- *
- * Os três resolvem o mesmo problema com formas diferentes, e a diferença
- * importa: o `radio_group` é uma lista de opções soltas; o `radio_selector` é
- * uma barra segmentada, do tipo que troca de aba.
- *
- * **Uma coisa do `radio_selector` que copiei mesmo achando estranha.** A opção
- * marcada recebe `has-[input:checked]:text-brand-blue/30` no rótulo externo —
- * texto azul a 30% de opacidade. O texto interno tem a própria regra
- * (`peer-checked:text-brand-blue-dark`) e ganha, então na prática o 30% não
- * aparece. É classe morta, não defeito visível, e está registrada no achado 106
- * porque some no dia em que alguém mexer no `span`.
+ * `core_components.ex` → `fake_radio_group/1`, `radio_group/1`,
+ * `radio_selector/1`, `checkbox_group/1`, `radio_cards/1` e `tooltip/1`.
+ * Slots com atributos viram listas (`radio`, `checkbox`, `option`).
  */
 
-export type ChoiceVariant = "default" | "purple";
+type Variant = "default" | "purple";
 
-export type Opcao = {
-  value: string;
-  label?: string;
-  icon?: string;
-  title?: string;
-  disabled?: boolean;
-  /** Bolinha vermelha com número, no canto superior esquerdo. */
-  warningNumber?: number;
-};
-
-/** `checkgroup/1`: variante múltipla vertical de `input/1`. */
-export function Checkgroup({ id, label, name, values, options, errors = [], variant = "default", disabled, onChange, className, innerClassName }: {
-  id: string; label?: string; name: string; values?: string[]; options: Opcao[]; errors?: string[]; variant?: ChoiceVariant;
-  disabled?: boolean; onChange?: (values: string[]) => void; className?: string; innerClassName?: string;
-}) {
-  const selected = values ?? [];
-  const fieldName = `${name}[]`;
-  const resolvedName = `${fieldName}[]`;
-  // O wrapper original aceita `variant`, mas a cláusula interna consulta
-  // `color`; a variante é inerte. Mantemos o atributo sem inventar efeito.
-  void variant;
-  const errorId = errors.length ? `${id}-errors` : undefined;
-  const toggle = (value: string) => onChange?.(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
-  return <fieldset className={["relative min-w-0 border-0 p-0", className].filter(Boolean).join(" ")} aria-describedby={errorId}>
-    {label && <legend className="text-sm/4 font-bold text-[var(--color-action)]">{label}</legend>}
-    <div className={["mt-2 flex flex-col items-start gap-2", innerClassName].filter(Boolean).join(" ")}>
-      {options.map((option) => <label key={option.value} className="inline-flex items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-neutral-900)] transition-colors has-[input:checked]:bg-[var(--color-blue-light)]">
-        <input type="checkbox" id={`${id}-${fieldName}-${option.value}`} name={resolvedName} value={option.value} checked={selected.includes(option.value)} disabled={disabled || option.disabled} onChange={() => toggle(option.value)} className="rounded border-[var(--color-neutral-100)] text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0" />
-        {option.label}
-      </label>)}
-    </div>
-    {errors.length > 0 && <div id={errorId}>{errors.map((message) => <FieldError key={message} className="absolute -bottom-6" message={message} />)}</div>}
-  </fieldset>;
-}
-
-/** `fake_radio_group/1`: somente o valor atual permanece habilitado. */
-export function FakeRadioGroup({ id, label, selectedValue, options, variant = "default", className }: {
-  id: string; label?: string; selectedValue?: string; options: (Opcao & { name: string })[]; variant?: ChoiceVariant; className?: string;
-}) {
-  return <fieldset className={["min-w-0 border-0 p-0", className].filter(Boolean).join(" ")}>
-    {label && <legend className={["text-sm/4 font-bold", variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-action)]"].join(" ")}>{label}</legend>}
-    <div className="mt-2 w-full space-x-2">
-      {options.map((option, index) => <label key={`${option.name}-${option.value}`} className={["inline-flex cursor-pointer items-center gap-3.5 rounded-lg p-4 text-base/4 text-[var(--color-neutral-900)] transition-colors", variant === "purple" ? "has-[input:checked]:bg-[var(--color-purple)]/20" : "has-[input:checked]:bg-[var(--color-blue-light)]"].join(" ")}>
-        <input type="radio" name={option.name} id={`${id}-${option.name}-${index}`} value={option.value} checked={option.value === selectedValue} disabled={option.value !== selectedValue} readOnly className={["border-[var(--color-neutral-100)] focus:ring-0", variant === "purple" ? "text-[var(--color-purple)] checked:border-[var(--color-purple)]" : "text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)]"].join(" ")} />
-        <span>{option.label}</span>
-      </label>)}
-    </div>
-  </fieldset>;
-}
-
-/**
- * `radio_group/1`: opções soltas, a marcada ganha fundo.
- *
- * O invólucro é `fieldset`/`legend`, e não `div`/`label` como no original —
- * mesma correção intencional que `Checkgroup` e `FakeRadioGroup` já traziam
- * neste arquivo. O rótulo do grupo é o que diz o que as opções significam; num
- * `div` ele fica solto, e quem usa leitor de tela ouve "Sem validade" sem ouvir
- * "Validade". A aparência não muda: o `legend` repete as classes do `.label`.
- */
-export function RadioGroup({
+/** `core_components.ex` → `fake_radio_group/1`. */
+export function FakeRadioGroup({
   label,
-  name,
-  value,
-  options,
+  selectedValue,
   variant = "default",
-  onChange,
   className,
+  radio,
 }: {
   label?: string;
-  name: string;
-  value?: string;
-  options: Opcao[];
-  variant?: ChoiceVariant;
-  onChange?: (valor: string) => void;
+  selectedValue?: unknown;
+  variant?: Variant;
   className?: string;
+  radio: { name: string; value: unknown; label: string }[];
 }) {
-  const base = useId();
-
   return (
-    <fieldset className={["min-w-0 border-0 p-0", className].filter(Boolean).join(" ")}>
-      {label && (
-        <legend
-          className={[
-            "text-sm/4 font-bold",
-            variant === "purple" ? "text-[var(--color-purple)]" : "text-[var(--color-action)]",
-          ].join(" ")}
-        >
-          {label}
-        </legend>
-      )}
-
+    <div className={cx(className)}>
+      <Label color={variant}>{label}</Label>
       <div className="mt-2 w-full space-x-2">
-        {options.map((op, i) => (
+        {radio.map((item, index) => (
           <label
-            key={op.value}
-            htmlFor={`${base}-${i}`}
-            className={[
-              "inline-flex cursor-pointer items-center gap-3.5 rounded-lg p-4 text-base/4 transition-colors",
-              variant === "purple"
-                ? "has-[input:checked]:bg-[var(--color-purple)]/20"
-                : "has-[input:checked]:bg-[var(--color-brand-blue)]/20",
-            ].join(" ")}
+            key={`${item.name}-${String(item.value)}`}
+            className={cx(
+              "inline-flex items-center gap-3.5 rounded-lg p-4 text-neutral-900 transition-colors text-base/4 cursor-pointer",
+              variant === "purple" && "has-[input:checked]:bg-purple/20",
+              variant === "default" && "has-[input:checked]:bg-blue-light",
+            )}
           >
+            {/* O HEEx lê `@radio[:name]` na lista de slots, que dá `nil`: o id sai `-0`, `-1`… */}
             <input
               type="radio"
-              name={name}
-              id={`${base}-${i}`}
-              value={op.value}
-              checked={value === op.value}
-              disabled={op.disabled}
-              onChange={() => onChange?.(op.value)}
-              className={[
-                "border-[var(--color-neutral-100)] focus:ring-0",
-                variant === "purple"
-                  ? "text-[var(--color-purple)] checked:border-[var(--color-purple)]"
-                  : "text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)]",
-              ].join(" ")}
+              name={item.name}
+              id={`-${index}`}
+              value={String(item.value)}
+              defaultChecked={item.value === selectedValue}
+              disabled={item.value !== selectedValue}
+              className={cx(
+                "border-neutral-100 focus:ring-0",
+                variant === "purple" && "text-purple checked:border-purple",
+                variant === "default" && "text-blue checked:border-blue",
+              )}
             />
-            <span>{op.label}</span>
+            <span>{item.label}</span>
           </label>
         ))}
       </div>
-    </fieldset>
+    </div>
   );
 }
 
-/**
- * `radio_selector/1`: barra segmentada.
- *
- * A marcada ganha fundo e uma linha superior por dentro (`shadow-top-inset`),
- * que é o que dá o efeito de aba pressionada.
- *
- * **`layout="pills"` não existe no original** — é extensão da decisão 0015. A
- * barra do sistema é uma linha só, e funciona para duas ou três opções curtas.
- * Com seis rótulos longos — "Certificado de especialização" ao lado de
- * "Comprovante de endereço" — ela transborda numa faixa que rola para o lado, e
- * escolher passa a exigir rolagem horizontal dentro de um formulário. Em pilha
- * de pastilhas as opções quebram linha e ficam todas visíveis de uma vez.
- *
- * O que não muda: continua sendo um `fieldset` de `input[type=radio]`, com o
- * mesmo teclado e o mesmo nome acessível. A extensão é de moldura, não de
- * semântica.
- */
+/** `core_components.ex` → `radio_group/1`. */
+export function RadioGroup({
+  label,
+  className = "",
+  wrapperClass,
+  field,
+  variant = "default",
+  radio,
+  required,
+  onChange,
+}: {
+  label: string;
+  className?: string;
+  wrapperClass?: string;
+  field: FormField;
+  variant?: Variant;
+  radio: { value: string; label: string; disabled?: boolean; removable?: () => void }[];
+  required?: boolean;
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const [current, setCurrent] = useMirror(String(field.value ?? ""));
+  return (
+    <div className={cx(className)}>
+      <Label color={variant}>{label}</Label>
+      <div className={cx("mt-2 w-full space-x-2", wrapperClass)}>
+        {radio.map((item, index) => (
+          <label
+            key={item.value}
+            htmlFor={`${field.id}-${index}`}
+            className={cx(
+              "relative inline-flex items-center gap-3.5 rounded-lg p-4 text-brand-purple-dark transition-colors text-base/4 cursor-pointer",
+              item.removable && "pr-10",
+              variant === "purple" && "has-[input:checked]:bg-purple/20",
+              variant === "default" && "has-[input:checked]:bg-brand-blue/20",
+            )}
+          >
+            <input
+              type="radio"
+              name={field.name}
+              id={`${field.id}-${index}`}
+              value={item.value}
+              checked={current === String(item.value)}
+              disabled={item.disabled || false}
+              onChange={(event) => {
+                setCurrent(item.value);
+                onChange?.(event);
+              }}
+              className={cx(
+                "border-neutral-100 focus:ring-0",
+                variant === "purple" && "text-purple checked:border-purple",
+                variant === "default" && "text-brand-blue checked:border-brand-blue",
+              )}
+              required={required}
+            />
+            <span>{item.label}</span>
+            {item.removable && (
+              <button
+                type="button"
+                aria-label={`Remover ${item.label}`}
+                onClick={item.removable}
+                className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-neutral-400 transition-colors hover:text-purple"
+              >
+                <Icon name="fa-times" className="size-3" />
+              </button>
+            )}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** `core_components.ex` → `radio_selector/1`. */
 export function RadioSelector({
   label,
-  name,
-  value,
-  options,
+  className = "",
+  field,
   variant = "default",
-  layout = "bar",
+  radio,
   onChange,
-  className,
 }: {
   label?: string;
-  name: string;
-  value?: string;
-  options: Opcao[];
-  variant?: ChoiceVariant;
-  layout?: "bar" | "pills";
-  onChange?: (valor: string) => void;
   className?: string;
+  field: FormField;
+  variant?: Variant;
+  radio: { value: string; title?: string; label?: string; icon?: string; warningNumber?: number; disabled?: boolean }[];
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const base = useId();
-
-  if (layout === "pills") {
-    return (
-      <div>
-        {label && <Label color={variant}>{label}</Label>}
-        <div
-          className={["flex flex-wrap gap-2", label && "mt-2", className]
-            .filter(Boolean)
-            .join(" ")}
-          role="radiogroup"
-          aria-label={label}
-        >
-          {options.map((op, i) => (
-            <label
-              key={op.value}
-              htmlFor={`${base}-${i}`}
-              title={op.title}
-              className={[
-                "inline-flex cursor-pointer items-center rounded-full border px-4 py-2 text-sm font-bold transition-colors",
-                "border-[var(--color-brand-purple-dark)]/15 text-[var(--color-brand-purple-dark)]",
-                "has-[input:checked]:border-[var(--color-brand-purple-dark)] has-[input:checked]:bg-[var(--color-brand-purple-dark)] has-[input:checked]:text-white",
-                "has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-[var(--color-action)]",
-                "has-[input:disabled]:cursor-not-allowed has-[input:disabled]:opacity-40",
-              ].join(" ")}
-            >
-              <input
-                type="radio"
-                name={name}
-                id={`${base}-${i}`}
-                value={op.value}
-                checked={value === op.value}
-                disabled={op.disabled}
-                onChange={() => onChange?.(op.value)}
-                className="sr-only"
-              />
-              {op.label}
-            </label>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
+  const [current, setCurrent] = useMirror(String(field.value ?? ""));
   return (
     <div>
       {label && <Label color={variant}>{label}</Label>}
-      <div
-        className={[
-          "space-x-1.5 rounded-lg bg-[var(--color-brand-purple-dark)]/10 p-1.5",
-          label && "mt-2",
-          className,
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        {options.map((op, i) => (
+      <div className={cx("bg-brand-purple-dark/10 p-1.5 rounded-lg space-x-1.5", label && "mt-2", className)}>
+        {radio.map((item, index) => (
           <label
-            key={op.value}
-            htmlFor={`${base}-${i}`}
-            title={op.title}
-            className="relative inline-flex h-10 cursor-pointer items-center rounded-lg px-3 text-base/4 text-[var(--color-neutral-900)] has-[input:checked]:bg-[var(--color-brand-blue)]/40 has-[input:checked]:shadow-[var(--shadow-top-inset)]"
+            key={item.value}
+            htmlFor={`${field.id}-${index}`}
+            className={cx(
+              "relative inline-flex items-center rounded-lg px-3 text-neutral-900 text-base/4 cursor-pointer h-10",
+              "has-[input:checked]:bg-brand-blue/40 has-[input:checked]:shadow-top-inset has-[input:checked]:text-brand-blue/30",
+            )}
+            title={item.title}
           >
             <input
               type="radio"
-              name={name}
-              id={`${base}-${i}`}
-              value={op.value}
-              checked={value === op.value}
-              disabled={op.disabled}
-              onChange={() => onChange?.(op.value)}
-              className="peer hidden"
+              name={field.name}
+              id={`${field.id}-${index}`}
+              value={item.value}
+              checked={current === String(item.value)}
+              onChange={(event) => {
+                setCurrent(item.value);
+                onChange?.(event);
+              }}
+              className="hidden peer"
+              disabled={item.disabled}
             />
-            {op.label && (
-              <span className="text-lg font-bold text-[var(--color-brand-purple-dark)]/40 peer-checked:text-[var(--color-brand-blue-dark)] peer-disabled:opacity-40">
-                {op.label}
+            {item.label && (
+              <span className="font-bold text-lg text-brand-purple-dark/40 peer-checked:text-brand-blue-dark peer-disabled:opacity-40">
+                {item.label}
               </span>
             )}
-            {op.icon && (
+            {item.icon && (
               <Icon
-                name={op.icon}
-                className="text-lg text-[var(--color-brand-purple-dark)]/40 peer-checked:text-[var(--color-brand-blue-dark)] peer-disabled:opacity-40"
+                name={item.icon}
+                className="text-lg text-brand-purple-dark/40 peer-checked:text-brand-blue-dark peer-disabled:opacity-40"
               />
             )}
-            {op.warningNumber !== undefined && op.warningNumber > 0 && (
-              <span className="absolute -left-2 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-red)] text-xs font-bold text-white">
-                {op.warningNumber}
-              </span>
+            {item.warningNumber !== undefined && item.warningNumber > 0 && (
+              <div className="w-6 h-6 absolute -left-2 z-10 -top-2 flex items-center justify-center font-bold text-xs rounded-full bg-red text-white">
+                {item.warningNumber}
+              </div>
             )}
           </label>
         ))}
@@ -277,48 +199,55 @@ export function RadioSelector({
   );
 }
 
-/** `checkbox_group/1`: escolha múltipla, com a mesma anatomia do rádio. */
+/** `core_components.ex` → `checkbox_group/1`. */
 export function CheckboxGroup({
   label,
-  name,
-  values,
-  options,
+  className = "",
+  wrapperClass,
+  field,
+  checkbox,
+  required,
   onChange,
-  className,
 }: {
   label: string;
-  name: string;
-  values: string[];
-  options: Opcao[];
-  onChange?: (valores: string[]) => void;
   className?: string;
+  wrapperClass?: string;
+  field: FormField;
+  checkbox: { value: string; label: string; disable?: boolean }[];
+  required?: boolean;
+  onChange?: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
-  const base = useId();
-
-  const alternar = (valor: string) =>
-    onChange?.(values.includes(valor) ? values.filter((v) => v !== valor) : [...values, valor]);
-
+  const initial = (Array.isArray(field.value) ? field.value : field.value ? [field.value] : []).map(String);
+  const [values, setValues] = useMirror(initial);
   return (
-    <div className={className}>
+    <div className={cx(className)}>
       <Label>{label}</Label>
-      <div className="mt-2 w-full space-x-2">
-        {options.map((op, i) => (
+      <div className={cx("mt-2 w-full space-x-2", wrapperClass)}>
+        {checkbox.map((item, index) => (
           <label
-            key={op.value}
-            htmlFor={`${base}-${i}`}
-            className="inline-flex cursor-pointer items-center gap-3.5 rounded-lg p-4 text-base/4 transition-colors has-[input:checked]:bg-[var(--color-brand-blue)]/20"
+            key={item.value}
+            htmlFor={`${field.id}-${index}`}
+            className={cx(
+              "inline-flex items-center gap-3.5 rounded-lg p-4 text-brand-purple-dar transition-colors text-base/4 cursor-pointer",
+              "has-[input:checked]:bg-brand-blue/20",
+            )}
           >
             <input
               type="checkbox"
-              name={name}
-              id={`${base}-${i}`}
-              value={op.value}
-              checked={values.includes(op.value)}
-              disabled={op.disabled}
-              onChange={() => alternar(op.value)}
-              className="rounded border-[var(--color-neutral-100)] text-[var(--color-brand-blue)] checked:border-[var(--color-brand-blue)] focus:ring-0"
+              name={`${field.name}[]`}
+              id={`${field.id}-${index}`}
+              value={item.value}
+              checked={values.includes(String(item.value))}
+              disabled={item.disable || false}
+              onChange={(event) => {
+                const value = String(item.value);
+                setValues(event.target.checked ? [...values, value] : values.filter((other) => other !== value));
+                onChange?.(event);
+              }}
+              className={cx("border-neutral-100 focus:ring-0", "text-brand-blue checked:border-brand-blue", "rounded-full")}
+              required={required}
             />
-            <span>{op.label}</span>
+            <span>{item.label}</span>
           </label>
         ))}
       </div>
@@ -326,44 +255,156 @@ export function CheckboxGroup({
   );
 }
 
+/** `core_components.ex` → `radio_cards/1`. */
+export function RadioCards({
+  id,
+  value,
+  name,
+  title,
+  option,
+  onChange,
+}: {
+  id: string;
+  value?: string;
+  name?: string;
+  title?: string;
+  option: { id: string; title: string; subtitle?: string; badge?: string; icon?: string; children?: ReactNode }[];
+  /** O `phx-click="select-option"` com `phx-value-value`. */
+  onChange?: (value: string) => void;
+}) {
+  const [current, setCurrent] = useMirror(value);
+  void name;
+  return (
+    <div id={id} className="rounded-2xl border border-brand-purple-dark/10 bg-white p-4 space-y-3">
+      {title && <h2 className="text-brand-purple-dark font-extrabold">{title}</h2>}
+      {option.map((item) => {
+        const selected = current === item.id;
+        return (
+          <div
+            key={item.id}
+            onClick={() => {
+              setCurrent(item.id);
+              onChange?.(item.id);
+            }}
+            className={cx(
+              "rounded-xl border cursor-pointer transition-all",
+              selected
+                ? "border-brand-blue/30 bg-brand-blue/10 ring-1 ring-brand-blue"
+                : "border-brand-purple-dark/30 bg-white hover:border-brand-purple-dark/10",
+            )}
+          >
+            <div className="flex justify-between gap-4 p-4">
+              <div className="flex gap-3">
+                <div
+                  className={cx(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                    selected ? "bg-brand-blue/10 text-bg-brand-blue" : "bg-gray-100",
+                  )}
+                >
+                  <Icon name={item.icon ?? ""} className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">{item.title}</span>
+                    {item.badge && (
+                      <span className="rounded-full bg-brand-blue px-2.5 py-0.5 text-xs font-medium text-white">{item.badge}</span>
+                    )}
+                  </div>
+                  {item.subtitle && <p className="text-sm text-gray-500">{item.subtitle}</p>}
+                </div>
+              </div>
+              <div
+                className={cx(
+                  "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                  selected ? "border-brand-blue" : "border-brand-purple-dark/10",
+                )}
+              >
+                {selected && <div className="h-2.5 w-2.5 rounded-full bg-brand-blue" />}
+              </div>
+            </div>
+            {selected && item.children !== undefined && <div className="border-t border-brand-blue px-4 py-4">{item.children}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+type Placement = "top" | "bottom" | "left" | "right";
+
 /**
- * `tooltip/1`: dica ancorada, escura, aparecendo no passar do mouse.
- *
- * No sistema um hook posiciona e mostra. Aqui o gatilho é o próprio elemento e
- * a dica responde a mouse **e a foco** — quem navega por teclado também precisa
- * dela, e é o que o menu recolhido usa para dizer o nome do item.
+ * `core_components.ex` → `tooltip/1`. Como o hook `Tooltip`: o conteúdo vai
+ * para o `body`, aparece no `mouseenter` do gatilho quando `active` é `"true"`
+ * e é posicionado com `offset(4)`, `flip` e `shift({padding: 8})`.
  */
 export function Tooltip({
   id,
-  content,
-  children,
-  className,
+  placement = "right",
+  tooltipClass,
+  triggerClass,
+  tooltipTrigger,
+  tooltipContent,
 }: {
   id: string;
-  content: ReactNode;
-  children: ReactNode;
-  className?: string;
+  placement?: Placement;
+  tooltipClass?: string;
+  triggerClass?: string;
+  tooltipTrigger: ReactNode | { active?: "true" | "false"; children: ReactNode };
+  tooltipContent: ReactNode;
 }) {
-  const [visivel, setVisivel] = useState(false);
+  const slot =
+    tooltipTrigger && typeof tooltipTrigger === "object" && "children" in tooltipTrigger && !("type" in tooltipTrigger)
+      ? (tooltipTrigger as { active?: "true" | "false"; children: ReactNode })
+      : { children: tooltipTrigger as ReactNode };
+  const active = slot.active ?? "true";
+  const [visible, setVisible] = useState(false);
+  const trigger = useRef<HTMLDivElement>(null);
+  const content = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const t = trigger.current?.getBoundingClientRect();
+    const c = content.current;
+    if (!visible || !t || !c) return;
+    const { width, height } = c.getBoundingClientRect();
+    const fits = {
+      top: t.top - 4 - height >= 0,
+      bottom: t.bottom + 4 + height <= window.innerHeight,
+      left: t.left - 4 - width >= 0,
+      right: t.right + 4 + width <= window.innerWidth,
+    };
+    const opposite: Record<Placement, Placement> = { top: "bottom", bottom: "top", left: "right", right: "left" };
+    const side = fits[placement] || !fits[opposite[placement]] ? placement : opposite[placement];
+    let x = side === "left" ? t.left - 4 - width : side === "right" ? t.right + 4 : t.left + t.width / 2 - width / 2;
+    let y = side === "top" ? t.top - 4 - height : side === "bottom" ? t.bottom + 4 : t.top + t.height / 2 - height / 2;
+    x = Math.min(Math.max(x, 8), window.innerWidth - width - 8);
+    y = Math.min(Math.max(y, 8), window.innerHeight - height - 8);
+    Object.assign(c.style, { left: `${x}px`, top: `${y}px` });
+  }, [visible, placement]);
 
   return (
-    <div
-      id={id}
-      className={["relative inline-block", className].filter(Boolean).join(" ")}
-      onMouseEnter={() => setVisivel(true)}
-      onMouseLeave={() => setVisivel(false)}
-      onFocus={() => setVisivel(true)}
-      onBlur={() => setVisivel(false)}
-    >
-      {children}
-      {visivel && (
-        <div
-          role="tooltip"
-          className="absolute z-[80] w-max rounded bg-[var(--color-neutral-900)] px-2 py-1 text-sm text-white"
-        >
-          {content}
-        </div>
-      )}
+    <div id={id} data-tooltip-placement={placement}>
+      <div
+        ref={trigger}
+        data-tooltip-trigger
+        data-active={active}
+        className={triggerClass}
+        onMouseEnter={() => active === "true" && setVisible(true)}
+        onMouseLeave={() => setVisible(false)}
+      >
+        {slot.children}
+      </div>
+      {typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={content}
+            data-tooltip-content
+            className={cx("bg-neutral-900 text-white rounded px-2 py-1 text-sm w-max fixed z-[80]", tooltipClass)}
+            style={{ display: visible ? "block" : "none" }}
+          >
+            {tooltipContent}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

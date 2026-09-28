@@ -1,93 +1,463 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Instance } from "flatpickr/dist/types/instance";
+import "flatpickr/dist/flatpickr.min.css";
+import "flatpickr/dist/plugins/monthSelect/style.css";
 import { Icon } from "./Icon.js";
-import { FieldError, Input, Label } from "./Input.js";
+import { FieldError, Input, Label, cx, useMirror, type FormField } from "./Input.js";
 import { TODAY } from "./today.js";
 
-/** Espelho determinístico dos quatro seletores do monólito (flatpickr em pt-BR). */
-type Dia = { ano: number; mes: number; dia: number };
-type Intervalo = { inicio: string; fim: string };
+/**
+ * `core_components.ex` → `range_datepicker/1`, `range_monthpicker/1`,
+ * `monthpicker/1`, `week_selector/1` e `date_navigator/1`, com o mesmo flatpickr
+ * dos hooks `RangeDatePicker`, `RangeMonthPicker`, `MonthPicker` e `.Flatpickr`.
+ *
+ * Diferença inevitável: o "hoje" do calendário é `TODAY`, não o relógio.
+ */
 
-const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-// flatpickr/dist/l10n/pt.js declara firstDayOfWeek: 1.
-const SEMANA = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const NOW = new Date(`${TODAY}T00:00:00`);
 
-function parseIso(valor: string): Dia { const [ano, mes, dia] = valor.split("-").map(Number); return { ano: ano!, mes: mes!, dia: dia! }; }
-function iso(data: Dia) { return `${data.ano}-${String(data.mes).padStart(2, "0")}-${String(data.dia).padStart(2, "0")}`; }
-function bissexto(ano: number) { return ano % 4 === 0 && (ano % 100 !== 0 || ano % 400 === 0); }
-function diasNoMes(ano: number, mes: number) { return [31, bissexto(ano) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1]!; }
-function diaDaSemana({ ano, mes, dia }: Dia) { const t = [0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4]; const y = mes < 3 ? ano - 1 : ano; return (y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) + t[mes - 1]! + dia) % 7; }
-function indiceSemanaSegunda(data: Dia) { return (diaDaSemana(data) + 6) % 7; }
-function somarDias(data: Dia, quantidade: number): Dia { let atual = { ...data }; const passo = quantidade < 0 ? -1 : 1; for (let i = 0; i < Math.abs(quantidade); i += 1) { atual.dia += passo; if (atual.dia > diasNoMes(atual.ano, atual.mes)) { atual.dia = 1; atual.mes += 1; if (atual.mes === 13) { atual.mes = 1; atual.ano += 1; } } else if (atual.dia === 0) { atual.mes -= 1; if (atual.mes === 0) { atual.mes = 12; atual.ano -= 1; } atual.dia = diasNoMes(atual.ano, atual.mes); } } return atual; }
-function moverMes(ano: number, mes: number, delta: number) { const total = ano * 12 + mes - 1 + delta; return { ano: Math.floor(total / 12), mes: ((total % 12) + 12) % 12 + 1 }; }
-function moverDataMes(data: Dia, delta: number) { const destino = moverMes(data.ano, data.mes, delta); return { ...destino, dia: Math.min(data.dia, diasNoMes(destino.ano, destino.mes)) }; }
-function dataPt(valor: string) { const d = parseIso(valor); return `${String(d.dia).padStart(2, "0")}/${String(d.mes).padStart(2, "0")}/${d.ano}`; }
-
-function useFecharExternamente(aberto: boolean, raiz: RefObject<HTMLDivElement | null>, fechar: () => void) {
-  useEffect(() => { if (!aberto) return; const aoPressionar = (event: MouseEvent) => { if (!raiz.current?.contains(event.target as Node)) fechar(); }; document.addEventListener("mousedown", aoPressionar); return () => document.removeEventListener("mousedown", aoPressionar); }, [aberto, fechar, raiz]);
+async function loadFlatpickr() {
+  const [{ default: flatpickr }, { Portuguese }, { default: monthSelectPlugin }] = await Promise.all([
+    import("flatpickr"),
+    import("flatpickr/dist/l10n/pt.js"),
+    import("flatpickr/dist/plugins/monthSelect/index.js"),
+  ]);
+  return { flatpickr, Portuguese, monthSelectPlugin };
 }
 
-function CampoPicker({ id, label, texto, aberto, disabled, erros, onOpen }: { id: string; label?: string; texto: string; aberto: boolean; disabled?: boolean; erros: string[]; onOpen: () => void }) {
-  const errorId = `${id}-errors`;
-  return <div>{label && <Label htmlFor={`${id}-view`} className="mb-2">{label}</Label>}<Input id={`${id}-view`} value={texto} readOnly disabled={disabled} rightIcon="fa-calendar" role="combobox" aria-controls={`${id}-popup`} aria-haspopup="dialog" aria-expanded={aberto} aria-invalid={erros.length ? true : undefined} aria-describedby={erros.length ? errorId : undefined} onClick={onOpen} onKeyDown={(e) => { if (!aberto && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpen(); } }} /></div>;
+/** Monta o flatpickr num efeito de layout: o `destroy` desfaz o `.flatpickr-wrapper` antes de o React remover o nó. */
+function useFlatpickr(target: React.RefObject<HTMLElement | null>, create: (lib: Awaited<ReturnType<typeof loadFlatpickr>>, el: HTMLElement) => Instance) {
+  const instance = useRef<Instance | null>(null);
+  const [ready, setReady] = useState(false);
+  useLayoutEffect(() => {
+    let cancelled = false;
+    void loadFlatpickr().then((lib) => {
+      if (cancelled || !target.current) return;
+      instance.current = create(lib, target.current);
+      setReady(true);
+    });
+    return () => {
+      cancelled = true;
+      instance.current?.destroy();
+      instance.current = null;
+    };
+  }, []);
+  return { instance, ready };
 }
 
-function Erros({ id, errors }: { id: string; errors: string[] }) { return errors.length ? <div id={`${id}-errors`}>{errors.map((msg) => <FieldError key={msg} className="absolute -bottom-6" message={msg} />)}</div> : null; }
-function restaurarFoco(id: string) { requestAnimationFrame(() => document.getElementById(`${id}-view`)?.focus()); }
-function BotaoNavegacao({ label, onClick, icon }: { label: string; onClick: () => void; icon: string }) { return <button type="button" tabIndex={-1} aria-label={label} onClick={onClick} className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--color-neutral-100)]"><Icon name={icon} /></button>; }
-
-function CalendarioDias({ id, cursor, inicio, fim, disable = [], minDate, maxDate, onCursor, onSelect, onClose }: { id: string; cursor: Dia; inicio?: string; fim?: string; disable?: string[]; minDate?: string; maxDate?: string; onCursor: (d: Dia) => void; onSelect: (valor: string) => void; onClose: () => void }) {
-  const dialog = useRef<HTMLDivElement>(null);
-  const indisponivel = (valor: string) => disable.includes(valor) || Boolean(minDate && valor < minDate) || Boolean(maxDate && valor > maxDate);
-  const focarDisponivel = (candidato: Dia, passo: number) => { let atual = candidato; for (let i = 0; i < 3700 && indisponivel(iso(atual)); i += 1) { const proxima = somarDias(atual, passo); if ((minDate && iso(proxima) < minDate) || (maxDate && iso(proxima) > maxDate)) return; atual = proxima; } onCursor(atual); };
-  useEffect(() => { dialog.current?.querySelector<HTMLElement>(`[data-date="${iso(cursor)}"]`)?.focus(); }, [cursor]);
-  const teclado = (e: KeyboardEvent<HTMLDivElement>) => { let destino: Dia | undefined; let passo = 1; if (e.key === "ArrowLeft") { destino = somarDias(cursor, -1); passo = -1; } else if (e.key === "ArrowRight") destino = somarDias(cursor, 1); else if (e.key === "ArrowUp") { destino = somarDias(cursor, -7); passo = -1; } else if (e.key === "ArrowDown") destino = somarDias(cursor, 7); else if (e.key === "Home") { destino = somarDias(cursor, -indiceSemanaSegunda(cursor)); passo = -1; } else if (e.key === "End") destino = somarDias(cursor, 6 - indiceSemanaSegunda(cursor)); else if (e.key === "PageUp") { destino = moverDataMes(cursor, -1); passo = -1; } else if (e.key === "PageDown") destino = moverDataMes(cursor, 1); else if (e.key === "Escape") { e.preventDefault(); onClose(); return; } else return; e.preventDefault(); focarDisponivel(destino, passo); };
-  const vazio = indiceSemanaSegunda({ ...cursor, dia: 1 });
-  return <div id={`${id}-popup`} ref={dialog} role="dialog" aria-label="Calendário" className="absolute left-1/2 top-full z-40 mt-2 w-[19.5rem] -translate-x-1/2 rounded-lg border border-[var(--color-neutral-100)] bg-white p-3 shadow-lg" onKeyDown={teclado}><div className="flex items-center justify-between py-2"><p className="m-0 font-normal text-[var(--color-neutral-900)]">{MESES[cursor.mes - 1]} de {cursor.ano}</p><div className="flex gap-2"><BotaoNavegacao label="Mês anterior" icon="fa-chevron-left" onClick={() => focarDisponivel(moverDataMes(cursor, -1), -1)} /><BotaoNavegacao label="Próximo mês" icon="fa-chevron-right" onClick={() => focarDisponivel(moverDataMes(cursor, 1), 1)} /></div></div><div className="grid grid-cols-7 text-center">{SEMANA.map((d) => <span key={d} className="py-2 text-xs font-semibold text-[var(--color-neutral-200)]">{d}</span>)}{Array.from({ length: vazio }, (_, i) => <span key={`v-${i}`} />)}{Array.from({ length: diasNoMes(cursor.ano, cursor.mes) }, (_, i) => i + 1).map((dia) => { const valor = iso({ ...cursor, dia }); const selecionado = valor === inicio || valor === fim; const dentro = Boolean(inicio && fim && valor > inicio && valor < fim); return <button data-date={valor} key={valor} type="button" tabIndex={valor === iso(cursor) ? 0 : -1} disabled={indisponivel(valor)} aria-label={`${dia} de ${MESES[cursor.mes - 1]} de ${cursor.ano}`} aria-pressed={selecionado || dentro} onClick={() => onSelect(valor)} className={["h-10 rounded-lg border-0 font-semibold text-[var(--color-neutral-900)] hover:bg-[var(--color-blue-light)] focus-visible:outline-2 focus-visible:outline-[var(--color-brand-blue)] disabled:opacity-30", selecionado && "bg-[var(--color-blue)]", dentro && "bg-[var(--color-blue-light)]"].filter(Boolean).join(" ")}>{dia}</button>; })}</div></div>;
+function isoDate(date: Date) {
+  return date.toISOString().split("T")[0]!;
 }
 
-export function RangeDatePicker({ id, label, value, onChange, disabled, disable, minDate, maxDate, errors = [], static: isStatic = true, className }: { id: string; label?: string; value?: Intervalo; onChange?: (valor: Intervalo) => void; disabled?: boolean; disable?: string[]; minDate?: string; maxDate?: string; errors?: string[]; static?: boolean; className?: string }) {
-  const inicial = parseIso(value?.inicio ?? minDate ?? "2026-08-01"); const [aberto, setAberto] = useState(false); const [cursor, setCursor] = useState(inicial); const [primeira, setPrimeira] = useState<string>(); const raiz = useRef<HTMLDivElement>(null);
-  const fechar = () => { setAberto(false); restaurarFoco(id); };
-  useFecharExternamente(aberto, raiz, fechar);
-  useEffect(() => { if (!primeira && value?.inicio) setCursor(parseIso(value.inicio)); }, [value?.inicio, value?.fim, primeira]);
-  const selecionar = (data: string) => { if (!primeira) { setPrimeira(data); return; } const novo = primeira <= data ? { inicio: primeira, fim: data } : { inicio: data, fim: primeira }; setPrimeira(undefined); onChange?.(novo); fechar(); };
-  return <div ref={raiz} id={`${id}-picker`} data-static={isStatic} className={["relative", disabled && "cursor-not-allowed opacity-60", className].filter(Boolean).join(" ")}><CampoPicker id={id} label={label} texto={value ? `${dataPt(value.inicio)} até ${dataPt(value.fim)}` : ""} aberto={aberto} disabled={disabled} erros={errors} onOpen={() => { if (!disabled) setAberto((a) => !a); }} /><input type="hidden" name={id} value={value ? `${value.inicio}#${value.fim}` : ""} readOnly />{aberto && <CalendarioDias id={id} cursor={cursor} inicio={primeira ?? value?.inicio} fim={primeira ? undefined : value?.fim} disable={disable} minDate={minDate} maxDate={maxDate} onCursor={setCursor} onSelect={selecionar} onClose={fechar} />}<Erros id={id} errors={errors} /></div>;
+function toBr(value: string) {
+  return value.split("#").map((date) => {
+    const [year, month, day] = date.split("-");
+    return `${day}/${month}/${year}`;
+  });
 }
 
-function CalendarioMeses({ id, ano, cursorMes, inicio, fim, range, onCursor, onSelect, onClose }: { id: string; ano: number; cursorMes: number; inicio?: string; fim?: string; range?: boolean; onCursor: (ano: number, mes: number) => void; onSelect: (ano: number, mes: number) => void; onClose: () => void }) {
-  const dialog = useRef<HTMLDivElement>(null); const chaveCursor = `${ano}-${String(cursorMes).padStart(2, "0")}`;
-  useEffect(() => { dialog.current?.querySelector<HTMLElement>(`[data-month="${chaveCursor}"]`)?.focus(); }, [chaveCursor]);
-  const mover = (delta: number) => { const destino = moverMes(ano, cursorMes, delta); onCursor(destino.ano, destino.mes); };
-  const teclado = (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === "Escape") { e.preventDefault(); onClose(); } else if (e.key === "ArrowLeft") { e.preventDefault(); mover(-1); } else if (e.key === "ArrowRight") { e.preventDefault(); mover(1); } else if (e.key === "ArrowUp") { e.preventDefault(); mover(-3); } else if (e.key === "ArrowDown") { e.preventDefault(); mover(3); } else if (e.key === "Home") { e.preventDefault(); onCursor(ano, 1); } else if (e.key === "End") { e.preventDefault(); onCursor(ano, 12); } else if (e.key === "PageUp") { e.preventDefault(); onCursor(ano - 1, cursorMes); } else if (e.key === "PageDown") { e.preventDefault(); onCursor(ano + 1, cursorMes); } };
-  return <div id={`${id}-popup`} ref={dialog} role="dialog" aria-label="Seletor de mês" className="absolute z-40 mt-2 w-[19.5rem] rounded-lg border border-[var(--color-neutral-100)] bg-white p-3 shadow-lg" onKeyDown={teclado}><div className="flex items-center justify-between py-2"><p className="m-0 text-[var(--color-neutral-900)]">{ano}</p><div className="flex gap-2"><BotaoNavegacao label="Ano anterior" icon="fa-chevron-left" onClick={() => onCursor(ano - 1, cursorMes)} /><BotaoNavegacao label="Próximo ano" icon="fa-chevron-right" onClick={() => onCursor(ano + 1, cursorMes)} /></div></div><div className="grid grid-cols-3 gap-1">{MESES_CURTOS.map((nome, i) => { const chave = `${ano}-${String(i + 1).padStart(2, "0")}`; const ponta = chave === inicio || chave === fim; const dentro = Boolean(range && inicio && fim && chave > inicio && chave < fim); return <button data-month={chave} key={nome} type="button" tabIndex={chave === chaveCursor ? 0 : -1} aria-label={`${MESES[i]} de ${ano}`} aria-pressed={ponta || dentro} onClick={() => onSelect(ano, i + 1)} className={["h-12 rounded-lg font-semibold hover:bg-[var(--color-blue-light)] focus-visible:outline-2 focus-visible:outline-[var(--color-brand-blue)]", ponta && "bg-[var(--color-blue)]", dentro && "bg-[var(--color-blue-light)]"].filter(Boolean).join(" ")}>{nome}</button>; })}</div></div>;
+function fieldErrors(field: FormField) {
+  return (field.errors ?? []).map((msg) => (
+    <FieldError key={msg} className="absolute -bottom-6" message={msg}>
+      {msg}
+    </FieldError>
+  ));
 }
 
-export function RangeMonthPicker({ id, label, value, onChange, className, disable = [] }: { id: string; label?: string; value?: Intervalo; onChange?: (valor: Intervalo) => void; className?: string; disable?: string[] }) {
-  const inicial = parseIso(value?.inicio ?? "2026-01-01"); const [aberto, setAberto] = useState(false); const [ano, setAno] = useState(inicial.ano); const [cursorMes, setCursorMes] = useState(inicial.mes); const [primeiro, setPrimeiro] = useState<string>(); const raiz = useRef<HTMLDivElement>(null); const fechar = () => { setAberto(false); restaurarFoco(id); };
-  useFecharExternamente(aberto, raiz, fechar); useEffect(() => { if (!primeiro && value?.inicio) { const d = parseIso(value.inicio); setAno(d.ano); setCursorMes(d.mes); } }, [value?.inicio, value?.fim, primeiro]);
-  const selecionar = (anoSelecionado: number, mes: number) => { const chave = `${anoSelecionado}-${String(mes).padStart(2, "0")}`; if (!primeiro) { setPrimeiro(chave); return; } const [a, b] = primeiro <= chave ? [primeiro, chave] : [chave, primeiro]; const fim = parseIso(`${b}-01`); onChange?.({ inicio: `${a}-01`, fim: `${b}-${String(diasNoMes(fim.ano, fim.mes)).padStart(2, "0")}` }); setPrimeiro(undefined); fechar(); };
-  const texto = value ? `${String(parseIso(value.inicio).mes).padStart(2, "0")}/${parseIso(value.inicio).ano} até ${String(parseIso(value.fim).mes).padStart(2, "0")}/${parseIso(value.fim).ano}` : "";
-  // `disable` existe no componente Phoenix, mas o hook RangeMonthPicker não o consome.
-  return <div ref={raiz} id={`${id}-picker`} data-disable={JSON.stringify(disable)} className={["relative", className].filter(Boolean).join(" ")}><CampoPicker id={id} label={label} texto={texto} aberto={aberto} erros={[]} onOpen={() => setAberto((a) => !a)} /><input type="hidden" name={id} value={value ? `${value.inicio}#${value.fim}` : ""} readOnly />{aberto && <CalendarioMeses id={id} ano={ano} cursorMes={cursorMes} inicio={primeiro ?? value?.inicio.slice(0, 7)} fim={primeiro ? undefined : value?.fim.slice(0, 7)} range onCursor={(a, m) => { setAno(a); setCursorMes(m); }} onSelect={selecionar} onClose={fechar} />}</div>;
+/** `core_components.ex` → `range_datepicker/1`. O valor é `AAAA-MM-DD#AAAA-MM-DD`. */
+export function RangeDatePicker({
+  label,
+  static: isStatic = true,
+  field,
+  className,
+  disable = [],
+  disabled = false,
+  minDate,
+  maxDate,
+  clear = true,
+  onChange,
+}: {
+  id?: string;
+  label?: string;
+  static?: boolean;
+  field: FormField;
+  className?: string;
+  disable?: string[];
+  disabled?: boolean;
+  minDate?: string;
+  maxDate?: string;
+  clear?: boolean;
+  onChange?: (value: string) => void;
+}) {
+  const external = String(field.value ?? "");
+  const [value, setValue] = useMirror(external);
+  const pickr = useRef<HTMLDivElement>(null);
+  const clearBtn = useRef<HTMLButtonElement>(null);
+  const emit = useRef({ value, onChange });
+  emit.current = { value, onChange };
+
+  const view = () => pickr.current?.querySelector<HTMLInputElement>("input[readonly]");
+  const publish = (next: string) => {
+    if (next === emit.current.value) return;
+    setValue(next);
+    emit.current.onChange?.(next);
+  };
+
+  const { instance, ready } = useFlatpickr(pickr, ({ flatpickr, Portuguese }, el) =>
+    flatpickr(el, {
+      mode: "range",
+      wrap: false,
+      static: isStatic,
+      monthSelectorType: "static",
+      locale: Portuguese,
+      dateFormat: "d/m/Y",
+      disable,
+      minDate,
+      maxDate,
+      now: NOW,
+      onChange: (selectedDates, dateStr) => {
+        if (selectedDates.length === 2) {
+          const input = view();
+          if (input) input.value = dateStr;
+          publish(selectedDates.map(isoDate).join("#"));
+        }
+      },
+    }) as Instance,
+  );
+
+  useEffect(() => {
+    if (ready && external) instance.current?.setDate(toBr(external), true);
+  }, [ready, external]);
+
+  useEffect(() => {
+    const btn = clearBtn.current;
+    if (!btn) return;
+    const onClick = (event: MouseEvent) => {
+      event.stopPropagation();
+      instance.current?.clear();
+      const input = view();
+      if (input) input.value = "";
+      publish("");
+    };
+    btn.addEventListener("click", onClick);
+    return () => btn.removeEventListener("click", onClick);
+  }, [clear]);
+
+  return (
+    <div id={`${field.id}-picker`} className={cx("relative", disabled && "opacity-60 cursor-not-allowed", className)}>
+      {label && <Label className="mb-2">{label}</Label>}
+      <div
+        ref={pickr}
+        id={`${field.id}-starts-at-pickr`}
+        className="relative w-full flatpickr"
+        data-static={isStatic ? "true" : "false"}
+        data-disable={JSON.stringify(disable)}
+        data-disabled={disabled ? "true" : undefined}
+        data-min-date={minDate}
+        data-max-date={maxDate}
+      >
+        <div className="relative flex items-center">
+          <Input name={`${field.id}-view`} value="" className="w-full" readOnly disabled={disabled || undefined} />
+          <div className="flex items-center gap-2 absolute right-3">
+            {clear && (
+              <button
+                ref={clearBtn}
+                type="button"
+                disabled={disabled}
+                title="Limpar seleção"
+                data-clear-btn
+                className={cx("transition-all hover:bg-brand-purple-dark/10 w-6 rounded-full", !value && "hidden")}
+              >
+                <Icon className="text-brand-red" name="fa-times" />
+              </button>
+            )}
+          </div>
+        </div>
+        <Input type="hidden" field={{ ...field, value }} className="w-full" />
+      </div>
+      {fieldErrors(field)}
+    </div>
+  );
 }
 
-export function MonthPicker({ id, label, value, onChange, errors = [], className }: { id: string; label?: string; value?: string; onChange?: (valor: string) => void; errors?: string[]; className?: string }) {
-  const inicial = parseIso(value ?? "2026-01-01"); const [aberto, setAberto] = useState(false); const [ano, setAno] = useState(inicial.ano); const [cursorMes, setCursorMes] = useState(inicial.mes); const raiz = useRef<HTMLDivElement>(null); const fechar = () => { setAberto(false); restaurarFoco(id); }; const d = value ? parseIso(value) : undefined;
-  useFecharExternamente(aberto, raiz, fechar); useEffect(() => { if (value) { const novo = parseIso(value); setAno(novo.ano); setCursorMes(novo.mes); } }, [value]);
-  return <div ref={raiz} id={`${id}-picker`} className={["relative", className].filter(Boolean).join(" ")}><CampoPicker id={id} label={label} texto={d ? `${MESES_CURTOS[d.mes - 1]} ${d.ano}` : ""} aberto={aberto} erros={errors} onOpen={() => setAberto((a) => !a)} /><input type="hidden" name={id} value={value ?? ""} readOnly />{aberto && <CalendarioMeses id={id} ano={ano} cursorMes={cursorMes} inicio={d ? `${d.ano}-${String(d.mes).padStart(2, "0")}` : undefined} onCursor={(a, m) => { setAno(a); setCursorMes(m); }} onSelect={(a, mes) => { onChange?.(`${a}-${String(mes).padStart(2, "0")}-01`); fechar(); }} onClose={fechar} />}<Erros id={id} errors={errors} /></div>;
+/** `core_components.ex` → `range_monthpicker/1`. A segunda ponta vira o último dia do mês. */
+export function RangeMonthPicker({
+  label,
+  field,
+  className,
+  disable = [],
+  onChange,
+}: {
+  id?: string;
+  label?: string;
+  field: FormField;
+  className?: string;
+  disable?: string[];
+  onChange?: (value: string) => void;
+}) {
+  // `phx-update="ignore"` na raiz: o valor inicial é o único que conta.
+  const [value, setValue] = useState(String(field.value ?? ""));
+  const pickr = useRef<HTMLDivElement>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  void disable;
+
+  const { instance, ready } = useFlatpickr(pickr, ({ flatpickr, Portuguese, monthSelectPlugin }, el) =>
+    flatpickr(el, {
+      mode: "range",
+      wrap: false,
+      static: true,
+      monthSelectorType: "static",
+      locale: Portuguese,
+      dateFormat: "d/m/Y",
+      now: NOW,
+      plugins: [monthSelectPlugin({ shorthand: true, dateFormat: "m/Y" })],
+      onChange: (selectedDates, dateStr) => {
+        if (selectedDates.length === 2) {
+          const [startDate, endDate] = selectedDates as [Date, Date];
+          const endOfMonth = new Date(endDate.getUTCFullYear(), endDate.getUTCMonth() + 1, 0);
+          const next = [startDate, endOfMonth].map(isoDate).join("#");
+          const view = el.querySelector<HTMLInputElement>("input[readonly]");
+          if (view) view.value = dateStr;
+          setValue((current) => {
+            if (current !== next) onChangeRef.current?.(next);
+            return next;
+          });
+        }
+      },
+    }) as Instance,
+  );
+
+  useEffect(() => {
+    if (ready && value) instance.current?.setDate(toBr(value), true);
+  }, [ready]);
+
+  return (
+    <div id={`${field.id}-picker`} className={cx("relative", className)}>
+      {label && <Label className="mb-2">{label}</Label>}
+      <div ref={pickr} id={`${field.id}-starts-at-pickr`} className="relative w-full flatpickr">
+        <Input name={`${field.id}-view`} value="" className="w-full" readOnly />
+        <Input type="hidden" field={{ ...field, value }} className="w-full" />
+      </div>
+    </div>
+  );
 }
 
-export function WeekSelector({ first, last, onChange, className }: { first: string; last: string; onChange?: (range: Intervalo) => void; className?: string }) { const inicio = parseIso(first); const fim = parseIso(last); const mover = (dias: number) => onChange?.({ inicio: iso(somarDias(inicio, dias)), fim: iso(somarDias(fim, dias)) }); return <div className={className}><div className="flex items-center gap-2"><button type="button" aria-label="Semana anterior" onClick={() => mover(-7)} className="flex h-12 w-12 items-center justify-center"><Icon name="fa-chevron-left" /></button><div><p className="m-0 text-xl font-bold text-[var(--color-brand-purple-dark)]">{MESES[inicio.mes - 1]} {inicio.ano}</p><p className="m-0 font-medium text-[var(--color-brand-purple-dark)]/60">{String(inicio.dia).padStart(2, "0")} - {String(fim.dia).padStart(2, "0")} de {MESES[fim.mes - 1]}</p></div><button type="button" aria-label="Próxima semana" onClick={() => mover(7)} className="flex h-12 w-12 items-center justify-center"><Icon name="fa-chevron-right" /></button></div></div>; }
+const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-/** `date_navigator/1`, sem relógio: `today` é a referência explícita do ambiente. */
-export function DateNavigator({ id = "date-navigator", name, date, today = TODAY, disable = false, onChange, className }: { id?: string; name: string; date: string; today?: string; disable?: boolean; onChange?: (date: string) => void; className?: string }) {
-  const [aberto, setAberto] = useState(false); const [cursor, setCursor] = useState(parseIso(date)); const raiz = useRef<HTMLDivElement>(null);
-  useEffect(() => { setCursor(parseIso(date)); }, [date]);
-  const fechar = () => { setAberto(false); requestAnimationFrame(() => document.getElementById(`datepicker-${id}`)?.focus()); };
-  useFecharExternamente(aberto, raiz, fechar);
-  const mover = (delta: number) => { if (!disable) onChange?.(iso(somarDias(parseIso(date), delta))); };
-  const texto = (() => { const d = parseIso(date); return `${date === today ? "Hoje, " : ""}${String(d.dia).padStart(2, "0")} ${MESES_CURTOS[d.mes - 1]} ${d.ano}`; })();
-  const foco = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand-blue)]";
-  return <div className={["flex items-center justify-center", className].filter(Boolean).join(" ")}><div ref={raiz} id={`datepicker-wrapper-${id}`} data-current-date={date} data-disable={JSON.stringify(disable)} data-id={id} className="flex items-center gap-4"><button type="button" aria-label="Dia anterior" disabled={disable} onClick={() => mover(-1)} className={`cursor-pointer rounded-xl bg-[var(--color-brand-purple-dark)]/5 p-3 text-[var(--color-brand-purple-dark)]/60 shadow-sm transition ${foco}`}><Icon name="fa-arrow-left" className="h-4 w-4 text-[var(--color-brand-purple-dark)]/60" /></button><div className="relative"><button id={`datepicker-${id}`} type="button" disabled={disable} aria-haspopup="dialog" aria-expanded={aberto} aria-controls={`${id}-popup`} onClick={() => setAberto((valor) => !valor)} className={`flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-xl bg-[var(--color-brand-purple-dark)]/5 px-4 py-3 text-sm font-semibold text-[var(--color-brand-purple-dark)]/60 shadow-sm ${foco}`}><span id={`datepicker-input-text-${id}`} className="bg-transparent p-1">{texto}</span><Icon name="fa-calendar" className="ml-1 h-4 w-4 text-[var(--color-brand-purple-dark)]/60" /></button><input type="hidden" id={`datepicker-input-hidden-${id}`} name={name} value={date} readOnly />{aberto && <CalendarioDias id={id} cursor={cursor} inicio={date} onCursor={setCursor} onSelect={(valor) => { onChange?.(valor); fechar(); }} onClose={fechar} />}</div><button type="button" aria-label="Próximo dia" disabled={disable} onClick={() => mover(1)} className={`cursor-pointer rounded-xl bg-[var(--color-brand-purple-dark)]/5 p-3 text-[var(--color-brand-purple-dark)]/60 shadow-sm transition ${foco}`}><Icon name="fa-arrow-right" className="h-4 w-4 text-[var(--color-brand-purple-dark)]/60" /></button></div></div>;
+/** `core_components.ex` → `monthpicker/1`. A visão mostra "Ago 2026"; o valor é `2026-08-01`. */
+export function MonthPicker({
+  label,
+  field,
+  className,
+  onChange,
+}: {
+  id?: string;
+  label?: string;
+  field: FormField;
+  className?: string;
+  onChange?: (value: string) => void;
+}) {
+  const external = String(field.value ?? "");
+  const [value, setValue] = useMirror(external);
+  const wrapper = useRef<HTMLDivElement>(null);
+  // O hook monta o flatpickr no campo de visão, não no invólucro.
+  const view = useRef<HTMLInputElement | null>(null);
+  useLayoutEffect(() => {
+    view.current = wrapper.current?.querySelector<HTMLInputElement>("input[readonly]") ?? null;
+  }, []);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const formatView = (date: Date) => `${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+
+  const { instance, ready } = useFlatpickr(view, ({ flatpickr, Portuguese, monthSelectPlugin }, el) =>
+    flatpickr(el, {
+      locale: Portuguese,
+      dateFormat: "Y-m",
+      allowInput: false,
+      disableMobile: true,
+      static: true,
+      now: NOW,
+      plugins: [monthSelectPlugin({ shorthand: true, dateFormat: "Y-m" })],
+      onChange: ([selectedDate]) => {
+        if (!selectedDate || !view.current) return;
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+        const next = `${year}-${month}-01`;
+        view.current.value = formatView(selectedDate);
+        setValue(next);
+        onChangeRef.current?.(next);
+      },
+    }) as Instance,
+  );
+
+  useEffect(() => {
+    const fp = instance.current;
+    if (!ready || !fp || !external) return;
+    fp.setDate(external, false, "Y-m-d");
+    const date = fp.selectedDates[0];
+    if (date && view.current) view.current.value = formatView(date);
+  }, [ready, external]);
+
+  return (
+    <div id={`${field.id}-picker`} className={cx("relative", className)}>
+      {label && <Label className="mb-2">{label}</Label>}
+      <div ref={wrapper} id={`${field.id}-month-picker`} className="relative w-full flatpickr">
+        <Input name={`${field.id}-view`} value="" className="w-full" readOnly />
+        <Input type="hidden" field={{ ...field, value }} className="w-full" />
+      </div>
+      {fieldErrors(field)}
+    </div>
+  );
+}
+
+const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+function addDays(value: string, days: number) {
+  const [y, m, d] = value.split("-").map(Number);
+  return isoDate(new Date(Date.UTC(y!, m! - 1, d! + days)));
+}
+
+function parts(value: string) {
+  const [y, m, d] = value.split("-");
+  return { year: y!, month: Number(m), day: d! };
+}
+
+/** `core_components.ex` → `week_selector/1`. `event` recebe o `phx-value-first/last`. */
+export function WeekSelector({
+  event,
+  range,
+}: {
+  event: (value: { first: string; last: string }) => void;
+  range: { first: string; last: string };
+  className?: string;
+}) {
+  const first = parts(range.first);
+  const last = parts(range.last);
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => event({ first: addDays(range.first, -7), last: addDays(range.last, -7) })}
+          className="w-12 h-12 flex items-center justify-center"
+        >
+          <Icon name="fa-chevron-left" />
+        </button>
+        <div>
+          <p className="text-xl font-bold text-brand-purple-dark">
+            {MONTHS[first.month - 1]} {first.year}
+          </p>
+          <p className="font-medium text-brand-purple-dark/60">
+            {first.day} - {last.day} de {MONTHS[last.month - 1]}
+          </p>
+        </div>
+        <button
+          onClick={() => event({ first: addDays(range.first, 7), last: addDays(range.last, 7) })}
+          className="w-12 h-12 flex items-center justify-center"
+        >
+          <Icon name="fa-chevron-right" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const CALENDAR_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/**
+ * `core_components.ex` → `date_navigator/1`. Como no original, o texto inicial
+ * sai do `Calendar.strftime` em inglês ("30 Jul 2026") e passa ao português do
+ * hook na primeira mudança; `disable` só desliga as setas; e `phx-update="ignore"`
+ * faz o componente ignorar `date` depois de montado.
+ */
+export function DateNavigator({
+  date,
+  className,
+  field,
+  disable = false,
+  id = "date-navigator",
+  onChange,
+}: {
+  date: string;
+  className?: string;
+  field: FormField;
+  disable?: boolean;
+  id?: string;
+  onChange?: (date: string) => void;
+}) {
+  const initial = parts(date);
+  const initialText = `${date === TODAY ? "Hoje, " : ""}${initial.day} ${CALENDAR_MONTHS[initial.month - 1]} ${initial.year}`;
+  const [current, setCurrent] = useState(date);
+  const [text, setText] = useState(initialText);
+  const content = useRef<HTMLDivElement>(null);
+  const currentRef = useRef(date);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  const updateDate = (next: string) => {
+    const p = parts(next);
+    currentRef.current = next;
+    setCurrent(next);
+    setText(`${next === TODAY ? "Hoje, " : ""}${p.day} ${MONTHS_SHORT[p.month - 1]} ${p.year}`);
+    onChangeRef.current?.(next);
+  };
+
+  const { instance } = useFlatpickr(content, ({ flatpickr }, el) =>
+    flatpickr(el, {
+      dateFormat: "Y-m-d",
+      defaultDate: date,
+      now: NOW,
+      onChange: (_dates, dateStr) => updateDate(dateStr),
+    }) as Instance,
+  );
+
+  const step = (delta: number) => {
+    if (disable) return;
+    const next = addDays(currentRef.current, delta);
+    updateDate(next);
+    instance.current?.setDate(next, true);
+  };
+
+  return (
+    <div className={cx("flex items-center justify-center", className)}>
+      <div
+        id={`datepicker-wrapper-${id}`}
+        data-current-date={date}
+        data-disable={JSON.stringify(disable)}
+        data-id={id}
+        className="flex items-center gap-4"
+      >
+        <button
+          type="button"
+          data-action="prev"
+          onClick={() => step(-1)}
+          className="p-3 rounded-xl text-brand-purple-dark/60 bg-brand-purple-dark/5 transition shadow-sm cursor-pointer"
+        >
+          <Icon name="fa-arrow-left" className="w-4 h-4 text-brand-purple-dark/60" />
+        </button>
+        <div
+          ref={content}
+          id={`datepicker-${id}`}
+          className="flex items-center gap-1 bg-brand-purple-dark/5 rounded-xl px-4 py-3 shadow-sm cursor-pointer whitespace-nowrap"
+        >
+          <span
+            id={`datepicker-input-text-${id}`}
+            className="bg-transparent font-semibold text-sm cursor-pointer focus:outline-none w-auto p-1 text-brand-purple-dark/60"
+          >
+            {text}
+          </span>
+          <Icon name="fa-calendar" className="w-4 h-4 ml-1 text-brand-purple-dark/60" />
+        </div>
+        <input type="hidden" id={`datepicker-input-hidden-${id}`} name={field.name} value={current} />
+        <button
+          type="button"
+          data-action="next"
+          onClick={() => step(1)}
+          className="p-3 rounded-xl bg-brand-purple-dark/5 text-brand-purple-dark/60 transition shadow-sm cursor-pointer"
+        >
+          <Icon name="fa-arrow-right" className="w-4 h-4 text-brand-purple-dark/60" />
+        </button>
+      </div>
+    </div>
+  );
 }
