@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@brucesantos/design-space':
-        specifier: link:../design-space/packages/core
-        version: link:../design-space/packages/core
+        specifier: ^0.8.0
+        version: 0.8.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       flatpickr:
         specifier: ^4.6.13
         version: 4.6.13
@@ -208,6 +208,12 @@ packages:
   '@babel/types@8.0.5':
     resolution: {integrity: sha512-eVdMqi3ej5aHhyQ2Si6yD2cAWeV8FJK9UrhK5aL0Sd8hu5GhT+YswhVNbVheOGVYMg8kuGuMaUpkB3stjj4z8A==}
     engines: {node: ^22.18.0 || >=24.11.0}
+
+  '@brucesantos/design-space@0.8.0':
+    resolution: {integrity: sha512-FAq3uH8pM5LZ0ypNZY0AjXwiUW6gp3qjxKaedW+a3RxAGqO1Z7kaIEn7eEJiRayHfX1Zi6I1yguRdzRAYu/60Q==}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
 
   '@esbuild/aix-ppc64@0.28.1':
     resolution: {integrity: sha512-Svl7tq8k/08+p6CXPpRjQ1fKX+1odH/BQbb48fV6fj3CWHhsoIOoY87w1oHXm0qEpkIK3ZfVgp0hed3XBXzXMQ==}
@@ -1485,6 +1491,11 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 8.0.0
       '@babel/helper-validator-identifier': 8.0.4
+
+  '@brucesantos/design-space@0.8.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
 
   '@esbuild/aix-ppc64@0.28.1':
     optional: true
