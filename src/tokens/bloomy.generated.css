@@ -1,0 +1,558 @@
+/* Gerado por scripts/sync-tokens.mjs a partir de bloomy/assets/css/app.css.
+   Não edite à mão: rode o script de novo quando o monólito mudar. */
+
+@import "tailwindcss";
+
+
+@theme {
+  --font-sans: "Mulish", "sans-serif";
+  --font-mono: "Inconsolata", "monospace";
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+
+  --shadow-main: 2px 2px 12px 0px rgba(0, 0, 0, 0.04);
+  --shadow-top-inset: inset 0px 6px 0px 0px currentColor;
+
+  --color-neutral-50: #f0eef5;
+  --color-neutral-100: #e1deeb;
+  --color-neutral-200: #d2cde1;
+  --color-neutral-300: #c3bdd7;
+  --color-neutral-400: #9d92b8;
+  --color-neutral-500: #776b99;
+  --color-neutral-600: #5d507a;
+  --color-neutral-700: #44365c;
+  --color-neutral-800: #352b47;
+  --color-neutral-900: #2B235B;
+
+  --color-pink: #b23c76;
+  --color-pink-dark: #852d58;
+  --color-pink-light: #fae4ef;
+
+  --color-purple: #7459e4;
+  --color-purple-dark: #463589;
+  --color-purple-light: #eae6fb;
+
+  --color-green: #3db03a;
+  --color-green-dark: #256a23;
+  --color-green-light: #e2f3e1;
+
+
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+
+  --color-warning: #FFC402;
+  --color-warning-dark: #DBA301;
+
+  --color-orange: #f58d37;
+  --color-orange-dark: #CD7445;
+  --color-orange-light: #fdeee1;
+
+  --color-red: #f04646;
+  --color-red-dark: #902a2a;
+  --color-red-light: #fde3e3;
+
+  --color-cyan: #38bcb0;
+  --color-cyan-dark: #22716a;
+  --color-cyan-light: #e1f5f3;
+
+  --color-blue: #0eb2e5;
+  --color-blue-dark: #086b89;
+  --color-blue-light: #dbf3fb;
+
+  --color-yellow: #FFC402;
+  --color-yellow-dark: #DBA301;
+
+  --color-background: #f0f6f8;
+  --color-background-auth: #EFEFF8;
+  --color-background-public: #EEF6F9;
+
+  --color-brand-purple: #805EE6;
+  --color-brand-purple-dark: #2B235B;
+  --color-brand-purple-light: #8474B4;
+
+  --color-brand-red: #FF445D;
+  --color-brand-red-dark: #DB3158;
+
+  --color-brand-blue: #58BADA;
+  --color-brand-blue-dark: #4094BB;
+
+  --color-brand-green: #87C619;
+  --color-brand-green-dark: #6DAA12;
+
+  --color-brand-orange: #EF995F;
+  --color-brand-orange-dark: #E17C38;
+
+  --color-brand-accent-dark: #6144C5;
+  --color-brand-accent: #805EE6;
+
+  --color-brand-info-dark: #546AD8;
+  --color-brand-info: #748DFC;
+
+  --color-brand-neutral: #6F9DAC;
+
+  --color-fuchsia: #C62D9A;
+}
+
+
+/* This file is for your main application CSS */
+
+.diagonal-stripe-pattern {
+  border-color: rgba(var(--pattern-color-rgb), 0.48);
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(var(--pattern-color-rgb), 0.1),
+    rgba(var(--pattern-color-rgb), 0.1) 7px,
+    rgba(var(--pattern-color-rgb), 0.18) 7px,
+    rgba(var(--pattern-color-rgb), 0.18) 14px
+  );
+}
+
+.pattern-color-swatch {
+  background-color: rgb(var(--pattern-color-rgb));
+}
+
+.pattern-color-indicator {
+  background-color: rgba(var(--pattern-color-rgb), 0.48);
+}
+
+.rich-text-content,
+.rich-text-content .ql-editor {
+  @apply text-base/6;
+}
+
+.rich-text-content h1 {
+  @apply text-3xl/9 font-bold;
+}
+
+.rich-text-content h2 {
+  @apply text-2xl/8 font-bold;
+}
+
+.rich-text-content h3 {
+  @apply text-xl/7 font-semibold;
+}
+
+.rich-text-content h4 {
+  @apply text-lg/6 font-semibold;
+}
+
+.rich-text-content * + :is(h1, h2, h3, h4) {
+  @apply mt-4;
+}
+
+.rich-text-content:not(.ql-container) ul {
+  @apply list-outside list-disc pl-6;
+}
+
+.rich-text-content:not(.ql-container) ol {
+  @apply list-outside list-decimal pl-6;
+}
+
+@layer base {
+  body {
+    @apply text-neutral-900;
+  }
+
+  /* Remove as setinhas de um input do tipo number */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"] {
+    -webkit-appearance: none;
+    margin: 0;
+    -moz-appearance: textfield !important;
+  }
+
+  dialog {
+    margin: auto;
+  }
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  @apply bg-purple rounded-full w-4 h-4 cursor-pointer relative z-10;
+  -webkit-appearance: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  @apply bg-white border-2 border-brand-blue rounded-full w-4 h-4 cursor-pointer relative z-10;
+  -moz-appearance: none;
+}
+
+[x-cloak] {
+  display: none !important;
+}
+
+dialog::backdrop {
+  @apply bg-neutral-900/30;
+}
+
+[data-screen] {
+  @apply absolute inset-0;
+  @apply hidden;
+}
+
+.flatpickr-wrapper {
+  @apply w-full;
+}
+
+.flatpickr-day {
+  @apply rounded-lg;
+  @apply hover:bg-blue-light;
+  @apply text-neutral-900 font-semibold;
+  @apply border-none;
+}
+
+.flatpickr-day.today {
+  @apply border-blue;
+}
+
+.flatpickr-day.selected.startRange,
+.flatpickr-day.startRange.startRange,
+.flatpickr-day.endRange.startRange {
+  @apply rounded-l-lg;
+}
+
+.flatpickr-day.selected.endRange,
+.flatpickr-day.startRange.endRange,
+.flatpickr-day.endRange.endRange {
+  @apply rounded-r-lg;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected.inRange,
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange,
+.flatpickr-day.selected:focus,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover,
+.flatpickr-day.selected.prevMonthDay,
+.flatpickr-day.startRange.prevMonthDay,
+.flatpickr-day.endRange.prevMonthDay,
+.flatpickr-day.selected.nextMonthDay,
+.flatpickr-day.startRange.nextMonthDay,
+.flatpickr-day.endRange.nextMonthDay {
+  @apply bg-blue;
+}
+
+.flatpickr-day.inRange,
+.flatpickr-day.prevMonthDay.inRange,
+.flatpickr-day.nextMonthDay.inRange,
+.flatpickr-day.today.inRange,
+.flatpickr-day.prevMonthDay.today.inRange,
+.flatpickr-day.nextMonthDay.today.inRange,
+.flatpickr-day:hover,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover,
+.flatpickr-day:focus,
+.flatpickr-day.prevMonthDay:focus,
+.flatpickr-day.nextMonthDay:focus {
+  @apply bg-blue-light;
+  @apply border-none;
+}
+
+.flatpickr-day.inRange {
+  box-shadow: -5px 0 0 #dbf3fb, 5px 0 0 #dbf3fb;
+}
+
+.flatpickr-day.selected.startRange.endRange,
+.flatpickr-day.startRange.startRange.endRange,
+.flatpickr-day.endRange.startRange.endRange {
+  @apply rounded-lg;
+}
+
+.flatpickr-day.today:hover,
+.flatpickr-day.today:focus {
+  @apply bg-blue;
+}
+
+span.flatpickr-weekday {
+  @apply text-neutral-200;
+}
+
+.flatpickr-months {
+  @apply py-2;
+}
+
+.flatpickr-current-month span.cur-month {
+  @apply font-normal text-neutral-900;
+  @apply hover:bg-transparent;
+  @apply after:content-['de'];
+}
+
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  @apply rounded-lg;
+  @apply border border-neutral-100;
+}
+
+.flatpickr-current-month {
+  @apply left-1;
+  @apply text-left;
+}
+
+.flatpickr-months .flatpickr-prev-month.flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month.flatpickr-prev-month {
+  @apply left-auto right-14 top-2;
+}
+
+.flatpickr-months .flatpickr-prev-month.flatpickr-next-month,
+.flatpickr-months .flatpickr-next-month.flatpickr-next-month {
+  @apply right-2 top-2;
+}
+
+.flatpickr-day.nextMonthDay {
+  @apply text-neutral-900/40 font-semibold;
+}
+
+.flatpickr-calendar.static {
+  top: calc(100% + 8px);
+}
+
+.chat-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 16px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  background-color: #bbb;
+  border-radius: 16px;
+  border: 2px solid #f1f1f1;
+}
+
+.chat-container::-webkit-scrollbar-thumb:hover {
+  background-color: #999;
+}
+
+.thin-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: rgb(240, 240, 240);
+  border-radius: 16px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgb(187, 187, 187);
+  border-radius: 16px;
+  border: 2px solid rgb(240, 240, 240);
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #999;
+}
+
+.hidden-scrollbar::-webkit-scrollbar {
+  width: 0px;
+}
+
+@keyframes progress-shrink {
+  0% {
+    width: 100%;
+  }
+
+  100% {
+    width: 0%;
+  }
+}
+
+.animate-progress {
+  animation-name: progress-shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes focus-element-highlight {
+  0%,
+  100% {
+    border-color: transparent;
+  }
+
+  20%,
+  70% {
+    border-color: var(--color-brand-red);
+  }
+}
+
+.focus-element-highlight {
+  animation: focus-element-highlight 1s ease-in-out;
+}
+
+.modal-actions {
+  @apply sticky bg-white pt-6 left-0 bottom-6 right-0;
+}
+
+.modal-actions::before,
+.modal-actions::after {
+  @apply content-[''] absolute z-10;
+}
+
+.modal-actions::before {
+  @apply h-px bg-brand-purple-dark/10 top-0 z-20 -left-6 -right-6;
+}
+
+.modal-actions::after {
+  @apply left-0 h-6 bg-white top-full w-full;
+}
+
+*:has(+ .modal-actions) {
+  @apply pb-6;
+}
+
+@variant phx-click-loading (.phx-click-loading&, .phx-click-loading &);
+@variant phx-submit-loading (.phx-submit-loading&, .phx-submit-loading &);
+@variant phx-change-loading (.phx-change-loading&, .phx-change-loading &);
+@variant drag-item (.drag-item&, .drag-item &);
+@variant drag-ghost (.drag-ghost&, .drag-ghost &);
+
+[data-phx-session],
+[data-phx-teleported-src] {
+  display: contents
+}
+
+/* Feedback shown when a target is completed. */
+@keyframes stepSuccessIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+
+  60% {
+    transform: scale(1.012) translateY(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes stepSuccessGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(135, 198, 25, 0);
+  }
+
+  35% {
+    box-shadow: 0 0 0 7px rgba(135, 198, 25, 0.22);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(135, 198, 25, 0);
+  }
+}
+
+@keyframes stepFailIn {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateX(-6px);
+  }
+
+  38% {
+    transform: translateX(6px);
+  }
+
+  58% {
+    transform: translateX(-4px);
+  }
+
+  78% {
+    transform: translateX(3px);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes stepFailGlow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 196, 2, 0);
+  }
+
+  35% {
+    box-shadow: 0 0 0 7px rgba(255, 196, 2, 0.26);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 196, 2, 0);
+  }
+}
+
+@keyframes stepMedalPop {
+  0% {
+    transform: scale(0.4) rotate(-14deg);
+    opacity: 0;
+  }
+
+  68% {
+    transform: scale(1.14) rotate(5deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes stepMedalSpin {
+  0% {
+    transform: scale(0.4) rotate(-120deg);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.16) rotate(8deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+.step--celebrate:not(.step--regress) {
+  animation: stepSuccessIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both, stepSuccessGlow 1.1s ease-out 0.08s;
+}
+
+.step--celebrate.step--regress {
+  animation: stepFailIn 0.5s ease both, stepFailGlow 1.1s ease-out 0.08s;
+}
+
+.step--celebrate .step-done__medal {
+  animation: stepMedalPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+.step--acquired.step--celebrate {
+  animation: stepSuccessIn 0.42s cubic-bezier(0.22, 1, 0.36, 1) both, stepSuccessGlow 1.5s ease-out 0.08s 2;
+}
+
+.step--acquired.step--celebrate .step-done__medal {
+  animation: stepMedalSpin 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step--celebrate,
+  .step--celebrate .step-done__medal {
+    animation: none;
+  }
+}

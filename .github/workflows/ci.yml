@@ -1,12 +1,4 @@
-# CI do repositório de design.
-#
-# Governança proporcional (Princípio 9): iteração visual acontece local, sem PR
-# por mudança. Este workflow existe para o que é barato e pega erro caro —
-# typecheck, contrato de cenário, contraste dos tokens e build.
-#
-# A jornada Playwright com axe não roda aqui: ela precisa de uma URL publicada, e
-# quem publica é o `deploy.yml`. Rodar contra um build local testaria um artefato
-# que ninguém revisa.
+# CI do repositório de design: typecheck, testes e build em cada PR.
 name: CI
 
 # Só em pull request. Em push, quem roda typecheck e testes é o `deploy.yml`, antes
@@ -34,7 +26,7 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Contrato de cenário, regras e contraste dos tokens
+      - name: Testes
         run: pnpm test
 
       - name: Build
