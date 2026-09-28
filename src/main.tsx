@@ -17,9 +17,9 @@ import "./tokens/tokens.css";
 // campo de instrução, e "Copiar backlog" gera o markdown numerado com
 // `arquivo:linha` para o agente.
 //
-// Só em desenvolvimento. Ligar no preview compartilhado é decisão por projeto —
-// ver `docs/decisions/0003-source-mapping-no-preview.md`.
-if (import.meta.env.DEV) {
+// Só dentro do quadro, onde a UI do produto é renderizada: é ali que os
+// elementos têm `arquivo:linha`.
+if (import.meta.env.DEV && window.self !== window.top) {
   void import("feedback-collector");
 }
 

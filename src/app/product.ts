@@ -17,7 +17,6 @@ export const productDefinition: ProductDefinition = {
   name: "Bloomy",
   tagline: "Componentes e layouts do Bloomy, espelhados do sistema real.",
 
-  modules: [],
   scenarios: [],
   personas,
   fixtures: [],

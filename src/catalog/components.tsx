@@ -77,9 +77,6 @@ function GalleryEntryPreview({ entry, demoId }: GalleryEntryPreviewProps) {
           </div>
         </div>
       ))}
-      <p className="m-0 text-[0.75rem] text-neutral-500">
-        Origem: <span>{entry.origem}</span>
-      </p>
     </div>
   );
 }
@@ -995,7 +992,88 @@ function fixtureIdFor(title: string, index: number) {
  * navegável. Hoje os 47 componentes de `core_components.ex` estão portados, e
  * `button_tabs` e `lazy_tabs` também entram a partir dos arquivos próprios do sistema.
  */
-export const COMPONENT_PREVIEWS: ComponentPreview[] = portados().map((entry) => {
+/** Grupo de navegação de cada componente no catálogo. */
+const GROUP_OF: Record<string, string> = {
+  button: "Ações",
+  link_button: "Ações",
+  copy_button: "Ações",
+  brand_button: "Ações",
+  kbd: "Ações",
+  input: "Formulários",
+  label: "Formulários",
+  error: "Formulários",
+  fake_input: "Formulários",
+  input_with_select: "Formulários",
+  input_switch_card: "Formulários",
+  switch_card: "Formulários",
+  checkgroup: "Formulários",
+  checkbox_group: "Formulários",
+  radio_group: "Formulários",
+  fake_radio_group: "Formulários",
+  radio_selector: "Formulários",
+  radio_cards: "Formulários",
+  simple_form: "Formulários",
+  form_grid: "Formulários",
+  brand_input: "Formulários",
+  rich_text: "Formulários",
+  custom_select: "Seleção",
+  select_search: "Seleção",
+  multi_select: "Seleção",
+  multi_select_search: "Seleção",
+  multi_tag_select: "Seleção",
+  dropdown: "Seleção",
+  dropdown_menu: "Seleção",
+  range_datepicker: "Datas",
+  range_monthpicker: "Datas",
+  monthpicker: "Datas",
+  week_selector: "Datas",
+  date_navigator: "Datas",
+  timer: "Datas",
+  file_uploader: "Arquivos",
+  item: "Arquivos",
+  image_upload: "Arquivos",
+  table: "Dados",
+  simple_table: "Dados",
+  list: "Dados",
+  meta_info: "Dados",
+  pagination: "Dados",
+  timeline_list: "Dados",
+  progress: "Dados",
+  avatar: "Dados",
+  tag: "Dados",
+  tag_list: "Dados",
+  status_tag: "Dados",
+  card: "Estrutura",
+  info_card: "Estrutura",
+  inside_card: "Estrutura",
+  header: "Estrutura",
+  back: "Estrutura",
+  empty_state_card: "Estrutura",
+  loading_card: "Estrutura",
+  breadcrumbs: "Estrutura",
+  drawer: "Estrutura",
+  tabs: "Abas",
+  card_tabs: "Abas",
+  button_tabs: "Abas",
+  dropdown_tabs: "Abas",
+  lazy_tabs: "Abas",
+  modal: "Sobreposição",
+  modal_content: "Sobreposição",
+  drawer_modal: "Sobreposição",
+  tooltip: "Sobreposição",
+  flash: "Feedback",
+  flash_group: "Feedback",
+  toast_wrapper: "Feedback",
+  notification: "Feedback",
+};
+
+const GROUP_ORDER = [...new Set(Object.values(GROUP_OF)), "Outros"];
+
+function sortByGroup(previews: ComponentPreview[]) {
+  return [...previews].sort((a, b) => GROUP_ORDER.indexOf(a.group!) - GROUP_ORDER.indexOf(b.group!));
+}
+
+export const COMPONENT_PREVIEWS: ComponentPreview[] = sortByGroup( portados().map((entry) => {
   const fixtures = (entry.demos ?? []).map((demo, index) => {
     const demoId = fixtureIdFor(demo.titulo, index);
     return {
@@ -1014,7 +1092,7 @@ export const COMPONENT_PREVIEWS: ComponentPreview[] = portados().map((entry) => 
         <div className="mx-auto max-w-[64rem]">
           <header className="mb-5">
             <p className="m-0 mb-1 text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-neutral-500">
-              Core components
+              {entry.origem}
             </p>
             <h1 className="m-0 text-[1.5rem] font-bold">{entry.name}</h1>
             <p className="m-0 mt-1 text-[0.875rem] text-neutral-600">{entry.descricao}</p>
@@ -1033,10 +1111,11 @@ export const COMPONENT_PREVIEWS: ComponentPreview[] = portados().map((entry) => 
   return {
     id: `core.${entry.name.replaceAll("_", "-")}`,
     name: entry.name,
-    group: "Core components",
+    group: GROUP_OF[entry.name] ?? "Outros",
     description: entry.descricao,
+    source: entry.origem,
     preview: Preview,
     fixtures,
     defaultFixture: fixtures[0]?.id,
   };
-});
+}));
