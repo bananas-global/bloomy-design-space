@@ -9,10 +9,8 @@ import { Avatar } from "./Layout.js";
  * `backoffice_components.ex` → `drawer/1`, `form_grid/1`, `timer/1`,
  * `toast_wrapper/1` (reexportado de `Action.tsx`), `breadcrumbs/1`.
  *
- * Diferença inevitável: `drawer/1`, `breadcrumbs/1` e `timer/1` só aparecem na
- * moldura da página, e usam as variantes de container (`@tablet`/`@desktop`) no
- * lugar de `md:`/`lg:` para responder ao palco do preview. `toggle_drawer/1`
- * (que troca `data-collapsed` em cinco lugares) vira o par `collapsed`/`onToggle`.
+ * Diferença inevitável: `toggle_drawer/1` (que troca `data-collapsed` em cinco
+ * lugares) vira o par `collapsed`/`onToggle`.
  */
 
 const cx = (...classes: unknown[]) => (classes.flat(3) as unknown[]).filter(Boolean).join(" ");
@@ -90,7 +88,7 @@ export function Drawer({
       <div
         id="drawer-overlay"
         data-collapsed={collapsed ? "false" : "true"}
-        className="fixed z-50 inset-0 hidden data-[collapsed=true]:block data-[collapsed=true]:bg-neutral-900/80 @desktop:data-[collapsed=true]:hidden"
+        className="fixed z-50 inset-0 hidden data-[collapsed=true]:block data-[collapsed=true]:bg-neutral-900/80 lg:data-[collapsed=true]:hidden"
         onClick={onToggle}
       ></div>
       <aside
@@ -99,13 +97,13 @@ export function Drawer({
         className={cx(
           "group flex max-h-screen flex-col top-0 left-0 bg-brand-blue transition-[width] duration-500 z-[50] overflow-hidden",
           "fixed left-0 bottom-0 data-[collapsed=false]:w-64 data-[collapsed=false]:p-4 data-[collapsed=true]:w-0 data-[collapsed=true]:p-0",
-          "@desktop:sticky @desktop:data-[collapsed=false]:w-64 @desktop:data-[collapsed=false]:p-4 @desktop:data-[collapsed=true]:w-[72px] @desktop:data-[collapsed=true]:p-2",
+          "lg:sticky lg:data-[collapsed=false]:w-64 lg:data-[collapsed=false]:p-4 lg:data-[collapsed=true]:w-[72px] lg:data-[collapsed=true]:p-2",
           className,
         )}
       >
-        <img src={symbolNegative} alt="Logo da Bloomy" className="@desktop:group-data-[collapsed=false]:hidden w-12 h-12 mx-auto mt-4 mb-8" />
+        <img src={symbolNegative} alt="Logo da Bloomy" className="lg:group-data-[collapsed=false]:hidden w-12 h-12 mx-auto mt-4 mb-8" />
 
-        <img src={logoNegative} alt="Logo da Bloomy" className="hidden @desktop:group-data-[collapsed=false]:block h-12 mx-auto mt-4 mb-8" />
+        <img src={logoNegative} alt="Logo da Bloomy" className="hidden lg:group-data-[collapsed=false]:block h-12 mx-auto mt-4 mb-8" />
 
         <nav className="flex-1 overflow-y-auto hidden-scrollbar overflow-x-hidden">
           <ul className="flex flex-col gap-2" data-link-container>
@@ -221,20 +219,20 @@ export function Timer({
         onNavigate?.(to);
       }}
       title="Voltar para o atendimento"
-      className={cx("block @desktop:relative @desktop:h-0 @desktop:w-72 @desktop:flex-none @desktop:w-80", className)}
+      className={cx("block lg:relative lg:h-0 lg:w-72 lg:flex-none lg:w-80", className)}
     >
-      <div className="bg-brand-blue/20 flex items-center justify-between gap-4 h-14 py-1.5 px-2 rounded-lg text-brand-blue-dark @desktop:absolute @desktop:inset-x-0 @desktop:top-1/2 @desktop:z-10 @desktop:-translate-y-1/2 @desktop:px-4">
+      <div className="bg-brand-blue/20 flex items-center justify-between gap-4 h-14 py-1.5 px-2 rounded-lg text-brand-blue-dark lg:absolute lg:inset-x-0 lg:top-1/2 lg:z-10 lg:-translate-y-1/2 lg:px-4">
         <div className="flex flex-col items-center justify-center">
           <Icon name="fa-clock" />
 
-          <span className="font-bold text-sm @desktop:text-base" id="header_timer" data-value={customService.startedAt}>
+          <span className="font-bold text-sm lg:text-base" id="header_timer" data-value={customService.startedAt}>
             {formatElapsed(elapsed)}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Avatar imageUrl={customService.avatarUrl} shape="square" size="medium" />
 
-          <div className="hidden @tablet:block">
+          <div className="hidden md:block">
             <p className="truncate leading-4 font-black max-w-48">{customService.title}</p>
             <p className="truncate text-xs">{customService.scheduleType}</p>
           </div>
@@ -261,7 +259,7 @@ export function Breadcrumbs({ items = [], onNavigate }: { items?: BreadcrumbItem
   const lastIndex = items.length;
 
   return (
-    <nav aria-label="Breadcrumb" className="hidden @tablet:block">
+    <nav aria-label="Breadcrumb" className="hidden md:block">
       <ol className="flex flex-wrap items-center gap-2">
         {items.map((item, i) => {
           const index = i + 1;

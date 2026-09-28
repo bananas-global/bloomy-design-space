@@ -558,7 +558,7 @@ export function LazyTabs({
                     data-disabled={entry.tabs.length === 0 ? "" : undefined}
                     className={cx(lazyTabButtonClasses)}
                   >
-                    {entry.title}
+                    {entry.title}{" "}
                     <Icon name="fa-chevron-down" />
                   </div>
                 </Dropdown>

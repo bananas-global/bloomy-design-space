@@ -46,13 +46,3 @@ body {
   background: var(--color-background);
   font-family: var(--font-sans);
 }
-
-/* Pontos de quebra por container, e não por viewport: no Design Space quem
-   encolhe no preview de celular é o palco, não a janela. Mesmos valores de
-   `md`, `lg` e `xl` do Tailwind, que são os do monólito. */
-@theme {
-  --container-phone: 36rem;
-  --container-tablet: 48rem;
-  --container-desktop: 64rem;
-  --container-wide: 80rem;
-}

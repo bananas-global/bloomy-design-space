@@ -20,7 +20,7 @@ import { permissionsByRole } from "../personas/permissions.js";
  * `layouts/backoffice.html.heex`, com `BackofficeComponents.drawer/1`,
  * `breadcrumbs/1`, `timer/1` e `toast_wrapper/1`.
  *
- * Adaptação: `md:`/`lg:` viram `@tablet:`/`@desktop:`. O menu é filtrado como o
+ * Adaptação: `md:`/`lg:` viram `md:`/`lg:`. O menu é filtrado como o
  * `:if` de cada item: por policy (`context.can`) ou pela lista de papéis do
  * layout (`context.persona.id`). Sem `context`, é a visão do Admin.
  * `SignatureNotificationModal` não foi portado.
@@ -145,18 +145,18 @@ export function BackofficeLayout({
           data-sidebar-collapsed={collapsed ? "true" : "false"}
           className={[
             "group/main relative flex-1 h-full",
-            "w-full @tablet:data-[sidebar-collapsed=false]:w-[calc(100%-16rem)] @tablet:data-[sidebar-collapsed=true]:w-[calc(100%-4rem)]",
+            "w-full md:data-[sidebar-collapsed=false]:w-[calc(100%-16rem)] md:data-[sidebar-collapsed=true]:w-[calc(100%-4rem)]",
           ].join(" ")}
         >
           {!hideMenu && (
             <header className="flex items-stretch">
-              <button id="header-drawer-button-mobile" onClick={toggle} className="flex @desktop:hidden items-center justify-center bg-brand-blue min-w-20">
+              <button id="header-drawer-button-mobile" onClick={toggle} className="flex lg:hidden items-center justify-center bg-brand-blue min-w-20">
                 <img src={symbolNegative} alt="Logo da Bloomy" className="w-12 h-12" />
               </button>
 
-              <div className="top-0 sticky z-40 relative flex w-full items-center justify-end @tablet:justify-between bg-white px-4 @desktop:px-8 py-4 shadow-main">
+              <div className="top-0 sticky z-40 relative flex w-full items-center justify-end md:justify-between bg-white px-4 lg:px-8 py-4 shadow-main">
                 <div className="flex gap-4">
-                  <div className="hidden @desktop:block">
+                  <div className="hidden lg:block">
                     <button id="header-drawer-button" onClick={toggle} className="h-5 w-5 flex items-center justify-center text-brand-purple-dark/60">
                       <Icon name="fa-sidebar" />
                     </button>
@@ -166,17 +166,17 @@ export function BackofficeLayout({
                 </div>
 
                 {currentAssistance && now && (
-                  <Timer customService={currentAssistance} now={now} className="mr-4 @tablet:mr-0" onNavigate={navigate} />
+                  <Timer customService={currentAssistance} now={now} className="mr-4 md:mr-0" onNavigate={navigate} />
                 )}
 
-                <div className="flex items-center gap-x-4 @tablet:gap-x-6">
+                <div className="flex items-center gap-x-4 md:gap-x-6">
                   {currentUser.units.length > 0 && (
                     <Dropdown
                       id="unit_dropdown"
-                      className={currentAssistance ? "hidden @desktop:block" : undefined}
+                      className={currentAssistance ? "hidden lg:block" : undefined}
                       items={
                         <div>
-                          <div className="flex gap-2 items-center @tablet:hidden px-2 py-1 rounded-md bg-green/10 mb-2 w-full">
+                          <div className="flex gap-2 items-center md:hidden px-2 py-1 rounded-md bg-green/10 mb-2 w-full">
                             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-green/20">
                               <Icon name="fa-hospital" className="text-green" />
                             </div>
@@ -195,7 +195,7 @@ export function BackofficeLayout({
                       }
                     >
                       <div className="flex gap-2 items-center">
-                        <p className="text-end text-sm hidden @tablet:block">
+                        <p className="text-end text-sm hidden md:block">
                           <span className="block text-green text-base/4 font-black">Unidade</span>
                           {unitName}
                         </p>
@@ -208,10 +208,10 @@ export function BackofficeLayout({
 
                   <Dropdown
                     id="profile_dropdown"
-                    className={currentAssistance ? "hidden @desktop:block" : undefined}
+                    className={currentAssistance ? "hidden lg:block" : undefined}
                     items={
                       <div>
-                        <div className="flex gap-2 items-center @tablet:hidden px-2 py-1 rounded-md bg-purple/10 mb-2 w-full">
+                        <div className="flex gap-2 items-center md:hidden px-2 py-1 rounded-md bg-purple/10 mb-2 w-full">
                           <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-brand-purple/20">
                             <Icon name="fa-user-tie" className="text-purple" />
                           </div>
@@ -231,7 +231,7 @@ export function BackofficeLayout({
                     }
                   >
                     <div className="flex gap-2 items-center">
-                      <p className="text-end text-sm hidden @tablet:block">
+                      <p className="text-end text-sm hidden md:block">
                         <span className="block text-purple text-base/4 font-black">Perfil</span>
                         {roleLabel}
                       </p>
@@ -244,10 +244,10 @@ export function BackofficeLayout({
 
                   <Dropdown
                     id="mobile_profile_dropdown"
-                    className="max-h-10 @tablet:max-h-none"
+                    className="max-h-10 md:max-h-none"
                     items={
                       <div>
-                        <div className="flex gap-2 items-center @tablet:hidden px-2 py-1 rounded-md bg-blue/10 mb-2 w-full">
+                        <div className="flex gap-2 items-center md:hidden px-2 py-1 rounded-md bg-blue/10 mb-2 w-full">
                           <Avatar size="medium" shape="square" imageUrl={currentUser.avatarUrl} />
 
                           <p className="text-sm">
@@ -286,7 +286,7 @@ export function BackofficeLayout({
                     }
                   >
                     <div className="flex gap-2 items-center">
-                      <p className="text-end text-sm hidden @tablet:block">
+                      <p className="text-end text-sm hidden md:block">
                         <span className="block text-brand-blue-dark text-base/4 font-black">{currentUser.name}</span>
                         Bem-vindo(a)
                       </p>
@@ -301,7 +301,7 @@ export function BackofficeLayout({
             </header>
           )}
 
-          <main className="p-4 @desktop:p-8 h-full relative">{children}</main>
+          <main className="p-4 lg:p-8 h-full relative">{children}</main>
         </div>
       </div>
 

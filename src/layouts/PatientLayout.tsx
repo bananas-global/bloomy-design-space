@@ -12,7 +12,7 @@ import type { LayoutContext } from "./BackofficeLayout.js";
 /**
  * `backoffice/live/patient_live/show.ex` (as `lazy_tabs/1` do paciente) com
  * `PatientLive.Components.CardHeader` no slot `header`. Adaptação: `md:`/`lg:`
- * viram `@tablet:`/`@desktop:`. Os modais de observação, chat, inativação e o
+ * viram `md:`/`lg:`. Os modais de observação, chat, inativação e o
  * drawer de acompanhamento periódico não foram portados: os botões ficam, sem
  * efeito.
  */
@@ -50,19 +50,19 @@ export type PatientHeader = {
 
 function PatientStatusFields({ canEdit, patient, canChat }: { canEdit: boolean; patient: PatientHeader; canChat: boolean }) {
   return (
-    <div className="flex flex-col @tablet:flex-row items-center gap-x-2 gap-y-4">
-      <Button type="button" className="w-full @tablet:w-fit" disabled={!canEdit} rightIcon="fa-notes-medical" variant="tint" color="blue" notificationBadge={patient.observation != null}>
+    <div className="flex flex-col md:flex-row items-center gap-x-2 gap-y-4">
+      <Button type="button" className="w-full md:w-fit" disabled={!canEdit} rightIcon="fa-notes-medical" variant="tint" color="blue" notificationBadge={patient.observation != null}>
         Observações
       </Button>
 
       {canChat && (
-        <Button className="hidden @tablet:block" type="button" variant="tint" color="purple" title="Chat Multidisciplinar">
+        <Button className="hidden md:block" type="button" variant="tint" color="purple" title="Chat Multidisciplinar">
           <Icon className="self-center" name="fa-messages" />
         </Button>
       )}
 
       {canChat && (
-        <Button className="w-full block @tablet:hidden" type="button" rightIcon="fa-messages" variant="tint" color="purple" title="Chat Multidisciplinar">
+        <Button className="w-full block md:hidden" type="button" rightIcon="fa-messages" variant="tint" color="purple" title="Chat Multidisciplinar">
           Chat
         </Button>
       )}
@@ -103,7 +103,7 @@ export function PatientCardHeader({ patient, canEdit, canChat }: { patient: Pati
 
   return (
     <div>
-      <div className="flex flex-col items-center gap-4 @tablet:flex-row @tablet:justify-between">
+      <div className="flex flex-col items-center gap-4 md:flex-row md:justify-between">
         <div className="flex items-center gap-4">
           <Avatar imageUrl={patient.avatarUrl} size="extra_large" />
           <div className="space-y-2">
@@ -134,12 +134,12 @@ export function PatientCardHeader({ patient, canEdit, canChat }: { patient: Pati
         </div>
 
         <div className="flex flex-row gap-4">
-          <div className="flex items-center gap-4 w-full @tablet:w-fit">
-            <div className="hidden @desktop:block">
+          <div className="flex items-center gap-4 w-full md:w-fit">
+            <div className="hidden lg:block">
               <PatientStatusFields canEdit={canEdit} patient={patient} canChat={canChat} />
             </div>
 
-            <Button className="block w-full @tablet:w-fit @desktop:hidden" color="purple" variant="tint" type="button" onClick={() => setOptions(true)}>
+            <Button className="block w-full md:w-fit lg:hidden" color="purple" variant="tint" type="button" onClick={() => setOptions(true)}>
               Ver Mais
             </Button>
           </div>
