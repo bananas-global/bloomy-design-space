@@ -1,14 +1,25 @@
-# Publicação manual de contingência. O deploy automático da main usa a integração Git.
+# Preview de cada pull request, publicado com o token da Vercel.
+#
+# No plano Pro, a integração Git da Vercel só publica commits de quem ocupa
+# assento no time. Publicando por aqui, quem aparece como autor do deploy é o
+# token: qualquer pessoa com push ganha preview. A `main` continua pela
+# integração Git (ver `vercel.json`); o disparo manual segue como contingência.
 name: Publicar e verificar
 
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 # Um deploy por branch de cada vez. Push em sequência cancela o anterior em vez de
 # publicar os dois fora de ordem.
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -16,12 +27,21 @@ env:
 
 jobs:
   publicar:
-    # O GitHub não entrega secrets a workflows disparados por pushes do
-    # Dependabot. Esses PRs continuam cobertos pelo workflow CI.
-    if: github.actor != 'dependabot[bot]'
+    # O GitHub não entrega secrets a PRs do Dependabot nem de forks. Esses PRs
+    # continuam cobertos pelo workflow CI.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
+    env:
+      # Num PR, o commit publicado é o da branch, não o merge temporário que o
+      # GitHub monta: é ele que o designer fez e que o dev vai referenciar.
+      BRANCH: ${{ github.head_ref || github.ref_name }}
+      SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SHA }}
 
       - uses: pnpm/action-setup@v4
         with:
@@ -34,13 +54,13 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # Typecheck e testes antes de publicar: falha rápida e barata, sem gastar um
-      # deploy. A jornada Playwright fica depois, porque ela testa o que foi
-      # publicado de verdade.
+      # Num PR, typecheck e testes já rodam no CI; aqui só no disparo manual.
       - name: Typecheck
+        if: github.event_name != 'pull_request'
         run: pnpm typecheck
 
       - name: Testes
+        if: github.event_name != 'pull_request'
         run: pnpm test
 
       - name: Instalar a CLI da Vercel
@@ -49,7 +69,7 @@ jobs:
       - name: Definir o ambiente pela branch
         id: ambiente
         run: |
-          if [ "${GITHUB_REF}" = "refs/heads/main" ]; then
+          if [ "${GITHUB_EVENT_NAME}" != "pull_request" ] && [ "${GITHUB_REF}" = "refs/heads/main" ]; then
             echo "alvo=production" >> "$GITHUB_OUTPUT"
             echo "flag=--prod" >> "$GITHUB_OUTPUT"
           else
@@ -79,8 +99,8 @@ jobs:
           cat > build-info.json <<JSON
           {
             "env": "${{ steps.ambiente.outputs.alvo }}",
-            "ref": "${{ github.ref_name }}",
-            "sha": "${{ github.sha }}"
+            "ref": "${{ env.BRANCH }}",
+            "sha": "${{ env.SHA }}"
           }
           JSON
           cat build-info.json
@@ -111,3 +131,22 @@ jobs:
             echo ""
             echo "Componentes e layouts na raiz."
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # O link vai para o próprio PR, num comentário só, atualizado a cada push:
+      # é o endereço que o designer manda para os devs. É a URL fixa deste
+      # deploy — não muda com pushes seguintes, que ganham URL própria.
+      - name: Comentar o preview no PR
+        if: github.event_name == 'pull_request' && steps.deploy.outputs.url != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          marker="<!-- design-space-preview -->"
+          body="$(printf '%s\n**Preview:** %s\n\nCommit `%s`. O endereço é fixo: cada push novo publica outro e atualiza este comentário.' "$marker" "$URL" "${SHA:0:7}")"
+          existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n1)"
+          if [ -n "$existing" ]; then
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="$body" > /dev/null
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -f body="$body" > /dev/null
+          fi

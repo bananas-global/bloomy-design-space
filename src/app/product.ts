@@ -50,9 +50,8 @@ const UPLOAD = (id: string) => `${reportPath(id)}/anexar`;
  * O Bloomy Design Space é a biblioteca de componentes e layouts do Bloomy,
  * espelhados do monólito Phoenix.
  *
- * Telas de feature não moram aqui de forma permanente: entram num PR enquanto a
- * feature está em desenho, registradas em `scenarios` e `routes`, e saem depois
- * de implementadas.
+ * Telas de feature entram por PR, registradas em `scenarios` e `routes`, e
+ * ficam como registro do design combinado no handoff.
  */
 export const productDefinition: ProductDefinition = {
   id: "bloomy",
