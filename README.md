@@ -12,7 +12,8 @@ pnpm dev   # http://localhost:5206
 - **Componentes**: `src/components/`, um espelho por componente Phoenix, com os
   mesmos atributos e classes.
 - **Layouts**: `src/layouts/`, as molduras de página do sistema.
-- **Telas de feature**: só dentro de um PR, enquanto a feature está em desenho.
+- **Telas de feature**: entram por PR e ficam como registro do design combinado
+  no handoff.
 
 Como trabalhar, do Claude Design ao PR: [`AGENTS.md`](AGENTS.md).
 

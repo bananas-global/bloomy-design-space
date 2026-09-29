@@ -4,16 +4,12 @@ on:
     types: [opened, reopened, ready_for_review, synchronize]
 jobs:
   merge:
+    # Só o Dependabot. PR de pessoa do time fica aberto: é o handoff para os
+    # devs, e o merge acontece quando eles aceitam a especificação.
     if: >-
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      (
-        github.event.pull_request.user.login == 'dependabot[bot]' ||
-        (
-          github.event.pull_request.user.type != 'Bot' &&
-          contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.pull_request.author_association)
-        )
-      )
+      github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - run: gh pr merge "$PR" --repo "$REPO" --merge --admin --delete-branch
