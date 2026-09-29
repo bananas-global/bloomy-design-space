@@ -29,7 +29,7 @@ pnpm sync:tokens  # copia os tokens de bloomy/assets/css/app.css
 | `src/catalog/` | Previews de cada componente e layout, com as variantes. |
 | `src/tokens/` | `bloomy.generated.css` (gerado, não editar) e as fontes. |
 | `src/personas/` | Os dez papéis e a matriz de permissões gerada por `scripts/gen-permissions.mjs`. |
-| `src/screens/` | Telas de feature, só enquanto o PR está aberto. |
+| `src/screens/` | Telas de feature: o design combinado no handoff de cada uma. |
 
 ## Regra dos componentes
 
@@ -55,7 +55,10 @@ e escreve `<.button variant="outline" color="red">` sem pensar.
    Os dados ficam em `fixtures`, sintéticos.
 4. Abra o PR com o modelo de `.github/pull_request_template.md`. O preview da
    Vercel é o link que vai para os devs.
-5. Depois de implementada no sistema, a tela sai do repositório.
+5. Depois de implementada, a tela continua aqui como registro do design
+   combinado no handoff. Ela não acompanha o sistema: ajustes feitos depois,
+   direto no Phoenix, não voltam para cá sem passar por design. Se remover as
+   telas implementadas vai virar regra ainda está em aberto.
 
 ## Guardrails
 
