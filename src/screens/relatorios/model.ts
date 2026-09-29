@@ -433,6 +433,35 @@ export function vbTotal(cells: VbCells) {
   const t = vbLevelTotals(cells).reduce((a, l) => ({ score: a.score + l.score, max: a.max + l.max }), { score: 0, max: 0 });
   return { ...t, pct: t.max ? Math.round((t.score / t.max) * 100) : 0 };
 }
+/** Faixa de cor da célula da grade: `off` = não avaliado; `t0`…`t5` pela pontuação. */
+export type VbTone = "off" | "t0" | "t1" | "t3" | "t4" | "t5";
+export const vbTone = (v: number | null | undefined): VbTone =>
+  v == null ? "off" : v >= 5 ? "t5" : v >= 4 ? "t4" : v >= 3 ? "t3" : v >= 1 ? "t1" : "t0";
+
+/**
+ * Texto base de uma seção do Relatório de Protocolo a partir dos números da
+ * aplicação (`vbLocalText`). É o que "Gerar com IA" escreve no porte: o
+ * protótipo chamava um modelo e caía neste texto quando não havia resposta.
+ */
+export function vbLocalText(sectionId: string, app: ProtocolApplication, patientName: string): string {
+  const rows = vbDomainRows(app.cells, app.previous).filter((r) => r.max > 0);
+  const tot = vbTotal(app.cells);
+  const lv = vbLevelTotals(app.cells);
+  const first = patientName.split(" ")[0];
+  const best = [...rows].sort((a, b) => b.pct - a.pct).slice(0, 3);
+  const worst = [...rows].sort((a, b) => a.pct - b.pct).slice(0, 3);
+  const gains = rows.filter((r) => r.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+  const flat = rows.filter((r) => r.delta === 0);
+  const m: Record<string, string> = {
+    instrumento: `Foi aplicada a Avaliação de Marcos do VB-MAPP em ${app.appliedAt}, sob responsabilidade de ${app.by.name} (${app.by.specialty}), com o objetivo de mapear o repertório verbal e de aprendizagem de ${first} e orientar as metas do plano terapêutico. A aplicação anterior do mesmo instrumento ocorreu em ${app.previousAt}, o que permite leitura comparativa.`,
+    resultados: `${first} alcançou ${tot.score} de ${tot.max} marcos avaliados (${tot.pct}%). Por nível: ${lv.map((l, i) => `${VB_LEVELS[i]!.label}, ${l.score} de ${l.max} (${l.pct}%)`).join("; ")}. O perfil indica repertório consolidado no Nível 1 e domínios em aquisição no Nível 2, com o Nível 3 ainda em fase inicial.`,
+    fortes: `Os melhores desempenhos aparecem em ${best.map((r) => `${r.name} (${r.score}/${r.max})`).join(", ")}. Esses repertórios já se sustentam com pouca ajuda e podem ser usados como base para ampliar as demais áreas.`,
+    prioridades: `As maiores defasagens estão em ${worst.map((r) => `${r.name} (${r.score}/${r.max})`).join(", ")}. A priorização considera o papel desses repertórios na comunicação funcional e na participação em atividades de grupo.`,
+    evolucao: `Em relação à avaliação de ${app.previousAt}, houve ganho em ${gains.length} domínios, com destaque para ${gains.map((r) => `${r.name} (+${r.delta})`).join(", ")}.${flat.length ? ` Permaneceram sem alteração: ${flat.map((r) => r.name).join(", ")}.` : ""}`,
+    conclusao: "Os resultados sustentam a continuidade da intervenção com foco nos domínios de maior defasagem, mantendo os repertórios já consolidados em programas de manutenção e generalização. Recomenda-se revisar as metas do plano terapêutico à luz desta avaliação e reaplicar o instrumento no próximo semestre.",
+  };
+  return m[sectionId] ?? "";
+}
 
 /* ============================================================
    Rotina de relatórios (regras da operadora + do paciente)

@@ -6,6 +6,8 @@
  *     view de página cheia (modo foco) com o id do relatório:
  *     `"report"` (visualizar), `"fill"` (preencher modelo/protocolo), `"upload"`
  *     (anexar documento/PDF). Para ir até ela: `go({ kind: "report", id })`.
+ *     Os editores usam `startReport`, `saveDraft`, `submitForSignature` e
+ *     `finalizeUpload`.
  *  2. O componente da view entra em `VIEWS` de `./views.tsx` (hoje lá há um
  *     placeholder por kind). Ele lê tudo por `useReports()`.
  *  3. Modais seguem o mesmo padrão: `openModal({ kind: "share", id })` e o
@@ -32,6 +34,8 @@ import {
   relStamp,
   routineForecast,
   shareState,
+  type DraftContent,
+  type FinalDoc,
   type Forecast,
   type ListFilters,
   type Professional,
@@ -152,6 +156,17 @@ export type ReportsStore = {
   requestChange: (id: string, authorId: string, reason: string) => void;
   /** Coordenação desfaz o envio para assinaturas ("Voltar para edição"). */
   backToEdit: (id: string) => void;
+
+  /* editores (preencher / anexar) */
+  /**
+   * Ao abrir o editor: "Solicitado" passa a "Em andamento" com `text` no
+   * histórico ("Relatório iniciado", "Solicitação aberta"). Idempotente.
+   */
+  startReport: (id: string, text: string) => void;
+  /** Salva o rascunho do editor (`draftContent`) e registra "Rascunho salvo". */
+  saveDraft: (id: string, content: DraftContent) => void;
+  /** Tipos sem modelo: anexa o PDF final e finaliza; `obs` entra nas observações. */
+  finalizeUpload: (id: string, file: FinalDoc, obs: string) => void;
 
   /* rotina */
   pauseRule: (ruleId: string, reason: string) => void;
@@ -410,6 +425,38 @@ export function ReportsProvider({ fixture, role, children }: { fixture: ReportsF
           pushHistory({ ...cur, status: "em_andamento", hasDraft: true, signatures: {}, updatedAt: relStamp() }, "Envio para assinaturas desfeito — voltou para edição", "fa-rotate-left"),
         );
         toast("info", "Voltou para edição", "As assinaturas já feitas foram descartadas.");
+      },
+
+      startReport(id, text) {
+        patch(id, (cur) => (cur.status === "solicitado" ? pushHistory({ ...cur, status: "em_andamento", updatedAt: relStamp() }, text, "fa-play") : {}));
+      },
+      saveDraft(id, content) {
+        const stamp = relStamp();
+        patch(id, (cur) =>
+          pushHistory(
+            {
+              ...cur, status: cur.status === "solicitado" ? "em_andamento" : cur.status, hasDraft: true, draftContent: content,
+              updatedAt: stamp, draft: { updatedAt: stamp, by: cur.prof ? cur.prof.name : REL_ME },
+            },
+            "Rascunho salvo",
+            "fa-floppy-disk",
+          ),
+        );
+      },
+      finalizeUpload(id, file, obs) {
+        const stamp = relStamp();
+        patch(id, (cur) =>
+          pushHistory(
+            {
+              ...cur, status: "finalizado", hasDraft: false, updatedAt: stamp,
+              finalDoc: { name: file.name, size: file.size, at: file.at },
+              obs: obs ? cur.obs + (cur.obs ? "\n\n" : "") + obs : cur.obs,
+            },
+            "PDF final anexado e solicitação finalizada",
+            "fa-file-arrow-up",
+          ),
+        );
+        toast("success", "Finalizado!", "PDF disponível no prontuário do paciente.");
       },
 
       pauseRule(ruleId, reason) {
