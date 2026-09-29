@@ -154,14 +154,17 @@ export function CardTabs({
   id,
   header,
   tab,
+  initialTab = 0,
   children,
 }: {
   id: string;
   header: ReactNode;
   tab: CardTabSlot[];
+  /** A aba aberta ao montar. Faz o papel de `tracker_id` (a aba na query string), que não foi portado. */
+  initialTab?: number;
   children?: ReactNode;
 }) {
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(initialTab);
   const list = useRef<HTMLDivElement>(null);
   const marker = useRef<HTMLDivElement>(null);
   useMarker(marker, () => list.current?.querySelector<HTMLElement>(`#${CSS.escape(`${id}-tab-${current}`)}`), lineMarker, [current, id]);
