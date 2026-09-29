@@ -15,6 +15,7 @@ import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { HealthCareLayout } from "../layouts/HealthCareLayout.js";
 import { PatientLayout } from "../layouts/PatientLayout.js";
 import { PublicLayout } from "../layouts/PublicLayout.js";
+import { UnitLayout } from "../layouts/UnitLayout.js";
 
 /**
  * Layouts: as molduras de página do Bloomy, com conteúdo de exemplo. Os dados
@@ -84,6 +85,29 @@ function Paciente() {
           missedCancelledCount: 3,
           activeWeeklyHours: 12,
           observation: "Prefere atividades com blocos no início da sessão.",
+        }}
+        renderTab={(tab) => <p>Conteúdo da aba <span>{tab}</span>.</p>}
+      />
+    </BackofficeLayout>
+  );
+}
+
+function Unidade() {
+  return (
+    <BackofficeLayout
+      currentPath="/backoffice/unidades"
+      breadcrumbs={[{ label: "Unidades", to: "/backoffice/unidades" }, { label: "Unidade Teste" }]}
+      currentUser={USUARIO}
+      notifications={NOTIFICACOES}
+    >
+      <UnitLayout
+        unit={{
+          name: "Unidade Teste",
+          active: true,
+          professionalsCount: 4,
+          roomsCount: 4,
+          phone: "(11) 3255-8890",
+          address: { street: "Av. Paulista", number: "1578", neighborhood: "Bela Vista", city: "São Paulo", state: "SP" },
         }}
         renderTab={(tab) => <p>Conteúdo da aba <span>{tab}</span>.</p>}
       />
@@ -181,6 +205,14 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     description: "Cabeçalho do paciente (CardHeader) e as abas agrupadas de lazy_tabs, dentro do backoffice.",
     source: "patient_live/show.ex",
     preview: Paciente,
+  },
+  {
+    id: "layout.unit",
+    name: "Página da unidade",
+    group: "Layouts",
+    description: "Cabeçalho da unidade (CardHeader) e as abas de card_tabs, dentro do backoffice.",
+    source: "unit_live/edit.ex",
+    preview: Unidade,
   },
   {
     id: "layout.health-care",
