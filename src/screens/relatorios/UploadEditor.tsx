@@ -1,5 +1,5 @@
 /**
- * Anexar documento em modo foco (view `upload`, `RfUploadEditor` de
+ * Anexar documento em modo foco (tela Anexar PDF, `RfUploadEditor` de
  * `relatorios-foco.jsx`). Para tipos sem modelo interno ("Outro" e "Relatório
  * externo/PDF"): o documento final é produzido fora do sistema e anexado aqui.
  * A área de envio é o `FileUploader` (variant `simplified`) do catálogo; o
@@ -22,7 +22,7 @@ const MAX_MB = 20;
 const sizeText = (b: number) => (b > 1048576 ? `${(b / 1048576).toFixed(1).replace(".", ",")} MB` : `${Math.round(b / 1024)} KB`);
 
 export function UploadEditor({ report: r }: { report: Report }) {
-  const { go, viewAs, me, finalizeUpload } = useReports();
+  const { toReport, viewAs, me, finalizeUpload } = useReports();
   const init = r.draftContent ?? {};
   const [file, setFile] = useState<FinalFile | null>(() => (init.file as FinalFile | undefined) ?? (r.finalDoc ? { ...r.finalDoc, kind: "PDF anexado" } : null));
   const [obs, setObs] = useState(String(init.obs ?? ""));
@@ -31,7 +31,7 @@ export function UploadEditor({ report: r }: { report: Report }) {
   const save = useDraft(r, { file: file ?? undefined, obs: obs || undefined });
   useStartReport(r, "Solicitação aberta");
   useEffect(() => () => void (timer.current && clearInterval(timer.current)), []);
-  const back = () => go({ kind: "report", id: r.id });
+  const back = () => toReport(r.id);
 
   /** Envio simulado: a barra do `FileUploader` sobe de 20 em 20% e o arquivo vira o documento final. */
   function pick(files: File[]) {

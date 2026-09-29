@@ -15,7 +15,7 @@
     "sync:tokens": "node scripts/sync-tokens.mjs"
   },
   "dependencies": {
-    "@brucesantos/design-space": "^0.8.0",
+    "@brucesantos/design-space": "^0.9.0",
     "flatpickr": "^4.6.13",
     "quill": "^2.0.3",
     "react": "^19.3.0",

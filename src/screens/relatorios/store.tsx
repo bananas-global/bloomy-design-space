@@ -1,27 +1,28 @@
 /**
- * Relatórios do paciente — estado da aba (provider React).
+ * Relatórios do paciente — estado de uma tela do fluxo (provider React).
  *
- * Como uma view nova entra:
- *  1. `view` é a navegação interna da aba: `{ kind: "list" }` (a lista) ou uma
- *     view de página cheia (modo foco) com o id do relatório:
- *     `"report"` (visualizar), `"fill"` (preencher modelo/protocolo), `"upload"`
- *     (anexar documento/PDF). Para ir até ela: `go({ kind: "report", id })`.
- *     Os editores usam `startReport`, `saveDraft`, `submitForSignature` e
- *     `finalizeUpload`.
- *  2. O componente da view entra em `VIEWS` de `./views.tsx` (hoje lá há um
- *     placeholder por kind). Ele lê tudo por `useReports()`.
- *  3. Modais seguem o mesmo padrão: `openModal({ kind: "share", id })` e o
- *     componente em `MODALS` de `./views.tsx`. Um kind novo de view ou modal é
- *     acrescentado às uniões `ReportsView`/`ReportsModal` abaixo.
+ * Cada tela (lista, relatório, editores) monta o próprio `ReportsState` a
+ * partir dos controles (`useControlledState` de `./flow.ts`) e o entrega a
+ * `ReportsProvider`, que expõe as ações de negócio do protótipo por
+ * `useReports()`.
  *
- * Os dados vêm da fixture do cenário e ficam em estado React local: nada de
- * `window`, nada de relógio (carimbos por `relStamp()`), ids por contador.
+ * - Navegação entre telas: `toList`, `toReport(id)` e `toEditor(id)` levam à
+ *   rota da tela com os controles que representam o relatório naquele momento.
+ * - Modais: `openModal`/`closeModal`. O controle "Sobreposição aberta" da tela
+ *   acompanha o modal aberto.
+ * - Toda mudança num relatório também vai para a sessão (`./session.ts`), para
+ *   a próxima tela do fluxo encontrar o mesmo relatório.
+ *
+ * Nada de `window`, nada de relógio (carimbos por `relStamp()`).
  */
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useRef, type ReactNode } from "react";
+import type { ScenarioContext } from "@brucesantos/design-space";
 import { showToast, type ToastType } from "../../components/Action.js";
-import type { ReportsFixture, ReportsPatient } from "./fixtures.js";
+import type { ReportsPatient } from "./fixtures.js";
+import { FILL_CONTROLS, LIST_CONTROLS, PROTOCOL_CONTROLS, REPORT_CONTROLS, UPLOAD_CONTROLS, defaultsOf, flowHref, listPath, reportPath } from "./flow.js";
+import { session } from "./session.js";
+import { deriveEditor, deriveReport, editorKindOf, type EditorKind } from "./variants.js";
 import {
-  EMPTY_FILTERS,
   REL_ME,
   REL_REQUESTED_BY,
   guardiansOf,
@@ -49,21 +50,26 @@ import {
   type ViewAs,
 } from "./model.js";
 
-export type ReportsView =
-  | { kind: "list" }
-  | { kind: "report"; id: string }
-  | { kind: "fill"; id: string }
-  | { kind: "upload"; id: string };
-
 export type ReportsModal =
   | { kind: "new" }
   | { kind: "routine" }
   | { kind: "reassign"; id: string }
   | { kind: "cancel"; id: string }
-  /** Compartilhar com a família (outra etapa). */
   | { kind: "share"; id: string }
-  /** Editar a solicitação (outra etapa). */
   | { kind: "edit"; id: string };
+
+/** O estado de uma tela: o que ela mostra, semeado pelos controles. */
+export type ReportsState = {
+  reports: Report[];
+  routine: RoutineState;
+  modal: ReportsModal | null;
+  /** Filtros da lista. */
+  filters: ListFilters;
+  /** Relatório da tela de relatório ou de editor. */
+  focusId?: string;
+  /** Muda a cada re-semeadura pelos controles: remonta o editor com o conteúdo novo. */
+  version: number;
+};
 
 /** O que o drawer de nova solicitação entrega. */
 export type NewRequestData = {
@@ -107,15 +113,16 @@ export type ReportsStore = {
   viewAs: ViewAs;
   /** Profissional logado na perspectiva "prof". */
   me: string;
-  view: ReportsView;
   modal: ReportsModal | null;
-  /** Filtros da lista (sobrevivem à ida e volta do modo foco). */
   filters: ListFilters;
   setFilters: (next: ListFilters) => void;
 
-  /* navegação */
-  go: (view: ReportsView) => void;
+  /* navegação entre as telas do fluxo */
   toList: () => void;
+  /** Abre o relatório em modo foco, com os controles que o representam. */
+  toReport: (id: string) => void;
+  /** Abre o editor do tipo do relatório (modelo, protocolo ou anexar). */
+  toEditor: (id: string) => void;
   openModal: (modal: ReportsModal) => void;
   closeModal: () => void;
   toast: (type: ToastType, title: string, content: string) => void;
@@ -124,7 +131,6 @@ export type ReportsStore = {
   nextId: () => string;
   add: (r: Report) => void;
   patch: (id: string, patch: Patch) => void;
-  remove: (id: string) => void;
 
   /* ações de negócio do protótipo */
   createRequest: (data: NewRequestData) => void;
@@ -183,28 +189,71 @@ export function useReports(): ReportsStore {
   return store;
 }
 
-export function ReportsProvider({ fixture, role, children }: { fixture: ReportsFixture; role?: string; children: ReactNode }) {
-  const patient = fixture.patient;
-  const [reports, setReports] = useState<Report[]>(() => fixture.reports);
-  const [routine, setRoutine] = useState<RoutineState>(() => fixture.routine);
-  const [view, setView] = useState<ReportsView>(() => fixture.initialView ?? { kind: "list" });
-  const [modal, setModal] = useState<ReportsModal | null>(() => fixture.initialModal ?? null);
-  const [filters, setFilters] = useState<ListFilters>(() => ({ ...EMPTY_FILTERS, ...fixture.initialFilters }));
-  const counter = useRef(0);
+const EDITOR_PATH: Record<EditorKind, string> = { fill: "preencher", protocol: "protocolo", upload: "anexar" };
+const EDITOR_CONTROLS = { fill: FILL_CONTROLS, protocol: PROTOCOL_CONTROLS, upload: UPLOAD_CONTROLS };
+
+type ProviderProps = {
+  context: ScenarioContext;
+  patient: ReportsPatient;
+  state: ReportsState;
+  setState: (next: ReportsState) => void;
+  children: ReactNode;
+};
+
+export function ReportsProvider({ context, patient, state, setState, children }: ProviderProps) {
+  const role = context.persona?.id;
+  // A última versão do estado, para ações seguidas no mesmo evento (salvar e sair).
+  const latest = useRef(state);
+  latest.current = state;
 
   const store = useMemo<ReportsStore>(() => {
-    const get = (id: string) => reports.find((r) => r.id === id);
-    const add = (r: Report) => setReports((list) => [r, ...list]);
+    const { reports, routine, modal, filters } = state;
+    const commit = (fn: (s: ReportsState) => ReportsState) => {
+      const next = fn(latest.current);
+      latest.current = next;
+      setState(next);
+    };
+    const get = (id: string) => latest.current.reports.find((r) => r.id === id);
+    const add = (r: Report) => {
+      session.save(r);
+      commit((s) => ({ ...s, reports: [r, ...s.reports] }));
+    };
     const patch = (id: string, p: Patch) =>
-      setReports((list) => list.map((r) => (r.id === id ? { ...r, ...(typeof p === "function" ? p(r) : p) } : r)));
-    const remove = (id: string) => setReports((list) => list.filter((r) => r.id !== id));
-    const nextId = () => `r-novo-${++counter.current}`;
+      commit((s) => ({
+        ...s,
+        reports: s.reports.map((r) => {
+          if (r.id !== id) return r;
+          const next = { ...r, ...(typeof p === "function" ? p(r) : p) };
+          session.save(next);
+          return next;
+        }),
+      }));
+    const nextId = () => session.nextId();
     const toast = (type: ToastType, title: string, content: string) => showToast({ type, title, content, closeTime: 4000 });
-    const closeModal = () => setModal(null);
+    const closeModal = () => commit((s) => ({ ...s, modal: null }));
     const mine = reports.filter((r) => r.patient.id === patient.id || r.patient.name === patient.name);
     const patRoutine = (s: RoutineState) => s.patients[patient.id] ?? { paused: {}, own: [] };
     const setPatRoutine = (fn: (p: RoutineState["patients"][string]) => RoutineState["patients"][string]) =>
-      setRoutine((s) => ({ ...s, patients: { ...s.patients, [patient.id]: fn(patRoutine(s)) } }));
+      commit((st) => ({ ...st, routine: { ...st.routine, patients: { ...st.routine.patients, [patient.id]: fn(patRoutine(st.routine)) } } }));
+
+    const toReport = (id: string) => {
+      const r = get(id);
+      if (!r) return;
+      const controls = deriveReport(r, defaultsOf(REPORT_CONTROLS));
+      context.navigate(flowHref(context, reportPath(r.id, patient.id), REPORT_CONTROLS, controls));
+    };
+    const toEditor = (id: string) => {
+      const r = get(id);
+      if (!r) return;
+      const kind = editorKindOf(r);
+      const groups = EDITOR_CONTROLS[kind];
+      const controls = deriveEditor(kind, r, defaultsOf(groups));
+      context.navigate(flowHref(context, `${reportPath(r.id, patient.id)}/${EDITOR_PATH[kind]}`, groups, controls));
+    };
+    const toList = () => {
+      const { overlay: _overlay, ...kept } = session.listControls() ?? {};
+      context.navigate(flowHref(context, listPath(patient.id), LIST_CONTROLS, kept));
+    };
 
     return {
       patient,
@@ -214,21 +263,20 @@ export function ReportsProvider({ fixture, role, children }: { fixture: ReportsF
       forecast: routineForecast(patient, mine, routine, patient.operator),
       viewAs: relDefaultViewAs(role),
       me: REL_ME,
-      view,
       modal,
       filters,
-      setFilters,
+      setFilters: (next) => commit((s) => ({ ...s, filters: next })),
 
-      go: setView,
-      toList: () => setView({ kind: "list" }),
-      openModal: setModal,
+      toList,
+      toReport,
+      toEditor,
+      openModal: (next) => commit((s) => ({ ...s, modal: next })),
       closeModal,
       toast,
 
       nextId,
       add,
       patch,
-      remove,
 
       createRequest(data) {
         const now = relStamp();
@@ -482,7 +530,7 @@ export function ReportsProvider({ fixture, role, children }: { fixture: ReportsF
         toast("success", "Removida", "Regra removida da rotina.");
       },
     };
-  }, [patient, reports, routine, view, modal, filters, role]);
+  }, [context, patient, state, setState, role]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

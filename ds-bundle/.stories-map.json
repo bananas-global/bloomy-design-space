@@ -1,0 +1,733 @@
+{
+  "global": "Bloomy",
+  "pkg": "bloomy-design-space",
+  "pkgDir": "/Users/brunosantos/Documents/GitHub/bloomy-design-space/.design-sync/pkg",
+  "extraEntries": [],
+  "exported": [
+    "AuthLayout",
+    "Avatar",
+    "Back",
+    "BackofficeAuthLayout",
+    "BackofficeLayout",
+    "BrandButton",
+    "BrandInput",
+    "Breadcrumbs",
+    "Button",
+    "ButtonTabs",
+    "Card",
+    "CardTabs",
+    "CheckboxGroup",
+    "Checkgroup",
+    "CopyButton",
+    "CustomSelect",
+    "DateNavigator",
+    "Drawer",
+    "DrawerModal",
+    "Dropdown",
+    "DropdownMenu",
+    "DropdownTabs",
+    "EmptyStateCard",
+    "FakeInput",
+    "FakeRadioGroup",
+    "FieldError",
+    "FileItem",
+    "FileUploader",
+    "Flash",
+    "FlashGroup",
+    "FormGrid",
+    "Header",
+    "HealthCareLayout",
+    "Icon",
+    "ImageUpload",
+    "InfoCard",
+    "Input",
+    "InputSwitchCard",
+    "InputWithSelect",
+    "InsideCard",
+    "Kbd",
+    "Label",
+    "LazyTabs",
+    "LinkButton",
+    "List",
+    "LoadingCard",
+    "MetaInfo",
+    "Modal",
+    "ModalContent",
+    "MonthPicker",
+    "MultiSelect",
+    "MultiSelectSearch",
+    "MultiTagSelect",
+    "NotificationComponent",
+    "Pagination",
+    "PatientCardHeader",
+    "PatientLayout",
+    "Progress",
+    "PublicLayout",
+    "RadioCards",
+    "RadioGroup",
+    "RadioSelector",
+    "RangeDatePicker",
+    "RangeMonthPicker",
+    "RichText",
+    "SearchBar",
+    "SelectSearch",
+    "SimpleForm",
+    "SimpleTable",
+    "StatusTag",
+    "SwitchCard",
+    "Table",
+    "Tabs",
+    "Tag",
+    "TagList",
+    "TimelineList",
+    "Timer",
+    "ToastWrapper",
+    "Tooltip",
+    "WeekSelector"
+  ],
+  "storybookStatic": null,
+  "keyRecipe": 7,
+  "cfgSliceGlobal": "a139d95ad8ab0a8ba08b44a258c54602e36090304087f48fe923c61aa5a8ae08",
+  "components": [
+    {
+      "name": "AuthLayout",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "6a13f52418551e1e",
+      "cfgSlice": "2805395c5ec329765895dd25dda4f587c939c09a7c2865df563cf46a999a49d2",
+      "stories": []
+    },
+    {
+      "name": "Avatar",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "08d9dbf0544c8d65",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Back",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "BackofficeAuthLayout",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "BackofficeLayout",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "9d15e12d651d6f6a",
+      "cfgSlice": "2805395c5ec329765895dd25dda4f587c939c09a7c2865df563cf46a999a49d2",
+      "stories": []
+    },
+    {
+      "name": "BrandButton",
+      "group": "brand",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "BrandInput",
+      "group": "brand",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Breadcrumbs",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "9c5abf0ba4ccbc2e",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Button",
+      "group": "buttons",
+      "srcSha": null,
+      "sourceKey": "bf4a9bdfb0b6e2de",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ButtonTabs",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "25d00c57ca1382d9",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Card",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "03a168b5394ed9c7",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CardTabs",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "c8c672788cb5e4e6",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CheckboxGroup",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "fff207bca0fed4c1",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Checkgroup",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "501220fd9b7d40f6",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CopyButton",
+      "group": "buttons",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CustomSelect",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "DateNavigator",
+      "group": "dates",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Drawer",
+      "group": "overlays",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "DrawerModal",
+      "group": "overlays",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Dropdown",
+      "group": "overlays",
+      "srcSha": null,
+      "sourceKey": "05023f3397cc9dd1",
+      "cfgSlice": "0dc5995ca08554086238de83967ac5238968e5da94b8b6ac01126f9a347a0df8",
+      "stories": []
+    },
+    {
+      "name": "DropdownMenu",
+      "group": "overlays",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "DropdownTabs",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "EmptyStateCard",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "4801d4e3521bec09",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FakeInput",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FakeRadioGroup",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FieldError",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FileItem",
+      "group": "uploads",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FileUploader",
+      "group": "uploads",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Flash",
+      "group": "feedback",
+      "srcSha": null,
+      "sourceKey": "9b952a34fc68045c",
+      "cfgSlice": "35c5dcae197e67586cb681fa7b370b063a7f68b0dfcfcbd3a1883d2d3337069e",
+      "stories": []
+    },
+    {
+      "name": "FlashGroup",
+      "group": "feedback",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "FormGrid",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Header",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "a5744f3668aad627",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "HealthCareLayout",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Icon",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "a96ccc4533b16d59",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ImageUpload",
+      "group": "uploads",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "InfoCard",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "6a771ee4ffd9dbdc",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Input",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "7a55db14fc8ca561",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "InputSwitchCard",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "InputWithSelect",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "InsideCard",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Kbd",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Label",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "cb6fb757df4c4ec8",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "LazyTabs",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "LinkButton",
+      "group": "buttons",
+      "srcSha": null,
+      "sourceKey": "83474bf6074b6ca0",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "List",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "LoadingCard",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "MetaInfo",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Modal",
+      "group": "overlays",
+      "srcSha": null,
+      "sourceKey": "54c8e1d1424d2170",
+      "cfgSlice": "f7eb35bb207e689f79f1b9c3043b4125688832389fcaf20dee97a548ac204b1b",
+      "stories": []
+    },
+    {
+      "name": "ModalContent",
+      "group": "overlays",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "MonthPicker",
+      "group": "dates",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "MultiSelect",
+      "group": "selects",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "MultiSelectSearch",
+      "group": "selects",
+      "srcSha": null,
+      "sourceKey": "b83e3bfbe1dba0be",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "MultiTagSelect",
+      "group": "selects",
+      "srcSha": null,
+      "sourceKey": "74e4569f59fcbd9d",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "NotificationComponent",
+      "group": "feedback",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Pagination",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "1429f68c8c6c4b48",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "PatientCardHeader",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "PatientLayout",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "2a0ee3866709a1b9",
+      "cfgSlice": "2805395c5ec329765895dd25dda4f587c939c09a7c2865df563cf46a999a49d2",
+      "stories": []
+    },
+    {
+      "name": "Progress",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "PublicLayout",
+      "group": "layouts",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "RadioCards",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "RadioGroup",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "8dd23df82f071416",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "RadioSelector",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "77bdc979a495d5b9",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "RangeDatePicker",
+      "group": "dates",
+      "srcSha": null,
+      "sourceKey": "240613373433dbd3",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "RangeMonthPicker",
+      "group": "dates",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "RichText",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "SearchBar",
+      "group": "selects",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "SelectSearch",
+      "group": "selects",
+      "srcSha": null,
+      "sourceKey": "4bf4a42b3d4fd0d1",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "SimpleForm",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "SimpleTable",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "StatusTag",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "ee4d1950bbbff9db",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "SwitchCard",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "70ae76ccf5ec7fc8",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Table",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "9bf4dbfac376b7b0",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Tabs",
+      "group": "navigation",
+      "srcSha": null,
+      "sourceKey": "4af425961e94907f",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Tag",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "2afc821b622383bc",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "TagList",
+      "group": "data",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "TimelineList",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Timer",
+      "group": "content",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "ToastWrapper",
+      "group": "feedback",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Tooltip",
+      "group": "forms",
+      "srcSha": null,
+      "sourceKey": "65d926033b5f9f6c",
+      "cfgSlice": "85eea7604cc388ffecf5561b6678ee7e6a9da592f722261976d223ca54367b0e",
+      "stories": []
+    },
+    {
+      "name": "WeekSelector",
+      "group": "dates",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    }
+  ]
+}

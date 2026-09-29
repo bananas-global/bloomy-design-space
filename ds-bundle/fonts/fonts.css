@@ -1,0 +1,39 @@
+@font-face{font-family:"Font Awesome 6 Pro";font-style:normal;font-weight:400;font-display:block;src:url(./fa-regular-400.woff2) format("woff2"),url(./fa-regular-400.ttf) format("truetype")}
+@font-face{font-family:"Font Awesome 6 Pro";font-style:normal;font-weight:900;font-display:block;src:url(./fa-solid-900.woff2) format("woff2"),url(./fa-solid-900.ttf) format("truetype")}
+@font-face{font-family:"Inconsolata";src:url(./Inconsolata-Variable.ttf) format("truetype");font-weight:200 900;font-display:swap}
+@font-face{
+  font-family: "Mulish";
+  src: url(./Mulish-Regular.ttf) format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Mulish";
+  src: url(./Mulish-Medium.ttf) format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Mulish";
+  src: url(./Mulish-SemiBold.ttf) format("truetype");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Mulish";
+  src: url(./Mulish-Bold.ttf) format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Mulish";
+  src: url(./Mulish-ExtraBold.ttf) format("truetype");
+  font-weight: 800;
+  font-display: swap;
+}
+@font-face{
+  font-family: "Mulish";
+  src: url(./Mulish-Black.ttf) format("truetype");
+  font-weight: 900;
+  font-display: swap;
+}

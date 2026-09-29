@@ -5,14 +5,14 @@
  * `REL_SEED` que são dele e a rotina de `RR_SEED`. Hoje é 16/07/2026. Nomes e
  * documentos são fictícios.
  *
- * `makeReportsFixture` monta variações: outras telas podem acrescentar
- * relatórios (`reports`), abrir direto uma view (`initialView`) ou um modal
- * (`initialModal`).
+ * É o conjunto de partida de todas as telas do fluxo: cada tela aplica os
+ * próprios controles sobre ele (`variants.ts`). `EXTRA_REPORTS` são os
+ * relatórios que só os editores abrem (Evolução de julho com gráfico e o laudo
+ * externo), fora da lista do protótipo.
  */
 import type { Fixture } from "@brucesantos/design-space";
 import type { PatientHeader } from "../../layouts/PatientLayout.js";
-import { vbLocalText, type ListFilters, type PatientRef, type ProtocolApplication, type Report, type RoutineState } from "./model.js";
-import type { ReportsModal, ReportsView } from "./store.js";
+import type { PatientRef, ProtocolApplication, Report, RoutineState } from "./model.js";
 
 export type ReportsPatient = PatientRef & {
   /** Operadora de onde vêm as regras herdadas da rotina. */
@@ -24,9 +24,6 @@ export type ReportsFixture = {
   patient: ReportsPatient;
   reports: Report[];
   routine: RoutineState;
-  initialView?: ReportsView;
-  initialModal?: ReportsModal;
-  initialFilters?: Partial<ListFilters>;
 };
 
 export const LUCAS: ReportsPatient = {
@@ -48,9 +45,9 @@ export const LUCAS: ReportsPatient = {
 };
 
 const PT: PatientRef = { id: "pt1", name: "Lucas Almeida Ferreira", age: 8 };
-const HELENA = { id: "s2", name: "Helena Martins Costa", specialty: "Psicologia" };
-const FABIO = { id: "s4", name: "Fábio Stoll Pereira", specialty: "Fonoaudiologia" };
-const MARCUS = "Marcus Vinícius Gimenes";
+export const HELENA = { id: "s2", name: "Helena Martins Costa", specialty: "Psicologia" };
+export const FABIO = { id: "s4", name: "Fábio Stoll Pereira", specialty: "Fonoaudiologia" };
+export const MARCUS = "Marcus Vinícius Gimenes";
 
 /** As solicitações do Lucas em `REL_SEED`, na ordem do protótipo. */
 export function seedReports(): Report[] {
@@ -216,63 +213,10 @@ export function makeReportsFixture(overrides: Partial<ReportsFixture> = {}): Rep
 }
 
 /**
- * Estados extras de compartilhamento: o trimestral (r-122) enviado ao pai e à
- * mãe, com mensagem, lido só pela mãe; a evolução de abril (r-121) com acesso
- * revogado.
- */
-function sharedReports(): Report[] {
-  return seedReports().map((r) => {
-    if (r.id === "r-122" && r.share) {
-      return {
-        ...r,
-        share: {
-          ...r.share,
-          note: "Relatório do 1º trimestre. Qualquer dúvida, falem com a Helena na próxima sessão.",
-          recipients: [
-            ...r.share.recipients,
-            { id: "g2", name: "Rogério Ferreira Pinto", relation: "Pai", viewedAt: null, viewCount: 0 },
-          ],
-        },
-      };
-    }
-    if (r.id === "r-121" && r.share) return { ...r, share: { ...r.share, revokedAt: "12/05/2026 10:30" } };
-    return r;
-  });
-}
-
-/**
- * A alta de julho (r-103) já em produção: rascunho salvo pela Helena com 1 de 3
- * seções preenchidas e o Fábio como coautor.
- */
-function inProgressReports(): Report[] {
-  return seedReports().map((r) =>
-    r.id === "r-103"
-      ? {
-          ...r,
-          status: "em_andamento",
-          hasDraft: true,
-          updatedAt: "15/07/2026 17:40",
-          coauthors: [FABIO],
-          draft: { updatedAt: "15/07/2026 17:40", by: "Helena Martins Costa" },
-          draftContent: {
-            trajetoria: "Lucas foi acompanhado de setembro de 2025 a julho de 2026, com 24 horas semanais de intervenção ABA e evolução consistente em comunicação e autonomia.",
-          },
-          history: [
-            ...r.history,
-            { at: "13/07/2026 10:05", who: "Helena Martins Costa", text: "Relatório iniciado", icon: "fa-play" },
-            { at: "14/07/2026 09:30", who: "Marcus V. Gimenes", text: "Fábio Stoll Pereira adicionado(a) como coautor(a)", icon: "fa-user-plus" },
-            { at: "15/07/2026 17:40", who: "Helena Martins Costa", text: "Rascunho salvo", icon: "fa-floppy-disk" },
-          ],
-        }
-      : r,
-  );
-}
-
-/**
  * Gráfico sintético de acertos por programa (SVG com as cores do monólito
  * `brand-blue` e `brand-purple-dark`), para o campo de imagem do editor.
  */
-const CHART_SVG =
+export const CHART_SVG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 240"><rect width="480" height="240" fill="white"/>' +
@@ -283,13 +227,12 @@ const CHART_SVG =
   );
 
 /**
- * Relatórios em produção para os editores (views `fill` e `upload`), além do
- * seed:
+ * Relatórios que só os editores abrem, além do seed:
  * - r-130: Evolução Mensal de julho, só da Helena, com 2 de 4 seções, um
  *   gráfico anexado e um campo de imagem extra.
  * - r-131: Relatório externo/PDF (laudo neuropediátrico) solicitado, sem PDF.
  */
-function editorReports(): Report[] {
+export function extraReports(): Report[] {
   return [
     {
       id: "r-130", patient: PT, typeId: "evolucao_mensal", period: "Julho 2026",
@@ -319,205 +262,14 @@ function editorReports(): Report[] {
   ];
 }
 
-/** O laudo externo (r-131) com o PDF final já anexado no rascunho, pronto para finalizar. */
-function uploadReadyReports(): Report[] {
-  return [...seedReports(), ...editorReports()].map((r) =>
-    r.id === "r-131"
-      ? {
-          ...r,
-          status: "em_andamento",
-          hasDraft: true,
-          updatedAt: "15/07/2026 16:40",
-          draft: { updatedAt: "15/07/2026 16:40", by: "Helena Martins Costa" },
-          draftContent: {
-            file: { name: "laudo-neuropediatrico-lucas.pdf", size: "2,1 MB", at: "15/07/2026", by: "Marcus V. Gimenes", kind: "PDF anexado" },
-            obs: "Laudo emitido pela Dra. Sílvia Prado em 10/07/2026.",
-          },
-          history: [
-            ...r.history,
-            { at: "15/07/2026 16:30", who: "Marcus V. Gimenes", text: "Solicitação aberta", icon: "fa-play" },
-            { at: "15/07/2026 16:40", who: "Helena Martins Costa", text: "Rascunho salvo", icon: "fa-floppy-disk" },
-          ],
-        }
-      : r,
-  );
-}
-
-/** O Relatório de Protocolo (r-111) em produção: 2 de 6 seções e o Fábio como coautor. */
-function protocolDraftReports(): Report[] {
-  const app = PROTOCOL_APPS[0]!;
-  return seedReports().map((r) =>
-    r.id === "r-111"
-      ? {
-          ...r,
-          status: "em_andamento",
-          hasDraft: true,
-          updatedAt: "14/07/2026 15:10",
-          coauthors: [FABIO],
-          draft: { updatedAt: "14/07/2026 15:10", by: "Helena Martins Costa" },
-          draftContent: {
-            instrumento: vbLocalText("instrumento", app, r.patient.name),
-            resultados: vbLocalText("resultados", app, r.patient.name),
-          },
-          history: [
-            ...r.history,
-            { at: "13/07/2026 09:15", who: "Helena Martins Costa", text: "Relatório iniciado", icon: "fa-play" },
-            { at: "13/07/2026 11:00", who: "Marcus V. Gimenes", text: "Fábio Stoll Pereira adicionado(a) como coautor(a)", icon: "fa-user-plus" },
-            { at: "14/07/2026 15:10", who: "Helena Martins Costa", text: "Rascunho salvo", icon: "fa-floppy-disk" },
-          ],
-        }
-      : r,
-  );
-}
-
 /** Sem solicitações e sem rotina (operadora sem regras). */
-const EMPTY_ROUTINE: RoutineState = { operators: { Unimed: [] }, patients: { pt1: { paused: {}, own: [] } } };
+export const EMPTY_ROUTINE: RoutineState = { operators: { Unimed: [] }, patients: { pt1: { paused: {}, own: [] } } };
 
 export const REPORTS_FIXTURES: Fixture<ReportsFixture>[] = [
   {
     id: "reports.lucas",
     label: "Lucas · relatórios do protótipo",
-    description: "3 em atraso (1 aguardando assinatura, 1 solicitado, 1 previsto), previstos da rotina, 5 emitidos e 1 cancelado.",
+    description: "3 em atraso (1 aguardando assinatura, 1 solicitado, 1 previsto), previstos da rotina, 5 emitidos e 1 cancelado. Cada tela aplica os controles sobre este conjunto.",
     data: () => makeReportsFixture(),
-  },
-  {
-    id: "reports.lucas-late",
-    label: "Lucas · filtro Em atraso",
-    description: "O mesmo prontuário com o Status em \"Em atraso\".",
-    data: () => makeReportsFixture({ initialFilters: { late: true } }),
-  },
-  {
-    id: "reports.lucas-no-match",
-    label: "Lucas · busca sem resultado",
-    description: "A busca não encontra nenhum relatório.",
-    data: () => makeReportsFixture({ initialFilters: { q: "laudo neurológico" } }),
-  },
-  {
-    id: "reports.empty",
-    label: "Lucas · sem relatórios",
-    description: "Nenhuma solicitação e nenhuma regra de rotina.",
-    data: () => makeReportsFixture({ reports: [], routine: EMPTY_ROUTINE }),
-  },
-  {
-    id: "reports.new-request",
-    label: "Lucas · nova solicitação aberta",
-    data: () => makeReportsFixture({ initialModal: { kind: "new" } }),
-  },
-  {
-    id: "reports.routine",
-    label: "Lucas · rotina de relatórios aberta",
-    data: () => makeReportsFixture({ initialModal: { kind: "routine" } }),
-  },
-  {
-    id: "reports.reassign",
-    label: "Lucas · reatribuir profissional",
-    data: () => makeReportsFixture({ initialModal: { kind: "reassign", id: "r-103" } }),
-  },
-  {
-    id: "reports.cancel",
-    label: "Lucas · cancelar solicitação",
-    data: () => makeReportsFixture({ initialModal: { kind: "cancel", id: "r-103" } }),
-  },
-  {
-    id: "reports.view-requested",
-    label: "Lucas · visualizar solicitado",
-    description: "Alta / Desligamento solicitada, ainda não iniciada, em modo foco.",
-    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-103" } }),
-  },
-  {
-    id: "reports.view-in-progress",
-    label: "Lucas · visualizar em produção",
-    description: "Alta / Desligamento em produção: rascunho com 1 de 3 seções e um coautor.",
-    data: () => makeReportsFixture({ reports: inProgressReports(), initialView: { kind: "report", id: "r-103" } }),
-  },
-  {
-    id: "reports.view-signing",
-    label: "Lucas · aguardando assinaturas (1 de 2)",
-    description: "Evolução de junho em atraso, texto bloqueado, Helena assinou e Fábio está pendente.",
-    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-105" } }),
-  },
-  {
-    id: "reports.view-final",
-    label: "Lucas · visualizar emitido",
-    description: "Trimestral finalizado com 2 de 2 assinaturas e lido pela família.",
-    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-122" } }),
-  },
-  {
-    id: "reports.view-cancelled",
-    label: "Lucas · visualizar cancelado",
-    description: "Relatório para a escola cancelado, com o motivo.",
-    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-125" } }),
-  },
-  {
-    id: "reports.edit-request",
-    label: "Lucas · editar solicitação",
-    description: "Alta / Desligamento em modo foco com a gaveta Editar solicitação aberta.",
-    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-103" }, initialModal: { kind: "edit", id: "r-103" } }),
-  },
-  {
-    id: "reports.share-new",
-    label: "Lucas · compartilhar com a família",
-    description: "Avaliação de fonoaudiologia emitida e ainda não compartilhada, com a gaveta aberta.",
-    data: () => makeReportsFixture({ initialModal: { kind: "share", id: "r-123" } }),
-  },
-  {
-    id: "reports.share-edit",
-    label: "Lucas · editar compartilhamento",
-    description: "Trimestral compartilhado com mãe e pai, lido só pela mãe, com a gaveta de edição aberta.",
-    data: () => makeReportsFixture({ reports: sharedReports(), initialModal: { kind: "share", id: "r-122" } }),
-  },
-  {
-    id: "reports.share-partial",
-    label: "Lucas · relatório lido em parte",
-    description: "Visualização do trimestral: mãe leu, pai ainda não abriu (Lembrar), com mensagem.",
-    data: () => makeReportsFixture({ reports: sharedReports(), initialView: { kind: "report", id: "r-122" } }),
-  },
-  {
-    id: "reports.share-revoked",
-    label: "Lucas · acesso revogado",
-    description: "Visualização da evolução de abril com o acesso da família revogado.",
-    data: () => makeReportsFixture({ reports: sharedReports(), initialView: { kind: "report", id: "r-121" } }),
-  },
-  {
-    id: "reports.fill-model-new",
-    label: "Lucas · iniciar modelo interno",
-    description: "Alta / Desligamento solicitada aberta no editor: passa a Em produção, só a Helena como autora (Assinar e finalizar).",
-    data: () => makeReportsFixture({ initialView: { kind: "fill", id: "r-103" } }),
-  },
-  {
-    id: "reports.fill-model",
-    label: "Lucas · continuar modelo interno",
-    description: "Alta / Desligamento em produção no editor: 1 de 3 seções, Fábio coautor (Enviar para assinaturas).",
-    data: () => makeReportsFixture({ reports: inProgressReports(), initialView: { kind: "fill", id: "r-103" } }),
-  },
-  {
-    id: "reports.fill-images",
-    label: "Lucas · modelo com gráficos",
-    description: "Evolução Mensal de julho no editor: 2 de 4 seções, um gráfico anexado e um campo de imagem extra.",
-    data: () => makeReportsFixture({ reports: [...seedReports(), ...editorReports()], initialView: { kind: "fill", id: "r-130" } }),
-  },
-  {
-    id: "reports.fill-protocol",
-    label: "Lucas · iniciar Relatório de Protocolo",
-    description: "VB-MAPP (aplicação pa1) aberto no editor, 0 de 6 seções, Finalizar desabilitado.",
-    data: () => makeReportsFixture({ initialView: { kind: "fill", id: "r-111" } }),
-  },
-  {
-    id: "reports.fill-protocol-draft",
-    label: "Lucas · Relatório de Protocolo em produção",
-    description: "VB-MAPP com 2 de 6 seções redigidas e Fábio coautor (Enviar para assinaturas).",
-    data: () => makeReportsFixture({ reports: protocolDraftReports(), initialView: { kind: "fill", id: "r-111" } }),
-  },
-  {
-    id: "reports.upload-empty",
-    label: "Lucas · anexar PDF externo",
-    description: "Laudo neuropediátrico (Relatório externo/PDF) solicitado, sem PDF: Finalizar desabilitado.",
-    data: () => makeReportsFixture({ reports: [...seedReports(), ...editorReports()], initialView: { kind: "upload", id: "r-131" } }),
-  },
-  {
-    id: "reports.upload-ready",
-    label: "Lucas · PDF externo anexado",
-    description: "Laudo neuropediátrico com o PDF final no rascunho, pronto para finalizar.",
-    data: () => makeReportsFixture({ reports: uploadReadyReports(), initialView: { kind: "upload", id: "r-131" } }),
   },
 ];

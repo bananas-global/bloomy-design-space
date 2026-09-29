@@ -1,6 +1,6 @@
 /**
  * Visualizar relatório em modo foco (`RelViewPage` de `relatorios-foco.jsx`).
- * Abre por `go({ kind: "report", id })`. Documento, autores, compartilhamento,
+ * Tela Relatório do fluxo (`/relatorios/:reportId`). Documento, autores, compartilhamento,
  * dados da solicitação e arquivos à esquerda; resumo, ações e histórico fixos
  * à direita.
  */
@@ -103,11 +103,11 @@ type SideAction = { label: string; icon: string; danger?: boolean; run: () => vo
 
 /** Resumo, ação principal e ações secundárias (`RfActions`). Novo — não existe no Phoenix. */
 function ActionsCard({ report: r }: { report: Report }) {
-  const { viewAs, go, openModal, reopen, download, backToEdit } = useReports();
+  const { viewAs, toEditor, openModal, reopen, download, backToEdit } = useReports();
   const model = relIsModel(r);
   const isCoord = viewAs === "coord";
   const st = r.status;
-  const produce = () => go({ kind: model ? "fill" : "upload", id: r.id });
+  const produce = () => toEditor(r.id);
   const late = isLate(r);
   const readDoc = () => document.getElementById(DOC_ID(r))?.scrollIntoView({ behavior: "smooth", block: "start" });
 

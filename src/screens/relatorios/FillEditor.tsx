@@ -1,5 +1,5 @@
 /**
- * Preencher relatório em modo foco (view `fill`): editor de modelo interno
+ * Preencher relatório em modo foco (telas Editor de modelo e Editor de protocolo): editor de modelo interno
  * (`RfModelEditor`) e de protocolo (`RfProtocolEditor`), sobre a casca comum
  * `EditorPage` (`RfEditorPage` de `relatorios-foco.jsx`) e a lateral
  * `ProduceSide` (`RelProduceSide` de `relatorios-fill.jsx`).
@@ -521,9 +521,9 @@ function ProtocolEditor({ report: r, onBack }: { report: Report; onBack: () => v
   );
 }
 
-/** View `fill`: escolhe o editor pelo tipo do relatório. */
+/** Editor pelo tipo do relatório; Voltar e o envio levam de volta à tela Relatório. */
 export function FillEditor({ report: r }: { report: Report }) {
-  const { go } = useReports();
-  const back = () => go({ kind: "report", id: r.id });
+  const { toReport } = useReports();
+  const back = () => toReport(r.id);
   return relIsProtocol(r) ? <ProtocolEditor report={r} onBack={back} /> : <ModelEditor report={r} onBack={back} />;
 }

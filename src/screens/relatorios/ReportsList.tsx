@@ -56,7 +56,7 @@ function IconAction({ id, label, icon, primary, onClick }: { id: string; label: 
 
 export function ReportsList() {
   const store = useReports();
-  const { patient, reports, forecast, filters, setFilters, go, openModal } = store;
+  const { patient, reports, forecast, filters, setFilters, toReport, openModal } = store;
   const [page, setPage] = useState(1);
 
   const mine = reports.filter((r) => r.patient.id === patient.id || r.patient.name === patient.name);
@@ -86,7 +86,7 @@ export function ReportsList() {
 
   /* a própria linha abre o relatório; aqui só o que vai além de "ver" */
   function rowActions(r: Report): RowAction[] {
-    if (r.status === "assinaturas") return [{ label: "Ver assinaturas", icon: "fa-signature", run: () => go({ kind: "report", id: r.id }) }];
+    if (r.status === "assinaturas") return [{ label: "Ver assinaturas", icon: "fa-signature", run: () => toReport(r.id) }];
     if (r.status !== "finalizado") return [];
     const st = shareState(r);
     const out: RowAction[] = [{ label: "Baixar PDF", icon: "fa-download", run: () => store.download(r) }];
@@ -106,13 +106,13 @@ export function ReportsList() {
     const acts = rowActions(r);
     if (acts.length === 0) {
       const label = x.status === "finalizado" ? "Ver relatório" : "Ver solicitação";
-      return <IconAction id={`ver-${r.id}`} label={label} icon="fa-eye" onClick={() => go({ kind: "report", id: r.id })} />;
+      return <IconAction id={`ver-${r.id}`} label={label} icon="fa-eye" onClick={() => toReport(r.id)} />;
     }
     if (acts.length === 1) {
       const a = acts[0]!;
       return <IconAction id={`acao-${r.id}`} label={a.label} icon={a.icon} onClick={a.run} />;
     }
-    const all: RowAction[] = [{ label: "Ver relatório", icon: "fa-file-lines", run: () => go({ kind: "report", id: r.id }) }, ...acts];
+    const all: RowAction[] = [{ label: "Ver relatório", icon: "fa-file-lines", run: () => toReport(r.id) }, ...acts];
     return (
       <DropdownMenu
         id={`menu-${r.id}`}
@@ -230,7 +230,7 @@ export function ReportsList() {
               id="patient-reports"
               rows={paged}
               rowId={(x) => x.key}
-              rowClick={(x) => x.r && go({ kind: "report", id: x.r.id })}
+              rowClick={(x) => x.r && toReport(x.r.id)}
               col={[
                 { label: "Relatório", render: (x) => dim(x, <NameCell row={x} />) },
                 { label: "Status", render: (x) => dim(x, <><ReportStatusBadge status={x.status} />{statusSub(x)}</>) },
