@@ -277,20 +277,13 @@ const validIn = (groups: ControlGroup[], id: string, value: string) =>
  * persona, a rede e a viewport do contexto vão junto; os controles iguais ao
  * padrão ficam fora da URL, como o motor faz.
  */
-export function flowHref(context: ScenarioContext, path: string, groups: ControlGroup[], controls: Controls): string {
-  const params = new URLSearchParams();
-  if (context.persona) params.set("persona", context.persona.id);
-  if (context.network !== "success") params.set("network", context.network);
-  if (context.viewport.id !== "fit") {
-    params.set("viewport", context.viewport.id);
-    if (context.viewport.id === "custom" && context.viewport.width) params.set("w", String(context.viewport.width));
-  }
-  const defaults = defaultsOf(groups);
-  for (const [id, value] of Object.entries(controls)) {
-    if (value !== defaults[id] && validIn(groups, id, value)) params.set(`c.${id}`, value);
-  }
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
+/**
+ * Navega para outra tela do fluxo levando os controles que valem nela. O motor
+ * preserva persona, rede e viewport e deixa fora da URL o que for padrão.
+ */
+export function flowNavigate(context: ScenarioContext, path: string, groups: ControlGroup[], controls: Controls): void {
+  const valid = Object.fromEntries(Object.entries(controls).filter(([id, value]) => validIn(groups, id, value)));
+  context.navigate(path, { controls: valid });
 }
 
 /* ============================================================
@@ -313,8 +306,8 @@ export type ControlledStateOptions<S> = {
  *
  * - Controle mudado de fora (o valor novo não é o que o estado representa):
  *   re-semeia com a combinação nova.
- * - Estado mudado pela UI: o controle correspondente é atualizado por
- *   `setControl`, um por vez (chamadas no mesmo ciclo se sobrescreveriam).
+ * - Estado mudado pela UI: os controles correspondentes são atualizados de uma
+ *   vez por `setControls`.
  */
 export function useControlledState<S>(context: ScenarioContext, { groups, seed, derive }: ControlledStateOptions<S>) {
   const controls = context.controls;
@@ -333,14 +326,14 @@ export function useControlledState<S>(context: ScenarioContext, { groups, seed, 
   const lastAttempt = useRef("");
   useEffect(() => {
     const represented = derive(current.state, controls);
-    const id = Object.keys(represented).find(
-      (c) => represented[c] !== controls[c] && validIn(groups, c, represented[c]!),
+    const patch = Object.fromEntries(
+      Object.entries(represented).filter(([c, value]) => value !== controls[c] && validIn(groups, c, value)),
     );
-    if (!id) return;
-    const attempt = `${key}|${id}=${represented[id]}`;
+    if (Object.keys(patch).length === 0) return;
+    const attempt = `${key}|${JSON.stringify(patch)}`;
     if (attempt === lastAttempt.current) return;
     lastAttempt.current = attempt;
-    context.setControl(id, represented[id]!);
+    context.setControls(patch);
   });
 
   const setState = useCallback((next: S) => setHeld((h) => ({ ...h, state: next })), []);

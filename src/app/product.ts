@@ -15,7 +15,7 @@ import {
   FILL_CONTROLS,
   FLOW,
   LIST_CONTROLS,
-  PATHS,
+  PATHS, PATIENT_ID,
   PROTOCOL_CONTROLS,
   REPORT_CONTROLS,
   UPLOAD_CONTROLS,
@@ -204,10 +204,12 @@ export const productDefinition: ProductDefinition = {
     },
   ],
   personas,
+  defaultPersona: "admin",
   fixtures: [...REPORTS_FIXTURES],
   routes: [
     {
       path: PATHS.list,
+      params: { id: PATIENT_ID },
       screen: PatientReportsList,
       name: "Lista",
       group: FLOW,
@@ -228,6 +230,7 @@ export const productDefinition: ProductDefinition = {
     },
     {
       path: PATHS.report,
+      params: { id: PATIENT_ID, reportId: "r-103" },
       screen: PatientReport,
       name: "Relatório",
       group: FLOW,
@@ -247,6 +250,7 @@ export const productDefinition: ProductDefinition = {
     },
     {
       path: PATHS.fill,
+      params: { id: PATIENT_ID, reportId: "r-103" },
       screen: PatientReportFill,
       name: "Editor de modelo",
       group: FLOW,
@@ -263,6 +267,7 @@ export const productDefinition: ProductDefinition = {
     },
     {
       path: PATHS.protocol,
+      params: { id: PATIENT_ID, reportId: "r-111" },
       screen: PatientReportProtocol,
       name: "Editor de protocolo",
       group: FLOW,
@@ -278,6 +283,7 @@ export const productDefinition: ProductDefinition = {
     },
     {
       path: PATHS.upload,
+      params: { id: PATIENT_ID, reportId: "r-131" },
       screen: PatientReportUpload,
       name: "Anexar PDF",
       group: FLOW,

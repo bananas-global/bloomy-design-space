@@ -19,7 +19,7 @@ import { createContext, useContext, useMemo, useRef, type ReactNode } from "reac
 import type { ScenarioContext } from "@brucesantos/design-space";
 import { showToast, type ToastType } from "../../components/Action.js";
 import type { ReportsPatient } from "./fixtures.js";
-import { FILL_CONTROLS, LIST_CONTROLS, PROTOCOL_CONTROLS, REPORT_CONTROLS, UPLOAD_CONTROLS, defaultsOf, flowHref, listPath, reportPath } from "./flow.js";
+import { FILL_CONTROLS, LIST_CONTROLS, PROTOCOL_CONTROLS, REPORT_CONTROLS, UPLOAD_CONTROLS, defaultsOf, flowNavigate, listPath, reportPath } from "./flow.js";
 import { session } from "./session.js";
 import { deriveEditor, deriveReport, editorKindOf, type EditorKind } from "./variants.js";
 import {
@@ -240,7 +240,7 @@ export function ReportsProvider({ context, patient, state, setState, children }:
       const r = get(id);
       if (!r) return;
       const controls = deriveReport(r, defaultsOf(REPORT_CONTROLS));
-      context.navigate(flowHref(context, reportPath(r.id, patient.id), REPORT_CONTROLS, controls));
+      flowNavigate(context, reportPath(r.id, patient.id), REPORT_CONTROLS, controls);
     };
     const toEditor = (id: string) => {
       const r = get(id);
@@ -248,11 +248,11 @@ export function ReportsProvider({ context, patient, state, setState, children }:
       const kind = editorKindOf(r);
       const groups = EDITOR_CONTROLS[kind];
       const controls = deriveEditor(kind, r, defaultsOf(groups));
-      context.navigate(flowHref(context, `${reportPath(r.id, patient.id)}/${EDITOR_PATH[kind]}`, groups, controls));
+      flowNavigate(context, `${reportPath(r.id, patient.id)}/${EDITOR_PATH[kind]}`, groups, controls);
     };
     const toList = () => {
       const { overlay: _overlay, ...kept } = session.listControls() ?? {};
-      context.navigate(flowHref(context, listPath(patient.id), LIST_CONTROLS, kept));
+      flowNavigate(context, listPath(patient.id), LIST_CONTROLS, kept);
     };
 
     return {
