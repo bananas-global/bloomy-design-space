@@ -215,6 +215,59 @@ export function makeReportsFixture(overrides: Partial<ReportsFixture> = {}): Rep
   return { patient: LUCAS, reports: seedReports(), routine: seedRoutine(), ...overrides };
 }
 
+/**
+ * Estados extras de compartilhamento: o trimestral (r-122) enviado ao pai e à
+ * mãe, com mensagem, lido só pela mãe; a evolução de abril (r-121) com acesso
+ * revogado.
+ */
+function sharedReports(): Report[] {
+  return seedReports().map((r) => {
+    if (r.id === "r-122" && r.share) {
+      return {
+        ...r,
+        share: {
+          ...r.share,
+          note: "Relatório do 1º trimestre. Qualquer dúvida, falem com a Helena na próxima sessão.",
+          recipients: [
+            ...r.share.recipients,
+            { id: "g2", name: "Rogério Ferreira Pinto", relation: "Pai", viewedAt: null, viewCount: 0 },
+          ],
+        },
+      };
+    }
+    if (r.id === "r-121" && r.share) return { ...r, share: { ...r.share, revokedAt: "12/05/2026 10:30" } };
+    return r;
+  });
+}
+
+/**
+ * A alta de julho (r-103) já em produção: rascunho salvo pela Helena com 1 de 3
+ * seções preenchidas e o Fábio como coautor.
+ */
+function inProgressReports(): Report[] {
+  return seedReports().map((r) =>
+    r.id === "r-103"
+      ? {
+          ...r,
+          status: "em_andamento",
+          hasDraft: true,
+          updatedAt: "15/07/2026 17:40",
+          coauthors: [FABIO],
+          draft: { updatedAt: "15/07/2026 17:40", by: "Helena Martins Costa" },
+          draftContent: {
+            trajetoria: "Lucas foi acompanhado de setembro de 2025 a julho de 2026, com 24 horas semanais de intervenção ABA e evolução consistente em comunicação e autonomia.",
+          },
+          history: [
+            ...r.history,
+            { at: "13/07/2026 10:05", who: "Helena Martins Costa", text: "Relatório iniciado", icon: "fa-play" },
+            { at: "14/07/2026 09:30", who: "Marcus V. Gimenes", text: "Fábio Stoll Pereira adicionado(a) como coautor(a)", icon: "fa-user-plus" },
+            { at: "15/07/2026 17:40", who: "Helena Martins Costa", text: "Rascunho salvo", icon: "fa-floppy-disk" },
+          ],
+        }
+      : r,
+  );
+}
+
 /** Sem solicitações e sem rotina (operadora sem regras). */
 const EMPTY_ROUTINE: RoutineState = { operators: { Unimed: [] }, patients: { pt1: { paused: {}, own: [] } } };
 
@@ -262,5 +315,65 @@ export const REPORTS_FIXTURES: Fixture<ReportsFixture>[] = [
     id: "reports.cancel",
     label: "Lucas · cancelar solicitação",
     data: () => makeReportsFixture({ initialModal: { kind: "cancel", id: "r-103" } }),
+  },
+  {
+    id: "reports.view-requested",
+    label: "Lucas · visualizar solicitado",
+    description: "Alta / Desligamento solicitada, ainda não iniciada, em modo foco.",
+    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-103" } }),
+  },
+  {
+    id: "reports.view-in-progress",
+    label: "Lucas · visualizar em produção",
+    description: "Alta / Desligamento em produção: rascunho com 1 de 3 seções e um coautor.",
+    data: () => makeReportsFixture({ reports: inProgressReports(), initialView: { kind: "report", id: "r-103" } }),
+  },
+  {
+    id: "reports.view-signing",
+    label: "Lucas · aguardando assinaturas (1 de 2)",
+    description: "Evolução de junho em atraso, texto bloqueado, Helena assinou e Fábio está pendente.",
+    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-105" } }),
+  },
+  {
+    id: "reports.view-final",
+    label: "Lucas · visualizar emitido",
+    description: "Trimestral finalizado com 2 de 2 assinaturas e lido pela família.",
+    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-122" } }),
+  },
+  {
+    id: "reports.view-cancelled",
+    label: "Lucas · visualizar cancelado",
+    description: "Relatório para a escola cancelado, com o motivo.",
+    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-125" } }),
+  },
+  {
+    id: "reports.edit-request",
+    label: "Lucas · editar solicitação",
+    description: "Alta / Desligamento em modo foco com a gaveta Editar solicitação aberta.",
+    data: () => makeReportsFixture({ initialView: { kind: "report", id: "r-103" }, initialModal: { kind: "edit", id: "r-103" } }),
+  },
+  {
+    id: "reports.share-new",
+    label: "Lucas · compartilhar com a família",
+    description: "Avaliação de fonoaudiologia emitida e ainda não compartilhada, com a gaveta aberta.",
+    data: () => makeReportsFixture({ initialModal: { kind: "share", id: "r-123" } }),
+  },
+  {
+    id: "reports.share-edit",
+    label: "Lucas · editar compartilhamento",
+    description: "Trimestral compartilhado com mãe e pai, lido só pela mãe, com a gaveta de edição aberta.",
+    data: () => makeReportsFixture({ reports: sharedReports(), initialModal: { kind: "share", id: "r-122" } }),
+  },
+  {
+    id: "reports.share-partial",
+    label: "Lucas · relatório lido em parte",
+    description: "Visualização do trimestral: mãe leu, pai ainda não abriu (Lembrar), com mensagem.",
+    data: () => makeReportsFixture({ reports: sharedReports(), initialView: { kind: "report", id: "r-122" } }),
+  },
+  {
+    id: "reports.share-revoked",
+    label: "Lucas · acesso revogado",
+    description: "Visualização da evolução de abril com o acesso da família revogado.",
+    data: () => makeReportsFixture({ reports: sharedReports(), initialView: { kind: "report", id: "r-121" } }),
   },
 ];

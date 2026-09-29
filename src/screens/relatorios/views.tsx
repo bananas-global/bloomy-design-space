@@ -9,11 +9,13 @@ import type { ComponentType } from "react";
 import { Button } from "../../components/Button.js";
 import { Card } from "../../components/Card.js";
 import { EmptyStateCard } from "../../components/Layout.js";
-import { Modal } from "../../components/Overlay.js";
 import { relTypeName, type Report } from "./model.js";
+import { EditRequestDrawer } from "./EditRequestDrawer.js";
 import { NewRequestDrawer } from "./NewRequestDrawer.js";
+import { ReportView } from "./ReportView.js";
 import { CancelModal, ReassignModal } from "./RequestModals.js";
 import { RoutineDrawer } from "./RoutineDrawer.js";
+import { ShareModal } from "./Share.js";
 import { useReports, type ReportsModal, type ReportsView } from "./store.js";
 
 export type ReportViewProps = { report: Report };
@@ -42,19 +44,9 @@ function PendingView({ report, what }: ReportViewProps & { what: string }) {
   );
 }
 
-/** Placeholder de modal ainda não construído. Novo — não existe no Phoenix. */
-function PendingModal({ report, what }: ReportModalProps & { what: string }) {
-  const { closeModal } = useReports();
-  return (
-    <Modal id={`relatorio-pendente-${report.id}`} show onCancel={closeModal} title={what} variant="extra_small">
-      <p className="text-brand-purple-dark/80">{`${relTypeName(report)} · ${report.period}. Este modal entra numa próxima etapa do porte.`}</p>
-    </Modal>
-  );
-}
-
 /** Views de página cheia por `kind`. */
 export const VIEWS: Record<FocusKind, ComponentType<ReportViewProps>> = {
-  report: (props) => <PendingView {...props} what="Visualizar relatório" />,
+  report: ReportView,
   fill: (props) => <PendingView {...props} what="Preencher relatório" />,
   upload: (props) => <PendingView {...props} what="Anexar documento" />,
 };
@@ -63,8 +55,11 @@ export const VIEWS: Record<FocusKind, ComponentType<ReportViewProps>> = {
 export const MODALS: Record<ReportModalKind, ComponentType<ReportModalProps>> = {
   reassign: ReassignModal,
   cancel: CancelModal,
-  share: (props) => <PendingModal {...props} what="Compartilhar com a família" />,
-  edit: (props) => <PendingModal {...props} what="Editar solicitação" />,
+  share: function ShareEntry({ report }) {
+    const { closeModal } = useReports();
+    return <ShareModal report={report} onClose={closeModal} />;
+  },
+  edit: EditRequestDrawer,
 };
 
 /** A view ativa (fora da lista). */

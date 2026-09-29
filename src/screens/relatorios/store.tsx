@@ -22,10 +22,13 @@ import {
   EMPTY_FILTERS,
   REL_ME,
   REL_REQUESTED_BY,
+  guardiansOf,
   isoToBR,
   pushHistory,
   relDefaultViewAs,
   relProfById,
+  relAuthors,
+  relSlug,
   relStamp,
   routineForecast,
   shareState,
@@ -37,6 +40,7 @@ import {
   type Requester,
   type RoutineRule,
   type RoutineState,
+  type ShareRecipient,
   type SupportFile,
   type ViewAs,
 } from "./model.js";
@@ -69,6 +73,21 @@ export type NewRequestData = {
   obs: string;
   support: SupportFile[];
   protocolAppId: string;
+};
+
+/** O que o drawer "Editar solicitação" entrega. */
+export type EditRequestData = {
+  typeId: ReportTypeId;
+  customName: string;
+  requester: Requester;
+  /** Novo prazo ISO `AAAA-MM-DD`, ou "" para manter o atual. */
+  due: string;
+  prof: Professional | null;
+  period: string;
+  obs: string;
+  extra: string;
+  status: Report["status"];
+  support: SupportFile[];
 };
 
 type Patch = Partial<Report> | ((r: Report) => Partial<Report>);
@@ -112,6 +131,27 @@ export type ReportsStore = {
   download: (r: Report) => void;
   remind: (r: Report) => void;
   revoke: (r: Report) => void;
+  /** Compartilha (ou atualiza o compartilhamento) com os responsáveis marcados; fecha o modal. */
+  share: (id: string, recipientIds: string[], note: string) => void;
+  /** Lembrete para um responsável que ainda não abriu (painel do relatório). */
+  remindGuardian: (g: ShareRecipient) => void;
+
+  /* solicitação, coautoria e assinaturas (modo foco) */
+  /** Salva o drawer "Editar solicitação"; fecha o modal. */
+  updateRequest: (id: string, data: EditRequestData) => void;
+  addCoauthor: (id: string, prof: Professional) => void;
+  removeCoauthor: (id: string, authorId: string) => void;
+  /**
+   * Envia para assinaturas (2+ autores) ou assina e finaliza direto (1 autor).
+   * `extra` entra no relatório junto (ex.: `{ draftContent }` do editor).
+   */
+  submitForSignature: (id: string, extra?: Partial<Report>) => void;
+  /** Assinatura de um autor; com todas coletadas, finaliza e gera o PDF. */
+  sign: (id: string, authorId: string) => void;
+  /** Pedido de alteração de um autor: volta para edição e descarta as assinaturas. */
+  requestChange: (id: string, authorId: string, reason: string) => void;
+  /** Coordenação desfaz o envio para assinaturas ("Voltar para edição"). */
+  backToEdit: (id: string) => void;
 
   /* rotina */
   pauseRule: (ruleId: string, reason: string) => void;
@@ -230,6 +270,146 @@ export function ReportsProvider({ fixture, role, children }: { fixture: ReportsF
           history: [...x.history, { at: relStamp(), who: REL_ME, icon: "fa-ban", text: "Acesso da família ao documento revogado" }],
         }));
         toast("info", "Acesso revogado", "O documento não aparece mais no app da família.");
+      },
+      share(id, recipientIds, note) {
+        const r = get(id);
+        if (!r) return;
+        const now = relStamp();
+        const already = r.share && !r.share.revokedAt ? r.share : null;
+        const prev = already ? already.recipients : [];
+        const recipients: ShareRecipient[] = guardiansOf(r.patient.name)
+          .filter((g) => recipientIds.includes(g.id))
+          .map((g) => {
+            const old = prev.find((x) => x.id === g.id);
+            return { ...g, viewedAt: old ? old.viewedAt : null, viewCount: old ? old.viewCount : 0 };
+          });
+        const n = `${recipients.length} responsáve${recipients.length > 1 ? "is" : "l"}`;
+        patch(id, (x) =>
+          pushHistory(
+            { ...x, share: { sharedAt: already ? already.sharedAt : now, sharedBy: REL_ME, note, recipients, revokedAt: null } },
+            already ? `Compartilhamento atualizado (${n})` : `Documento compartilhado com ${n} no app da família`,
+            "fa-share-nodes",
+            REL_ME,
+          ),
+        );
+        closeModal();
+        toast(
+          "success",
+          already ? "Compartilhamento atualizado" : "Documento compartilhado",
+          `Disponível no app para ${recipients.map((g) => g.name.split(" ")[0]).join(", ")}.`,
+        );
+      },
+      remindGuardian(g) {
+        toast("success", "Lembrete enviado", `${g.name} recebeu uma notificação no app.`);
+      },
+
+      updateRequest(id, data) {
+        const r = get(id);
+        if (!r) return;
+        const prof = data.prof;
+        const profChanged = (prof && (!r.prof || r.prof.id !== prof.id)) || (!prof && r.prof);
+        patch(id, (cur) => {
+          let next: Report = {
+            ...cur, typeId: data.typeId, customName: data.customName || undefined, requester: data.requester, prof,
+            due: data.due ? isoToBR(data.due) : cur.due, period: data.period, obs: data.obs, extra: data.extra,
+            status: data.status, support: data.support, updatedAt: relStamp(),
+          };
+          next = pushHistory(next, "Dados da solicitação atualizados", "fa-pen-to-square");
+          if (profChanged) next = pushHistory(next, prof ? `Responsável alterado para ${prof.name}` : "Responsável removido", "fa-user-pen");
+          return next;
+        });
+        closeModal();
+        toast("success", "Salvo!", "Solicitação atualizada.");
+      },
+      addCoauthor(id, prof) {
+        patch(id, (cur) =>
+          pushHistory({ ...cur, coauthors: [...(cur.coauthors ?? []), prof], updatedAt: relStamp() }, `${prof.name} adicionado(a) como coautor(a)`, "fa-user-plus"),
+        );
+        toast("success", "Coautor adicionado", `${prof.name} pode editar e vai assinar o relatório.`);
+      },
+      removeCoauthor(id, authorId) {
+        patch(id, (cur) => {
+          const a = (cur.coauthors ?? []).find((c) => c.id === authorId);
+          if (!a) return {};
+          return pushHistory({ ...cur, coauthors: (cur.coauthors ?? []).filter((c) => c.id !== authorId), updatedAt: relStamp() }, `${a.name} removido(a) dos coautores`, "fa-user-minus");
+        });
+      },
+      submitForSignature(id, extra = {}) {
+        const r = get(id);
+        if (!r) return;
+        const stamp = relStamp();
+        const authors = relAuthors(r);
+        if (authors.length <= 1) {
+          const signer = authors[0];
+          patch(id, (cur) =>
+            pushHistory(
+              {
+                ...cur, ...extra, status: "finalizado", hasDraft: false, updatedAt: stamp,
+                signatures: signer ? { [signer.id]: stamp } : {},
+                finalDoc: { name: `${relSlug(cur)}-${cur.patient.name.split(" ")[0]!.toLowerCase()}.pdf`, size: "1,1 MB", at: stamp.split(" ")[0]! },
+              },
+              signer ? `Assinado por ${signer.name} e finalizado` : "Relatório finalizado",
+              "fa-circle-check",
+              signer?.name,
+            ),
+          );
+          toast("success", "Finalizado!", "Relatório assinado e disponível no prontuário do paciente.");
+        } else {
+          patch(id, (cur) =>
+            pushHistory({ ...cur, ...extra, status: "assinaturas", hasDraft: false, signatures: {}, updatedAt: stamp }, `Enviado para assinaturas de ${authors.length} autores`, "fa-signature"),
+          );
+          toast("success", "Enviado para assinaturas", `${authors.length} autores precisam assinar. O texto fica bloqueado até lá.`);
+        }
+      },
+      sign(id, authorId) {
+        const r = get(id);
+        const author = r && relAuthors(r).find((a) => a.id === authorId);
+        if (!r || !author) return;
+        const stamp = relStamp();
+        const signatures = { ...(r.signatures ?? {}), [author.id]: stamp };
+        const authors = relAuthors(r);
+        const done = authors.filter((a) => signatures[a.id]).length;
+        const all = done === authors.length;
+        patch(id, (cur) => {
+          let next = pushHistory({ ...cur, signatures, updatedAt: stamp }, `Assinado por ${author.name}`, "fa-signature", author.name);
+          if (all) {
+            next = pushHistory(
+              {
+                ...next, status: "finalizado",
+                finalDoc: { name: `${relSlug(cur)}-${cur.patient.name.split(" ")[0]!.toLowerCase()}.pdf`, size: "1,2 MB", at: stamp.split(" ")[0]! },
+              },
+              "Todas as assinaturas coletadas — relatório finalizado",
+              "fa-circle-check",
+              "Sistema",
+            );
+          }
+          return next;
+        });
+        toast(
+          "success",
+          all ? "Finalizado!" : "Assinado",
+          all ? "Todas as assinaturas coletadas. PDF gerado no prontuário." : `${done} de ${authors.length} assinaturas.`,
+        );
+      },
+      requestChange(id, authorId, reason) {
+        const r = get(id);
+        const author = r && relAuthors(r).find((a) => a.id === authorId);
+        if (!author) return;
+        patch(id, (cur) =>
+          pushHistory(
+            { ...cur, status: "em_andamento", hasDraft: true, signatures: {}, changeRequest: { by: author.name, reason, at: relStamp() }, updatedAt: relStamp() },
+            `${author.name} pediu alteração: “${reason}”. Assinaturas descartadas`,
+            "fa-rotate-left",
+            author.name,
+          ),
+        );
+        toast("info", "Voltou para edição", "As assinaturas já feitas foram descartadas.");
+      },
+      backToEdit(id) {
+        patch(id, (cur) =>
+          pushHistory({ ...cur, status: "em_andamento", hasDraft: true, signatures: {}, updatedAt: relStamp() }, "Envio para assinaturas desfeito — voltou para edição", "fa-rotate-left"),
+        );
+        toast("info", "Voltou para edição", "As assinaturas já feitas foram descartadas.");
       },
 
       pauseRule(ruleId, reason) {
