@@ -14,6 +14,7 @@ import { AuthLayout } from "../layouts/AuthLayout.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { HealthCareLayout } from "../layouts/HealthCareLayout.js";
 import { PatientLayout } from "../layouts/PatientLayout.js";
+import { ProfessionalLayout } from "../layouts/ProfessionalLayout.js";
 import { PublicLayout } from "../layouts/PublicLayout.js";
 
 /**
@@ -84,6 +85,38 @@ function Paciente() {
           missedCancelledCount: 3,
           activeWeeklyHours: 12,
           observation: "Prefere atividades com blocos no início da sessão.",
+        }}
+        renderTab={(tab) => <p>Conteúdo da aba <span>{tab}</span>.</p>}
+      />
+    </BackofficeLayout>
+  );
+}
+
+function Profissional() {
+  return (
+    <BackofficeLayout
+      currentPath="/backoffice/profissionais/p1"
+      breadcrumbs={[{ label: "Profissionais", to: "/backoffice/profissionais" }, { label: "Helena Martins Costa" }]}
+      currentUser={USUARIO}
+      notifications={NOTIFICACOES}
+    >
+      <ProfessionalLayout
+        professional={{
+          name: "Helena Martins Costa",
+          status: "Ativo",
+          specialty: "Psicologia",
+          healthFormation: "CRP",
+          specialtyRegister: "06233962",
+          supervisorName: "Rafael Andrade Nunes",
+          showInDashboard: true,
+          tbd: false,
+          phone: "(11) 99873-9084",
+          email: "helena.martins@bloomy.com.br",
+          contractStart: "06/05/2026",
+          uniquePatientsCount: 3,
+          weeklyScheduleHours: 30,
+          occupancyRate: "10.0",
+          absenceCount: 0,
         }}
         renderTab={(tab) => <p>Conteúdo da aba <span>{tab}</span>.</p>}
       />
@@ -181,6 +214,14 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     description: "Cabeçalho do paciente (CardHeader) e as abas agrupadas de lazy_tabs, dentro do backoffice.",
     source: "patient_live/show.ex",
     preview: Paciente,
+  },
+  {
+    id: "layout.professional",
+    name: "Página do profissional",
+    group: "Layouts",
+    description: "Cabeçalho do profissional (CardHeader) e as abas de lazy_tabs, dentro do backoffice.",
+    source: "professionals/show.ex",
+    preview: Profissional,
   },
   {
     id: "layout.health-care",
