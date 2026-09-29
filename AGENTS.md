@@ -53,8 +53,9 @@ e escreve `<.button variant="outline" color="red">` sem pensar.
    `scenarios` para cada estado que o dev precisa ver (vazio, com dados, erro…),
    cada um com `id`, `title`, `route`, `fixture` e, se o menu importar, `persona`.
    Os dados ficam em `fixtures`, sintéticos.
-4. Abra o PR com o modelo de `.github/pull_request_template.md`. O preview da
-   Vercel é o link que vai para os devs.
+4. Abra o PR com o modelo de `.github/pull_request_template.md`. Cada push no PR
+   publica um preview (workflow `deploy.yml`, com o token da Vercel) e atualiza um
+   comentário no PR com o link. Esse é o link que vai para os devs.
 5. Depois de implementada no sistema, a tela sai do repositório.
 
 ## Guardrails
