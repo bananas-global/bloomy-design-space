@@ -213,14 +213,20 @@ export function ButtonTabs({
   className,
   tab,
   actions,
+  initialTab = 0,
+  onChange,
 }: {
   id: string;
   size?: "small" | "normal";
   className?: string;
   tab: ButtonTabSlot[];
   actions?: ReactNode;
+  /** A aba aberta ao montar, como no `CardTabs`. */
+  initialTab?: number;
+  /** Avisa a troca de aba, para o `actions` acompanhar a aba aberta (no original, o JS do hook). */
+  onChange?: (index: number) => void;
 }) {
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(initialTab);
   const list = useRef<HTMLDivElement>(null);
   const marker = useRef<HTMLDivElement>(null);
   useMarker(
@@ -266,7 +272,10 @@ export function ButtonTabs({
               disabled={t.disabled}
               data-button-tab-button={id}
               data-slug={titleToSlug(t.title)}
-              onClick={() => setCurrent(index)}
+              onClick={() => {
+                setCurrent(index);
+                onChange?.(index);
+              }}
             >
               {t.title}
               <span className="hidden">
