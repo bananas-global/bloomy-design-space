@@ -9,7 +9,7 @@
 import { Button } from "../../components/Button.js";
 import { Input } from "../../components/Input.js";
 import { ABSENCE_REASONS, CANCEL, WD, brShort, sessionsWord, weekdayOf, type Session } from "./model.js";
-import { Empty, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
+import { CrossException, Empty, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
 import { useTransferCenter } from "./store.js";
 
 function SessionRow({ s }: { s: Session }) {
@@ -46,7 +46,7 @@ function SessionRow({ s }: { s: Session }) {
 
 /** A coluna da lista: período, filtros e as sessões por dia e titular. */
 export function SessionsList() {
-  const { state, sessions, pending, groups, specialties, profOptions, profById, setPeriod, setSpec, setProf, setSCross, distributeS } = useTransferCenter();
+  const { state, sessions, pending, groups, specialties, profOptions, profById, setPeriod, setSpec, setProf, setSCross, setSWhy, distributeS } = useTransferCenter();
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,6 +86,8 @@ export function SessionsList() {
         <ListActions id="sessoes-outra-especialidade" cross={state.sCross} onCross={setSCross} disabled={pending.length === 0} onDistribute={distributeS} />
       </div>
 
+      {state.sCross && <CrossException id="sessoes-motivo-excecao" why={state.sWhy} onWhy={setSWhy} record="da sessão" />}
+
       {pending.length === 0 ? (
         <Empty icon="fa-calendar-xmark">{sessions.length ? "Todas as sessões destes filtros já foram transferidas." : "Nenhuma sessão com estes filtros."}</Empty>
       ) : (
@@ -121,8 +123,8 @@ export function SessionsList() {
 
 /** A coluna lateral: a cobertura, o motivo da ausência e a observação. */
 export function SessionsSide() {
-  const { state, selected, covered, cancelled, setReason, setNote, resetS, applyS } = useTransferCenter();
-  const canApply = covered.length > 0 && Boolean(state.sReason);
+  const { state, selected, covered, cancelled, sCrossReady, setReason, setNote, resetS, applyS } = useTransferCenter();
+  const canApply = covered.length > 0 && Boolean(state.sReason) && sCrossReady;
 
   return (
     <SidePanel
@@ -133,7 +135,7 @@ export function SessionsSide() {
           <Button type="button" variant="ghost" onClick={resetS}>
             Limpar
           </Button>
-          <Button type="button" leftIcon="fa-check" iconType="solid" className="gap-2" disabled={!canApply} title={covered.length && !state.sReason ? "Informe o motivo" : undefined} onClick={applyS}>
+          <Button type="button" leftIcon="fa-check" iconType="solid" className="gap-2" disabled={!canApply} title={covered.length && !state.sReason ? "Informe o motivo" : !sCrossReady ? "Descreva o motivo da exceção" : undefined} onClick={applyS}>
             {`Transferir ${covered.length} ${sessionsWord(covered.length)}`}
           </Button>
         </>

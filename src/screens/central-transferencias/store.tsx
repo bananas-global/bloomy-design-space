@@ -75,6 +75,8 @@ export type TransferCenterState = {
   sApplied: Record<string, string>;
   sReason: string;
   sNote: string;
+  /** Motivo da exceção de especialidade nas sessões. */
+  sWhy: string;
 };
 
 /** O primeiro dia útil a partir de hoje: onde o período de sessões começa. */
@@ -141,6 +143,9 @@ export type TransferCenterStore = {
   setSpec: (spec: string) => void;
   setProf: (prof: string) => void;
   setSCross: (on: boolean) => void;
+  setSWhy: (why: string) => void;
+  /** Sem exceção, ou com o motivo da exceção preenchido. */
+  sCrossReady: boolean;
   setSessionDest: (id: string, pid: string) => void;
   setReason: (reason: string) => void;
   setNote: (note: string) => void;
@@ -373,6 +378,8 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
         setState((s) => ({ ...s, sSpec: spec, sProf: s.sProf && profById(s.sProf)?.specialty !== spec ? "" : s.sProf, sAssign: {} })),
       setProf: (prof) => set({ sProf: prof, sAssign: {} }),
       setSCross: (on) => set({ sCross: on, sAssign: {} }),
+      setSWhy: (sWhy) => set({ sWhy }),
+      sCrossReady: !state.sCross || state.sWhy.trim().length > 2,
       setSessionDest: (id, pid) =>
         setState((s) => {
           const next = { ...s.sAssign };
@@ -396,7 +403,7 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
             applied[id] = s.sAssign[id]!;
             delete rest[id];
           });
-          return { ...s, sApplied: applied, sAssign: rest, sReason: "", sNote: "" };
+          return { ...s, sApplied: applied, sAssign: rest, sReason: "", sNote: "", sWhy: "" };
         });
         toast("success", "Sessões transferidas", `${ids.length} ${sessionsWord(ids.length)} · ${state.sReason} · mapas de horas inalterados`);
       },

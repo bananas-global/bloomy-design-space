@@ -55,14 +55,14 @@ export function ListActions({ id, cross, onCross, disabled, onDistribute }: { id
 }
 
 /** Aviso de exceção de especialidade, com o motivo. */
-export function CrossException({ id, why, onWhy }: { id: string; why: string; onWhy: (v: string) => void }) {
+export function CrossException({ id, why, onWhy, record = "do mapa" }: { id: string; why: string; onWhy: (v: string) => void; record?: string }) {
   return (
     <div className="flex gap-3 rounded-xl border border-brand-orange/50 bg-brand-orange/10 p-4">
       <Icon name="fa-triangle-exclamation" type="solid" className="mt-0.5 text-orange-dark" />
       <div className="flex-1">
         <p className="text-sm font-extrabold text-brand-purple-dark">Transferência fora da especialidade</p>
-        <p className="text-sm text-brand-purple-dark/70">Fora do padrão da clínica. Registre o motivo — fica no histórico do mapa.</p>
-        <Input id={id} name={id} placeholder="Motivo da exceção" value={why} onChange={(e) => onWhy(e.target.value)} className="mt-3" inputClass="bg-white" />
+        <p className="text-sm text-brand-purple-dark/70">Fora do padrão da clínica. Registre o motivo — fica no histórico {record}.</p>
+        <Input id={id} name={id} placeholder="Motivo da exceção" value={why} onChange={(e) => onWhy(e.target.value)} className="mt-3" />
       </div>
     </div>
   );

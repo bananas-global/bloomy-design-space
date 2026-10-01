@@ -67,6 +67,7 @@ function seedWith(fixture: TransferCenterFixture) {
       sApplied: {},
       sReason: "",
       sNote: "",
+      sWhy: "",
     };
 
     /* Mapas de horas */
