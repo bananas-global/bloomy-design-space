@@ -106,7 +106,7 @@ export function SessionsList() {
                     <Who name={prof?.name ?? "—"} detail={`${prof?.specialty ?? ""} · ${list.length} ${sessionsWord(list.length)}`} />
                     <span className="shrink-0 text-xs font-extrabold text-brand-purple-dark/45">{`${withSub} de ${list.length} com substituto`}</span>
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col gap-2">
                     {list.map((s) => (
                       <SessionRow key={s.id} s={s} />
                     ))}
