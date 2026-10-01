@@ -22,7 +22,7 @@ const slotsWord = (n: number) => plural(n, "horário", "horários");
 const mapsWord = (n: number) => plural(n, "mapa", "mapas");
 
 /** O seletor de destino de um mapa inteiro ou de um horário. */
-function DestSelect({ id, value, options, onChange }: { id: string; value: string; options: [string, string][]; onChange: (pid: string) => void }) {
+function DestSelect({ id, value, options, className, onChange }: { id: string; value: string; options: [string, string][]; className?: string; onChange: (pid: string) => void }) {
   return (
     <Input
       type="select"
@@ -31,7 +31,7 @@ function DestSelect({ id, value, options, onChange }: { id: string; value: strin
       prompt="Manter com a origem"
       value={value}
       options={options}
-      className="w-[260px] shrink-0"
+      className={["w-[260px] shrink-0", className].filter(Boolean).join(" ")}
       onChange={(v) => onChange(v ?? "")}
     />
   );
@@ -83,7 +83,7 @@ function MapCard({ m }: { m: HoursMap }) {
             (all.length === 0 && !mixed && !allPid ? (
               <StatusTag status="soft" icon="fa-user-slash">Ninguém cobre todos os horários</StatusTag>
             ) : (
-              <DestSelect id={`destino-${m.id}`} value={allPid} options={allOptions} onChange={(pid) => setMapDest(m, pid)} />
+              <DestSelect id={`destino-${m.id}`} className="ml-auto" value={allPid} options={allOptions} onChange={(pid) => setMapDest(m, pid)} />
             ))}
         </div>
       )}

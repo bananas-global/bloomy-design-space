@@ -8,9 +8,12 @@
  */
 import { Button } from "../../components/Button.js";
 import { Input } from "../../components/Input.js";
-import { ABSENCE_REASONS, CANCEL, WD, brShort, sessionsWord, weekdayOf, type Session } from "./model.js";
+import { ABSENCE_REASONS, CANCEL, MIXED, WD, brShort, sessionsWord, weekdayOf, type Professional, type Session } from "./model.js";
 import { CrossException, Empty, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
 import { useTransferCenter } from "./store.js";
+
+/** Opção de substituto, com a especialidade quando é outra. */
+const optionLabel = (p: Professional, s: Pick<Session, "specialty">) => `${p.name}${p.specialty !== s.specialty ? ` · ${p.specialty}` : ""} · ${p.room}`;
 
 function SessionRow({ s }: { s: Session }) {
   const { state, profById, sessionCandidates, setSessionDest } = useTransferCenter();
@@ -33,7 +36,7 @@ function SessionRow({ s }: { s: Session }) {
           prompt="Escolher substituto…"
           value={pid}
           options={[
-            ...cands.map((p): [string, string] => [`${p.name}${p.specialty !== s.specialty ? ` · ${p.specialty}` : ""} · ${p.room}`, p.id]),
+            ...cands.map((p): [string, string] => [optionLabel(p, s), p.id]),
             ["Sem cobertura — cancelar sessão", CANCEL],
           ]}
           className="w-[260px] shrink-0"
@@ -44,9 +47,80 @@ function SessionRow({ s }: { s: Session }) {
   );
 }
 
+/**
+ * As sessões de um titular num dia. Recolhido: um substituto para todas de
+ * uma vez; em Detalhar, um por sessão (como os horários em Mapas de horas).
+ */
+function HolderCard({ date, pid, list }: { date: string; pid: string; list: Session[] }) {
+  const { state, profById, groupCandidates, setGroupDest, setSOpen } = useTransferCenter();
+  const key = `${date}|${pid}`;
+  const all = groupCandidates(list);
+  const prof = profById(pid);
+  const free = list.filter((s) => !state.sApplied[s.id]);
+  const withSub = list.filter((s) => state.sApplied[s.id] || (state.sAssign[s.id] && state.sAssign[s.id] !== CANCEL)).length;
+  const pids = [...new Set(free.map((s) => state.sAssign[s.id] ?? ""))];
+  const mixed = pids.length > 1;
+  const allPid = mixed ? MIXED : (pids[0] ?? "");
+  const isOpen = state.sOpen[key] ?? (all.length === 0 && free.length > 0);
+  const ref = list[0]!;
+  const options: [string, string][] = [
+    ...(mixed ? ([["Personalizado por sessão", MIXED]] as [string, string][]) : []),
+    ...all.map((p): [string, string] => [optionLabel(p, ref), p.id]),
+    ...(allPid && allPid !== MIXED && allPid !== CANCEL && !all.some((p) => p.id === allPid) ? [[profById(allPid)?.name ?? allPid, allPid] as [string, string]] : []),
+    ["Sem cobertura — cancelar sessões", CANCEL],
+  ];
+
+  return (
+    <ItemCard>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+        <Who name={prof?.name ?? "—"} detail={`${prof?.specialty ?? ""} · ${list.length} ${sessionsWord(list.length)}`} />
+        <div className="flex shrink-0 items-center gap-2.5">
+          <span className="text-xs font-extrabold text-brand-purple-dark/45">{`${withSub} de ${list.length} com substituto`}</span>
+          <Button type="button" size="medium" variant="ghost" leftIcon={isOpen ? "fa-chevron-up" : "fa-list"} iconType="solid" className="gap-1.5" onClick={() => setSOpen(key, !isOpen)}>
+            {isOpen ? "Recolher" : "Detalhar"}
+          </Button>
+        </div>
+      </div>
+
+      {!isOpen && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap gap-1.5">
+            {list.map((s) => (
+              <SlotTag key={s.id} className="tabular-nums">{`${s.start}–${s.end}`}</SlotTag>
+            ))}
+          </div>
+          {free.length > 0 &&
+            (all.length === 0 && !mixed && !allPid ? (
+              <StatusTag status="soft" icon="fa-user-slash">Ninguém cobre todas as sessões</StatusTag>
+            ) : (
+              <Input
+                type="select"
+                id={`substituto-${key}`}
+                name={`substituto[${key}]`}
+                prompt="Escolher substituto…"
+                value={allPid}
+                options={options}
+                className="ml-auto w-[260px] shrink-0"
+                onChange={(v) => setGroupDest(free, v ?? "")}
+              />
+            ))}
+        </div>
+      )}
+
+      {isOpen && (
+        <div className="flex flex-col gap-2">
+          {list.map((s) => (
+            <SessionRow key={s.id} s={s} />
+          ))}
+        </div>
+      )}
+    </ItemCard>
+  );
+}
+
 /** A coluna da lista: período, filtros e as sessões por dia e titular. */
 export function SessionsList() {
-  const { state, sessions, pending, groups, specialties, profOptions, profById, setPeriod, setSpec, setProf, setSCross, setSWhy, distributeS } = useTransferCenter();
+  const { state, sessions, pending, groups, specialties, profOptions, setPeriod, setSpec, setProf, setSCross, setSWhy, distributeS } = useTransferCenter();
 
   return (
     <div className="flex flex-col gap-4">
@@ -97,23 +171,9 @@ export function SessionsList() {
               <b className="text-sm font-black text-brand-purple-dark">{`${WD[weekdayOf(g.date)]}, ${brShort(g.date)}`}</b>
               <span className="text-xs font-bold text-brand-purple-dark/45">{`${g.total} ${sessionsWord(g.total)}`}</span>
             </div>
-            {g.profs.map(({ pid, list }) => {
-              const prof = profById(pid);
-              const withSub = list.filter((s) => state.sApplied[s.id] || (state.sAssign[s.id] && state.sAssign[s.id] !== CANCEL)).length;
-              return (
-                <ItemCard key={pid}>
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                    <Who name={prof?.name ?? "—"} detail={`${prof?.specialty ?? ""} · ${list.length} ${sessionsWord(list.length)}`} />
-                    <span className="shrink-0 text-xs font-extrabold text-brand-purple-dark/45">{`${withSub} de ${list.length} com substituto`}</span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {list.map((s) => (
-                      <SessionRow key={s.id} s={s} />
-                    ))}
-                  </div>
-                </ItemCard>
-              );
-            })}
+            {g.profs.map(({ pid, list }) => (
+              <HolderCard key={pid} date={g.date} pid={pid} list={list} />
+            ))}
           </div>
         ))
       )}

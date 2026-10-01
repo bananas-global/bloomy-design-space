@@ -19,7 +19,7 @@ const STATUS_VARIANT = { ok: "green", bad: "red", soft: "dark-purple", prog: "li
 
 /** O lugar do seletor quando não há o que escolher, ou o resultado: `tag` pill com ícone. */
 export function StatusTag({ status, icon, children }: { status: keyof typeof STATUS_VARIANT; icon: string; children: string }) {
-  return <Tag pill item={children} variant={STATUS_VARIANT[status]} leftIcon={`fa-solid ${icon}`} className="w-[260px] shrink-0 whitespace-nowrap py-1.5" />;
+  return <Tag pill item={children} variant={STATUS_VARIANT[status]} leftIcon={`fa-solid ${icon}`} className="ml-auto w-[260px] shrink-0 whitespace-nowrap py-1.5" />;
 }
 
 /** Nome em destaque com uma linha de apoio (paciente, profissional). */

@@ -77,6 +77,11 @@ export type TransferCenterState = {
   sNote: string;
   /** Motivo da exceção de especialidade nas sessões. */
   sWhy: string;
+  /**
+   * Titulares detalhados sessão a sessão (`data|profissional`). Sem valor, o
+   * card abre detalhado só quando ninguém cobre todas as sessões dele.
+   */
+  sOpen: Record<string, boolean>;
 };
 
 /** O primeiro dia útil a partir de hoje: onde o período de sessões começa. */
@@ -147,6 +152,10 @@ export type TransferCenterStore = {
   /** Sem exceção, ou com o motivo da exceção preenchido. */
   sCrossReady: boolean;
   setSessionDest: (id: string, pid: string) => void;
+  /** Quem pode assumir todas as sessões do titular no dia de uma vez. */
+  groupCandidates: (list: Session[]) => Professional[];
+  setGroupDest: (list: Session[], pid: string) => void;
+  setSOpen: (key: string, open: boolean) => void;
   setReason: (reason: string) => void;
   setNote: (note: string) => void;
   distributeS: () => void;
@@ -387,6 +396,29 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
           else delete next[id];
           return { ...s, sAssign: next };
         }),
+      groupCandidates: (list) => {
+        const open = list.filter((s) => !state.sApplied[s.id]);
+        if (!open.length) return [];
+        let ids: string[] | null = null;
+        open.forEach((s) => {
+          const c = sessionCandidates(s).map((p) => p.id);
+          ids = ids === null ? c : ids.filter((id) => c.includes(id));
+        });
+        const list2: string[] = ids ?? [];
+        return profs.filter((p) => list2.includes(p.id));
+      },
+      setGroupDest: (list, pid) =>
+        setState((s) => {
+          if (pid === MIXED) return s;
+          const next = { ...s.sAssign };
+          list.forEach((x) => {
+            if (s.sApplied[x.id]) return;
+            if (pid) next[x.id] = pid;
+            else delete next[x.id];
+          });
+          return { ...s, sAssign: next };
+        }),
+      setSOpen: (key, open) => setState((s) => ({ ...s, sOpen: { ...s.sOpen, [key]: open } })),
       setReason: (sReason) => set({ sReason }),
       setNote: (sNote) => set({ sNote }),
       distributeS: () => {
