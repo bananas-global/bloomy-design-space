@@ -37,7 +37,7 @@ export const productDefinition: ProductDefinition = {
       intent: "A sub-aba Mapas de horas abre nos mapas que ficaram sem profissional, porque eles têm destino possível.",
       expected: [
         "Profissional de origem: Sem profissional (inativos) · 4 mapas; contagem \"6 horários em 4 mapas · 0 com destino\".",
-        "Cards de Helena Vieira, Igor Nunes, Júlia Almeida e Otávio Campos; Igor e Otávio mostram \"Ninguém cobre todos os horários\".",
+        "Cards de Helena Vieira, Igor Nunes, Júlia Almeida e Otávio Campos; Júlia e Otávio mostram \"Ninguém cobre todos os horários\".",
         "Painel: Mapas sem profissional · 4 mapas · 6h por semana; Transferir 0 horários desabilitado.",
         "Ao lado, Transferências programadas com 01/09 (em 11 dias), origem Rafael Lima: Flora Souza Seg 10:00–11:00 → Thiago Rezende.",
       ],
@@ -51,10 +51,10 @@ export const productDefinition: ProductDefinition = {
       controls: { distribute: "auto" },
       intent: "Distribuir dá a cada horário livre o profissional que recebeu menos; o que não tem destino fica com a origem.",
       expected: [
-        "3 de 6 horários com destino: Helena Vieira (Ter e Qui 08:00) → Renata Siqueira; Júlia Almeida Sex 13:00 → Murilo Pacheco.",
+        "4 de 6 horários com destino: Helena Vieira (Ter e Qui 08:00) → Renata Siqueira; Igor Nunes → Carolina Mattos; Júlia Almeida Sex 13:00 → Murilo Pacheco.",
         "Júlia aparece com \"Personalizado por horário\" (um horário com destino, outro sem).",
-        "Resumo: 3h a transferir, 2 profissionais de destino, 3h permanecem na origem. Para quem vai: Renata 2h, Murilo 1h.",
-        "Transferir 3 horários aplica e mostra o toast \"Horários transferidos\"; os mapas que saíram somem da lista.",
+        "Resumo: 4h a transferir, 3 profissionais de destino, 2h permanecem na origem. Para quem vai: Renata 2h, Carolina 1h, Murilo 1h.",
+        "Transferir 4 horários aplica e mostra o toast \"Horários transferidos\"; os mapas que saíram somem da lista.",
       ],
     },
     {
@@ -107,7 +107,7 @@ export const productDefinition: ProductDefinition = {
       intent: "Início Programada: os horários ficam reservados até a data e passam para o destino nela.",
       expected: [
         "Data 28/08/2026 (mínimo: amanhã, 22/08); texto \"Até 27/08/2026 os atendimentos seguem com a origem. A partir de 28/08/2026 (em 7 dias)…\".",
-        "O botão vira \"Programar 3 para 28/08\"; ao programar, entra em Transferências programadas e, de volta a Sem profissional, os horários aparecem travados (roxo) em Detalhar.",
+        "O botão vira \"Programar 4 para 28/08\"; ao programar, entra em Transferências programadas e, de volta a Sem profissional, os horários aparecem travados (roxo) em Detalhar.",
         "Com os horários dos mapas sem profissional reservados, a origem automática passa para Marina Costa.",
         "Cancelar devolve os horários à origem; Antecipar aplica hoje.",
       ],
@@ -134,7 +134,8 @@ export const productDefinition: ProductDefinition = {
       intent: "Cobertura pontual de sexta, 21/08: as sessões concretas de todos os profissionais, por titular, sem mexer nos mapas.",
       expected: [
         "Filtros De / Até 21/08/2026, Especialidade e Profissional; \"Sex, 21/08 · 87 sessões\".",
-        "Um card por titular (Ana Beatriz primeiro), cada sessão com Escolher substituto… ou \"Só fora da especialidade\".",
+        "Um card por titular (Ana Beatriz primeiro). Ana Beatriz, Vanessa Lobo e Henrique Sales abrem recolhidos, com um substituto para o dia inteiro (Carolina Mattos cobre todos); os outros abrem detalhados, porque ninguém cobre todas as sessões.",
+        "Em Detalhar, cada sessão tem Escolher substituto… ou \"Só fora da especialidade\".",
         "Painel Cobertura do período: 21/08 · os mapas de horas não mudam; Transferir 0 sessões desabilitado.",
       ],
     },
@@ -147,9 +148,9 @@ export const productDefinition: ProductDefinition = {
       controls: { sub: "sessions", period: "week", sDistribute: "auto" },
       intent: "Uma semana (21/08 a 27/08) com os substitutos distribuídos; Transferir pede o motivo da ausência.",
       expected: [
-        "446 sessões em cinco dias; Distribuir dá substituto a 157.",
-        "Ana Beatriz, 21/08: 07:00 Davi Teixeira → Henrique Sales; 08:00 Heitor Almeida → Vanessa Lobo; 09:00 Isabela Mendes sem substituto.",
-        "Com Motivo da ausência escolhido, Transferir 157 sessões aplica; as sessões transferidas saem da lista.",
+        "446 sessões em cinco dias; Distribuir dá substituto a 196.",
+        "Ana Beatriz, 21/08: 07:00 Davi Teixeira → Henrique Sales; 08:00 Heitor Almeida → Vanessa Lobo; 09:00 Isabela Mendes → Carolina Mattos; 11:00 Noah Araújo → Vanessa Lobo.",
+        "Com Motivo da ausência escolhido, Transferir 196 sessões aplica; as sessões transferidas saem da lista.",
       ],
     },
   ],

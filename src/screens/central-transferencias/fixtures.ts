@@ -1,10 +1,12 @@
 /**
  * Central de Transferências — dados sintéticos e determinísticos.
  *
- * Quinze profissionais da unidade, cada um com a escala semanal e a sala fixa,
- * e os mapas de horas dos pacientes: uma carga realista (~25–40h ocupadas por
- * profissional, o mesmo horário em 2–3 dias) gerada a partir da escala, mais
- * quatro mapas sem profissional. Hoje é `TODAY` (sexta, 21/08/2026). Nomes são
+ * Dezesseis profissionais da unidade, cada um com a escala semanal e a sala
+ * fixa, e os mapas de horas dos pacientes: uma carga realista (~25–40h
+ * ocupadas por profissional, o mesmo horário em 2–3 dias) gerada a partir da
+ * escala, mais quatro mapas sem profissional. Carolina Mattos (Fonoaudiologia)
+ * acabou de entrar: escala cheia e nenhum paciente, então cobre o dia inteiro
+ * de um titular. Hoje é `TODAY` (sexta, 21/08/2026). Nomes são
  * fictícios.
  */
 import type { Fixture } from "@brucesantos/design-space";
@@ -19,6 +21,8 @@ const avail = (days: Weekday[], start: string, end: string) => days.map((wd) => 
 type SeedProfessional = Professional & {
   /** Profissionais de apoio: ocupação ~67%, com folgas escalonadas entre si. */
   occ?: number;
+  /** Recém-contratada: escala cheia e nenhum paciente ainda. */
+  free?: boolean;
 };
 
 const PROFS_SEED: SeedProfessional[] = [
@@ -37,9 +41,10 @@ const PROFS_SEED: SeedProfessional[] = [
   { id: "p13", name: "Bianca Torres", specialty: "Terapia Ocupacional", room: "Sala 12", occ: 0, avail: avail(WEEK, "07:00", "18:00") },
   { id: "p14", name: "Murilo Pacheco", specialty: "Terapia Ocupacional", room: "Sala 13", occ: 2, avail: avail(WEEK, "07:00", "18:00") },
   { id: "p15", name: "Sabrina Coelho", specialty: "Psicopedagogia", room: "Sala 14", occ: 1, avail: avail(WEEK, "07:00", "17:00") },
+  { id: "p16", name: "Carolina Mattos", specialty: "Fonoaudiologia", room: "Sala 15", free: true, avail: avail(WEEK, "07:00", "19:00") },
 ];
 
-export const PROFESSIONALS: Professional[] = PROFS_SEED.map(({ occ: _occ, ...p }) => p);
+export const PROFESSIONALS: Professional[] = PROFS_SEED.map(({ occ: _occ, free: _free, ...p }) => p);
 
 const FIRST = ["Alice", "Bruno", "Caio", "Duda", "Enzo", "Flora", "Gabriel", "Helena", "Igor", "Júlia", "Lucas", "Manuela", "Nina", "Otávio", "Pietra", "Rafa", "Sofia", "Theo", "Valentina", "Yuri", "Lara", "Miguel", "Bia", "Arthur", "Clara", "Davi", "Eva", "Heitor", "Isabela", "Joaquim", "Lívia", "Noah", "Olívia", "Pedro", "Rebeca", "Samuel", "Tainá", "Vicente", "Zoe", "Benício"];
 const LAST = ["Ribeiro", "Martins", "Ferreira", "Lopes", "Tavares", "Souza", "Pinto", "Vieira", "Nunes", "Almeida", "Moreira", "Rocha", "Barbosa", "Campos", "Cunha", "Teixeira", "Mendes", "Araújo", "Castro", "Monteiro"];
@@ -53,6 +58,7 @@ function baseSeed(): HoursMap[] {
   let n = 0;
   const pad = (h: number) => `${String(h).padStart(2, "0")}:00`;
   PROFS_SEED.forEach((p, pi) => {
+    if (p.free) return;
     const days = p.avail.map((a) => a.wd);
     const groups =
       days.length >= 5
@@ -105,9 +111,9 @@ export type TransferCenterFixture = { professionals: Professional[]; maps: Hours
 export const TRANSFER_CENTER_FIXTURES: Fixture<TransferCenterFixture>[] = [
   {
     id: "transfer-center.unit",
-    label: "Unidade Teste · quinze profissionais e seus mapas de horas",
+    label: "Unidade Teste · dezesseis profissionais e seus mapas de horas",
     description:
-      "Quinze profissionais com escala e sala fixa, os mapas de horas dos pacientes (carga de 25–40h por profissional), quatro mapas sem profissional e uma transferência programada para 01/09.",
+      "Dezesseis profissionais com escala e sala fixa (uma recém-contratada, sem pacientes), os mapas de horas dos pacientes (carga de 25–40h por profissional), quatro mapas sem profissional e uma transferência programada para 01/09.",
     data: () => ({ professionals: PROFESSIONALS, maps: HOURS_MAPS, scheduled: SCHEDULED }),
   },
 ];

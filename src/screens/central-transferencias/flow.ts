@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ControlGroup, ScenarioContext } from "@brucesantos/design-space";
-import { PROFESSIONALS } from "./fixtures.js";
+import { HOURS_MAPS, PROFESSIONALS } from "./fixtures.js";
 import { NO_PROF } from "./model.js";
 
 export type Controls = Record<string, string>;
@@ -53,7 +53,8 @@ export const TRANSFER_CENTER_CONTROLS: ControlGroup[] = [
         label: "Profissional de origem",
         options: [
           { value: "auto", label: "Automática" },
-          ...PROFESSIONALS.map((p) => ({ value: p.id, label: `${p.name} · ${p.specialty}` })),
+          // Só quem tem mapa pode ser origem (Carolina Mattos, recém-contratada, não tem).
+          ...PROFESSIONALS.filter((p) => HOURS_MAPS.some((m) => m.profId === p.id)).map((p) => ({ value: p.id, label: `${p.name} · ${p.specialty}` })),
           { value: NO_PROF, label: "Sem profissional (inativos)" },
         ],
       },
