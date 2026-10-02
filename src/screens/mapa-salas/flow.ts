@@ -3,7 +3,7 @@
  *
  * Os controles (`ControlGroup`, painel Variações do motor) montam os dados
  * sintéticos da aba; quando a própria UI muda o que um controle representa
- * (trocar o dia, a vigência, abrir ou fechar uma gaveta), o controle acompanha
+ * (trocar o dia, filtrar, abrir ou fechar uma gaveta), o controle acompanha
  * por `context.setControls`.
  *
  * `useControlledState` é o mesmo de `documentos-unidade/flow.ts` e de
@@ -59,26 +59,10 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
     ],
   },
   {
-    id: "vigencia",
-    title: "Vigência do planejamento",
-    note: "Hoje é 30/07/2026. Em vigência: edições viram rascunho até publicar. Futura: grava direto. Encerrada: só leitura.",
-    controls: [
-      {
-        id: "vigencia",
-        label: "Vigência",
-        options: [
-          { value: "v1", label: "06/05/2026 – 30/11/2026 (em vigência)" },
-          { value: "v2", label: "01/12/2026 – 30/06/2027 (futura)" },
-          { value: "v0", label: "05/01/2026 – 05/05/2026 (encerrada)" },
-        ],
-      },
-    ],
-  },
-  {
     id: "day",
     title: "Dia da semana · radio_selector",
     component: "core.radio-selector",
-    note: "O dia que o mapa mostra. Na vigência em curso, a semana é a de hoje; nas outras, a primeira semana da vigência.",
+    note: "O dia que o mapa mostra, na semana de hoje (27 a 31/07/2026).",
     controls: [
       {
         id: "day",
@@ -104,27 +88,12 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
         label: "Mostrar",
         options: [
           { value: "all", label: "Tudo" },
-          { value: "ok", label: "Com plano e profissional" },
-          { value: "open", label: "Só com plano (sem profissional)" },
-          { value: "extra", label: "Só com profissional (sem plano)" },
-          { value: "noplan", label: "Sem plano e sem profissional" },
-          { value: "divergent", label: "Com conflito" },
+          { value: "ok", label: "Planejado com profissional" },
+          { value: "open", label: "Planejado sem profissional" },
+          { value: "extra", label: "Profissional sem planejado" },
+          { value: "noplan", label: "Sem planejado e sem profissional" },
+          { value: "divergent", label: "Especialidade diferente do planejado" },
           { value: "temp", label: "Temporário" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "draft",
-    title: "Rascunho da vigência em curso",
-    note: "Com rascunho: uma alocação ainda não publicada (Unidade Teste: Fábio na Sala Lilás·B à tarde) e a barra Descartar / Publicar no pé da página.",
-    controls: [
-      {
-        id: "draft",
-        label: "Rascunho",
-        options: [
-          { value: "none", label: "Sem alterações" },
-          { value: "with", label: "Com alteração não publicada" },
         ],
       },
     ],
@@ -149,7 +118,7 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
     id: "overlay",
     title: "Sobreposição aberta · drawer_modal",
     component: "core.drawer-modal",
-    note: "Editar sala abre a primeira sala. Definir padrão abre no primeiro ponto sem plano; Alocar, no primeiro trecho a cobrir do dia; Editar alocação, na primeira alocação. Publicar abre com o rascunho. Em Santana não há ponto sem plano, trecho a cobrir na quinta nem bloqueio.",
+    note: "Editar sala abre a primeira sala. Novo planejado abre no primeiro ponto sem planejado no dia; Editar planejado, no primeiro trecho planejado. Em Santana não há ponto sem planejado nem bloqueio.",
     controls: [
       {
         id: "overlay",
@@ -158,11 +127,8 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
           { value: "none", label: "Nenhuma" },
           { value: "room-new", label: "Nova sala" },
           { value: "room-edit", label: "Editar sala" },
-          { value: "plan", label: "Definir padrão do ponto" },
-          { value: "gap", label: "Alocar no trecho a cobrir" },
-          { value: "card", label: "Editar alocação" },
-          { value: "version", label: "Nova vigência" },
-          { value: "publish", label: "Publicar rascunho" },
+          { value: "plan", label: "Novo planejado" },
+          { value: "plan-edit", label: "Editar planejado" },
           { value: "blocking", label: "Novo bloqueio" },
           { value: "blocking-info", label: "Detalhes do bloqueio" },
         ],

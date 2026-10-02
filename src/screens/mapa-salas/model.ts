@@ -13,11 +13,11 @@
  * onde falta gente, onde a especialidade não bate e onde há alocação fora do
  * planejado.
  *
- * O planejamento tem vigências (versões com início e fim). O mapa aplica a
- * vigência selecionada; editar a vigência em curso vira rascunho até publicar.
+ * Só o planejamento se edita no mapa, e vale na hora. A escala vem do perfil
+ * de cada profissional (lá se define a sala e o ponto em que ele atende).
  */
 import { TODAY } from "../../components/today.js";
-import { FREE_SCALE, PROFESSIONALS } from "./fixtures.js";
+import { PROFESSIONALS } from "./fixtures.js";
 
 /* ============================================================
    Tipos
@@ -183,7 +183,6 @@ export function daysLabel(days: DayKey[] | null | undefined, uDays: DayKey[]): s
    Datas (ISO `AAAA-MM-DD`, no fuso local)
    ============================================================ */
 
-const MONTHS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
 export const parseISO = (iso: string) => {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y!, m! - 1, d);
@@ -208,10 +207,6 @@ export const fmtBR = (iso: string | null | undefined) => {
   if (!iso) return "—";
   const [y, m, d] = iso.split("-");
   return `${d}/${m}/${y}`;
-};
-export const fmtWeek = (monday: Date) => {
-  const end = addDays(monday, 6);
-  return `${monday.getDate()} ${MONTHS[monday.getMonth()]} – ${end.getDate()} ${MONTHS[end.getMonth()]} ${end.getFullYear()}`;
 };
 
 /** O relógio do ambiente: o mapa e a lista de profissionais concordam sobre "hoje". */
@@ -252,22 +247,6 @@ export const typeLabel = (t: PlanType) => (t === "temporary" ? "Temporário" : "
 
 /** Conflito = só especialidade diferente (perfil e tipo não entram na regra). */
 const fits = (pl: { specialty: string }, al: { specialty: string }) => al.specialty === pl.specialty;
-
-/** Divide um trecho do padrão em antes / [from, to] com nova especialidade / depois. */
-export function splitPlan(list: PlanEntry[], src: PlanEntry, from: number, to: number, specialty: Specialty): PlanEntry[] {
-  return list
-    .flatMap((pl) => {
-      if (pl !== src) return [pl];
-      const s = toMin(pl.start), e = toMin(pl.end), a = Math.max(s, from), b = Math.min(e, to);
-      if (b <= a) return [pl];
-      return [
-        ...(s < a ? [{ ...pl, end: hhmm(a) }] : []),
-        { ...pl, start: hhmm(a), end: hhmm(b), specialty },
-        ...(b < e ? [{ ...pl, start: hhmm(b) }] : []),
-      ];
-    })
-    .sort(byStart);
-}
 
 export const byStart = (x: { start: string }, y: { start: string }) => String(x.start).localeCompare(String(y.start));
 
@@ -315,22 +294,11 @@ export type AllocBlock = Period & Segment & {
   host: PlanSeg | null;
 };
 
-/** Alguém com escala livre na unidade que cobre (parte de) um trecho aberto. */
-export type Candidate = {
-  professional: string;
-  specialty: Specialty;
-  role: string;
-  start: string;
-  end: string;
-  busy: boolean;
-};
-
 export type Gap = Segment & {
   room: Room;
   point: ServicePoint;
   plan: PlanSeg;
   minutes: number;
-  candidates: Candidate[];
 };
 
 export type Lane = {
@@ -359,28 +327,6 @@ export function buildDay(unit: UnitShape, day: DayKey, monday: Date): DayModel {
   const dayEnd = toMin(unit.serviceHour.end);
   const span = Math.max(60, dayEnd - dayStart);
   const uDays = unitDays(unit);
-
-  // Alocações do dia em todos os pontos, para não sugerir quem já está em uso.
-  const busy: { professional: string; from: number; to: number }[] = [];
-  unit.rooms.forEach((room) =>
-    room.servicePoints.forEach((sp) =>
-      sp.periods.forEach((p) => {
-        if (!p.professional || !periodDays(p, uDays).includes(day) || !periodValidOn(p, refISO)) return;
-        busy.push({ professional: p.professional, from: toMin(p.start), to: toMin(p.end) });
-      }),
-    ),
-  );
-  const busyAt = (name: string, a: number, b: number) => busy.some((x) => x.professional === name && overlap(a, b, x.from, x.to) > 0);
-
-  /** Todos os candidatos para um trecho aberto; a decisão de alocar é de quem opera o mapa. */
-  const candidatesFor = (a: number, b: number): Candidate[] =>
-    FREE_SCALE.filter((c) => c.unitId === unit.id && c.days.includes(day))
-      .map((c) => {
-        const from = Math.max(toMin(c.start), a), to = Math.min(toMin(c.end), b);
-        return { ...c, coverMin: Math.max(0, to - from), busy: busyAt(c.professional, from, to) };
-      })
-      .filter((c) => c.coverMin >= MIN_SEG)
-      .map(({ professional, specialty, role, start, end, busy }) => ({ professional, specialty, role, start, end, busy }));
 
   const closed: Segment[] = [];
 
@@ -418,7 +364,7 @@ export function buildDay(unit: UnitShape, day: DayKey, monday: Date): DayModel {
             .filter((al) => overlap(pl.from, pl.to, al.from, al.to) > 0)
             .map((al): [number, number] => [Math.max(al.from, pl.from), Math.min(al.to, pl.to)]);
           subtract(pl.from, pl.to, covered).forEach(([a, b]) => {
-            gaps.push({ room, point: sp, plan: pl, from: a, to: b, minutes: b - a, candidates: candidatesFor(a, b) });
+            gaps.push({ room, point: sp, plan: pl, from: a, to: b, minutes: b - a });
           });
         });
 
@@ -514,86 +460,6 @@ export function searchOptions(rooms: DayModel["rooms"]): SearchOption[] {
   const order = ["Profissionais", "Salas", "Sala e ponto", "Especialidades"];
   return out.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
 }
-
-/* ============================================================
-   Vigências do planejamento
-   ============================================================ */
-
-/** O padrão semanal de cada ponto: plano e alocação. */
-export type Sps = Record<string, Record<string, { plan: PlanEntry[]; periods: Period[] }>>;
-/** A estrutura das salas na vigência: quais existem, nome, tipo, ativa e pontos. */
-export type Struct = Record<string, { name: string; type: RoomType; active: boolean; points: string[] }>;
-
-export type Version = { id: string; start: string; end: string; sps: Sps; struct: Struct; autoRenew?: boolean };
-
-export type VersionStatus = { label: string; order: 0 | 1 | 2 };
-
-export function versionStatus(v: Pick<Version, "start" | "end">): VersionStatus {
-  const t = TODAY;
-  if (t >= v.start && t <= v.end) return { label: "Em vigência", order: 0 };
-  if (v.start > t) return { label: "Futura", order: 1 };
-  return { label: "Encerrada", order: 2 };
-}
-
-const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
-
-export function extractSps(rooms: Room[]): Sps {
-  const out: Sps = {};
-  rooms.forEach((r) => {
-    out[r.id] = {};
-    r.servicePoints.forEach((sp) => {
-      out[r.id]![sp.name] = { plan: sp.plan, periods: sp.periods };
-    });
-  });
-  return out;
-}
-
-export function structOf(rooms: Room[]): Struct {
-  const out: Struct = {};
-  rooms.forEach((r) => {
-    out[r.id] = { name: r.name, type: r.type, active: r.active !== false, points: r.servicePoints.map((sp) => sp.name) };
-  });
-  return out;
-}
-
-/** As salas como a vigência as vê: estrutura dela sobre o cadastro, com o padrão de cada ponto. */
-export function applySps(rooms: Room[], sps: Sps, struct: Struct | null): Room[] {
-  return rooms
-    .filter((r) => !struct || struct[r.id])
-    .map((r) => {
-      const st = struct?.[r.id];
-      const names = st ? st.points : r.servicePoints.map((sp) => sp.name);
-      return {
-        ...r,
-        ...(st ? { name: st.name, type: st.type, active: st.active } : {}),
-        servicePoints: names.map((n) => {
-          const x = sps[r.id]?.[n];
-          return { name: n, plan: x ? x.plan : [], periods: x ? x.periods : [] };
-        }),
-      };
-    });
-}
-
-/** As três vigências do protótipo: a anterior só com a manhã, a em curso e a futura (renova). */
-export function initialVersions(rooms: Room[]): Version[] {
-  const snap = clone(extractSps(rooms));
-  const old = clone(snap);
-  Object.values(old).forEach((pts) =>
-    Object.values(pts).forEach((x) => {
-      x.plan = x.plan.filter((pl) => pl.start < "12:00");
-      x.periods = x.periods.filter((pr) => pr.start < "12:00");
-    }),
-  );
-  const st = structOf(rooms);
-  return [
-    { id: "v0", start: "2026-01-05", end: "2026-05-05", sps: old, struct: clone(st) },
-    { id: "v1", start: "2026-05-06", end: "2026-11-30", sps: snap, struct: clone(st) },
-    { id: "v2", start: "2026-12-01", end: "2027-06-30", sps: clone(snap), struct: clone(st), autoRenew: true },
-  ];
-}
-
-export const cloneSps = (sps: Sps) => clone(sps);
-export const cloneStruct = (st: Struct) => clone(st);
 
 /* ============================================================
    Cabeçalho da unidade

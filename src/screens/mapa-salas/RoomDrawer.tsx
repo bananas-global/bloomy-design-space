@@ -3,22 +3,21 @@
  *
  * Criação simplificada: nome, tipo e os pontos de atendimento. O padrão de
  * cada ponto é definido depois, direto no mapa (clique num horário vazio).
- * Renomear um ponto mantém o padrão e as alocações dele. Numa vigência
- * encerrada, salas não são criadas nem editadas.
+ * Renomear um ponto mantém o planejado e a escala dele.
  */
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
 import { DrawerModal } from "../../components/Overlay.js";
-import { POINT_NAMES, ROOM_TYPES, fmtBR, type Room, type RoomType, type ServicePoint } from "./model.js";
+import { POINT_NAMES, ROOM_TYPES, type Room, type RoomType, type ServicePoint } from "./model.js";
 import { DRAWER_SIZE, DrawerFooter, Note, Warn } from "./parts.js";
 import { useRoomsMap } from "./store.js";
 
 type PointRow = { key: string; name: string; src: ServicePoint | null };
 
 export function RoomDrawer({ room }: { room: Room | null }) {
-  const { rooms, unit, version, vStatus, saveRoom, closeModal } = useRoomsMap();
+  const { rooms, unit, saveRoom, closeModal } = useRoomsMap();
   const isEdit = Boolean(room);
   const [name, setName] = useState(room ? room.name : "");
   const [type, setType] = useState<RoomType>(room ? room.type : "attendance");
@@ -65,11 +64,6 @@ export function RoomDrawer({ room }: { room: Room | null }) {
       title={isEdit ? "Editar sala" : "Nova Sala"}
     >
       <div className="flex flex-1 flex-col gap-6">
-        <p className="flex items-center gap-2 text-[13px] font-bold text-brand-purple-dark/60">
-          <Icon name="fa-calendar" />
-          {`Vigência ${fmtBR(version.start)} – ${fmtBR(version.end)}`}
-          {vStatus.order === 0 ? " · entra no rascunho, vale ao publicar" : ""}
-        </p>
         <Input id="mapa-salas-sala-nome" label="Nome da Sala" value={name} placeholder={`Sala ${number}`} onChange={(e) => setName(e.target.value)} />
         <Input
           id="mapa-salas-sala-tipo"
@@ -126,8 +120,8 @@ export function RoomDrawer({ room }: { room: Room | null }) {
 
         {removed.length > 0 && (
           <Warn>
-            {removed.map((sp) => `${name.trim() || number}·${sp.name}`).join(", ")} {removed.length > 1 ? "têm" : "tem"} padrão definido. Ao remover, o padrão e as
-            alocações desse ponto saem do mapa.
+            {removed.map((sp) => `${name.trim() || number}·${sp.name}`).join(", ")} {removed.length > 1 ? "têm" : "tem"} planejado ou escala. Ao remover, o ponto sai do
+            mapa com o planejado dele.
           </Warn>
         )}
         {isEdit && (
@@ -136,7 +130,7 @@ export function RoomDrawer({ room }: { room: Room | null }) {
             <p className="px-4 text-sm font-semibold text-brand-purple-dark/55">Sai do mapa, mas o histórico fica.</p>
           </div>
         )}
-        {!isEdit && <Note>O padrão de atendimento de cada ponto é definido depois, direto no mapa: clique num horário vazio da faixa.</Note>}
+        {!isEdit && <Note>O planejado de cada ponto é definido depois, direto no mapa: clique num horário vazio da linha de cima.</Note>}
       </div>
 
       <DrawerFooter>
@@ -152,23 +146,6 @@ export function RoomDrawer({ room }: { room: Room | null }) {
             Criar sala
           </Button>
         )}
-      </DrawerFooter>
-    </DrawerModal>
-  );
-}
-
-/** Vigência encerrada: salas não são criadas nem editadas. */
-export function ClosedVersionDrawer() {
-  const { closeModal } = useRoomsMap();
-  return (
-    <DrawerModal id="mapa-salas-encerrada" show onCancel={closeModal} variant="extra_small" contentClass="flex flex-col" title="Vigência encerrada">
-      <p className="flex-1 text-sm text-brand-purple-dark/70 text-pretty">
-        Salas não podem ser criadas nem editadas numa vigência encerrada. Selecione a vigência em curso ou uma futura.
-      </p>
-      <DrawerFooter>
-        <Button type="button" onClick={closeModal}>
-          Entendi
-        </Button>
       </DrawerFooter>
     </DrawerModal>
   );

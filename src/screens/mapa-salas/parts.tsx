@@ -7,8 +7,7 @@ import type { ReactNode } from "react";
 import { Button } from "../../components/Button.js";
 import { CheckboxGroup } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
-import { Tag, type TagVariant } from "../../components/Tag.js";
-import { dayShort, type DayKey, type VersionStatus } from "./model.js";
+import { dayShort, type DayKey } from "./model.js";
 
 /**
  * Tamanho das gavetas do mapa: o `extra_small` (`max-w-md`) um pouco mais
@@ -74,11 +73,4 @@ export function DayPicker({ id, value, unitDays, onChange }: { id: string; value
       </div>
     </div>
   );
-}
-
-const VERSION_TAG: Record<VersionStatus["order"], TagVariant> = { 0: "green", 1: "dark-purple", 2: "red" };
-
-/** Selo da vigência: Em vigência, Futura ou Encerrada. Novo — não existe no Phoenix. */
-export function VersionTag({ status }: { status: VersionStatus }) {
-  return <Tag pill item={status.label} variant={VERSION_TAG[status.order]} className="whitespace-nowrap" />;
 }

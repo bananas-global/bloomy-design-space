@@ -6,8 +6,8 @@
  * traz o planejamento (`plan`, o que a unidade precisa) e a escala (`periods`,
  * quem está alocado). Hoje é `TODAY` (30/07/2026). Nomes são fictícios.
  *
- * `PROFESSIONALS` dá as datas de desligamento que o mapa consulta e
- * `FREE_SCALE`, quem tem escala na unidade sem ponto de atendimento.
+ * `PROFESSIONALS` dá a especialidade e as datas de desligamento que o mapa
+ * consulta.
  */
 import type { Fixture } from "@brucesantos/design-space";
 import type { UnitHeader } from "../../layouts/UnitLayout.js";
@@ -210,23 +210,6 @@ export const PROFESSIONALS: Professional[] = [
   { name: "Letícia Barros Maia", active: true, specialty: "Aplicador ABA" },
   { name: "Vinícius Moraes Tavares", active: true, specialty: "Aplicador ABA" },
   { name: "Sofia Lacerda Ramos", active: true, specialty: "Aplicador ABA" },
-];
-
-/**
- * Escala sem ponto de atendimento: quem já tem dia e horário na unidade, mas
- * sem Sala · Ponto. São os candidatos que o mapa sugere para o planejado aberto.
- */
-export type FreeScale = { professional: string; specialty: Specialty; role: string; unitId: UnitId; days: DayKey[]; start: string; end: string };
-
-export const FREE_SCALE: FreeScale[] = [
-  { professional: "Helena Martins Costa", specialty: "Psicologia", role: "therapeutic_companion", unitId: "u1", days: WEEK, start: "08:00", end: "12:00" },
-  { professional: "Tânia Abreu Pinho", specialty: "Psicologia", role: "applicator", unitId: "u1", days: ["monday", "wednesday", "friday"], start: "13:00", end: "18:00" },
-  { professional: "Mariana Palmeira Stein", specialty: "Terapia Ocupacional", role: "specialist", unitId: "u1", days: ["monday", "tuesday", "wednesday"], start: "08:00", end: "12:00" },
-  { professional: "Tiago Alves da Rocha", specialty: "Terapia Ocupacional", role: "therapeutic_companion", unitId: "u1", days: ["tuesday", "thursday"], start: "08:00", end: "13:00" },
-  { professional: "Fábio Stoll Pereira", specialty: "Fonoaudiologia", role: "specialist", unitId: "u1", days: WEEK, start: "13:00", end: "18:00" },
-  { professional: "Larissa Wippich Faria", specialty: "Fonoaudiologia", role: "applicator", unitId: "u1", days: ["monday", "thursday", "friday"], start: "14:00", end: "18:00" },
-  { professional: "Raiane Almeida Longo", specialty: "Fisioterapia", role: "therapeutic_companion", unitId: "u2", days: WEEK, start: "07:30", end: "12:00" },
-  { professional: "Lívia Cardoso da Mata", specialty: "Psicopedagogia", role: "specialist", unitId: "u1", days: ["tuesday", "thursday"], start: "13:00", end: "17:00" },
 ];
 
 export const ROOMS_MAP_FIXTURES: Fixture<RoomsMapFixture>[] = [

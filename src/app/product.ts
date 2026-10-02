@@ -9,8 +9,8 @@ import { FLOW as ROOMS_MAP_FLOW, PATH as ROOMS_MAP_PATH, ROOMS_MAP_CONTROLS, UNI
 
 /** Componentes do catálogo que a aba Salas (Mapa de Salas) usa. */
 const ROOMS_MAP_COMPONENTS = [
-  "layout.backoffice", "layout.unit", "core.card-tabs", "core.button-tabs", "core.radio-selector", "core.dropdown",
-  "core.button", "core.input", "core.custom-select", "core.checkbox-group", "core.radio-group", "core.tag",
+  "layout.backoffice", "layout.unit", "core.card-tabs", "core.button-tabs", "core.radio-selector",
+  "core.button", "core.input", "core.custom-select", "core.checkbox-group",
   "core.table", "core.modal", "core.drawer-modal", "core.toast-wrapper", "core.avatar", "core.dropdown-menu",
 ];
 
@@ -35,9 +35,9 @@ export const productDefinition: ProductDefinition = {
       route: roomsMapPath(),
       fixture: "rooms-map.units",
       persona: "admin",
-      intent: "A aba Salas da Unidade Teste na vigência em curso: uma faixa por ponto, com o planejado em cima e quem está na escala embaixo.",
+      intent: "A aba Salas da Unidade Teste: uma faixa por ponto, com o planejado em cima e a escala (do perfil do profissional) embaixo.",
       expected: [
-        "Ao lado de Salas / Bloqueios: Seg a Sex com Qui marcado, a vigência 06/05/2026 – 30/11/2026 \"Em vigência\" e Nova Sala.",
+        "Ao lado de Salas / Bloqueios: Seg a Sex com Qui marcado e Nova Sala.",
         "Contadores: 4 com plano e profissional, 11 só com plano, 0 só com profissional, 7 sem plano nem profissional, 2 com conflito e 2 temporários.",
         "Sala Laranja·B (Helena, PSI num plano de FIS) e Sala Integração·C (Larissa, FON num plano de PSI) aparecem com o alerta laranja.",
         "Sala de Espera, sem ponto, mostra \"nenhum ponto de atendimento configurado\"; a Ludoteca, inativa, não aparece.",
@@ -54,7 +54,7 @@ export const productDefinition: ProductDefinition = {
       expected: [
         "Contadores: 5, 11, 1, 5, 3 e 4.",
         "Conflitos: Larissa na Sala Azul·B, Mariana na Sala Rosa·B e Helena na Sala Laranja·B.",
-        "Lívia no Consultório 1·A é escala sem plano (a parte de cima do card fica cinza).",
+        "Lívia no Consultório 1·A é escala sem planejado (card tracejado na linha de baixo).",
       ],
     },
     {
@@ -67,96 +67,41 @@ export const productDefinition: ProductDefinition = {
       intent: "O contador de conflito ligado filtra o mapa; Limpar filtros volta tudo.",
       expected: ["Só Sala Laranja·B e Sala Integração·C.", "O contador de conflito fica marcado e aparece Limpar filtros."],
     },
-    {
-      id: "rooms-map.gap",
-      title: "Alocar no trecho a cobrir",
-      route: roomsMapPath(),
-      fixture: "rooms-map.units",
-      persona: "admin",
-      controls: { overlay: "gap" },
-      intent: "O trecho planejado sem ninguém da Sala Azul·B (Fonoaudiologia, 13h–17h), com quem tem escala livre primeiro.",
-      expected: [
-        "O profissional sugerido primeiro é \"Fábio Stoll Pereira · escala livre 13:00–18:00\".",
-        "Ao salvar, o card passa a mostrar Fábio, aparece o toast \"Profissional alocado\" e a barra \"1 alteração não publicada\".",
-      ],
-    },
+
     {
       id: "rooms-map.plan",
-      title: "Definir o padrão de um ponto",
+      title: "Novo planejado num ponto",
       route: roomsMapPath(),
       fixture: "rooms-map.units",
       persona: "admin",
       controls: { overlay: "plan" },
-      intent: "Clique num horário vazio da faixa: a gaveta define o que a unidade precisa no ponto (Sala Lilás·D).",
+      intent: "Clique num horário vazio da linha de cima: a gaveta define o que a unidade precisa no ponto (Sala Lilás·D).",
       expected: [
-        "Especialidade, profissional (só depois da especialidade), início e fim de hora em hora, tipo Fixo / Temporário e dias.",
-        "Fim antes do início, nenhum dia escolhido ou horário que cruza outro padrão do ponto mostra o aviso e não salva.",
+        "Especialidade, início e fim de hora em hora, tipo Fixo / Temporário e dias. Sem campo de profissional.",
+        "Fim antes do início, nenhum dia escolhido ou horário que cruza outro planejado do ponto mostra o aviso e não salva.",
+        "Ao salvar, o trecho entra na linha de cima na hora, com o toast \"Planejado adicionado\".",
       ],
     },
     {
-      id: "rooms-map.card",
-      title: "Editar uma alocação",
+      id: "rooms-map.plan-edit",
+      title: "Editar um planejado",
       route: roomsMapPath(),
       fixture: "rooms-map.units",
       persona: "admin",
-      controls: { overlay: "card" },
-      intent: "O card de Helena na Sala Azul·A: trocar o profissional, o horário, o tipo e os dias.",
+      controls: { overlay: "plan-edit" },
+      intent: "O planejado de Psicologia da Sala Azul·A (08h–12h): mudar, ou remover.",
       expected: [
-        "Salvar só habilita depois de mudar algo.",
-        "Arrastar o card no mapa move o horário de hora em hora; puxar as bordas muda início e fim.",
+        "Salvar só habilita depois de mudar algo; Remover tira o trecho do planejamento.",
+        "A nota mostra quem está na escala no horário (Helena Martins Costa), que vem do perfil do profissional.",
+        "Arrastar o trecho na linha de cima move o horário de hora em hora; puxar as bordas muda início e fim.",
       ],
     },
-    {
-      id: "rooms-map.draft",
-      title: "Rascunho da vigência em curso",
-      route: roomsMapPath(),
-      fixture: "rooms-map.units",
-      persona: "admin",
-      controls: { draft: "with" },
-      intent: "Edições na vigência em curso ficam em rascunho até publicar.",
-      expected: [
-        "Fábio ocupa a Sala Lilás·B à tarde e a barra \"1 alteração não publicada no padrão em vigência\" fica no pé da página.",
-        "Descartar volta ao padrão publicado; Publicar abre \"A partir de quando vale?\".",
-      ],
-    },
-    {
-      id: "rooms-map.publish",
-      title: "Publicar o rascunho",
-      route: roomsMapPath(),
-      fixture: "rooms-map.units",
-      persona: "admin",
-      controls: { overlay: "publish" },
-      intent: "Escolher quando a nova versão do padrão começa e termina.",
-      expected: [
-        "Hoje · 30/07/2026 ou outra data; o fim vem 30/11/2026.",
-        "Com fim antes de 30/11/2026, avisa que depois volta o padrão atual.",
-        "Ao publicar, a vigência 06/05 – 29/07 fica encerrada e a nova vale de 30/07.",
-      ],
-    },
-    {
-      id: "rooms-map.closed",
-      title: "Vigência encerrada (só leitura)",
-      route: roomsMapPath(),
-      fixture: "rooms-map.units",
-      persona: "admin",
-      controls: { vigencia: "v0" },
-      intent: "A vigência anterior, só com a manhã planejada.",
-      expected: [
-        "Aviso \"Vigência encerrada · somente leitura\"; os cards não arrastam nem abrem.",
-        "Contadores: 4, 5, 0, 13, 0 e 0.",
-        "Nova Sala e o lápis da sala abrem \"Vigência encerrada\" em vez da gaveta.",
-      ],
-    },
-    {
-      id: "rooms-map.version",
-      title: "Nova vigência",
-      route: roomsMapPath(),
-      fixture: "rooms-map.units",
-      persona: "admin",
-      controls: { overlay: "version" },
-      intent: "Uma nova versão do planejamento, no dia seguinte à última.",
-      expected: ["O início é 01/07/2027, travado; o planejamento vem copiado da vigência em curso ou em branco.", "Ao criar, ela vira a selecionada, marcada \"Futura\"."],
-    },
+
+
+
+
+
+
     {
       id: "rooms-map.room",
       title: "Nova sala",
@@ -165,7 +110,7 @@ export const productDefinition: ProductDefinition = {
       persona: "admin",
       controls: { overlay: "room-new" },
       intent: "Criação simplificada: nome, tipo e pontos. O padrão de cada ponto se define depois, no mapa.",
-      expected: ["Pontos com nome repetido ou vazio bloqueiam o Criar sala.", "A sala nova entra no fim do mapa com uma faixa por ponto."],
+      expected: ["Pontos com nome repetido ou vazio bloqueiam o Criar sala.", "A sala nova entra no fim do mapa, na hora, com uma faixa por ponto."],
     },
     {
       id: "rooms-map.santana",
@@ -210,7 +155,7 @@ export const productDefinition: ProductDefinition = {
       fixture: "rooms-map.units",
       persona: "clinic_admin",
       intent: "Quem vê a unidade mas não tem units.edit.",
-      expected: ["Sem Nova Sala, Nova vigência nem Novo bloqueio; o mapa não arrasta nem abre gavetas.", "Detalhes do bloqueio continuam disponíveis."],
+      expected: ["Sem Nova Sala nem Novo bloqueio; o planejado não arrasta nem abre gavetas.", "Detalhes do bloqueio e \"Ver escala no perfil\" continuam disponíveis."],
     },
   ],
   personas,
@@ -223,15 +168,14 @@ export const productDefinition: ProductDefinition = {
       screen: UnitRoomsMap,
       name: "Salas",
       group: ROOMS_MAP_FLOW,
-      description: "A aba Salas da unidade: o Mapa de Salas do dia (planejamento × escala de cada ponto), as vigências do planejamento e os bloqueios de sala.",
+      description: "A aba Salas da unidade: o Mapa de Salas do dia (o planejado de cada ponto sobre a escala dos profissionais) e os bloqueios de sala.",
       controls: ROOMS_MAP_CONTROLS,
       expected: [
-        "Button tabs Salas / Bloqueios; em Salas, o dia da semana (radio_selector), a vigência do planejamento e Nova Sala.",
-        "Uma faixa por ponto de atendimento no eixo do horário de funcionamento. Card: especialidade planejada e Sala·Ponto em cima; especialidade e profissional embaixo.",
-        "Trecho planejado sem ninguém: metade de baixo cinza, \"Alocar\" no hover. Escala sem plano: metade de cima cinza. Conflito (especialidade diferente): alerta laranja. Temporário: ampulheta roxa.",
-        "Clicar num horário vazio define o padrão; clicar no trecho aloca; clicar no card edita. Arrastar move de hora em hora e as bordas mudam início e fim.",
+        "Button tabs Salas / Bloqueios; em Salas, o dia da semana (radio_selector) e Nova Sala.",
+        "Uma faixa por ponto de atendimento no eixo do horário de funcionamento, em duas linhas.",
+        "Em cima, o planejado do ponto (o dia todo de uma especialidade, ou duas no mesmo dia): clicar num horário vazio adiciona, clicar num trecho edita ou remove, arrastar move de hora em hora e as bordas mudam início e fim. Vale na hora, sem rascunho nem publicar.",
+        "Embaixo, a escala: o profissional e a especialidade dele, vindos do perfil do profissional. Só leitura; hover mostra os detalhes e \"Ver escala no perfil\". Cinza: planejado sem profissional. Tracejado: escala sem planejado. Alerta laranja: especialidade diferente do planejado. Ampulheta roxa: temporário.",
         "Busca única por profissional, sala, sala + ponto (\"azul a\", \"1a\") ou especialidade, com sugestões; os contadores filtram por status.",
-        "Vigência em curso: edições viram rascunho até publicar. Futura: grava direto. Encerrada: só leitura.",
         "Bloqueios: filtros por sala, tipo e período; tabela do Phoenix; Novo bloqueio; detalhes em modal.",
         "Sem units.edit: só leitura.",
       ],
