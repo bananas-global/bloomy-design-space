@@ -64,19 +64,20 @@ export const OPERATORS: Operator[] = [
 
 /** Formações especiais reconhecidas. */
 export const SPECIAL_TRAININGS = [
-  { id: "is", name: "Integração Sensorial" },
-  { id: "bobath", name: "Conceito Bobath" },
-  { id: "pecs", name: "PECS — Comunicação por Troca de Figuras" },
-  { id: "denver", name: "Modelo Denver (ESDM)" },
-  { id: "prompt", name: "PROMPT" },
-  { id: "ablls", name: "ABLLS-R" },
-  { id: "vbmapp", name: "VB-MAPP" },
-  { id: "psicoped", name: "Psicopedagogia clínica" },
-  { id: "bcaba", name: "Supervisão BCaBA" },
-  { id: "bcba", name: "Supervisão BCBA" },
+  { id: "is", short: "IS", name: "Integração Sensorial" },
+  { id: "bobath", short: "Bobath", name: "Conceito Bobath" },
+  { id: "pecs", short: "PECS", name: "PECS — Comunicação por Troca de Figuras" },
+  { id: "denver", short: "Denver", name: "Modelo Denver (ESDM)" },
+  { id: "prompt", short: "PROMPT", name: "PROMPT" },
+  { id: "ablls", short: "ABLLS-R", name: "ABLLS-R" },
+  { id: "vbmapp", short: "VB-MAPP", name: "VB-MAPP" },
+  { id: "psicoped", short: "Psicopedagogia", name: "Psicopedagogia clínica" },
+  { id: "bcaba", short: "BCaBA", name: "Supervisão BCaBA" },
+  { id: "bcba", short: "BCBA", name: "Supervisão BCBA" },
 ];
 
 export const trainingName = (id: string) => SPECIAL_TRAININGS.find((t) => t.id === id)?.name ?? "";
+export const trainingShort = (id: string) => SPECIAL_TRAININGS.find((t) => t.id === id)?.short ?? "";
 
 /** Carga horária ABA e formações especiais do cadastro. */
 export const PROFILE: Record<string, { abaHours: number; badges: string[] }> = {

@@ -22,7 +22,7 @@ import { SimpleTable } from "../components/Table.js";
 import { Tag, TagList } from "../components/Tag.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { DocDrawer, OpDrawer } from "./profissionais/drawers.js";
-import { MONTH_HOURS, OPERATORS, PROFESSIONALS_FIXTURES, TODAY, type ProfessionalsFixture, type ProfessionalsView } from "./profissionais/fixtures.js";
+import { MONTH_HOURS, OPERATORS, PROFESSIONALS_FIXTURES, TODAY, trainingName, trainingShort, type ProfessionalsFixture, type ProfessionalsView } from "./profissionais/fixtures.js";
 import {
   byStatus,
   DOC_CATEGORIES,
@@ -316,6 +316,23 @@ function DocsView({ professionals }: { professionals: Professional[] }) {
                 types.map((t) => {
                   const c = r.cats[cat].cells.find((x) => x.type.id === t.id)!;
                   const hours = t.id === "aba_course" ? abaHours(state.docs[r.prof.id]) : null;
+                  const trainings = t.id === "special_training" ? (state.docs[r.prof.id] ?? []).filter((d) => d.training) : [];
+                  if (trainings.length)
+                    return (
+                      <td key={t.id} onClick={stop}>
+                        {/* Uma tag por formação especial; o clique abre o drawer do documento. */}
+                        <button
+                          type="button"
+                          title={trainings.map((d) => trainingName(d.training!)).join(" · ")}
+                          onClick={() => setDocDrawer({ prof: r.prof, cell: c })}
+                          className="inline-flex cursor-pointer flex-wrap justify-center gap-1"
+                        >
+                          {trainings.map((d) => (
+                            <Tag key={d.id} item={trainingShort(d.training!)} className="whitespace-nowrap" />
+                          ))}
+                        </button>
+                      </td>
+                    );
                   return (
                     <td key={t.id} onClick={stop}>
                       <CellBox
