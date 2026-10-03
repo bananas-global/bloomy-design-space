@@ -52,20 +52,24 @@ const down = (m: number) => Math.floor(m / HOUR) * HOUR;
    ============================================================ */
 
 function Ruler({ dayStart, dayEnd, span }: { dayStart: number; dayEnd: number; span: number }) {
-  // Abertura, horas cheias intermediárias e fechamento, com folga de 45 min entre rótulos.
+  // Abertura, todas as horas cheias e fechamento. A hora cheia a menos de 45 min
+  // de uma ponta (08:00 numa abertura às 07:30) alinha pelo lado de fora, para
+  // não encostar no rótulo da ponta.
   const gap = 45;
   const marks = [dayStart];
-  for (let m = Math.ceil(dayStart / 60) * 60; m < dayEnd; m += 60) if (m - dayStart >= gap) marks.push(m);
-  if (dayEnd - marks[marks.length - 1]! >= gap) marks.push(dayEnd);
+  for (let m = Math.floor(dayStart / 60) * 60 + 60; m < dayEnd; m += 60) marks.push(m);
+  marks.push(dayEnd);
+  const align = (m: number, i: number) => {
+    if (i === 0 || (m - dayStart < gap && dayEnd - m >= gap)) return "";
+    if (i === marks.length - 1 || dayEnd - m < gap) return "-translate-x-full";
+    return "-translate-x-1/2";
+  };
   return (
     <div className="relative h-[22px]">
       {marks.map((m, i) => (
         <span
           key={m}
-          className={cx(
-            "absolute bottom-1 whitespace-nowrap text-[11px] font-extrabold text-brand-purple-dark/40 tabular-nums",
-            i === 0 ? "" : i === marks.length - 1 ? "-translate-x-full" : "-translate-x-1/2",
-          )}
+          className={cx("absolute bottom-1 whitespace-nowrap text-[11px] font-extrabold text-brand-purple-dark/40 tabular-nums", align(m, i))}
           style={{ left: `${((m - dayStart) / span) * 100}%` }}
         >
           {hhmm(m)}
@@ -406,6 +410,7 @@ function Search({ value, onChange, options }: { value: string; onChange: (v: str
     <div ref={ref} className="relative min-w-0">
       <Input
         id="mapa-salas-busca"
+        type="search"
         value={value}
         placeholder="Profissional, sala ou ponto (ex.: Azul A)"
         leftIcon="fa-magnifying-glass"
@@ -418,19 +423,6 @@ function Search({ value, onChange, options }: { value: string; onChange: (v: str
         onFocus={() => value && setOpen(true)}
         onKeyDown={onKey}
       />
-      {value && (
-        <button
-          type="button"
-          aria-label="Limpar busca"
-          className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-brand-purple-dark/45 hover:bg-brand-purple-dark/6 hover:text-brand-purple-dark"
-          onClick={() => {
-            onChange("");
-            setOpen(false);
-          }}
-        >
-          <Icon name="fa-xmark" type="solid" />
-        </button>
-      )}
       {open && nq && (
         <div role="listbox" className="absolute inset-x-0 top-[calc(100%+6px)] z-40 max-h-[360px] overflow-y-auto rounded-xl border border-neutral-100 bg-white p-1.5 shadow-main">
           {flat.length === 0 && <p className="px-2.5 py-3 text-[13px] font-semibold text-brand-purple-dark/50">Nada encontrado para “{value}”.</p>}
@@ -513,7 +505,7 @@ export function Board() {
 
   return (
     <div>
-      <div className="mt-4 flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <div className="min-w-0 flex-[1_1_360px]">
           <Search value={q} onChange={setQ} options={searchOptions(model.rooms)} />
         </div>
