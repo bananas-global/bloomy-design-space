@@ -20,7 +20,7 @@ import {
 import { Flash, FlashGroup, SimpleForm } from "../components/Feedback.js";
 import { ImageUpload } from "../components/ImageUpload.js";
 import { CopyButton, LinkButton, showToast, ToastWrapper } from "../components/Action.js";
-import { ButtonTabs, CardTabs, DropdownTabs, LazyTabs, Tabs } from "../components/Tabs.js";
+import { ButtonTabs, CardTabs, DropdownTabs, LazyTabs, Tabs, useTrackedTab } from "../components/Tabs.js";
 import { Breadcrumbs, Drawer, FormGrid, Timer } from "../components/BackofficeComponents.js";
 import { Pagination } from "../components/Pagination.js";
 import { NotificationComponent } from "../components/Notification.js";
@@ -147,6 +147,21 @@ function DemoButtonTabs() {
         { title: "Programas", content: <p>Programas estruturados em aquisição.</p> },
         { title: "Protocolos", content: <p>ABLLS-R e protocolos de avaliação.</p> },
         { title: "Histórico", disabled: true, content: <p>Alterações registradas no plano.</p> },
+      ]}
+    />
+  );
+}
+
+function DemoButtonTabsTracked() {
+  const open = useTrackedTab("g_tab", "g-button-tabs-tracked") ?? "salas";
+  return (
+    <ButtonTabs
+      id="g-button-tabs-tracked"
+      trackerId="g_tab"
+      actions={<Button size="medium" leftIcon="fa-plus">{open === "bloqueios" ? "Novo bloqueio" : "Nova sala"}</Button>}
+      tab={[
+        { title: "Salas", content: <p>Salas da unidade e a ocupação do dia.</p> },
+        { title: "Bloqueios", content: <p>Bloqueios de sala por período.</p> },
       ]}
     />
   );
@@ -455,7 +470,10 @@ export const GALLERY: GalleryEntry[] = [
   { name: "card_tabs", origem: "tab_components.ex → card_wrapper/1", descricao: "Abas dentro de um cartão com cabeçalho; o conteúdo vem em cartão próprio.",
     demos: [{ titulo: "Com header e no_card", nota: "A terceira aba usa `no_card` e aparece sem cartão.", render: () => <DemoCardTabs /> }] },
   { name: "button_tabs", origem: "button_tab_components.ex → wrapper/1", descricao: "Abas em trilho, com um marcador que acompanha a seleção.",
-    demos: [{ titulo: "size small, com actions e aba disabled", render: () => <DemoButtonTabs /> }] },
+    demos: [
+      { titulo: "size small, com actions e aba disabled", render: () => <DemoButtonTabs /> },
+      { titulo: "Com tracker_id", nota: "A aba vai para a URL como `?g_tab=g-button-tabs-tracked|bloqueios` e é lida ao abrir. O `actions` acompanha a aba com `useTrackedTab`.", render: () => <DemoButtonTabsTracked /> },
+    ] },
   { name: "dropdown_tabs", origem: "dropdown_tabs_components.ex → wrapper/1", descricao: "Abas de topo que abrem um menu com as abas filhas (`parent_id`).",
     demos: [{ titulo: "Headers com uma e com várias abas", nota: "Header com uma só aba seleciona direto, sem menu.", render: () => <DemoDropdownTabs /> }] },
   { name: "lazy_tabs", origem: "lazy_tab_component.ex → wrapper/1", descricao: "Abas com grupos em dropdown e conteúdo montado só quando a aba é aberta.",
