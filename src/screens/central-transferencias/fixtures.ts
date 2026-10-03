@@ -71,12 +71,14 @@ function baseSeed(): HoursMap[] {
         if (p.occ != null ? (h + gi + p.occ) % 3 === 0 : (h - h0 + pi + gi * 2) % 5 === 0) return;
         const name = `${FIRST[n % FIRST.length]} ${LAST[(n * 7 + Math.floor(n / FIRST.length)) % LAST.length]}`;
         n++;
+        // Mapas criados de janeiro até hoje (21/08): nenhum começa depois de `TODAY`.
+        const month = 1 + (n % 8);
         out.push({
           id: `b${n}`,
           patient: name,
           specialty: p.specialty,
           profId: p.id,
-          since: `2026-0${1 + (n % 8)}-${String(1 + ((n * 3) % 27)).padStart(2, "0")}`,
+          since: `2026-0${month}-${String(1 + ((n * 3) % (month === 8 ? 21 : 27))).padStart(2, "0")}`,
           slots: g.map((wd) => ({ wd, start: pad(h), end: pad(h + 1) })),
         });
       });
@@ -89,11 +91,14 @@ export const HOURS_MAPS: HoursMap[] = [
   ...baseSeed(),
   { id: "m8", patient: "Helena Vieira", specialty: "Psicologia", profId: null, since: "2026-08-03", left: "Juliana Prado", reason: "profissional inativado em 03/08", slots: [{ wd: 2, start: "08:00", end: "09:00" }, { wd: 4, start: "08:00", end: "09:00" }] },
   { id: "m9", patient: "Igor Nunes", specialty: "Fonoaudiologia", profId: null, since: "2026-07-28", left: "Juliana Prado", reason: "profissional inativado em 28/07", slots: [{ wd: 3, start: "09:00", end: "10:00" }] },
-  { id: "m10", patient: "Júlia Almeida", specialty: "Terapia Ocupacional", profId: null, since: "2026-08-14", left: "Rafael Lima", reason: "escala alterada em 14/08", slots: [{ wd: 5, start: "13:00", end: "14:00" }, { wd: 5, start: "14:00", end: "15:00" }] },
+  { id: "m10", patient: "Júlia Almeida", specialty: "Terapia Ocupacional", profId: null, since: "2026-08-14", left: "Rafael Lima", reason: "paciente mudou de horário em 14/08 e Rafael Lima já atende nele", slots: [{ wd: 5, start: "13:00", end: "14:00" }, { wd: 5, start: "14:00", end: "15:00" }] },
   { id: "m14", patient: "Otávio Campos", specialty: "Psicopedagogia", profId: null, since: "2026-08-18", left: "Letícia Farias", reason: "mapa criado sem profissional", slots: [{ wd: 1, start: "15:00", end: "16:00" }] },
 ];
 
-/** A transferência já programada: um horário de Flora Souza, de Rafael Lima para Thiago Rezende, em 01/09. */
+/**
+ * A transferência já programada: o horário de quarta 10:00 de Otávio Rocha
+ * (`b14`), de Rafael Lima para Thiago Rezende, que está livre nele, em 01/09.
+ */
 export const SCHEDULED: ScheduledTransfer[] = [
   {
     id: "sc-seed",
@@ -102,7 +107,7 @@ export const SCHEDULED: ScheduledTransfer[] = [
     originName: "Rafael Lima",
     createdAt: "2026-08-19",
     why: "",
-    items: [{ mapId: "m6", patient: "Flora Souza", specialty: "Terapia Ocupacional", s: { wd: 1, start: "10:00", end: "11:00" }, pid: "p6" }],
+    items: [{ mapId: "b14", patient: "Otávio Rocha", specialty: "Terapia Ocupacional", s: { wd: 3, start: "10:00", end: "11:00" }, pid: "p6" }],
   },
 ];
 
