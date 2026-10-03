@@ -311,7 +311,8 @@ export function distributeSessions(
   pending.forEach((s) => {
     const cands = eligible(profs, maps, s, taken, cross);
     if (!cands.length) {
-      delete next[s.id];
+      // Sem substituto: fica para escolher, ou cancelada se já estava.
+      if (next[s.id] !== CANCEL) delete next[s.id];
       return;
     }
     const pick = [...cands].sort((x, y) => (load[x.id] ?? 0) - (load[y.id] ?? 0))[0]!;

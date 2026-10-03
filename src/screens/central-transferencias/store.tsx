@@ -252,6 +252,12 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
     const scheduledSorted = [...scheduled].sort((a, b) => a.date.localeCompare(b.date));
     const originName = originProf ? originProf.name : "Mapas sem profissional";
 
+    /**
+     * Aplicar muda os mapas, e a origem automática (`fallbackOrigin`) poderia
+     * passar para outro profissional: a lista fica na origem que estava em tela.
+     */
+    const keepOrigin = (s: TransferCenterState) => s.origin || originId;
+
     function apply() {
       const items: MoveItem[] = assigned.map((x) => ({ mapId: x.m.id, patient: x.m.patient, specialty: x.m.specialty, s: x.s, pid: state.assign[x.k]! }));
       if (!items.length) return;
@@ -259,12 +265,12 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
       const destN = new Set(items.map((i) => i.pid)).size;
       if (state.when === "prog") {
         const sc: ScheduledTransfer = { id: `sc${Date.now()}`, date: state.startDate, originId, originName, items, why: state.cross ? state.why.trim() : "", createdAt: TODAY };
-        setState((s) => ({ ...s, scheduled: [...s.scheduled, sc], assign: {} }));
+        setState((s) => ({ ...s, origin: keepOrigin(s), scheduled: [...s.scheduled, sc], assign: {} }));
         toast("success", "Transferência programada", `${n} ${slotsWord(n)} de ${originName} passam para ${destN} ${profsWord(destN)} em ${br(state.startDate)}`);
         return;
       }
       const stamp = Date.now().toString().slice(-5);
-      setState((s) => ({ ...s, maps: executeMoves(s.maps, items, stamp), assign: {} }));
+      setState((s) => ({ ...s, origin: keepOrigin(s), maps: executeMoves(s.maps, items, stamp), assign: {} }));
       toast("success", "Horários transferidos", `${n} ${slotsWord(n)} de ${originName} para ${destN} ${profsWord(destN)}`);
     }
 
@@ -357,7 +363,7 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
       apply,
       runNow: (sc) => {
         const stamp = Date.now().toString().slice(-5);
-        setState((s) => ({ ...s, maps: executeMoves(s.maps, sc.items, stamp), scheduled: s.scheduled.filter((x) => x.id !== sc.id) }));
+        setState((s) => ({ ...s, origin: keepOrigin(s), maps: executeMoves(s.maps, sc.items, stamp), scheduled: s.scheduled.filter((x) => x.id !== sc.id) }));
         toast("success", "Transferência antecipada", `${sc.items.length} ${slotsWord(sc.items.length)} de ${sc.originName} transferidos hoje`);
       },
       cancelScheduled: (sc) => {
@@ -420,7 +426,8 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
         toast(r.ok === r.total ? "success" : "info", "Distribuição automática", `${r.ok} de ${r.total} ${sessionsWord(r.total)} com substituto`);
       },
       applyS: () => {
-        const ids = covered.map((s) => s.id);
+        // As substituídas e as canceladas saem da lista; os mapas não mudam.
+        const ids = selected.map((s) => s.id);
         setState((s) => {
           const applied = { ...s.sApplied };
           const rest = { ...s.sAssign };
@@ -430,7 +437,11 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
           });
           return { ...s, sApplied: applied, sAssign: rest, sReason: "", sNote: "", sWhy: "" };
         });
-        toast("success", "Sessões transferidas", `${ids.length} ${sessionsWord(ids.length)} · ${state.sReason} · mapas de horas inalterados`);
+        const done = [
+          covered.length ? `${covered.length} ${plural(covered.length, "transferida", "transferidas")}` : "",
+          cancelled.length ? `${cancelled.length} ${plural(cancelled.length, "cancelada", "canceladas")}` : "",
+        ].filter(Boolean).join(", ");
+        toast("success", covered.length ? "Sessões transferidas" : "Sessões canceladas", `${done} · ${state.sReason} · mapas de horas inalterados`);
       },
       resetS: () => set({ sAssign: {} }),
     };
