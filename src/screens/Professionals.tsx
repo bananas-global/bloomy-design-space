@@ -228,16 +228,16 @@ function DocsView({ professionals }: { professionals: Professional[] }) {
     <>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] items-end gap-3">
         <SearchFilter id="docs_name" label="Nome/Conselho" placeholder="Buscar por nome ou conselho" value={name} onChange={setName} />
-        <SelectFilter id="docs_specialty" label="Especialidade" prompt="Selecione a especialidade" options={pairs(specialties)} value={specialty} onChange={setSpecialty} />
+        <SelectFilter id="docs_specialty" label="Especialidade" prompt="Todas" options={pairs(specialties)} value={specialty} onChange={setSpecialty} />
         <SelectFilter
           id="docs_status"
           label="Status"
-          prompt="Selecione o status"
+          prompt="Todos"
           options={STATUS_OPTIONS}
           value={status}
           onChange={setStatus}
         />
-        <SelectFilter id="docs_situation" label="Situação da documentação" prompt="Selecione a situação" options={SITUATIONS} value={situation} onChange={(v) => setSituation(v as DocSituation)} />
+        <SelectFilter id="docs_situation" label="Situação da documentação" prompt="Todas" options={SITUATIONS} value={situation} onChange={(v) => setSituation(v as DocSituation)} />
         <SelectFilter
           id="docs_category"
           label="Categoria"
