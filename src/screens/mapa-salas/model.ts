@@ -6,7 +6,8 @@
  * 1. Planejamento (`sp.plan`): o que a unidade precisa naquele ponto. Ex.: o
  *    Ponto A quer Psicologia das 08h às 12h e Fono das 13h às 17h.
  * 2. Escala (`sp.periods`): quem está de fato alocado, vindo da escala dos
- *    profissionais. Pode coincidir com o plano, divergir, ficar aquém ou
+ *    profissionais. A especialidade de cada período é a do perfil do
+ *    profissional (`professionalSpecialty`). Pode coincidir com o plano, divergir, ficar aquém ou
  *    existir sem plano nenhum.
  *
  * O mapa não força uma ponta na outra: mede a distância entre as duas e mostra
@@ -27,7 +28,6 @@ export type DayKey = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" 
 export type Specialty = string;
 export type PlanType = "fixed" | "temporary";
 export type RoomType = "attendance" | "evaluation" | "playful" | "waiting" | "administrative";
-export type BlockingType = "time_period" | "slot";
 
 export type ServiceHour = { weekdays: DayKey[]; start: string; end: string };
 
@@ -42,11 +42,13 @@ export type PlanEntry = {
   days?: DayKey[] | null;
 };
 
-/** Um período da escala de um profissional apontando para este ponto. */
+/**
+ * Um período da escala de um profissional apontando para este ponto. Sem
+ * especialidade própria: ela vem do perfil do profissional.
+ */
 export type Period = {
   start: string;
   end: string;
-  specialty: Specialty;
   role?: string;
   /** "default" é a escala Padrão (= plano fixo). */
   type?: "default" | "temporary";
@@ -67,17 +69,6 @@ export type Room = {
   capacity: number;
   active: boolean;
   servicePoints: ServicePoint[];
-};
-
-export type RoomBlocking = {
-  id: string;
-  room: string;
-  number: number | string;
-  name: string;
-  type: BlockingType;
-  start: string;
-  end: string;
-  obs: string;
 };
 
 export type UnitShape = {
@@ -108,12 +99,6 @@ export const ROOM_TYPES: [string, RoomType][] = [
   ["Sala administrativa", "administrative"],
 ];
 export const roomTypeLabel = (v: RoomType) => (ROOM_TYPES.find((t) => t[1] === v) ?? [v])[0];
-
-export const BLOCKING_TYPES: [string, BlockingType][] = [
-  ["Dia inteiro / Período", "time_period"],
-  ["Horário específico", "slot"],
-];
-export const blockingTypeLabel = (v: BlockingType) => (BLOCKING_TYPES.find((t) => t[1] === v) ?? [v])[0];
 
 export const SPECIALTIES: Specialty[] = ["Psicologia", "Fonoaudiologia", "Terapia Ocupacional", "Psicopedagogia", "Fisioterapia", "Aplicador ABA"];
 
@@ -227,7 +212,8 @@ function leavingAt(name: string) {
   return p.deactivationAt;
 }
 
-export const professionalSpecialty = (name: string) => professional(name)?.specialty;
+/** A especialidade do perfil: é a que vale para todos os períodos da escala dele. */
+export const professionalSpecialty = (name: string): Specialty => professional(name)?.specialty ?? "";
 
 export function periodValidOn(p: Period, iso: string) {
   if (p.validFrom && iso < p.validFrom) return false;
@@ -286,6 +272,8 @@ export type LaneStatus = "ok" | "partial" | "open" | "divergent";
 export type PlanBlock = PlanSeg & { status: LaneStatus; typeOnly: boolean };
 export type AllocStatus = "ok" | "divergent" | "extra";
 export type AllocBlock = Period & Segment & {
+  /** Do perfil do profissional. */
+  specialty: Specialty;
   dayLabel: string | null;
   leavingAt: string | null;
   _src: Period;
@@ -354,7 +342,7 @@ export function buildDay(unit: UnitShape, day: DayKey, monday: Date): DayModel {
 
         const allocs = sp.periods
           .filter((p) => periodDays(p, uDays).includes(day) && periodValidOn(p, refISO))
-          .map((p) => ({ ...clip(p), leavingAt: p.professional ? leavingAt(p.professional) : null, _src: p }))
+          .map((p) => ({ ...clip(p), specialty: professionalSpecialty(p.professional), leavingAt: p.professional ? leavingAt(p.professional) : null, _src: p }))
           .filter((p) => p.to > p.from && p.professional)
           .sort((a, b) => a.from - b.from);
 
@@ -465,8 +453,8 @@ export function searchOptions(rooms: DayModel["rooms"]): SearchOption[] {
    Cabeçalho da unidade
    ============================================================ */
 
+/** Como `Units.count_unit_rooms`: conta todas as salas, ativas ou não. */
 export function headerCounts(rooms: Room[]) {
-  const active = rooms.filter((r) => r.active);
   const professionals = new Set(rooms.flatMap((r) => r.servicePoints.flatMap((sp) => sp.periods.map((p) => p.professional).filter(Boolean))));
-  return { roomsCount: active.length, professionalsCount: professionals.size };
+  return { roomsCount: rooms.length, professionalsCount: professionals.size };
 }

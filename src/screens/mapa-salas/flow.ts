@@ -43,22 +43,6 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
     ],
   },
   {
-    id: "sub",
-    title: "Sub-aba · button_tabs",
-    component: "core.button-tabs",
-    note: "Os button_tabs da aba Salas: o mapa ou os bloqueios de sala.",
-    controls: [
-      {
-        id: "sub",
-        label: "Sub-aba",
-        options: [
-          { value: "rooms", label: "Salas" },
-          { value: "blockings", label: "Bloqueios" },
-        ],
-      },
-    ],
-  },
-  {
     id: "day",
     title: "Dia da semana · radio_selector",
     component: "core.radio-selector",
@@ -99,26 +83,10 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
     ],
   },
   {
-    id: "blockings",
-    title: "Bloqueios de sala · table",
-    component: "core.table",
-    note: "Sem bloqueios: \"Não existe nenhum bloqueio de sala\".",
-    controls: [
-      {
-        id: "blockings",
-        label: "Bloqueios",
-        options: [
-          { value: "data", label: "Com bloqueios" },
-          { value: "empty", label: "Sem bloqueios" },
-        ],
-      },
-    ],
-  },
-  {
     id: "overlay",
     title: "Sobreposição aberta · drawer_modal",
     component: "core.drawer-modal",
-    note: "Editar sala abre a primeira sala. Novo planejado abre no primeiro ponto sem planejado no dia; Editar planejado, no primeiro trecho planejado. Em Santana não há ponto sem planejado nem bloqueio.",
+    note: "Editar sala abre a primeira sala. Novo planejado abre no primeiro ponto sem planejado no dia; Editar planejado, no primeiro trecho planejado. Em Santana não há ponto sem planejado.",
     controls: [
       {
         id: "overlay",
@@ -129,8 +97,6 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
           { value: "room-edit", label: "Editar sala" },
           { value: "plan", label: "Novo planejado" },
           { value: "plan-edit", label: "Editar planejado" },
-          { value: "blocking", label: "Novo bloqueio" },
-          { value: "blocking-info", label: "Detalhes do bloqueio" },
         ],
       },
     ],

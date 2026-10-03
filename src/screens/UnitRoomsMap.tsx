@@ -1,11 +1,11 @@
 /**
- * Mapa de Salas — a aba Salas da unidade (`unit_live/components/unit_rooms.ex`
- * e `unit_room_schedule_blocking.ex`), na versão 2 do protótipo.
+ * Mapa de Salas — a aba Salas da unidade (`unit_live/components/unit_rooms.ex`),
+ * na versão 2 do protótipo.
  *
- * A moldura do backoffice com a ficha da unidade e a aba Salas: os
- * `button_tabs` Salas / Bloqueios, o mapa de ocupação do dia (o planejado de
- * cada ponto, editável, sobre a escala que vem do perfil dos profissionais),
- * a gaveta da sala e os bloqueios.
+ * A moldura do backoffice com a ficha da unidade e a aba Salas: o mapa de
+ * ocupação do dia (o planejado de cada ponto, editável, sobre a escala que vem
+ * do perfil dos profissionais) e a gaveta da sala. Os bloqueios ficam em
+ * `/backoffice/bloqueios` (`blocking_live`), fora da unidade.
  *
  * A tela monta os dados a partir dos controles (`mapa-salas/flow.ts`) sobre as
  * duas unidades do protótipo (`mapa-salas/fixtures.ts`).
@@ -20,7 +20,7 @@ import { ModalHost, RoomsTab } from "./mapa-salas/RoomsTab.js";
 import { RoomsMapProvider, dayModelOf, type MapModal, type RoomsMapState } from "./mapa-salas/store.js";
 
 const CURRENT_USER = {
-  name: "Marcus Vinícius Gimenes",
+  name: "Marina Alves",
   units: UNITS.map((u) => u.name),
   roles: [],
   professional: false,
@@ -47,10 +47,6 @@ function modalOf(overlay: string | undefined, s: RoomsMapState, unit: MapUnit): 
       const hit = lanes.find(({ l }) => l.plan.length > 0);
       return hit ? { kind: "planEdit", roomId: hit.room.id, point: hit.l.point!.name, from: hit.l.plan[0]!.from } : null;
     }
-    case "blocking":
-      return { kind: "blocking" };
-    case "blocking-info":
-      return s.blockings[0] ? { kind: "blockingInfo", id: s.blockings[0].id } : null;
     default:
       return null;
   }
@@ -60,12 +56,10 @@ const OVERLAY_OF: Record<MapModal["kind"], (m: MapModal) => string> = {
   room: (m) => (m.kind === "room" && m.roomId ? "room-edit" : "room-new"),
   plan: () => "plan",
   planEdit: () => "plan-edit",
-  blocking: () => "blocking",
-  blockingInfo: () => "blocking-info",
 };
 
 /** Controles que re-semeiam só a parte deles, sem refazer a unidade. */
-const PATCHABLE = ["sub", "day", "focus", "blockings", "overlay"];
+const PATCHABLE = ["day", "focus", "overlay"];
 
 function seedWith(units: MapUnit[]) {
   const unitOf = (id: string) => units.find((u) => u.id === id) ?? unitById(id);
@@ -77,28 +71,19 @@ function seedWith(units: MapUnit[]) {
     let s: RoomsMapState;
     if (prev && changed && patch) {
       s = { ...prev };
-      if (changed.includes("sub")) s = { ...s, sub: c.sub === "blockings" ? "blockings" : "rooms", tabsKey: s.tabsKey + 1 };
       if (changed.includes("day")) s = { ...s, day: DAY_KEYS.includes(c.day as DayKey) ? (c.day as DayKey) : TODAY_KEY };
       if (changed.includes("focus")) s = { ...s, focus: FOCUS.includes(c.focus as Focus) ? (c.focus as Focus) : "all" };
-      if (changed.includes("blockings")) s = { ...s, blockings: c.blockings === "empty" ? [] : unit.roomBlockings };
     } else {
       s = {
         unitId,
         rooms: unit.rooms,
-        blockings: c.blockings === "empty" ? [] : unit.roomBlockings,
-        sub: c.sub === "blockings" ? "blockings" : "rooms",
-        tabsKey: (prev?.tabsKey ?? 0) + 1,
         day: DAY_KEYS.includes(c.day as DayKey) ? (c.day as DayKey) : TODAY_KEY,
         q: "",
         focus: FOCUS.includes(c.focus as Focus) ? (c.focus as Focus) : "all",
         modal: null,
       };
     }
-    if (!patch || changed?.includes("overlay")) {
-      const modal = modalOf(c.overlay, s, unit);
-      const sub = modal && (modal.kind === "blocking" || modal.kind === "blockingInfo") ? "blockings" : modal ? "rooms" : s.sub;
-      s = { ...s, modal, ...(sub !== s.sub ? { sub, tabsKey: s.tabsKey + 1 } : {}) };
-    }
+    if (!patch || changed?.includes("overlay")) s = { ...s, modal: modalOf(c.overlay, s, unit) };
     return s;
   };
 }
@@ -106,10 +91,8 @@ function seedWith(units: MapUnit[]) {
 function derive(s: RoomsMapState): Controls {
   return {
     unit: s.unitId,
-    sub: s.sub,
     day: s.day,
     focus: s.focus,
-    blockings: s.blockings.length ? "data" : "empty",
     overlay: s.modal ? OVERLAY_OF[s.modal.kind](s.modal) : "none",
   };
 }

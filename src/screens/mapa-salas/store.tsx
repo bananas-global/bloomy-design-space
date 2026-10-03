@@ -31,27 +31,18 @@ import {
   type PlanEntry,
   type PlanType,
   type Room,
-  type RoomBlocking,
   type ServicePoint,
 } from "./model.js";
 
-export type RoomsSub = "rooms" | "blockings";
-
-/** As gavetas e modais. O trecho do planejado é achado de novo no dia a cada render. */
+/** As gavetas. O trecho do planejado é achado de novo no dia a cada render. */
 export type MapModal =
   | { kind: "room"; roomId: string | null }
   | { kind: "plan"; roomId: string; point: string; from: number }
-  | { kind: "planEdit"; roomId: string; point: string; from: number }
-  | { kind: "blocking" }
-  | { kind: "blockingInfo"; id: string };
+  | { kind: "planEdit"; roomId: string; point: string; from: number };
 
 export type RoomsMapState = {
   unitId: string;
   rooms: Room[];
-  blockings: RoomBlocking[];
-  sub: RoomsSub;
-  /** Muda quando a sub-aba vem de fora, para os `button_tabs` remontarem nela. */
-  tabsKey: number;
   day: DayKey;
   q: string;
   focus: Focus;
@@ -64,16 +55,10 @@ export type PlanInput = { start: string; end: string; specialty: string; planTyp
 /** O que a gaveta da sala entrega. */
 export type RoomInput = Omit<Room, "id"> & { id?: string };
 
-export type BlockingInput = { roomId: string; type: RoomBlocking["type"]; name: string; start: string; end: string; obs: string };
-
 export type RoomsMapStore = {
   unit: MapUnit;
   rooms: Room[];
-  blockings: RoomBlocking[];
   canEdit: boolean;
-  sub: RoomsSub;
-  tabsKey: number;
-  setSub: (sub: RoomsSub) => void;
   days: DayKey[];
   day: DayKey;
   setDay: (day: DayKey) => void;
@@ -94,9 +79,6 @@ export type RoomsMapStore = {
   movePlan: (room: Room, point: ServicePoint, pl: PlanBlock, from: number, to: number) => void;
   /** "Ver escala no perfil": a Escala do profissional fica fora deste protótipo. */
   showSchedule: (professional: string) => void;
-
-  addBlocking: (data: BlockingInput) => void;
-  removeBlocking: (id: string) => void;
 };
 
 const Ctx = createContext<RoomsMapStore | null>(null);
@@ -147,11 +129,7 @@ export function RoomsMapProvider({ context, unit, state, setState, children }: P
     return {
       unit,
       rooms: state.rooms,
-      blockings: state.blockings,
       canEdit,
-      sub: state.sub,
-      tabsKey: state.tabsKey,
-      setSub: (sub) => set({ sub }),
       days: uDays,
       day,
       setDay: (d) => set({ day: d }),
@@ -207,27 +185,6 @@ export function RoomsMapProvider({ context, unit, state, setState, children }: P
 
       showSchedule: (professional) =>
         toast("info", "Escala do profissional", `A sala e o ponto de ${professional} se definem no perfil do profissional, fora deste protótipo.`),
-
-      addBlocking: (data) => {
-        const roomObj = state.rooms.find((r) => r.id === data.roomId);
-        const nb: RoomBlocking = {
-          id: nextId("rb"),
-          room: roomObj ? roomObj.name : "—",
-          number: roomObj ? roomObj.number : "-",
-          name: data.name || "Não informado",
-          type: data.type,
-          start: data.start,
-          end: data.end,
-          obs: data.obs,
-        };
-        setState((s) => ({ ...s, blockings: [nb, ...s.blockings], modal: null }));
-        toast("success", "Sucesso!", "Bloqueio de sala adicionado à unidade");
-      },
-
-      removeBlocking: (id) => {
-        setState((s) => ({ ...s, blockings: s.blockings.filter((b) => b.id !== id) }));
-        toast("success", "Sucesso!", "Bloqueio de agenda removido da unidade");
-      },
     };
   }, [state, canEdit, unit, setState]);
 

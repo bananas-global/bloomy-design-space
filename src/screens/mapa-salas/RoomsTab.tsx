@@ -1,15 +1,17 @@
 /**
- * Mapa de Salas — a aba Salas da unidade: os `button_tabs` Salas / Bloqueios
- * de `unit_live/edit.ex` (id `room_scheduling`).
+ * Mapa de Salas — a aba Salas da unidade (`unit_live/components/unit_rooms.ex`).
  *
- * Em Salas, o Mapa de Salas substitui as visões tabela e cartões de
- * `unit_rooms.ex`: ao lado das abas ficam o dia da semana e "Nova Sala". Em
- * Bloqueios, "Novo bloqueio".
+ * O `header` "Salas" do Phoenix, com o dia da semana e "Nova Sala" nas
+ * `actions`; o Mapa de Salas substitui as visões tabela e cartões (o
+ * `radio_selector` de visão vira o do dia).
+ *
+ * Bloqueios não ficam aqui: o PR #1646 do monólito tirou os `button_tabs`
+ * Salas / Bloqueios da unidade e unificou os bloqueios em `blocking_live`
+ * (`/backoffice/bloqueios`, no menu lateral).
  */
 import { Button } from "../../components/Button.js";
 import { RadioSelector } from "../../components/Choice.js";
-import { ButtonTabs } from "../../components/Tabs.js";
-import { BlockingDrawer, BlockingInfoModal, BlockingsPanel } from "./Blockings.js";
+import { Header } from "../../components/Layout.js";
 import { Board } from "./Board.js";
 import { dayShort, type DayKey } from "./model.js";
 import { PlanDrawer } from "./PlanDrawer.js";
@@ -17,54 +19,39 @@ import { RoomDrawer } from "./RoomDrawer.js";
 import { useRoomsMap } from "./store.js";
 
 export function RoomsTab() {
-  const { sub, setSub, tabsKey, days, day, setDay, canEdit, openModal } = useRoomsMap();
-
-  const roomsActions = (
-    <div className="flex flex-1 flex-wrap items-center justify-end gap-3">
-      <RadioSelector
-        field={{ id: "mapa-salas-dia", name: "mapa[dia]", value: day }}
-        className="inline-flex"
-        radio={days.map((k) => ({ value: k, label: dayShort(k) }))}
-        onChange={(e) => setDay(e.target.value as DayKey)}
-      />
-      {canEdit && (
-        <Button type="button" rightIcon="fa-plus" iconType="solid" onClick={() => openModal({ kind: "room", roomId: null })}>
-          Nova Sala
-        </Button>
-      )}
-    </div>
-  );
-  const blockingsActions = canEdit ? (
-    <Button type="button" rightIcon="fa-plus" iconType="solid" onClick={() => openModal({ kind: "blocking" })}>
-      Novo bloqueio
-    </Button>
-  ) : null;
+  const { days, day, setDay, canEdit, openModal } = useRoomsMap();
 
   return (
-    <ButtonTabs
-      key={tabsKey}
-      id="room_scheduling"
-      className="flex-wrap gap-4"
-      initialTab={sub === "blockings" ? 1 : 0}
-      onChange={(i) => setSub(i === 1 ? "blockings" : "rooms")}
-      actions={sub === "rooms" ? roomsActions : blockingsActions}
-      tab={[
-        { title: "Salas", content: <Board /> },
-        { title: "Bloqueios", content: <BlockingsPanel /> },
-      ]}
-    />
+    <div>
+      <Header
+        className="mb-6"
+        actions={
+          <div className="flex items-center gap-2">
+            <RadioSelector
+              field={{ id: "mapa-salas-dia", name: "mapa[dia]", value: day }}
+              className="inline-flex"
+              radio={days.map((k) => ({ value: k, label: dayShort(k) }))}
+              onChange={(e) => setDay(e.target.value as DayKey)}
+            />
+            {canEdit && (
+              <Button type="button" rightIcon="fa-plus" iconType="solid" onClick={() => openModal({ kind: "room", roomId: null })}>
+                Nova Sala
+              </Button>
+            )}
+          </div>
+        }
+      >
+        Salas
+      </Header>
+      <Board />
+    </div>
   );
 }
 
-/** A gaveta ou modal aberto. Monta só quando aberto, para o formulário começar limpo. */
+/** A gaveta aberta. Monta só quando aberta, para o formulário começar limpo. */
 export function ModalHost() {
-  const { modal, rooms, blockings, canEdit, findPlan } = useRoomsMap();
-  if (!modal) return null;
-  if (modal.kind === "blockingInfo") {
-    const b = blockings.find((x) => x.id === modal.id);
-    return b ? <BlockingInfoModal blocking={b} /> : null;
-  }
-  if (!canEdit) return null;
+  const { modal, rooms, canEdit, findPlan } = useRoomsMap();
+  if (!modal || !canEdit) return null;
   const key = JSON.stringify(modal);
   switch (modal.kind) {
     case "room": {
@@ -80,7 +67,5 @@ export function ModalHost() {
       const pl = findPlan(modal.roomId, modal.point, modal.from);
       return pl ? <PlanDrawer key={key} room={room} point={point} pl={pl} /> : null;
     }
-    case "blocking":
-      return <BlockingDrawer />;
   }
 }

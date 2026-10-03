@@ -16,6 +16,7 @@ import {
   hhmm,
   periodDays,
   periodValidOn,
+  professionalSpecialty,
   planTypeOf,
   roomLabel,
   specAbbr,
@@ -136,7 +137,7 @@ export function PlanDrawer({ room, point, from = 0, pl }: Props) {
         {onSite.length > 0 && (
           <Note icon="fa-user">
             Na escala neste horário:{" "}
-            {onSite.map((p) => `${p.professional} (${specAbbr(p.specialty)}, ${p.start}–${p.end})`).join(", ")}. Vem do perfil do profissional.
+            {onSite.map((p) => `${p.professional} (${specAbbr(professionalSpecialty(p.professional))}, ${p.start}–${p.end})`).join(", ")}. Vem do perfil do profissional.
           </Note>
         )}
       </div>
