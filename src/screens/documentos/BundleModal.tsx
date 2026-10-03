@@ -5,13 +5,16 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { Icon } from "../../components/Icon.js";
+import { Input } from "../../components/Input.js";
 import { DrawerModal } from "../../components/Overlay.js";
-import { docState, pluralize } from "./model.js";
+import { buildRows, docState, pluralize } from "./model.js";
 import { DRAWER_SIZE, DocStatusTag, DrawerFooter, docMeta } from "./parts.js";
 import { useDocuments } from "./store.js";
 
 export function BundleModal() {
-  const { professional, documents, closeModal, exportBundle } = useDocuments();
+  const { professional, documents: all, closeModal, exportBundle } = useDocuments();
+  // Na ordem da lista da aba: os padrão primeiro, depois os adicionais.
+  const documents = buildRows(all).flatMap((r) => (r.doc ? [r.doc] : []));
   const withFile = documents.filter((d) => d.file);
   const [sel, setSel] = useState<string[]>(() => withFile.map((d) => d.id));
   const toggle = (id: string) => setSel((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -46,33 +49,34 @@ export function BundleModal() {
           {documents.map((d) => {
             const on = sel.includes(d.id);
             return (
-              <label
+              <div
                 key={d.id}
-                htmlFor={`exportar-${d.id}`}
                 className={[
-                  "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors",
+                  "flex items-center gap-1 rounded-xl border py-1 pr-3 transition-colors",
                   on ? "border-brand-blue/40 bg-brand-blue/10" : "border-brand-purple-dark/10 bg-white",
-                  !d.file && "cursor-not-allowed opacity-60",
+                  !d.file && "opacity-60",
                 ]
                   .filter(Boolean)
                   .join(" ")}
               >
-                <input
-                  id={`exportar-${d.id}`}
+                {/* `input type="checkbox"` do sistema; o texto ao lado é o rótulo dele. */}
+                <Input
                   type="checkbox"
+                  id={`exportar-${d.id}`}
+                  name="exportar[]"
+                  inputValue={d.id}
                   checked={on}
                   disabled={!d.file}
                   onChange={() => toggle(d.id)}
-                  className="rounded border-neutral-100 text-brand-blue focus:ring-0"
                 />
-                <span className="min-w-0 flex-1">
+                <label htmlFor={`exportar-${d.id}`} className={["min-w-0 flex-1", d.file ? "cursor-pointer" : "cursor-not-allowed"].join(" ")}>
                   <span className="block font-bold text-brand-purple-dark">{d.name}</span>
                   <span className="block text-sm text-brand-purple-dark/60">
                     {d.file ? `${docMeta(d)} · ${d.file}` : "sem arquivo anexado — não entra no PDF"}
                   </span>
-                </span>
+                </label>
                 <DocStatusTag doc={d} />
-              </label>
+              </div>
             );
           })}
         </div>
@@ -93,7 +97,7 @@ export function BundleModal() {
         <Button type="button" variant="tint" onClick={closeModal}>
           Cancelar
         </Button>
-        <Button type="button" rightIcon="fa-file-pdf" disabled={chosen.length === 0} className="disabled:opacity-50" onClick={() => exportBundle(sel)}>
+        <Button type="button" rightIcon="fa-file-pdf" disabled={chosen.length === 0} className="disabled:opacity-50" onClick={() => exportBundle(chosen.map((d) => d.id))}>
           Exportar PDF
         </Button>
       </DrawerFooter>

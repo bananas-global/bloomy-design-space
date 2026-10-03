@@ -144,7 +144,7 @@ export function docState(doc: ProfessionalDocument | null): DocState {
   return { key: "ok", label: "Válido" };
 }
 
-/** Cores de status: pendente amarelo, sem validade neutro, válido verde, a vencer laranja, vencido vermelho. */
+/** Cores de status: pendente amarelo, sem validade roxo-escuro (`dark-purple`, o mais neutro do `tag`), válido verde, a vencer laranja, vencido vermelho. */
 export const STATE_VARIANT: Record<DocStateKey, TagVariant> = {
   none: "yellow",
   no_validity: "dark-purple",

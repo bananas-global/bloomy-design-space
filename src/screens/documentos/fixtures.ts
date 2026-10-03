@@ -25,7 +25,7 @@ export const HELENA: DocumentsProfessional = {
     status: "Ativo",
     specialty: "Psicologia",
     healthFormation: "CRP",
-    specialtyRegister: "06233962",
+    specialtyRegister: "06900101",
     supervisorName: "Rafael Andrade Nunes",
     showInDashboard: true,
     tbd: false,
@@ -79,7 +79,7 @@ export const DOCUMENTS_FIXTURES: Fixture<DocumentsFixture>[] = [
     id: "documents.helena",
     label: "Helena · documentos do protótipo",
     description:
-      "4 dos 6 documentos padrão (faltam a carteirinha e a quitação do conselho), 3 formações especiais, curso de ABA de 320h, 4 adicionais — um a vencer e um vencido — e compartilhamentos com Unimed e Bradesco Saúde.",
+      "4 dos 6 documentos padrão (faltam a carteirinha e a quitação do conselho), 3 formações especiais, curso de ABA de 320h, 5 adicionais (RG/CPF, currículo, especialização e, com os alertas, um comprovante de endereço a vencer e um contrato PJ vencido) e compartilhamentos com Unimed e Bradesco Saúde.",
     data: () => makeDocumentsFixture(),
   },
 ];

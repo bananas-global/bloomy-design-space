@@ -96,7 +96,8 @@ export const productDefinition: ProductDefinition = {
       controls: { overlay: "bundle" },
       intent: "Juntar os documentos escolhidos num PDF só, na ordem da lista.",
       expected: [
-        "Todos os documentos com arquivo vêm marcados; o rodapé avisa quantos estão vencidos ou a vencer.",
+        "Os documentos vêm na ordem da aba: Formação, Conselho, Curso ABA e as formações especiais, depois os adicionais.",
+        "Todos os documentos com arquivo vêm marcados (checkbox do sistema); o rodapé avisa quantos estão vencidos ou a vencer.",
         "Desmarcar todos desabilita Exportar PDF.",
       ],
     },
@@ -135,7 +136,7 @@ export const productDefinition: ProductDefinition = {
       expected: [
         "Os seis documentos padrão aparecem sempre, com o selo \"Padrão\"; sem arquivo, ficam \"Pendente\" com o botão Anexar.",
         "Depois vêm os documentos adicionais.",
-        "Status: Pendente (amarelo), Sem validade (neutro), Válido (verde), Vence em N dias até 60 dias antes (laranja) e Vencido (vermelho).",
+        "Status: Pendente (amarelo), Sem validade (roxo-escuro claro, `dark-purple`), Válido (verde), Vence em N dias até 60 dias antes (laranja) e Vencido (vermelho).",
         "Filtros por nome, tipo, status e operadora; sem resultado: \"Nenhum documento corresponde aos filtros\" e Limpar filtros.",
         "Adicionar, Anexar e Editar abrem a gaveta; documento padrão tem o tipo travado.",
         "Curso de ABA pede a carga horária; Formação especial pede a formação (IS, Bobath, PECS…).",

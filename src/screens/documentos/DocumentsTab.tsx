@@ -116,7 +116,7 @@ export function DocumentsTab() {
           <Button type="button" variant="ghost" size="small" onClick={() => setFilters(EMPTY_FILTERS)}>
             Limpar filtros
           </Button>
-          <span className="ml-auto text-[13px] font-semibold text-brand-purple-dark/55">{pluralize(rows.length, "documento", "documentos")}</span>
+          <span className="ml-auto text-sm font-semibold text-brand-purple-dark/55">{pluralize(rows.length, "documento", "documentos")}</span>
         </div>
       )}
 
