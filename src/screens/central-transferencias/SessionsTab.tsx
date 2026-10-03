@@ -9,7 +9,8 @@
 import { Button } from "../../components/Button.js";
 import { Input } from "../../components/Input.js";
 import { ABSENCE_REASONS, CANCEL, MIXED, WD, brShort, sessionsWord, weekdayOf, type Professional, type Session } from "./model.js";
-import { CrossException, Empty, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
+import { EmptyStateCard } from "../../components/Layout.js";
+import { CrossException, DEST_WIDTH, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
 import { useTransferCenter } from "./store.js";
 
 /** Opção de substituto, com a especialidade quando é outra. */
@@ -26,20 +27,19 @@ function SessionRow({ s }: { s: Session }) {
       <b className={["flex-1 truncate text-sm font-bold", done ? "text-brand-purple-dark/55" : "text-brand-purple-dark"].join(" ")}>{s.patient}</b>
       {done ? (
         <StatusTag status="ok" icon="fa-user-check">{profById(done)?.name ?? "—"}</StatusTag>
-      ) : cands.length === 0 && pid !== CANCEL ? (
-        <StatusTag status="soft" icon="fa-user-slash">{state.sCross ? "Sem substituto disponível" : "Só fora da especialidade"}</StatusTag>
       ) : (
+        // Sem substituto, o seletor diz por quê e fica só com a opção de cancelar.
         <Input
           type="select"
           id={`substituto-${s.id}`}
           name={`substituto[${s.id}]`}
-          prompt="Escolher substituto…"
+          prompt={cands.length ? "Escolher substituto…" : state.sCross ? "Sem substituto disponível" : "Só fora da especialidade"}
           value={pid}
           options={[
             ...cands.map((p): [string, string] => [optionLabel(p, s), p.id]),
             ["Sem cobertura — cancelar sessão", CANCEL],
           ]}
-          className="w-[260px] shrink-0"
+          className={DEST_WIDTH}
           onChange={(v) => setSessionDest(s.id, v ?? "")}
         />
       )}
@@ -100,7 +100,7 @@ function HolderCard({ date, pid, list }: { date: string; pid: string; list: Sess
                 prompt="Escolher substituto…"
                 value={allPid}
                 options={options}
-                className="ml-auto w-[260px] shrink-0"
+                className={`ml-auto ${DEST_WIDTH}`}
                 onChange={(v) => setGroupDest(free, v ?? "")}
               />
             ))}
@@ -163,7 +163,7 @@ export function SessionsList() {
       {state.sCross && <CrossException id="sessoes-motivo-excecao" why={state.sWhy} onWhy={setSWhy} record="da sessão" />}
 
       {pending.length === 0 ? (
-        <Empty icon="fa-calendar-xmark">{sessions.length ? "Todas as sessões destes filtros já foram transferidas." : "Nenhuma sessão com estes filtros."}</Empty>
+        <EmptyStateCard icon="fa-calendar-xmark" text={sessions.length ? "Todas as sessões destes filtros já foram transferidas ou canceladas." : "Nenhuma sessão com estes filtros."} />
       ) : (
         groups.map((g) => (
           <div key={g.date} className="flex flex-col gap-2.5">
@@ -184,7 +184,13 @@ export function SessionsList() {
 /** A coluna lateral: a cobertura, o motivo da ausência e a observação. */
 export function SessionsSide() {
   const { state, selected, covered, cancelled, sCrossReady, setReason, setNote, resetS, applyS } = useTransferCenter();
-  const canApply = covered.length > 0 && Boolean(state.sReason) && sCrossReady;
+  const canApply = selected.length > 0 && Boolean(state.sReason) && sCrossReady;
+  const label =
+    covered.length && cancelled.length
+      ? `Transferir ${covered.length} e cancelar ${cancelled.length}`
+      : cancelled.length
+        ? `Cancelar ${cancelled.length} ${sessionsWord(cancelled.length)}`
+        : `Transferir ${covered.length} ${sessionsWord(covered.length)}`;
 
   return (
     <SidePanel
@@ -195,8 +201,8 @@ export function SessionsSide() {
           <Button type="button" variant="ghost" onClick={resetS}>
             Limpar
           </Button>
-          <Button type="button" leftIcon="fa-check" iconType="solid" className="gap-2" disabled={!canApply} title={covered.length && !state.sReason ? "Informe o motivo" : !sCrossReady ? "Descreva o motivo da exceção" : undefined} onClick={applyS}>
-            {`Transferir ${covered.length} ${sessionsWord(covered.length)}`}
+          <Button type="button" leftIcon="fa-check" iconType="solid" className="gap-2" disabled={!canApply} title={selected.length && !state.sReason ? "Informe o motivo" : !sCrossReady ? "Descreva o motivo da exceção" : undefined} onClick={applyS}>
+            {label}
           </Button>
         </>
       }

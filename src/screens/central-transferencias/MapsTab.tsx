@@ -12,10 +12,11 @@ import { Card } from "../../components/Card.js";
 import { RadioGroup } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
+import { EmptyStateCard } from "../../components/Layout.js";
 import { Tag } from "../../components/Tag.js";
 import { TODAY } from "./fixtures.js";
 import { MIXED, NO_PROF, WD, addDays, br, brShort, daysBetween, hours, hoursLabel, plural, slotKey, slotLabel, type HoursMap, type ScheduledTransfer } from "./model.js";
-import { CrossException, Empty, Hint, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
+import { CrossException, DEST_WIDTH, Hint, ItemCard, ListActions, SidePanel, SlotTag, StatusTag, Summary, Who } from "./parts.js";
 import { MIN_START, useTransferCenter } from "./store.js";
 
 const slotsWord = (n: number) => plural(n, "horário", "horários");
@@ -31,7 +32,7 @@ function DestSelect({ id, value, options, className, onChange }: { id: string; v
       prompt="Manter com a origem"
       value={value}
       options={options}
-      className={["w-[260px] shrink-0", className].filter(Boolean).join(" ")}
+      className={[DEST_WIDTH, className].filter(Boolean).join(" ")}
       onChange={(v) => onChange(v ?? "")}
     />
   );
@@ -162,7 +163,7 @@ export function MapsList() {
       )}
 
       {rows.length === 0 ? (
-        <Empty icon="fa-circle-check">{originId === NO_PROF ? "Nenhum mapa sem profissional — fila zerada." : "Este profissional não tem mais mapas — pronto para inativar."}</Empty>
+        <EmptyStateCard icon="fa-circle-check" text={originId === NO_PROF ? "Nenhum mapa sem profissional — fila zerada." : "Este profissional não tem mais mapas — pronto para inativar."} />
       ) : (
         <div className="flex flex-col gap-2.5">
           {rows.map((m) => (

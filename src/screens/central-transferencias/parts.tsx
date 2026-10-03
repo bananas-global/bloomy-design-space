@@ -15,11 +15,20 @@ export function SlotTag({ children, className }: { children: string; className?:
   return <Tag item={children} variant="dark-purple" className={["whitespace-nowrap", className].filter(Boolean).join(" ")} />;
 }
 
+/**
+ * A largura do seletor de destino e do que fica no lugar dele: cabe
+ * "Carolina Mattos · Sala 15" e "Personalizado por horário" sem cortar.
+ */
+export const DEST_WIDTH = "w-[340px] max-w-full shrink-0";
+
 const STATUS_VARIANT = { ok: "green", bad: "red", soft: "dark-purple", prog: "light-purple" } as const satisfies Record<string, TagVariant>;
 
-/** O lugar do seletor quando não há o que escolher, ou o resultado: `tag` pill com ícone. */
+/**
+ * O lugar do seletor quando não há o que escolher, ou o resultado: `tag` pill
+ * com `left_icon` (o `icon` do sistema, no estilo regular).
+ */
 export function StatusTag({ status, icon, children }: { status: keyof typeof STATUS_VARIANT; icon: string; children: string }) {
-  return <Tag pill item={children} variant={STATUS_VARIANT[status]} leftIcon={`fa-solid ${icon}`} className="ml-auto w-[260px] shrink-0 whitespace-nowrap py-1.5" />;
+  return <Tag pill item={children} variant={STATUS_VARIANT[status]} leftIcon={icon} className={`ml-auto ${DEST_WIDTH} whitespace-nowrap py-1.5`} />;
 }
 
 /** Nome em destaque com uma linha de apoio (paciente, profissional). */
@@ -75,16 +84,6 @@ export function Hint({ children, warn = false, icon }: { children: ReactNode; wa
       {icon && <Icon name={icon} type="solid" className="mr-1.5" />}
       {children}
     </p>
-  );
-}
-
-/** Lista vazia. */
-export function Empty({ icon, children }: { icon: string; children: string }) {
-  return (
-    <div className="flex flex-col items-center gap-2 px-4 py-8 text-center text-sm text-brand-purple-dark/60">
-      <Icon name={icon} type="solid" className="text-xl text-brand-purple-dark/25" />
-      {children}
-    </div>
   );
 }
 
