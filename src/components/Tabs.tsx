@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { Icon } from "./Icon.js";
 import { Card } from "./Card.js";
 import { Dropdown } from "./Overlay.js";
@@ -10,9 +10,11 @@ import { Dropdown } from "./Overlay.js";
  * `lazy_tab_component.ex` → `wrapper/1` (`lazy_tabs/1`).
  *
  * Os hooks (`TabsController`, `ButtonTabsController`, `DropdownTabController`,
- * `.LazyTab`) viram estado React. Diferença inevitável: `tracker_id` (a aba
- * guardada na query string) e a marcação de erro por aba (`validate_tab`) não
- * foram portados; o ícone de erro fica no markup, sempre escondido.
+ * `.LazyTab`) viram estado React. O `tracker_id` de `card_tabs` e `button_tabs`
+ * segue o hook: a aba vai para a query string como `?<tracker_id>=<id>|<slug>`,
+ * é lida ao montar e reescrita no clique. Diferença inevitável: a marcação de
+ * erro por aba (`validate_tab`) não foi portada; o ícone de erro fica no markup,
+ * sempre escondido.
  */
 
 const cx = (...classes: unknown[]) => (classes.flat(3) as unknown[]).filter(Boolean).join(" ");
@@ -49,6 +51,73 @@ function useMarker(
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
+}
+
+/* ------------------------------------------------------------------ */
+/* tracker_id: `verifyQueryParam`, `updateQueryParam` e                 */
+/* `verifyAndRemoveInnerTabs` dos hooks                                 */
+/* ------------------------------------------------------------------ */
+
+const TRACKER_EVENT = "bloomy:tab-tracker";
+
+/** O slug guardado em `?<trackerId>=<id>|<slug>`, se for deste `id`. */
+function trackedSlug(trackerId: string | undefined, id: string): string | undefined {
+  if (!trackerId || typeof window === "undefined") return undefined;
+  const value = new URLSearchParams(window.location.search).get(trackerId);
+  if (!value) return undefined;
+  const [owner, slug] = value.split("|");
+  return owner === id ? slug : undefined;
+}
+
+/** A aba de abertura: a da query string, ou a primeira. */
+function initialIndex(trackerId: string | undefined, id: string, titles: string[]): number {
+  const slug = trackedSlug(trackerId, id);
+  const index = slug ? titles.findIndex((title) => titleToSlug(title) === slug) : -1;
+  return index >= 0 ? index : 0;
+}
+
+/** Grava a aba na query string e tira as abas internas, como o hook. */
+function updateQueryParam(trackerId: string | undefined, id: string, slug: string, root: HTMLElement | null) {
+  if (!trackerId) return;
+  const params = new URLSearchParams(window.location.search);
+  params.set(trackerId, `${id}|${slug}`);
+  root?.querySelectorAll<HTMLElement>("[data-tab-tracker-id]").forEach((el) => {
+    if (el !== root && el.dataset.tabTrackerId) params.delete(el.dataset.tabTrackerId);
+  });
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+  window.dispatchEvent(new Event(TRACKER_EVENT));
+}
+
+function subscribeTracker(onChange: () => void) {
+  window.addEventListener(TRACKER_EVENT, onChange);
+  window.addEventListener("popstate", onChange);
+  return () => {
+    window.removeEventListener(TRACKER_EVENT, onChange);
+    window.removeEventListener("popstate", onChange);
+  };
+}
+
+/**
+ * O slug da aba aberta de um `CardTabs`/`ButtonTabs` com `trackerId`, para a
+ * tela acompanhar a aba (por exemplo, trocar o `actions`). No Phoenix a tela lê
+ * o mesmo parâmetro da URL; aqui ele chega sem recarregar.
+ */
+export function useTrackedTab(trackerId: string, id: string): string | undefined {
+  return useSyncExternalStore(subscribeTracker, () => trackedSlug(trackerId, id), () => undefined);
+}
+
+/**
+ * Põe `?<trackerId>=<id>|<slug>` na URL quando ainda não há aba guardada para
+ * esse `trackerId`. Serve aos layouts do design space, que têm uma rota por aba
+ * (`/unidades/:id/salas`) onde o Phoenix tem uma página só com a aba na URL:
+ * chamado antes de montar as abas, faz a rota abrir na aba dela.
+ */
+export function ensureTrackedTab(trackerId: string, id: string, slug: string) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.has(trackerId)) return;
+  params.set(trackerId, `${id}|${slug}`);
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
 }
 
 const lineMarker = (el: HTMLElement, m: HTMLDivElement) => {
@@ -152,23 +221,26 @@ export type CardTabSlot = { title: string; noCard?: boolean; content: ReactNode 
 
 export function CardTabs({
   id,
+  trackerId,
   header,
   tab,
   children,
 }: {
   id: string;
+  trackerId?: string;
   header: ReactNode;
   tab: CardTabSlot[];
   children?: ReactNode;
 }) {
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(() => initialIndex(trackerId, id, tab.map((t) => t.title)));
+  const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const marker = useRef<HTMLDivElement>(null);
   useMarker(marker, () => list.current?.querySelector<HTMLElement>(`#${CSS.escape(`${id}-tab-${current}`)}`), lineMarker, [current, id]);
   const slug = tab[current] ? titleToSlug(tab[current].title) : undefined;
 
   return (
-    <div id={id} className="relative w-full">
+    <div ref={root} id={id} className="relative w-full" data-tab-tracker-id={trackerId}>
       <Card className="mb-6 p-0!">
         <div className="group p-6" data-tab-header data-tab={slug}>
           {header}
@@ -179,7 +251,18 @@ export function CardTabs({
           className="relative w-full text-gray-500 select-none flex border-t border-brand-purple-dark/10 overflow-y-hidden overflow-x-auto thin-scrollbar pb-1 px-6"
         >
           {tab.map((t, index) => (
-            <TabButton key={index} id={index} tabId={id} title={t.title} size="large" active={index === current} onClick={() => setCurrent(index)} />
+            <TabButton
+              key={index}
+              id={index}
+              tabId={id}
+              title={t.title}
+              size="large"
+              active={index === current}
+              onClick={() => {
+                setCurrent(index);
+                updateQueryParam(trackerId, id, titleToSlug(t.title), root.current);
+              }}
+            />
           ))}
 
           <div ref={marker} className="absolute left-0 w-1/2 h-full duration-300 ease-out pointer-events-none hidden" data-tab-marker>
@@ -209,24 +292,21 @@ export type ButtonTabSlot = { title: string; disabled?: boolean; content: ReactN
 
 export function ButtonTabs({
   id,
+  trackerId,
   size = "small",
   className,
   tab,
   actions,
-  initialTab = 0,
-  onChange,
 }: {
   id: string;
+  trackerId?: string;
   size?: "small" | "normal";
   className?: string;
   tab: ButtonTabSlot[];
   actions?: ReactNode;
-  /** A aba aberta ao montar, como no `CardTabs`. */
-  initialTab?: number;
-  /** Avisa a troca de aba, para o `actions` acompanhar a aba aberta (no original, o JS do hook). */
-  onChange?: (index: number) => void;
 }) {
-  const [current, setCurrent] = useState(initialTab);
+  const [current, setCurrent] = useState(() => initialIndex(trackerId, id, tab.map((t) => t.title)));
+  const root = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const marker = useRef<HTMLDivElement>(null);
   useMarker(
@@ -240,7 +320,7 @@ export function ButtonTabs({
   );
 
   return (
-    <div id={id} className="relative">
+    <div ref={root} id={id} className="relative" data-tab-tracker-id={trackerId}>
       <div className={cx("flex items-center justify-between", className)}>
         <div ref={list} className="relative text-neutral-900 p-2 rounded-xl bg-brand-purple-dark/5 inline-flex gap-2 overflow-auto thin-scrollbar">
           <div
@@ -274,7 +354,7 @@ export function ButtonTabs({
               data-slug={titleToSlug(t.title)}
               onClick={() => {
                 setCurrent(index);
-                onChange?.(index);
+                updateQueryParam(trackerId, id, titleToSlug(t.title), root.current);
               }}
             >
               {t.title}
