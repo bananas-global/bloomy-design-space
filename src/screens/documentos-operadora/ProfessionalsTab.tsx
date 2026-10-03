@@ -8,13 +8,14 @@ import { Button } from "../../components/Button.js";
 import { DrawerModal } from "../../components/Overlay.js";
 import { Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
-import { DOC_SITUATIONS, LINK_STATUS, NOT_LINKED, abaBand, isShared, profDocState, yearsLabel, type DocSituation } from "./model.js";
+import { DOC_SITUATIONS, LINK_STATUS, NOT_LINKED, NOT_LINKED_VARIANT, abaBand, docTypeName, isShared, missingFor, profDocState, yearsLabel, type DocSituation } from "./model.js";
 import {
   DocCheck,
   DocCount,
   DrawerFooter,
   FilterBar,
   FilterCount,
+  MissingDocsNote,
   None,
   RowActions,
   SearchFilter,
@@ -87,10 +88,10 @@ export function ProfessionalsTab({ canEdit }: { canEdit: boolean }) {
     <div className="flex flex-col gap-4">
       <SummaryTags
         items={[
-          [`${none} não ${none === 1 ? "credenciado" : "credenciados"}`, "light-blue"],
-          [`${count("pending")} em credenciamento`, "light-blue"],
-          [plural(count("active"), "ativo", "ativos"), "green"],
-          [plural(count("inactive"), "descredenciado", "descredenciados"), "red"],
+          [`${none} não ${none === 1 ? "credenciado" : "credenciados"}`, NOT_LINKED_VARIANT],
+          [`${count("pending")} em credenciamento`, LINK_STATUS.pending.variant],
+          [plural(count("active"), "ativo", "ativos"), LINK_STATUS.active.variant],
+          [plural(count("inactive"), "descredenciado", "descredenciados"), LINK_STATUS.inactive.variant],
         ]}
       />
 
@@ -164,6 +165,8 @@ function ShareDrawer({ profId, show, canEdit, onClose }: { profId: string; show:
   const op = state.operator;
   const prof = state.professionals.find((p) => p.id === profId)!;
   const docs = state.docs[profId] ?? [];
+  // Exigidos que o profissional nem tem no cadastro: compartilhar não resolve, e o vínculo fica Em credenciamento.
+  const absent = state.links[`${profId}:${op.id}`] ? missingFor(state, profId, op.id).filter((typeId) => !docs.some((d) => d.typeId === typeId)) : [];
 
   function toggle(docId: string, name: string, on: boolean) {
     setShare(profId, docId, on);
@@ -173,6 +176,11 @@ function ShareDrawer({ profId, show, canEdit, onClose }: { profId: string; show:
   return (
     <DrawerModal id="share_professional_docs" show={show} title="Compartilhar com operadora" onCancel={onClose}>
       <Subject name={prof.name} meta={`${prof.specialty}${prof.council ? ` · conselho ${prof.council}` : ""}`} />
+      {absent.length > 0 && (
+        <MissingDocsNote>
+          {`Sem ${absent.map(docTypeName).join(", ")} no cadastro do profissional: o credenciamento na ${op.name} fica Em credenciamento até ${absent.length === 1 ? "o documento ser anexado" : "os documentos serem anexados"} no cadastro e compartilhado${absent.length === 1 ? "" : "s"} aqui.`}
+        </MissingDocsNote>
+      )}
       <SectionLabel>Documentos do profissional</SectionLabel>
       <div className="flex flex-col gap-2">
         {docs.map((d) => (

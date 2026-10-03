@@ -3,7 +3,7 @@
  * Cada ação devolve um estado já reconciliado (status dos vínculos recalculado).
  */
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { TODAY_BR, isShared, linkKey, missingFor, reconcile, unitStatus, type DocsState, type LinkStatus } from "./model.js";
+import { TODAY_BR, isShared, linkKey, missingFor, reconcile, type DocsState, type LinkStatus } from "./model.js";
 
 export type Store = {
   state: DocsState;
@@ -11,7 +11,6 @@ export type Store = {
   setShare: (profId: string, docId: string, on: boolean) => void;
   setLinkStatus: (profId: string, status: LinkStatus) => void;
   setUnitShare: (unitId: string, docId: string, on: boolean) => void;
-  setOperatorActive: (active: boolean) => void;
 };
 
 const Ctx = createContext<Store | null>(null);
@@ -51,7 +50,6 @@ export function DocsProvider({ initial, children }: { initial: DocsState; childr
               : { ...u, documents: u.documents.map((d) => (d.id !== docId ? d : { ...d, shared: on ? [...d.shared, opId] : d.shared.filter((x) => x !== opId) })) },
           ),
         })),
-      setOperatorActive: (active) => setState((s) => ({ ...s, operator: { ...s.operator, active } })),
     }),
     [state, opId],
   );
@@ -81,6 +79,3 @@ export function profRows(s: DocsState) {
     return { prof, link, shared, missing };
   });
 }
-
-/** As unidades credenciadas na operadora. */
-export const activeUnits = (s: DocsState) => s.units.filter((u) => unitStatus(u, s.operator.id).key === "active");

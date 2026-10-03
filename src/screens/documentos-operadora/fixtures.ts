@@ -6,33 +6,32 @@
  * obrigatórios. Hoje é `TODAY` (05/08/2026). Nomes são fictícios.
  */
 import type { Fixture } from "@brucesantos/design-space";
-import { docTypeName, linkKey, reconcile, type DocsState, type Link, type LinkStatus, type Operator, type ProfDoc, type Professional, type Unit } from "./model.js";
+import { docTypeName, linkKey, parseBR, reconcile, type DocsState, type Link, type LinkStatus, type Operator, type ProfDoc, type Professional, type Unit } from "./model.js";
 
 export const OPERATOR: Operator = {
   id: "op1",
   name: "Unimed",
-  ans: "339679",
-  type: "Plano de saúde",
-  active: true,
-  services: 3,
-  patients: 3,
-  guides: 3,
+  ans: "999901",
+  planCount: 3,
+  phone: "(11) 3000-0101",
+  email: "credenciamento@operadora.example",
+  observation: "Enviar a documentação de credenciamento até o dia 10 de cada mês.",
 };
 
 /** O que a Unimed exige para credenciar um profissional. */
 export const REQUIRED = ["diploma", "council", "id", "cv"];
 
 export const PROFESSIONALS: Professional[] = [
-  { id: "p1", name: "Helena Martins Costa", active: true, specialty: "Psicologia", council: "06233962", units: ["Unidade Teste"], graduation: "12/2013", abaHours: 320, badges: ["Integração Sensorial", "PECS", "Denver"] },
-  { id: "p2", name: "Tânia Abreu Pinho", active: true, specialty: "Psicologia", council: "06113517", units: ["Santana"], graduation: "07/2009", abaHours: 480, badges: ["Supervisão BCaBA", "PECS"] },
+  { id: "p1", name: "Helena Martins Costa", active: true, specialty: "Psicologia", council: "06900101", units: ["Unidade Teste"], graduation: "12/2013", abaHours: 320, badges: ["Integração Sensorial", "PECS", "Denver"] },
+  { id: "p2", name: "Tânia Abreu Pinho", active: true, specialty: "Psicologia", council: "06900102", units: ["Santana"], graduation: "07/2009", abaHours: 480, badges: ["Supervisão BCaBA", "PECS"] },
   { id: "p3", name: "Mariana Palmeira Stein", active: true, specialty: "Terapia Ocupacional", council: "25044", units: ["Unidade Teste", "Santana"], graduation: "12/2016", abaHours: 180, badges: ["Integração Sensorial"] },
   { id: "p4", name: "Tiago Alves da Rocha", active: true, specialty: "Terapia Ocupacional", council: "25067", units: ["Santana"], graduation: "06/2019", abaHours: 120, badges: [] },
-  { id: "p5", name: "Lívia Cardoso da Mata", active: true, specialty: "Psicopedagogia", council: "00015", units: ["Unidade Teste"], graduation: "12/2011", abaHours: 240, badges: ["Psicopedagogia clínica"] },
-  { id: "p6", name: "Larissa Wippich Faria", active: true, specialty: "Psicologia", council: "123", units: ["Santana"], graduation: "12/2017", abaHours: 400, badges: ["Integração Sensorial", "ABLLS-R"] },
+  { id: "p5", name: "Lívia Cardoso da Mata", active: true, specialty: "Psicopedagogia", council: "90106", units: ["Unidade Teste"], graduation: "12/2011", abaHours: 240, badges: ["Psicopedagogia clínica"] },
+  { id: "p6", name: "Larissa Moura Faria", active: true, specialty: "Psicologia", council: "06900103", units: ["Santana"], graduation: "12/2017", abaHours: 400, badges: ["Integração Sensorial", "ABLLS-R"] },
   { id: "p7", name: "Raiane Almeida Longo", active: true, specialty: "Fisioterapia", council: "448485", units: ["Unidade Teste", "Santana"], graduation: "07/2021", abaHours: 80, badges: [] },
-  { id: "p8", name: "Lucinara Rodrigues Lima", active: true, specialty: "Fisioterapia", council: "239861", units: ["Santana"], graduation: "12/2012", abaHours: 200, badges: ["Bobath"] },
-  { id: "p9", name: "Fábio Stoll Pereira", active: true, specialty: "Fonoaudiologia", council: "123123", units: ["Unidade Teste"], graduation: "12/2008", abaHours: 520, badges: ["Integração Sensorial", "PROMPT", "Supervisão BCBA"] },
-  { id: "p10", name: "Carina Ferreira de Araújo", active: false, specialty: "Aplicador Psicologia", council: "123123", units: ["Unidade Teste"], graduation: "06/2022", abaHours: 60, badges: [] },
+  { id: "p8", name: "Luciana Rodrigues Lima", active: true, specialty: "Fisioterapia", council: "239861", units: ["Santana"], graduation: "12/2012", abaHours: 200, badges: ["Bobath"] },
+  { id: "p9", name: "Fábio Teixeira Pereira", active: true, specialty: "Fonoaudiologia", council: "90104", units: ["Unidade Teste"], graduation: "12/2008", abaHours: 520, badges: ["Integração Sensorial", "PROMPT", "Supervisão BCBA"] },
+  { id: "p10", name: "Carina Ferreira de Araújo", active: false, specialty: "Aplicador Psicologia", council: "06900105", units: ["Unidade Teste"], graduation: "06/2022", abaHours: 60, badges: [] },
 ];
 
 /** Formações especiais reconhecidas: o nome do documento sai daqui. */
@@ -87,16 +86,21 @@ const trainingFor = (badge: string) =>
   SPECIAL_TRAININGS.find((t) => t.name === badge) ??
   SPECIAL_TRAININGS.find((t) => badge.toLowerCase().includes(t.name.toLowerCase()) || t.name.toLowerCase().includes(badge.toLowerCase()));
 
+/** A mais recente de duas datas dd/mm/aaaa. */
+const later = (a: string, b: string) => (parseBR(a)! >= parseBR(b)! ? a : b);
+
 /** Os documentos de um profissional: os do cadastro, um por formação especial e o certificado do curso de ABA. */
 function docsOf(prof: Professional): ProfDoc[] {
   const seed = SEED_DOCS[prof.id] ?? [];
+  // Compartilhar só existe depois do vínculo: o documento mais antigo entra na data do vínculo.
+  const since = SEED_LINKS[prof.id]?.[1];
   const docs: ProfDoc[] = seed.map(([typeId, updatedAt, validUntil], i) => ({
     id: `${prof.id}_d${i + 1}`,
     typeId,
     name: docTypeName(typeId),
     validUntil,
     file: `${typeId}-${prof.id}.pdf`,
-    shared: (SEED_SHARE[prof.id] ?? []).includes(typeId) ? [{ opId: OPERATOR.id, at: updatedAt }] : [],
+    shared: since && (SEED_SHARE[prof.id] ?? []).includes(typeId) ? [{ opId: OPERATOR.id, at: later(updatedAt, since) }] : [],
   }));
   prof.badges.forEach((badge, j) => {
     const t = trainingFor(badge);
@@ -141,17 +145,14 @@ export const UNITS: Unit[] = [
   },
 ];
 
-/** Qual parte da aba Documentos abre. */
-export type DocsScope = "professionals" | "units";
+export type OperatorDocsFixture = DocsState;
 
-export type OperatorDocsFixture = DocsState & { scope: DocsScope };
-
-function build(scope: DocsScope): OperatorDocsFixture {
+function build(): OperatorDocsFixture {
   const links: Record<string, Link> = {};
   for (const [profId, [status, since]] of Object.entries(SEED_LINKS)) {
     links[linkKey(profId, OPERATOR.id)] = { profId, opId: OPERATOR.id, status, since };
   }
-  const state = reconcile({
+  return reconcile({
     operator: OPERATOR,
     professionals: PROFESSIONALS,
     required: REQUIRED,
@@ -159,21 +160,15 @@ function build(scope: DocsScope): OperatorDocsFixture {
     links,
     units: UNITS,
   });
-  return { ...state, scope };
 }
 
+/** Uma fixture só: Profissionais e Unidades são abas da mesma tela, e a aba vai na URL. */
 export const OPERATOR_DOCS_FIXTURES: Fixture<OperatorDocsFixture>[] = [
   {
-    id: "operator-docs.professionals",
-    label: "Unimed · Documentos › Profissionais",
+    id: "operator-docs.unimed",
+    label: "Unimed · Documentos",
     description:
-      "Dez profissionais: seis com vínculo na Unimed (três ativos, três em credenciamento por documento faltando ou vencido) e quatro não credenciados. Duas unidades, uma credenciada.",
-    data: () => build("professionals"),
-  },
-  {
-    id: "operator-docs.units",
-    label: "Unimed · Documentos › Unidades",
-    description: "Os mesmos dados, com a aba Documentos aberta em Unidades: Unidade Teste credenciada, Santana sem documento compartilhado.",
-    data: () => build("units"),
+      "Dez profissionais: seis com vínculo na Unimed (três ativos, três em credenciamento por documento faltando ou vencido) e quatro não credenciados. Duas unidades: Unidade Teste credenciada, Santana sem documento compartilhado.",
+    data: () => build(),
   },
 ];

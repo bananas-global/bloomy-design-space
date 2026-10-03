@@ -38,8 +38,8 @@ export function UnitsTab({ canEdit }: { canEdit: boolean }) {
     <div className="flex flex-col gap-4">
       <SummaryTags
         items={[
-          [`${count("none")} não ${count("none") === 1 ? "compartilhado" : "compartilhados"}`, "light-blue"],
-          [`${count("pending")} em credenciamento`, "light-blue"],
+          [`${count("none")} não ${count("none") === 1 ? "compartilhado" : "compartilhados"}`, UNIT_STATUS.none.variant],
+          [`${count("pending")} em credenciamento`, UNIT_STATUS.pending.variant],
           [`${count("active")} ${count("active") === 1 ? "credenciada" : "credenciadas"}`, "green"],
         ]}
       />

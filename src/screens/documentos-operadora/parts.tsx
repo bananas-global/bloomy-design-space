@@ -204,27 +204,29 @@ export function DocCheck({
     <div
       className={[
         "flex items-center gap-3 rounded-xl border pr-4 transition-colors",
-        checked ? "border-brand-blue bg-brand-blue/10" : "border-brand-purple-dark/10",
+        checked ? "border-brand-blue" : "border-brand-purple-dark/10",
       ].join(" ")}
     >
       <div className="min-w-0 flex-1">
-        <Input
-          type="checkbox"
-          id={id}
-          name={id}
-          label={name}
-          checked={checked}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.checked)}
-          className="[&_label]:w-full [&_label]:cursor-pointer [&_label]:bg-transparent! [&_label]:pb-1 [&_label]:font-bold"
-        />
-        <p className="-mt-0.5 flex flex-wrap items-center gap-2 pb-3 pl-[46px] text-xs text-brand-purple-dark/60">
+        {/* O `input type="checkbox"` como é: o realce de marcado é o do próprio label. */}
+        <Input type="checkbox" id={id} name={id} label={name} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+        <p className="flex flex-wrap items-center gap-2 pb-3 pl-[46px] text-xs text-brand-purple-dark/60">
           {detail}
           {badge}
         </p>
       </div>
       <Tag item={state.label} variant={state.variant} className="shrink-0 whitespace-nowrap" />
     </div>
+  );
+}
+
+/** Aviso no drawer: o que o compartilhamento sozinho não resolve. */
+export function MissingDocsNote({ children }: { children: ReactNode }) {
+  return (
+    <p className="mt-4 flex items-start gap-2 rounded-xl bg-brand-orange/20 px-4 py-3 text-sm text-orange-dark">
+      <Icon name="fa-triangle-exclamation" type="solid" className="mt-0.5" />
+      <span>{children}</span>
+    </p>
   );
 }
 

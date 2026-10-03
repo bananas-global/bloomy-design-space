@@ -22,16 +22,17 @@ export const TODAY_BR = "05/08/2026";
    Tipos
    ============================================================ */
 
+/** Os campos de `HealthCare` que o `CardHeader` da ficha mostra. */
 export type Operator = {
   id: string;
   name: string;
+  /** `ans_register`. */
   ans: string;
-  /** Rótulo do tipo: "Plano de saúde", "Autogestão", "Cooperativa". */
-  type: string;
-  active: boolean;
-  services: number;
-  patients: number;
-  guides: number;
+  /** `plan_count`: tipos de plano ativos. */
+  planCount: number;
+  phone: string | null;
+  email: string | null;
+  observation: string | null;
 };
 
 export type Professional = {
@@ -166,6 +167,9 @@ export const LINK_STATUS: Record<LinkStatus, { label: string; variant: TagVarian
 
 export const NOT_LINKED = "Não credenciado";
 
+/** Cor de "não credenciado" nos totais: a mesma neutra de "Não compartilhado" das unidades. */
+export const NOT_LINKED_VARIANT: TagVariant = "dark-purple";
+
 export const isShared = (doc: ProfDoc, opId: string) => doc.shared.some((s) => s.opId === opId);
 
 /** Os documentos exigidos que faltam: não compartilhados com a operadora, ou vencidos. */
@@ -249,7 +253,7 @@ export function unitDocState(doc: UnitDoc): { label: string; variant: TagVariant
 export type UnitStatusKey = "none" | "pending" | "active";
 
 export const UNIT_STATUS: Record<UnitStatusKey, { label: string; variant: TagVariant }> = {
-  none: { label: "Não compartilhado", variant: "light-blue" },
+  none: { label: "Não compartilhado", variant: "dark-purple" },
   pending: { label: "Em credenciamento", variant: "light-blue" },
   active: { label: "Credenciada", variant: "green" },
 };
