@@ -119,6 +119,44 @@ jobs:
           fi
           echo "url=$url" >> "$GITHUB_OUTPUT"
 
+      # A URL de cada deploy é imutável: um push novo ganha outra. O link que vai
+      # para os devs é um alias fixo por branch, que passa a apontar para o
+      # último deploy a cada push. Assim o link do sprint não muda e sempre
+      # mostra a versão atual da feature.
+      #
+      # A URL automática de branch da Vercel (`-git-<branch>-`) só existe para
+      # deploys da integração Git, que fica desligada fora da `main`.
+      - name: Apontar o alias da branch
+        id: alias
+        if: steps.ambiente.outputs.alvo == 'preview' && steps.deploy.outputs.url != ''
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          slug="$(printf '%s' "$BRANCH" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' | cut -c1-50 | sed -E 's/-+$//')"
+          alias="bloomy-ds-${slug}.vercel.app"
+          vercel alias set "$URL" "$alias" --scope="$VERCEL_ORG_ID" --token=${{ secrets.VERCEL_TOKEN }}
+          echo "url=https://${alias}" >> "$GITHUB_OUTPUT"
+
+      # Os cenários novos ou alterados no PR, cada um com seu link: rota mais os
+      # parâmetros que reproduzem o estado. Os que já estão na base ficam de fora.
+      - name: Listar os cenários do PR
+        id: cenarios
+        if: steps.alias.outputs.url != ''
+        # Sem a lista, o comentário sai só com o link da branch.
+        continue-on-error: true
+        env:
+          ORIGIN: ${{ steps.alias.outputs.url }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          base=""
+          if [ -n "$BASE_SHA" ] && git fetch --depth=1 origin "$BASE_SHA" \
+            && git worktree add --detach ../base FETCH_HEAD; then
+            ln -s "$PWD/node_modules" ../base/node_modules
+            base="../base"
+          fi
+          node scripts/preview-links.mjs "$ORIGIN" $base > "$RUNNER_TEMP/cenarios.json"
+          cat "$RUNNER_TEMP/cenarios.json"
+
       # O link aparece no resumo da execução, para não ter que caçar na saída dos
       # comandos. É o endereço que circula em revisão.
       - name: Mostrar o link
@@ -127,23 +165,36 @@ jobs:
           {
             echo "## Bloomy Design Space publicado"
             echo ""
-            echo "${{ steps.deploy.outputs.url }}"
+            echo "${{ steps.alias.outputs.url || steps.deploy.outputs.url }}"
             echo ""
             echo "Componentes e layouts na raiz."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # O link vai para o próprio PR, num comentário só, atualizado a cada push:
-      # é o endereço que o designer manda para os devs. É a URL fixa deste
-      # deploy — não muda com pushes seguintes, que ganham URL própria.
+      # O link vai para o próprio PR, num comentário só, reescrito a cada push:
+      # o alias da branch e um link por cenário. É o que o designer manda para os
+      # devs, e é o mesmo endereço do primeiro ao último push.
       - name: Comentar o preview no PR
-        if: github.event_name == 'pull_request' && steps.deploy.outputs.url != ''
+        if: github.event_name == 'pull_request' && steps.alias.outputs.url != ''
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
-          URL: ${{ steps.deploy.outputs.url }}
+          URL: ${{ steps.alias.outputs.url }}
         run: |
           marker="<!-- design-space-preview -->"
-          body="$(printf '%s\n**Preview:** %s\n\nCommit `%s`. O endereço é fixo: cada push novo publica outro e atualiza este comentário.' "$marker" "$URL" "${SHA:0:7}")"
+          body="$(node -e '
+            const fs = require("fs");
+            const [marker, url, sha, file] = process.argv.slice(1);
+            let links = [];
+            try { links = JSON.parse(fs.readFileSync(file, "utf8")); } catch {}
+            const lines = [marker, `**Preview:** ${url}`, ""];
+            if (links.length) {
+              lines.push("| Cenário | Link |", "| --- | --- |");
+              for (const l of links) lines.push(`| ${l.title.replace(/\|/g, "\\|")} | [abrir](${l.url}) |`);
+              lines.push("");
+            }
+            lines.push(`Mostra sempre o último push (commit \`${sha.slice(0, 7)}\`).`);
+            console.log(lines.join("\n"));
+          ' "$marker" "$URL" "$SHA" "$RUNNER_TEMP/cenarios.json")"
           existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n1)"
           if [ -n "$existing" ]; then
             gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="$body" > /dev/null
