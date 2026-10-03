@@ -127,29 +127,32 @@ export const REPORT_CONTROLS: ControlGroup[] = [
   },
   {
     id: "signatures",
-    title: "Assinaturas",
+    title: "Assinaturas (em Aguardando assinatura)",
     component: "core.avatar",
-    note: "Só em Aguardando assinatura, com responsável e coautor. A última assinatura emite o relatório, então Emitido tem sempre todas.",
+    note: "Vale em Aguardando assinatura, com responsável e coautor. A última assinatura emite o relatório: Emitido mostra sempre Todas, e Todas em Aguardando assinatura volta a 1 de 2.",
     controls: [
       {
         id: "signatures",
         label: "Assinadas",
         default: "1",
+        description: "Só muda a tela em Aguardando assinatura; em Emitido acompanha o relatório (Todas).",
         options: [
           { value: "0", label: "0 de 2" },
           { value: "1", label: "1 de 2" },
+          { value: "all", label: "Todas (Emitido)" },
         ],
       },
     ],
   },
   {
     id: "share",
-    title: "Compartilhamento com a família",
-    note: "Só em Emitido. Lido em parte: mãe e pai receberam, só a mãe abriu.",
+    title: "Compartilhamento com a família (em Emitido)",
+    note: "Só em Emitido; nos outros status não muda a tela. Lido em parte: mãe e pai receberam, só a mãe abriu.",
     controls: [
       {
         id: "share",
         label: "Família",
+        description: "Só muda a tela em Emitido.",
         options: [
           { value: "none", label: "Não compartilhado" },
           { value: "pending", label: "Não lido" },
@@ -164,17 +167,18 @@ export const REPORT_CONTROLS: ControlGroup[] = [
     id: "overlay",
     title: "Sobreposição aberta · drawer_modal / modal",
     component: "core.drawer-modal",
-    note: "Editar, reatribuir e cancelar só abrem para a coordenação em Solicitado e Em produção; compartilhar, em Emitido.",
+    note: "Editar, reatribuir e cancelar só abrem para a coordenação em Solicitado e Em produção; compartilhar, em Emitido. Fora disso a escolha volta a Nenhuma.",
     controls: [
       {
         id: "overlay",
         label: "Aberta",
+        description: "Fora do status indicado na opção, a sobreposição não abre e o controle volta a Nenhuma.",
         options: [
           { value: "none", label: "Nenhuma" },
-          { value: "edit", label: "Editar solicitação" },
-          { value: "share", label: "Compartilhar" },
-          { value: "reassign", label: "Reatribuir profissional" },
-          { value: "cancel", label: "Cancelar solicitação" },
+          { value: "edit", label: "Editar solicitação (Solicitado, Em produção)" },
+          { value: "share", label: "Compartilhar (Emitido)" },
+          { value: "reassign", label: "Reatribuir profissional (Solicitado, Em produção)" },
+          { value: "cancel", label: "Cancelar solicitação (Solicitado, Em produção)" },
         ],
       },
     ],
@@ -220,13 +224,14 @@ export const FILL_CONTROLS: ControlGroup[] = [
   authorsGroup,
   {
     id: "images",
-    title: "Gráficos · file_uploader",
+    title: "Gráficos · file_uploader (Evolução, Trimestral, Avaliação)",
     component: "core.file-uploader",
-    note: "Só em modelos com campo de imagem (Evolução Mensal, Trimestral, Avaliação).",
+    note: "Só em modelos com campo de imagem (Evolução Mensal, Trimestral, Avaliação). Nos outros (Admissão, Alta) o controle volta a Sem gráficos.",
     controls: [
       {
         id: "images",
         label: "Gráficos",
+        description: "Admissão e Alta não têm campo de imagem.",
         options: [
           { value: "none", label: "Sem gráficos" },
           { value: "with", label: "Com gráfico e campo extra" },
@@ -246,7 +251,7 @@ export const UPLOAD_CONTROLS: ControlGroup[] = [
     id: "file",
     title: "PDF final · file_uploader",
     component: "core.file-uploader",
-    note: "Relatório externo/PDF ou Outro: o documento é produzido fora do sistema e anexado aqui.",
+    note: "Relatório Externo ou Outro: o documento é produzido fora do sistema e anexado aqui.",
     controls: [
       {
         id: "file",

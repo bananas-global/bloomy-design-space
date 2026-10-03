@@ -205,7 +205,7 @@ function EditorScreen({ context, reportId, kind }: { context: ScenarioContext; r
     },
     derive: (s, c) => {
       const r = focusOf(s);
-      return r ? deriveEditor(kind, r, c) : c;
+      return r ? deriveEditor(kind, r) : c;
     },
   });
   const r = focusOf(state);

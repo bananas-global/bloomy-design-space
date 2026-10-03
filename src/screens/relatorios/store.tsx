@@ -247,7 +247,7 @@ export function ReportsProvider({ context, patient, state, setState, children }:
       if (!r) return;
       const kind = editorKindOf(r);
       const groups = EDITOR_CONTROLS[kind];
-      const controls = deriveEditor(kind, r, defaultsOf(groups));
+      const controls = deriveEditor(kind, r);
       flowNavigate(context, `${reportPath(r.id, patient.id)}/${EDITOR_PATH[kind]}`, groups, controls);
     };
     const toList = () => {
@@ -419,7 +419,7 @@ export function ReportsProvider({ context, patient, state, setState, children }:
           toast("success", "Finalizado!", "Relatório assinado e disponível no prontuário do paciente.");
         } else {
           patch(id, (cur) =>
-            pushHistory({ ...cur, ...extra, status: "assinaturas", hasDraft: false, signatures: {}, updatedAt: stamp }, `Enviado para assinaturas de ${authors.length} autores`, "fa-signature"),
+            pushHistory({ ...cur, ...extra, status: "assinaturas", hasDraft: true, signatures: {}, updatedAt: stamp }, `Enviado para assinaturas de ${authors.length} autores`, "fa-signature"),
           );
           toast("success", "Enviado para assinaturas", `${authors.length} autores precisam assinar. O texto fica bloqueado até lá.`);
         }

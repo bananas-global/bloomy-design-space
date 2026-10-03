@@ -65,10 +65,10 @@ export type Report = {
   id: string;
   patient: PatientRef;
   typeId: ReportTypeId;
-  /** Nome livre de "Outro" e de "Relatório externo/PDF". */
+  /** Nome livre de "Outro" e de "Relatório Externo". */
   customName?: string;
   period: string;
-  /** Aplicação de protocolo finalizada (Relatório de Protocolo). */
+  /** Aplicação de protocolo finalizada (Relatório de protocolo). */
   protocolAppId?: string | null;
   requester: Requester;
   requestedBy: string;
@@ -77,6 +77,7 @@ export type Report = {
   due: string;
   prof: Professional | null;
   status: ReportStatus;
+  /** Há conteúdo salvo: rascunho em produção ou texto aguardando assinaturas. */
   hasDraft: boolean;
   updatedAt: string;
   obs: string;
@@ -134,7 +135,7 @@ export const LIST_STATUS_ORDER: ListStatus[] = ["previsto", "solicitado", "em_an
  * kind: "model"    → existe modelo interno (abre editor de preenchimento)
  *       "protocol" → nasce de uma aplicação de protocolo finalizada
  *       "custom"   → "Outro" (informar nome; sem modelo → anexar documento)
- *       "external" → "Relatório externo/PDF" (sem modelo → anexar PDF final)
+ *       "external" → "Relatório Externo" (sem modelo → anexar PDF final)
  */
 export const REL_TYPES: ReportType[] = [
   { id: "evolucao_mensal", name: "Evolução Mensal", kind: "model" },
@@ -143,8 +144,8 @@ export const REL_TYPES: ReportType[] = [
   { id: "admissao", name: "Relatório de Admissão", kind: "model" },
   { id: "alta", name: "Alta / Desligamento", kind: "model" },
   { id: "outro", name: "Outro", kind: "custom" },
-  { id: "protocolo", name: "Relatório de Protocolo", kind: "protocol" },
-  { id: "externo", name: "Relatório externo/PDF", kind: "external" },
+  { id: "protocolo", name: "Relatório de protocolo", kind: "protocol" },
+  { id: "externo", name: "Relatório Externo", kind: "external" },
 ];
 
 export const relType = (id: ReportTypeId): ReportType => REL_TYPES.find((t) => t.id === id) ?? REL_TYPES[0]!;
@@ -341,7 +342,7 @@ export const REL_MODEL_SECTIONS: Partial<Record<ReportTypeId, ModelSection[]>> =
 export const sectionsFor = (typeId: ReportTypeId): ModelSection[] =>
   REL_MODEL_SECTIONS[typeId] ?? REL_MODEL_SECTIONS.avaliacao!;
 
-/** Seções do Relatório de Protocolo (`ask` é o pedido para gerar o texto com IA). */
+/** Seções do Relatório de protocolo (`ask` é o pedido para gerar o texto com IA). */
 export const REL_PROTO_SECTIONS: (ModelSection & { ask: string })[] = [
   { id: "instrumento", title: "Instrumento e contexto da aplicação", ph: "Qual instrumento foi aplicado, quando, por quem e em que condições.", ask: "Descreva o instrumento aplicado, a data, o responsável e o objetivo da avaliação. 2 a 3 frases." },
   { id: "resultados", title: "Resultados gerais", ph: "Pontuação total, distribuição por nível e leitura geral do repertório.", ask: "Descreva os resultados gerais: pontuação total, aproveitamento por nível e o que isso indica sobre o estágio de desenvolvimento verbal. Cite números." },
@@ -385,8 +386,14 @@ export const VB_DOMAINS = [
   { id: "writing", name: "Escrita", short: "Escrita" },
   { id: "math", name: "Matemática", short: "Mat." },
 ];
-/** Pontuação por nível [N1, N2, N3]; `null` = domínio não avaliado no nível. */
-export type VbCells = Record<string, (number | null)[]>;
+/**
+ * Marcos por nível [N1, N2, N3], como em `vb_mapp_view` do monólito
+ * (`patient_live/components/edit_tabs/protocol_executions.ex`): cada nível de
+ * cada domínio tem 5 marcos, e cada marco vale 0, 0,5 ou 1. `null` = domínio
+ * não avaliado no nível.
+ */
+export type VbMilestone = 0 | 0.5 | 1;
+export type VbCells = Record<string, (VbMilestone[] | null)[]>;
 export type ProtocolApplication = {
   id: string;
   protocol: string;
@@ -399,13 +406,19 @@ export type ProtocolApplication = {
   cells: VbCells;
   previous: VbCells;
 };
+/** Marcos por nível de cada domínio (pontuação máxima de uma célula). */
 export const VB_MAX_CELL = 5;
+/** Pontuação de uma célula: a soma dos marcos (meio ponto conta). */
+export const vbCellScore = (ms: VbMilestone[] | null | undefined): number | null =>
+  ms == null ? null : ms.reduce<number>((a, v) => a + v, 0);
+/** Pontuação com vírgula decimal: `75,5`. */
+export const vbNum = (n: number) => String(n).replace(".", ",");
 export function vbLevelTotals(cells: VbCells) {
   return VB_LEVELS.map((_, i) => {
     let score = 0;
     let max = 0;
     VB_DOMAINS.forEach((d) => {
-      const v = (cells[d.id] ?? [])[i];
+      const v = vbCellScore((cells[d.id] ?? [])[i]);
       if (v == null) return;
       score += v;
       max += VB_MAX_CELL;
@@ -415,8 +428,8 @@ export function vbLevelTotals(cells: VbCells) {
 }
 export function vbDomainRows(cells: VbCells, prev?: VbCells) {
   return VB_DOMAINS.map((d) => {
-    const row = cells[d.id] ?? [];
-    const pRow = prev?.[d.id] ?? [];
+    const row = (cells[d.id] ?? []).map(vbCellScore);
+    const pRow = (prev?.[d.id] ?? []).map(vbCellScore);
     let score = 0;
     let max = 0;
     let pScore = 0;
@@ -433,13 +446,9 @@ export function vbTotal(cells: VbCells) {
   const t = vbLevelTotals(cells).reduce((a, l) => ({ score: a.score + l.score, max: a.max + l.max }), { score: 0, max: 0 });
   return { ...t, pct: t.max ? Math.round((t.score / t.max) * 100) : 0 };
 }
-/** Faixa de cor da célula da grade: `off` = não avaliado; `t0`…`t5` pela pontuação. */
-export type VbTone = "off" | "t0" | "t1" | "t3" | "t4" | "t5";
-export const vbTone = (v: number | null | undefined): VbTone =>
-  v == null ? "off" : v >= 5 ? "t5" : v >= 4 ? "t4" : v >= 3 ? "t3" : v >= 1 ? "t1" : "t0";
 
 /**
- * Texto base de uma seção do Relatório de Protocolo a partir dos números da
+ * Texto base de uma seção do Relatório de protocolo a partir dos números da
  * aplicação (`vbLocalText`). É o que "Gerar com IA" escreve no porte: o
  * protótipo chamava um modelo e caía neste texto quando não havia resposta.
  */
@@ -454,10 +463,10 @@ export function vbLocalText(sectionId: string, app: ProtocolApplication, patient
   const flat = rows.filter((r) => r.delta === 0);
   const m: Record<string, string> = {
     instrumento: `Foi aplicada a Avaliação de Marcos do VB-MAPP em ${app.appliedAt}, sob responsabilidade de ${app.by.name} (${app.by.specialty}), com o objetivo de mapear o repertório verbal e de aprendizagem de ${first} e orientar as metas do plano terapêutico. A aplicação anterior do mesmo instrumento ocorreu em ${app.previousAt}, o que permite leitura comparativa.`,
-    resultados: `${first} alcançou ${tot.score} de ${tot.max} marcos avaliados (${tot.pct}%). Por nível: ${lv.map((l, i) => `${VB_LEVELS[i]!.label}, ${l.score} de ${l.max} (${l.pct}%)`).join("; ")}. O perfil indica repertório consolidado no Nível 1 e domínios em aquisição no Nível 2, com o Nível 3 ainda em fase inicial.`,
-    fortes: `Os melhores desempenhos aparecem em ${best.map((r) => `${r.name} (${r.score}/${r.max})`).join(", ")}. Esses repertórios já se sustentam com pouca ajuda e podem ser usados como base para ampliar as demais áreas.`,
-    prioridades: `As maiores defasagens estão em ${worst.map((r) => `${r.name} (${r.score}/${r.max})`).join(", ")}. A priorização considera o papel desses repertórios na comunicação funcional e na participação em atividades de grupo.`,
-    evolucao: `Em relação à avaliação de ${app.previousAt}, houve ganho em ${gains.length} domínios, com destaque para ${gains.map((r) => `${r.name} (+${r.delta})`).join(", ")}.${flat.length ? ` Permaneceram sem alteração: ${flat.map((r) => r.name).join(", ")}.` : ""}`,
+    resultados: `${first} alcançou ${vbNum(tot.score)} de ${tot.max} marcos avaliados (${tot.pct}%). Por nível: ${lv.map((l, i) => `${VB_LEVELS[i]!.label}, ${vbNum(l.score)} de ${l.max} (${l.pct}%)`).join("; ")}. O perfil indica repertório consolidado no Nível 1 e domínios em aquisição no Nível 2, com o Nível 3 ainda em fase inicial.`,
+    fortes: `Os melhores desempenhos aparecem em ${best.map((r) => `${r.name} (${vbNum(r.score)}/${r.max})`).join(", ")}. Esses repertórios já se sustentam com pouca ajuda e podem ser usados como base para ampliar as demais áreas.`,
+    prioridades: `As maiores defasagens estão em ${worst.map((r) => `${r.name} (${vbNum(r.score)}/${r.max})`).join(", ")}. A priorização considera o papel desses repertórios na comunicação funcional e na participação em atividades de grupo.`,
+    evolucao: `Em relação à avaliação de ${app.previousAt}, houve ganho em ${gains.length} domínios, com destaque para ${gains.map((r) => `${r.name} (+${vbNum(r.delta)})`).join(", ")}.${flat.length ? ` Permaneceram sem alteração: ${flat.map((r) => r.name).join(", ")}.` : ""}`,
     conclusao: "Os resultados sustentam a continuidade da intervenção com foco nos domínios de maior defasagem, mantendo os repertórios já consolidados em programas de manutenção e generalização. Recomenda-se revisar as metas do plano terapêutico à luz desta avaliação e reaplicar o instrumento no próximo semestre.",
   };
   return m[sectionId] ?? "";
@@ -577,6 +586,10 @@ export function routineForecast(patient: PatientRef, mine: Report[], routine: Ro
       if (days > 45) return;
       const name = relTypeName(rule);
       if (mine.some((r) => r.status !== "cancelado" && r.typeId === rule.typeId && r.period === per.label && (rule.typeId !== "outro" || r.customName === rule.customName))) return;
+      // Regra automática: a solicitação nasce `autoDays` antes do prazo. Se essa
+      // data já passou e não há registro (regra criada ou retomada depois dela),
+      // a rotina cria na próxima execução, hoje. No seed, o 2º Tri já foi criado
+      // em 05/07 (r-126) e por isso não aparece aqui.
       const autoAt = rule.action === "auto" ? new Date(per.due.getTime() - rule.autoDays * 86400000) : null;
       out.push({
         key: `${rule.id}-${per.label}`, typeId: rule.typeId, customName: rule.customName ?? "", name, period: per.label,

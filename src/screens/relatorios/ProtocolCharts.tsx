@@ -1,12 +1,14 @@
 /**
- * Relatório de Protocolo — gráficos do VB-MAPP (`relatorios-protocolo.jsx` e
- * `RfVbLevelBars` de `relatorios-foco.jsx`). Novo — não existe no Phoenix:
+ * Relatório de protocolo — gráficos do VB-MAPP (`relatorios-protocolo.jsx` e
+ * `RfVbLevelBars` de `relatorios-foco.jsx`). Novos — não existem no Phoenix,
+ * exceto a grade de marcos, que espelha `vb_mapp_view` do monólito:
  * desenhados em HTML/CSS com tokens do monólito. Os números vêm de
  * `vbDomainRows`, `vbLevelTotals` e `vbTotal` (`model.ts`).
  *
  * Exportado (todos recebem `app: ProtocolApplication`):
  * - `ProtocolSource`: faixa da aplicação de origem com o aproveitamento total.
- * - `VbMilestoneGrid`: grade de marcos (16 domínios × 3 níveis) com legenda.
+ * - `VbMilestoneGrid`: grade de marcos por nível, espelho de `vb_mapp_view`
+ *   do monólito (5 marcos por domínio, células de 0,5 e 1).
  * - `VbLevelBars`: aproveitamento por nível em barras horizontais, com a marca
  *   da avaliação anterior (a versão da v2; a `VbLevelChart` vertical é da v1).
  * - `VbDomainTable`: pontuação por domínio e variação desde a anterior, sobre o
@@ -16,21 +18,9 @@
 import type { ReactNode } from "react";
 import { Icon } from "../../components/Icon.js";
 import { Table } from "../../components/Table.js";
-import { VB_LEVELS, vbDomainRows, vbLevelTotals, vbTone, vbTotal, type ProtocolApplication, type VbTone } from "./model.js";
+import { VB_DOMAINS, VB_LEVELS, vbDomainRows, vbLevelTotals, vbNum, vbTotal, type ProtocolApplication } from "./model.js";
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(" ");
-
-/** Hachura de "não avaliado", com o `neutral-50` do monólito. */
-const HATCH = "bg-[repeating-linear-gradient(135deg,var(--color-neutral-50)_0_4px,transparent_4px_8px)]";
-
-const TONE_BG: Record<VbTone, string> = {
-  off: HATCH,
-  t0: "bg-red/10",
-  t1: "bg-orange/20",
-  t3: "bg-yellow/25",
-  t4: "bg-brand-green/25",
-  t5: "bg-brand-green/40",
-};
 
 /** Bloco com título em caixa alta (`vb-block`). Novo — não existe no Phoenix. */
 export function VbBlock({ title, children }: { title: string; children: ReactNode }) {
@@ -60,77 +50,70 @@ export function ProtocolSource({ app }: { app: ProtocolApplication }) {
       </div>
       <div className="text-right">
         <span className="block text-[26px]/none font-black text-brand-blue-dark">{`${tot.pct}%`}</span>
-        <span className="text-xs font-bold text-brand-purple-dark/55">{`${tot.score} de ${tot.max} marcos`}</span>
+        <span className="text-xs font-bold text-brand-purple-dark/55">{`${vbNum(tot.score)} de ${tot.max} marcos`}</span>
       </div>
     </div>
   );
 }
 
-const LEGEND: [VbTone, string][] = [
-  ["t0", "0 marcos"],
-  ["t1", "1–2"],
-  ["t3", "3"],
-  ["t4", "4"],
-  ["t5", "5 — nível completo"],
-  ["off", "não avaliado"],
-];
+/** Rótulos das linhas da grade, de cima para baixo: 05 … 01. */
+const VB_ROWS = [5, 4, 3, 2, 1];
 
-/** Grade de marcos por nível (`VbMilestoneGrid`). Novo — não existe no Phoenix. */
+/**
+ * Grade de marcos por nível. Espelha `vb_mapp_view` do monólito
+ * (`patient_live/components/edit_tabs/protocol_executions.ex`): os níveis do
+ * último para o primeiro (`Enum.reverse(@groups)`), uma coluna por domínio
+ * avaliado no nível, 5 marcos de baixo para cima e duas células por marco — a
+ * de baixo pinta com 0,5 e a de cima com 1. Sem o clique que abre a questão
+ * (`show_question`), que não tem tela aqui.
+ */
 export function VbMilestoneGrid({ app }: { app: ProtocolApplication }) {
-  const rows = vbDomainRows(app.cells, app.previous);
+  const levels = VB_LEVELS.map((level, i) => ({
+    level,
+    areas: VB_DOMAINS.flatMap((d) => {
+      const marks = (app.cells[d.id] ?? [])[i];
+      return marks == null ? [] : [{ ...d, marks }];
+    }),
+  })).reverse();
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-separate border-spacing-[3px]">
-        <thead>
-          <tr className="[&>th]:p-1 [&>th]:text-center [&>th]:text-[11px] [&>th]:font-extrabold [&>th]:text-brand-purple-dark/60">
-            <th className="min-w-50 text-left!">Domínio</th>
-            {VB_LEVELS.map((l) => (
-              <th key={l.id}>
-                {l.label}
-                <span className="block text-[9px] font-bold text-brand-purple-dark/40">{l.sub}</span>
-              </th>
-            ))}
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <th scope="row" className="py-1 pr-2 text-left text-xs font-bold whitespace-nowrap text-brand-purple-dark">
-                {r.name}
-              </th>
-              {VB_LEVELS.map((l, i) => {
-                const v = r.row[i];
-                return (
-                  <td
-                    key={l.id}
-                    title={v == null ? "Não avaliado neste nível" : `${v} de 5 marcos`}
-                    className={cx("h-[34px] w-[74px] rounded-lg text-center", TONE_BG[vbTone(v)])}
+    <div className="w-full overflow-y-auto">
+      {levels.map(({ level, areas }) => (
+        <div key={level.id}>
+          <p className="my-2 font-extrabold text-brand-blue-dark">{level.label}</p>
+          <div className="flex gap-8 pb-4">
+            <div className="flex items-start gap-2 overflow-x-auto">
+              <div className="flex shrink-0 flex-col items-end pt-9">
+                {VB_ROWS.map((i) => (
+                  <div key={i} className="mt-[6px] flex flex-col items-end gap-[3px]">
+                    <div className="flex h-6 items-center pr-1">
+                      <span className="text-xs font-semibold text-gray-500">{String(i).padStart(2, "0")}</span>
+                    </div>
+                    <div className="h-6" />
+                  </div>
+                ))}
+              </div>
+              {areas.map((area) => (
+                <div key={area.id} className="flex flex-col items-center">
+                  <p
+                    title={area.name}
+                    className="mb-2 w-full truncate rounded-t-lg bg-gray-200 px-2 py-1 text-center font-bold text-brand-purple-dark/60"
                   >
-                    {v == null ? (
-                      <span className="text-xs text-brand-purple-dark/25">—</span>
-                    ) : (
-                      <span className="text-[13px] font-extrabold text-brand-purple-dark">
-                        {v}
-                        <span className="text-[10px] font-bold opacity-55">/5</span>
-                      </span>
-                    )}
-                  </td>
-                );
-              })}
-              <td className="text-center text-xs font-extrabold whitespace-nowrap text-brand-purple-dark/60">{r.max ? `${r.score}/${r.max}` : "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="mt-3 flex flex-wrap gap-3.5">
-        {LEGEND.map(([tone, label]) => (
-          <span key={tone} className="inline-flex items-center gap-1.5 text-[11px] font-bold text-brand-purple-dark/55">
-            <i className={cx("h-3.5 w-3.5 rounded", tone === "off" ? "bg-[repeating-linear-gradient(135deg,var(--color-neutral-100)_0_4px,transparent_4px_8px)]" : TONE_BG[tone])} />
-            {label}
-          </span>
-        ))}
-      </div>
+                    {area.short}
+                  </p>
+                  <div className="flex flex-col-reverse gap-[3px]">
+                    {area.marks.map((v, m) => (
+                      <div key={m} title={`Marco ${m + 1}: ${vbNum(v)}`} className="flex flex-col-reverse gap-[3px]">
+                        <div className={cx("h-6 w-32 rounded-sm", v >= 0.5 ? "bg-brand-blue" : "bg-gray-100")} />
+                        <div className={cx("h-6 w-32 rounded-sm", v === 1 ? "bg-brand-blue" : "bg-gray-100")} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -157,7 +140,7 @@ export function VbLevelBars({ app }: { app: ProtocolApplication }) {
             </div>
             <div>
               <p className="text-sm font-extrabold text-brand-purple-dark">{`${t.pct}%`}</p>
-              <p className="mt-px text-xs text-brand-purple-dark/55">{`${t.score} de ${t.max}${d !== 0 ? ` · ${d > 0 ? "+" : ""}${d} p.p.` : ""}`}</p>
+              <p className="mt-px text-xs text-brand-purple-dark/55">{`${vbNum(t.score)} de ${t.max}${d !== 0 ? ` · ${d > 0 ? "+" : ""}${d} p.p.` : ""}`}</p>
             </div>
           </div>
         );
@@ -181,7 +164,7 @@ export function VbDomainTable({ app }: { app: ProtocolApplication }) {
       rowId={(r) => `vbmapp-dominio-${r.id}`}
       col={[
         { label: "Domínio", render: (r) => r.name },
-        { label: "Pontuação", className: "whitespace-nowrap", render: (r) => `${r.score}/${r.max}` },
+        { label: "Pontuação", className: "whitespace-nowrap", render: (r) => `${vbNum(r.score)}/${r.max}` },
         {
           label: "Aproveitamento",
           className: "whitespace-nowrap",
@@ -201,12 +184,12 @@ export function VbDomainTable({ app }: { app: ProtocolApplication }) {
             r.delta > 0 ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-green-dark">
                 <Icon name="fa-arrow-up" type="solid" />
-                {`+${r.delta}`}
+                {`+${vbNum(r.delta)}`}
               </span>
             ) : r.delta < 0 ? (
               <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-red-dark">
                 <Icon name="fa-arrow-down" type="solid" />
-                {r.delta}
+                {vbNum(r.delta)}
               </span>
             ) : (
               <span className="text-xs font-semibold text-brand-purple-dark/40">sem mudança</span>

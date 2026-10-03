@@ -415,7 +415,7 @@ function streamText(text: string): AiGenerate {
     });
 }
 
-/** Editor do Relatório de Protocolo (`RfProtocolEditor`). Novo — não existe no Phoenix. */
+/** Editor do Relatório de protocolo (`RfProtocolEditor`). Novo — não existe no Phoenix. */
 function ProtocolEditor({ report: r, onBack }: { report: Report; onBack: () => void }) {
   const { submitForSignature, toast } = useReports();
   const app = protoApp(r.protocolAppId) ?? protoAppsFor(r.patient.name)[0] ?? PROTOCOL_APPS[0]!;

@@ -133,7 +133,7 @@ export const productDefinition: ProductDefinition = {
       route: reportPath("r-122"),
       fixture: "reports.lucas",
       persona: "admin",
-      controls: { status: "finalizado", share: "partial" },
+      controls: { status: "finalizado", signatures: "all", share: "partial" },
       intent: "Trimestral com as duas assinaturas, compartilhado com mãe e pai; só a mãe abriu.",
       expected: [
         "Selo \"Lido em parte 1/2\"; quem não abriu tem a ação \"Lembrar\".",
@@ -167,13 +167,13 @@ export const productDefinition: ProductDefinition = {
     },
     {
       id: "reports.protocol-new",
-      title: "Iniciar Relatório de Protocolo",
+      title: "Iniciar Relatório de protocolo",
       route: PROTOCOL("r-111"),
       fixture: "reports.lucas",
       persona: "admin",
       intent: "VB-MAPP (aplicação de 18/06) aberto no editor, 0 de 6 seções.",
       expected: [
-        "Mostra 43% (73 de 170), a grade de marcos, as barras por nível e a tabela de domínios.",
+        "Mostra 44% (75,5 de 170: marcos valem 0, 0,5 ou 1), a grade de marcos por nível, as barras por nível e a tabela de domínios.",
         "Finalizar relatório fica desabilitado até alguma seção ter texto.",
       ],
     },
@@ -196,7 +196,7 @@ export const productDefinition: ProductDefinition = {
       route: UPLOAD("r-131"),
       fixture: "reports.lucas",
       persona: "admin",
-      intent: "Laudo neuropediátrico (Relatório externo/PDF) solicitado, ainda sem documento.",
+      intent: "Laudo neuropediátrico (Relatório Externo) solicitado, ainda sem documento.",
       expected: [
         "Explica que o documento é produzido fora do sistema; Finalizar relatório fica desabilitado sem arquivo.",
         "Com o PDF enviado, Finalizar relatório conclui e volta para o Relatório emitido.",
@@ -271,10 +271,10 @@ export const productDefinition: ProductDefinition = {
       screen: PatientReportProtocol,
       name: "Editor de protocolo",
       group: FLOW,
-      description: "Relatório de Protocolo a partir da aplicação VB-MAPP do paciente, com grade de marcos, barras por nível e tabela de domínios.",
+      description: "Relatório de protocolo a partir da aplicação VB-MAPP do paciente, com grade de marcos, barras por nível e tabela de domínios.",
       controls: PROTOCOL_CONTROLS,
       expected: [
-        "Mostra 43% (73 de 170), a grade de marcos, as barras por nível e a tabela de domínios.",
+        "Mostra 44% (75,5 de 170: marcos valem 0, 0,5 ou 1), a grade de marcos por nível, as barras por nível e a tabela de domínios.",
         "Finalizar relatório fica desabilitado até alguma seção ter texto.",
         "Gerar todo o relatório preenche as seis seções.",
         "Com coautor, a ação final é Enviar para assinaturas.",
@@ -287,7 +287,7 @@ export const productDefinition: ProductDefinition = {
       screen: PatientReportUpload,
       name: "Anexar PDF",
       group: FLOW,
-      description: "Relatório produzido fora do sistema (Relatório externo/PDF ou Outro): anexar o PDF final e finalizar.",
+      description: "Relatório produzido fora do sistema (Relatório Externo ou Outro): anexar o PDF final e finalizar.",
       controls: UPLOAD_CONTROLS,
       expected: [
         "Explica que o documento é produzido fora do sistema.",

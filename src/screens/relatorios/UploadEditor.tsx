@@ -1,7 +1,7 @@
 /**
  * Anexar documento em modo foco (tela Anexar PDF, `RfUploadEditor` de
  * `relatorios-foco.jsx`). Para tipos sem modelo interno ("Outro" e "Relatório
- * externo/PDF"): o documento final é produzido fora do sistema e anexado aqui.
+ * Externo"): o documento final é produzido fora do sistema e anexado aqui.
  * A área de envio é o `FileUploader` (variant `simplified`) do catálogo; o
  * rascunho guarda `{ file, obs }` em `draftContent`, e "Finalizar relatório"
  * chama `finalizeUpload`.

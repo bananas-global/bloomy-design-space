@@ -10,7 +10,7 @@
  * Carimbos fixos, sempre antes de hoje (16/07/2026 09:00), sem relógio.
  */
 import type { Controls } from "./flow.js";
-import { CHART_SVG, FABIO, HELENA, MARINA, extraReports, PROTOCOL_APPS, protoApp, seedReports } from "./fixtures.js";
+import { CHART_SVG, FABIO, HELENA, MARINA, PROTOCOL_APPS, protoApp, seedReports } from "./fixtures.js";
 import {
   REL_REQUESTED_BY_SHORT,
   filledSections,
@@ -41,10 +41,10 @@ const profName = (r: Report) => (r.prof ?? HELENA).name;
    Onde achar um relatório
    ============================================================ */
 
-/** Relatório por id: o da sessão, o do conjunto da tela ou um dos extras dos editores. */
+/** Relatório por id: o da sessão, o do conjunto da tela ou o do seed (quando a tela usa outro conjunto). */
 export function findReport(id: string | undefined, dataset: Report[]): Report | undefined {
   if (!id) return undefined;
-  return session.report(id) ?? dataset.find((r) => r.id === id) ?? extraReports().find((r) => r.id === id);
+  return session.report(id) ?? dataset.find((r) => r.id === id) ?? seedReports().find((r) => r.id === id);
 }
 
 /** Relatório de cada status quando o id da URL não existe (ex.: a tela aberta pela aba Telas). */
@@ -118,7 +118,7 @@ export function withStatus(r: Report, status: ReportStatus): Report {
     case "assinaturas": {
       const base = withTwoAuthors(inProgress(r));
       return {
-        ...base, status: "assinaturas", hasDraft: false, updatedAt: "15/07/2026 18:10",
+        ...base, status: "assinaturas", hasDraft: true, updatedAt: "15/07/2026 18:10",
         history: [...base.history, entry("15/07/2026 18:10", profName(base), `Enviado para assinaturas de ${relAuthors(base).length} autores`, "fa-signature")],
       };
     }
@@ -144,9 +144,14 @@ export function withStatus(r: Report, status: ReportStatus): Report {
   }
 }
 
-/** Aguardando assinatura: `n` dos dois autores já assinaram (o responsável primeiro). */
+/**
+ * Aguardando assinatura: `n` dos dois autores já assinaram (o responsável
+ * primeiro). Todas as assinaturas emitem o relatório, então aqui fica no
+ * máximo 1 de 2.
+ */
 export function withSignatures(r: Report, n: number): Report {
   if (r.status !== "assinaturas") return r;
+  n = Math.min(n, 1);
   if (relAuthors(r).length === 2 && signProgress(r).done === n) return r;
   const base = withTwoAuthors(r);
   const signed = relAuthors(base).slice(0, n);
@@ -190,14 +195,19 @@ export function withShare(r: Report, state: ShareState): Report {
 /** O relatório da tela Relatório com os controles aplicados. */
 export function reportFromControls(base: Report, c: Controls): Report {
   const status = c.status as ReportStatus;
-  return withShare(withSignatures(withStatus(base, status), Number(c.signatures)), c.share as ShareState);
+  const signatures = c.signatures === "all" ? 2 : Number(c.signatures);
+  return withShare(withSignatures(withStatus(base, status), signatures), c.share as ShareState);
 }
 
-/** Os controles da tela Relatório que o relatório representa (os que não se aplicam ficam como estão). */
+/**
+ * Os controles da tela Relatório que o relatório representa. Emitido tem todas
+ * as assinaturas; nos outros status, assinaturas e compartilhamento ficam como
+ * estão (não se aplicam, e voltam quando o status volta).
+ */
 export function deriveReport(r: Report, c: Controls): Controls {
   return {
     status: r.status,
-    signatures: r.status === "assinaturas" ? String(signProgress(r).done) : c.signatures!,
+    signatures: r.status === "assinaturas" ? String(signProgress(r).done) : r.status === "finalizado" ? "all" : c.signatures!,
     share: r.status === "finalizado" ? shareState(r) : c.share!,
   };
 }
@@ -238,9 +248,10 @@ export function withImages(r: Report, images: string): Report {
   }
   return { ...r, draftContent: content };
 }
-export const deriveImages = (r: Report, c: Controls) => {
+/** Modelo sem campo de imagem (Admissão, Alta): "Sem gráficos", que é o que a tela mostra. */
+export const deriveImages = (r: Report) => {
   const sec = imageSection(r);
-  return sec ? (hasImages(r.draftContent, sec.id) ? "with" : "none") : c.images!;
+  return sec && hasImages(r.draftContent, sec.id) ? "with" : "none";
 };
 
 /** Anexar: sem arquivo, ou o PDF final já anexado no rascunho. */
@@ -265,7 +276,7 @@ export const editorKindOf = (r: Report): EditorKind => (relIsProtocol(r) ? "prot
 /** Relatório padrão de cada editor quando o da URL não é do tipo certo. */
 const EDITOR_CANONICAL: Record<EditorKind, string> = { fill: "r-130", protocol: "r-111", upload: "r-131" };
 export const editorCanonical = (kind: EditorKind) =>
-  [...seedReports(), ...extraReports()].find((r) => r.id === EDITOR_CANONICAL[kind])!;
+  seedReports().find((r) => r.id === EDITOR_CANONICAL[kind])!;
 
 export function editorFromControls(kind: EditorKind, base: Report, c: Controls): Report {
   if (kind === "upload") return withFile(base, c.file!);
@@ -273,10 +284,10 @@ export function editorFromControls(kind: EditorKind, base: Report, c: Controls):
   return kind === "fill" ? withImages(r, c.images!) : r;
 }
 
-export function deriveEditor(kind: EditorKind, r: Report, c: Controls): Controls {
+export function deriveEditor(kind: EditorKind, r: Report): Controls {
   if (kind === "upload") return { file: deriveFile(r) };
   const out: Controls = { draft: deriveDraft(r), coauthor: deriveCoauthor(r) };
-  if (kind === "fill") out.images = deriveImages(r, c);
+  if (kind === "fill") out.images = deriveImages(r);
   return out;
 }
 
