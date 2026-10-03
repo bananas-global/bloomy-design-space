@@ -54,8 +54,10 @@ e escreve `<.button variant="outline" color="red">` sem pensar.
    cada um com `id`, `title`, `route`, `fixture` e, se o menu importar, `persona`.
    Os dados ficam em `fixtures`, sintéticos.
 4. Abra o PR com o modelo de `.github/pull_request_template.md`. Cada push no PR
-   publica um preview (workflow `deploy.yml`, com o token da Vercel) e atualiza um
-   comentário no PR com o link. Esse é o link que vai para os devs.
+   publica um preview (workflow `deploy.yml`, com o token da Vercel) e aponta para
+   ele o link fixo da branch, `bloomy-ds-<branch>.vercel.app`. Um comentário no
+   PR traz esse link e um link por cenário novo ou alterado. O endereço não muda
+   entre pushes e mostra sempre a última versão: é ele que vai para os devs.
 5. Depois de implementada, a tela continua aqui como registro do design
    combinado no handoff. Ela não acompanha o sistema: ajustes feitos depois,
    direto no Phoenix, não voltam para cá sem passar por design. Se remover as
