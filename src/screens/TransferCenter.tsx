@@ -11,9 +11,10 @@
  * A tela monta os dados a partir dos controles (`central-transferencias/flow.ts`)
  * sobre a unidade do protótipo (`central-transferencias/fixtures.ts`).
  */
+import { useEffect, useState } from "react";
 import type { ScenarioContext, ScreenProps } from "@brucesantos/design-space";
 import { Card } from "../components/Card.js";
-import { ButtonTabs, titleToSlug, useTrackedTab } from "../components/Tabs.js";
+import { ButtonTabs, ensureTrackedTab, titleToSlug, useTrackedTab } from "../components/Tabs.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { HOURS_MAPS, PROFESSIONALS, SCHEDULED, TODAY, type TransferCenterFixture } from "./central-transferencias/fixtures.js";
 import { TAB_ID, TAB_TRACKER, TRANSFER_CENTER_CONTROLS, useControlledState, type Controls } from "./central-transferencias/flow.js";
@@ -105,8 +106,24 @@ function derive(s: TransferCenterState, c: Controls): Controls {
   };
 }
 
+/**
+ * A sub-aba aberta, pelo `tracker_id`. Quando a tela muda um controle, o motor
+ * reescreve a query string só com os controles e o parâmetro da aba some da
+ * URL, mas os `button_tabs` continuam na aba: vale a última lida, que volta
+ * para a URL.
+ */
+function useOpenTab() {
+  const tracked = useTrackedTab(TAB_TRACKER, TAB_ID);
+  const [last, setLast] = useState(tracked);
+  if (tracked && tracked !== last) setLast(tracked);
+  useEffect(() => {
+    if (!tracked && last) ensureTrackedTab(TAB_TRACKER, TAB_ID, last);
+  });
+  return tracked ?? last;
+}
+
 function TransferCenterPage() {
-  const sessions = useTrackedTab(TAB_TRACKER, TAB_ID) === SESSIONS_SLUG;
+  const sessions = useOpenTab() === SESSIONS_SLUG;
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1.55fr)_minmax(360px,1fr)]">
