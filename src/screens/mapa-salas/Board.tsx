@@ -52,15 +52,16 @@ const down = (m: number) => Math.floor(m / HOUR) * HOUR;
    ============================================================ */
 
 function Ruler({ dayStart, dayEnd, span }: { dayStart: number; dayEnd: number; span: number }) {
-  // Abertura, todas as horas cheias e fechamento. A hora cheia a menos de 45 min
-  // de uma ponta (08:00 numa abertura às 07:30) alinha pelo lado de fora, para
-  // não encostar no rótulo da ponta.
+  // Abertura, todas as horas cheias e fechamento. Quando a primeira hora cheia
+  // fica a menos de 45 min da abertura (08:00 numa abertura às 07:30), o rótulo
+  // da abertura termina no início do eixo, no recuo do ponto, para os dois
+  // caberem. A hora cheia perto do fechamento alinha pela direita.
   const gap = 45;
   const marks = [dayStart];
   for (let m = Math.floor(dayStart / 60) * 60 + 60; m < dayEnd; m += 60) marks.push(m);
   marks.push(dayEnd);
   const align = (m: number, i: number) => {
-    if (i === 0 || (m - dayStart < gap && dayEnd - m >= gap)) return "";
+    if (i === 0) return marks[1]! - dayStart < gap && marks.length > 2 ? "-translate-x-full pr-1" : "";
     if (i === marks.length - 1 || dayEnd - m < gap) return "-translate-x-full";
     return "-translate-x-1/2";
   };
