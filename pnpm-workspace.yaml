@@ -1,7 +1,7 @@
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:
-  - '@brucesantos/design-space@0.5.1 || 0.6.0'
+  - '@brucesantos/design-space@0.5.1 || 0.6.0 || 0.8.0 || 0.9.2'
   # Mesma exceção, mesmo motivo: pacote da própria organização
   # (bananas-global/feedback-collector), usado só em desenvolvimento, e a versão
   # sai no mesmo dia em que é consumida aqui.
