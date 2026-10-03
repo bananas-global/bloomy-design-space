@@ -5,17 +5,21 @@ import { LinkButton } from "../components/Action.js";
 import { Icon } from "../components/Icon.js";
 import { Tag } from "../components/Tag.js";
 import { DropdownMenu } from "../components/Overlay.js";
-import { CardTabs, type CardTabSlot } from "../components/Tabs.js";
+import { CardTabs, ensureTrackedTab, titleToSlug, type CardTabSlot } from "../components/Tabs.js";
 import { permissionsByRole } from "../personas/permissions.js";
 import type { LayoutContext } from "./BackofficeLayout.js";
 
 /**
- * `backoffice/live/unit_live/edit.ex` (as `card_tabs/1` da unidade) com
- * `UnitLive.Components.CardHeader` no slot `header`. Inativar e reativar ficam
- * no menu, sem efeito.
+ * `backoffice/live/unit_live/edit.ex` (as `card_tabs/1` da unidade, com
+ * `tracker_id="main_tab"`) com `UnitLive.Components.CardHeader` no slot
+ * `header`. Inativar e reativar ficam no menu, sem efeito.
+ *
+ * No Phoenix é uma página só, com a aba em `?main_tab=unit_data|<slug>`. Aqui
+ * cada tela tem a rota da sua aba, e `activeTab` põe essa aba na URL quando ela
+ * ainda não tem uma.
  */
 
-export type UnitTabId = "data" | "address" | "patients" | "rooms" | "services" | "schedule" | "schedule_limit" | "documents";
+export type UnitTabId = "data" | "address" | "patients" | "rooms" | "services" | "schedule_limit" | "documents";
 
 export type UnitHeader = {
   name: string;
@@ -94,7 +98,6 @@ const TABS: { id: UnitTabId; title: string }[] = [
   { id: "patients", title: "Pacientes" },
   { id: "rooms", title: "Salas" },
   { id: "services", title: "Serviços" },
-  { id: "schedule", title: "Agenda" },
   { id: "schedule_limit", title: "Limite de Agenda" },
   { id: "documents", title: "Documentos" },
 ];
@@ -113,12 +116,15 @@ export function UnitLayout({
 }) {
   const can = context ? context.can : (permission: string) => (permissionsByRole.admin as readonly string[]).includes(permission);
   const tabs: CardTabSlot[] = TABS.map((t) => ({ title: t.title, content: renderTab?.(t.id) ?? null }));
+  const active = TABS.find((t) => t.id === activeTab) ?? TABS[0]!;
+  ensureTrackedTab("main_tab", "unit_data", titleToSlug(active.title));
 
   return (
     <CardTabs
+      key={activeTab}
       id="unit_data"
+      trackerId="main_tab"
       tab={tabs}
-      initialTab={Math.max(0, TABS.findIndex((t) => t.id === activeTab))}
       header={<UnitCardHeader unit={unit} canEdit={can("units.edit")} />}
     />
   );
