@@ -4,12 +4,11 @@
 
 ## Preview
 
-<!-- Link do preview da Vercel deste PR. Um link por estado que o dev precisa ver. -->
+<!-- O workflow comenta neste PR o link fixo da branch e um link por cenário
+     registrado em `src/app/product.ts`. O link não muda entre pushes e mostra
+     sempre a última versão. Para o dev ver outro estado, registre outro cenário. -->
 
-| Estado | Link |
-| --- | --- |
-| Com dados | |
-| Vazio | |
+Ver o comentário do preview abaixo.
 
 Desenho no Claude Design: <!-- link -->
 
