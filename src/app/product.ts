@@ -132,8 +132,13 @@ export const productDefinition: ProductDefinition = {
       route: unitDocumentsPath(),
       fixture: "unit-documents.units",
       persona: "clinic_admin",
-      intent: "Quem vê a unidade mas não tem units.edit.",
-      expected: ["Sem \"Adicionar documento\"; Editar e Anexar ficam desabilitados.", "Exportar agrupado continua disponível."],
+      controls: { unit: "u2" },
+      intent:
+        "Proposta nova: no Phoenix a página com as abas (`unit_live/edit.ex`) é só do Admin (`UnitPolicy.can?(role, :edit)`); o Admin de Clínica, sem units.edit, só chega em `/backoffice/unidades/:id` (`show.ex`), onde a aba Arquivos lista os arquivos sem status. Aqui ele vê a mesma aba Documentos, só para consulta.",
+      expected: [
+        "Santana, com as dez lacunas padrão: sem \"Adicionar documento\"; Editar e Anexar ficam desabilitados.",
+        "Exportar agrupado continua disponível.",
+      ],
     },
   ],
   personas,
