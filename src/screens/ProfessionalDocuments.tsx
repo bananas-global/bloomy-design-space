@@ -21,7 +21,7 @@ import { DocumentsProvider, type DocumentsModal, type DocumentsState } from "./d
 import { ModalHost } from "./documentos/views.js";
 
 const CURRENT_USER = {
-  name: "Marcus Vinícius Gimenes",
+  name: "Marina Alves",
   units: ["Unidade Teste", "Santana"],
   roles: [],
   professional: true,

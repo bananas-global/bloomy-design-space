@@ -106,7 +106,7 @@ function Profissional() {
           status: "Ativo",
           specialty: "Psicologia",
           healthFormation: "CRP",
-          specialtyRegister: "06233962",
+          specialtyRegister: "06900101",
           supervisorName: "Rafael Andrade Nunes",
           showInDashboard: true,
           tbd: false,
