@@ -18,12 +18,15 @@ export type Professional = {
   name: string;
   /** `status` do monólito: `false` é desligado. */
   active: boolean;
-  /** `deactivation_date`: no futuro e ativo, está em inativação. */
+  /** `deactivation_date`: depois de hoje e ativo, está em inativação. */
   deactivationAt?: string;
   tbd?: boolean;
   specialty: string;
   /** `specialty_register`. */
   council: string;
+  /** `email` e `phone`: o filtro Contato busca nos dois. */
+  email: string;
+  phone: string;
   /** `professional_types`, já traduzidos. */
   types: string[];
   /** `health_formation`, já traduzida. */
@@ -48,15 +51,16 @@ export function daysBetween(fromIso: string, toIso: string): number {
 
 export function profStatus(p: Professional, today: string): ProfStatus {
   if (!p.active) return "inativo";
-  if (p.deactivationAt && daysBetween(today, p.deactivationAt) >= 0) return "deactivating";
+  // Como `professional_status/1`: só em inativação com a data depois de hoje.
+  if (p.deactivationAt && daysBetween(today, p.deactivationAt) > 0) return "deactivating";
   return "ativo";
 }
 
-/** Em inativação, depois TBD, depois ativos, depois inativos. */
+/** Em inativação, depois TBD (só os ativos), depois ativos, depois inativos. */
 function rank(p: Professional, today: string): number {
   const st = profStatus(p, today);
   if (st === "deactivating") return 0;
-  if (p.tbd) return 1;
+  if (p.tbd && st === "ativo") return 1;
   return st === "ativo" ? 2 : 3;
 }
 
@@ -119,15 +123,19 @@ export type DocType = {
   expires?: boolean;
 };
 
-/** Escopo profissional: os documentos da aba Documentos do perfil. */
+/**
+ * Escopo profissional: os documentos da aba Documentos do perfil. Os
+ * obrigatórios são os seis documentos padrão da aba (a mesma lista do
+ * `STANDARD` de `documentos/model.ts`); os outros são adicionais.
+ */
 export const PROF_DOC_TYPES: DocType[] = [
   { id: "diploma", cat: "prof", name: "Certificado de formação", short: "Formação", required: true },
   { id: "council", cat: "prof", name: "Registro no conselho", short: "Conselho", required: true },
-  { id: "council_card", cat: "prof", name: "Carteirinha do conselho", short: "Carteirinha", required: false },
-  { id: "council_quit", cat: "prof", name: "Declaração de quitação do conselho", short: "Quitação", required: false },
-  { id: "aba_course", cat: "prof", name: "Curso de formação em ABA", short: "Curso ABA", required: false },
-  { id: "special_training", cat: "prof", name: "Formação especial", short: "Form. especial", required: false },
-  { id: "id", cat: "prof", name: "RG / CPF", short: "RG/CPF", required: true },
+  { id: "council_card", cat: "prof", name: "Carteirinha do conselho", short: "Carteirinha", required: true },
+  { id: "council_quit", cat: "prof", name: "Declaração de quitação do conselho", short: "Quitação", required: true },
+  { id: "aba_course", cat: "prof", name: "Curso de formação em ABA", short: "Curso ABA", required: true },
+  { id: "special_training", cat: "prof", name: "Formação especial", short: "Form. especial", required: true },
+  { id: "id", cat: "prof", name: "RG / CPF", short: "RG/CPF", required: false },
   { id: "address", cat: "prof", name: "Comprovante de endereço", short: "Endereço", required: false },
   { id: "cv", cat: "prof", name: "Currículo", short: "Currículo", required: false },
   { id: "specialization", cat: "prof", name: "Certificado de especialização", short: "Especialização", required: false },
@@ -150,8 +158,8 @@ export const typesOf = (cat: DocCategory): DocType[] =>
 export const docTypeName = (id: string) =>
   [...PROF_DOC_TYPES, ...EXTRA_DOC_TYPES].find((t) => t.id === id)?.name ?? id;
 
-/** Janela de alerta da matriz. */
-export const WARN_DAYS = 30;
+/** Janela de alerta da matriz: a mesma da aba Documentos do perfil. */
+export const WARN_DAYS = 60;
 
 export type DocState = "ok" | "expiring" | "expired" | "missing" | "waived";
 
@@ -162,7 +170,7 @@ export const DOC_STATES: Record<DocState, { label: string; icon: string }> = {
   ok: { label: "Válido", icon: "fa-check" },
   expiring: { label: "A vencer", icon: "fa-clock" },
   expired: { label: "Vencido", icon: "fa-xmark" },
-  missing: { label: "Ausente", icon: "fa-minus" },
+  missing: { label: "Pendente", icon: "fa-minus" },
   waived: { label: "Dispensado", icon: "fa-ban" },
 };
 
@@ -268,7 +276,7 @@ export type DocRow = {
   pct: number;
   expiring: DocCell[];
   expired: DocCell[];
-  /** Só os obrigatórios ausentes. */
+  /** Só os obrigatórios (os padrão) pendentes. */
   missing: DocCell[];
 };
 
@@ -316,11 +324,11 @@ export function docRow(state: DocsState, operators: Operator[], prof: Profession
 }
 
 /** O filtro Situação da documentação. */
-export type DocSituation = "" | "vencido" | "ausente" | "a_vencer" | "dispensado" | "em_dia";
+export type DocSituation = "" | "vencido" | "pendente" | "a_vencer" | "dispensado" | "em_dia";
 
 export function matchesSituation(row: DocRow, key: DocSituation): boolean {
   if (key === "vencido") return row.expired.length > 0;
-  if (key === "ausente") return row.missing.length > 0;
+  if (key === "pendente") return row.missing.length > 0;
   if (key === "a_vencer") return row.expiring.length > 0;
   if (key === "dispensado") return row.all.some((c) => c.state === "waived");
   if (key === "em_dia") return row.pct === 100;

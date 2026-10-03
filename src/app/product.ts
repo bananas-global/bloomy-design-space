@@ -28,11 +28,12 @@ export const productDefinition: ProductDefinition = {
       intent: "A lista de profissionais abre em Cadastro, com o seletor das três visões e o contador de pendências na Documentação.",
       expected: [
         "Título Profissionais; à direita o seletor Cadastro / Documentação / Controle de horas e Novo profissional.",
-        "Documentação mostra o contador vermelho de profissionais com documento vencido ou obrigatório ausente.",
-        "Filtros Nome/Conselho, Especialidade, Perfil e Status.",
-        "Em inativação primeiro: Tânia (sai 12/08/2026 · 7 dias) e Lucinara (sai 31/08/2026 · 26 dias), com ponto laranja e fundo laranja na linha. Logo depois, Lívia (TBD).",
-        "Carina por último, com ponto vermelho e \"Inativo\" embaixo do nome; Lívia com a tag TBD; Larissa com Terapeuta, Aplicador e +1.",
-        "Clicar numa linha mostra o toast Perfil do profissional.",
+        "Documentação mostra o contador vermelho 4: profissionais com documento vencido ou padrão pendente.",
+        "Filtros Nome/Conselho, Especialidade, Contato, Perfil e Status, com os prompts \"Selecione …\"; Status abre em Ativo, como no sistema.",
+        "Colunas Nome, Especialidade, Conselho, Tipo e Formação em Saúde; embaixo, \"Mostrando 1 até 9 de 9 registros\" e a paginação.",
+        "Em inativação primeiro: Tânia (sai 12/08/2026 · 7 dias) e Luciana (sai 31/08/2026 · 26 dias), com ponto laranja e fundo laranja na linha. Logo depois, Lívia (TBD).",
+        "Status \"Inativo\" ou limpo: Carina por último, com ponto vermelho e \"Inativo\" embaixo do nome. Larissa com Terapeuta, Aplicador e +1.",
+        "Clicar numa linha mostra o toast \"Abre a ficha do profissional\", com a rota /backoffice/profissionais/:id.",
       ],
     },
     {
@@ -45,7 +46,8 @@ export const productDefinition: ProductDefinition = {
       expected: [
         "Filtros Nome/Conselho, Especialidade, Status, Situação da documentação e Categoria (Visão geral, Profissional, Interno, Ocupacional, Operadoras).",
         "Visão geral: Completude com a barra (verde em 100%, azul a partir de 70%, vermelha abaixo) e, por categoria, quantos documentos em cada estado, ou \"em dia\".",
-        "Clicar num resumo abre a categoria: uma coluna por documento (* obrigatório), com o estado de cada um; Curso ABA mostra a carga horária.",
+        "Estados: Válido, A vencer (até 60 dias), Vencido, Pendente e Dispensado; os seis documentos padrão da aba Documentos do perfil são os obrigatórios.",
+        "Clicar num resumo abre a categoria: uma coluna por documento (* padrão), com o estado de cada um; Curso ABA mostra a carga horária e Form. especial até duas tags e \"+N\", numa linha.",
         "Clicar num documento abre o drawer com o estado, a validade e, em Interno e Ocupacional, Anexar/Substituir e Marcar como dispensado.",
         "Operadoras: Apto, Falta N, Não credenciado ou Descredenciado; o drawer lista os exigidos e compartilha o que falta.",
       ],
@@ -59,7 +61,7 @@ export const productDefinition: ProductDefinition = {
       intent: "O controle de horas do mês, que hoje é uma página à parte, como terceira visão da lista.",
       expected: [
         "Filtros Especialidade, Profissionais (multi_select_search), Mês e Processar.",
-        "Psicologia selecionada, agosto de 2026 processado: Helena, Tânia e Larissa com horas planejadas, trabalhadas, atendimentos e valor.",
+        "Psicologia selecionada, agosto de 2026 processado: Tânia primeiro (em inativação, horas só até a saída em 12/08), depois Helena e Larissa, com horas planejadas, trabalhadas, atendimentos e valor.",
         "Trocar a especialidade seleciona os profissionais ativos dela; a tabela só muda ao Processar.",
       ],
     },

@@ -17,7 +17,8 @@ import { Button } from "../components/Button.js";
 import { Card } from "../components/Card.js";
 import { Icon } from "../components/Icon.js";
 import { Input } from "../components/Input.js";
-import { Header } from "../components/Layout.js";
+import { Header, MetaInfo } from "../components/Layout.js";
+import { Pagination } from "../components/Pagination.js";
 import { SimpleTable } from "../components/Table.js";
 import { Tag, TagList } from "../components/Tag.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
@@ -45,7 +46,7 @@ import { DocsProvider, useDocs } from "./profissionais/store.js";
 export const PROFESSIONALS_PATH = "/backoffice/profissionais";
 
 const CURRENT_USER = {
-  name: "Marcus Vinícius Gimenes",
+  name: "Marina Alves",
   units: ["Unidade Teste", "Santana"],
   roles: [],
   professional: false,
@@ -68,8 +69,27 @@ const pairs = (values: string[]) => values.map((v) => [v, v] as const);
 /** Linhas de 60px, como no desenho. */
 const ROWS = "[&_tbody_tr_td]:h-[60px] [&_tbody_tr_td]:py-1.5!";
 
+/**
+ * O `row_click` do Phoenix navega para `/backoffice/profissionais/:id`. A ficha
+ * não tem rota nesta branch (a aba Documentos dela vem em outro PR); navegar
+ * daria "Nenhuma rota", então o preview avisa para onde o clique leva.
+ */
 const openProfile = (p: Professional) =>
-  showToast({ type: "info", title: "Perfil do profissional", content: `O perfil de ${p.name} não faz parte deste protótipo.`, closeTime: 4000 });
+  showToast({ type: "info", title: "Abre a ficha do profissional", content: `No sistema, o clique abre ${PROFESSIONALS_PATH}/${p.id}, a ficha de ${p.name}.`, closeTime: 4000 });
+
+/** `status_options` do `index.ex`, na mesma ordem. */
+const STATUS_OPTIONS: [string, string][] = [
+  ["Ativo", "ativo"],
+  ["Inativo", "inativo"],
+  ["Em inativação", "deactivating"],
+];
+
+/** O filtro Status como o `filter_by("status", …)`: Ativo inclui quem está em inativação. */
+function matchesStatus(p: Professional, status: string): boolean {
+  const st = profStatus(p, TODAY);
+  if (status === "ativo") return st !== "inativo";
+  return !status || st === status;
+}
 
 /* ------------------------------------------------------------------ */
 /* Cadastro                                                            */
@@ -78,35 +98,29 @@ const openProfile = (p: Professional) =>
 function RegistryView({ professionals }: { professionals: Professional[] }) {
   const [name, setName] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [contact, setContact] = useState("");
   const [perfil, setPerfil] = useState("");
-  const [status, setStatus] = useState("");
+  // Como o `mount`: a lista abre filtrada em Ativo (que inclui os em inativação).
+  const [status, setStatus] = useState("ativo");
 
   const specialties = unique(professionals.map((p) => p.specialty));
   const perfis = unique(professionals.flatMap((p) => p.types));
   const rows = professionals
     .filter((p) => !name || norm(p.name).includes(norm(name)) || norm(p.council).includes(norm(name)))
     .filter((p) => !specialty || p.specialty === specialty)
+    .filter((p) => !contact || norm(p.email).includes(norm(contact)) || p.phone.includes(contact))
     .filter((p) => !perfil || p.types.includes(perfil))
-    .filter((p) => !status || (status === "ativo" ? profStatus(p, TODAY) !== "inativo" : profStatus(p, TODAY) === "inativo"))
+    .filter((p) => matchesStatus(p, status))
     .sort(byStatus(TODAY));
 
   return (
     <>
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] items-end gap-4">
+      <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-3 lg:grid-cols-5">
         <SearchFilter id="filters_name" label="Nome/Conselho" placeholder="Buscar por nome ou conselho" value={name} onChange={setName} />
-        <SelectFilter id="filters_specialty" label="Especialidade" prompt="Todas" options={pairs(specialties)} value={specialty} onChange={setSpecialty} />
-        <SelectFilter id="filters_professional_types" label="Perfil" prompt="Todos" options={pairs(perfis)} value={perfil} onChange={setPerfil} />
-        <SelectFilter
-          id="filters_status"
-          label="Status"
-          prompt="Todos"
-          options={[
-            ["Ativo", "ativo"],
-            ["Inativo", "inativo"],
-          ]}
-          value={status}
-          onChange={setStatus}
-        />
+        <SelectFilter id="filters_specialty" label="Especialidade" prompt="Selecione a especialidade" options={pairs(specialties)} value={specialty} onChange={setSpecialty} />
+        <SearchFilter id="filters_contact" label="Contato" placeholder="E-mail ou telefone" value={contact} onChange={setContact} />
+        <SelectFilter id="filters_professional_types" label="Perfil" prompt="Selecione o perfil" options={pairs(perfis)} value={perfil} onChange={setPerfil} />
+        <SelectFilter id="filters_status" label="Status" prompt="Selecione o status" options={STATUS_OPTIONS} value={status} onChange={setStatus} />
       </div>
 
       <SimpleTable className={cx("mt-4", ROWS)}>
@@ -115,7 +129,7 @@ function RegistryView({ professionals }: { professionals: Professional[] }) {
             <th>Nome</th>
             <th>Especialidade</th>
             <th>Conselho</th>
-            <th>Perfil</th>
+            <th>Tipo</th>
             <th>Formação em Saúde</th>
           </tr>
         </thead>
@@ -137,6 +151,12 @@ function RegistryView({ professionals }: { professionals: Professional[] }) {
           <EmptyRow colSpan={5} show={rows.length === 0} />
         </tbody>
       </SimpleTable>
+
+      {/* `meta_info` e `pagination` do `index.ex`: tudo cabe numa página. */}
+      <div className="mt-4 flex items-center justify-between">
+        <MetaInfo meta={{ totalCount: rows.length, currentOffset: 0, pageSize: 20 }} />
+        <Pagination meta={{ currentPage: 1, totalPages: 1 }} path={PROFESSIONALS_PATH} onPaginate={() => {}} />
+      </div>
     </>
   );
 }
@@ -172,7 +192,7 @@ function EmptyRow({ colSpan, show, children = "Nenhum dado encontrado para a pes
 
 const SITUATIONS: [string, DocSituation][] = [
   ["Vencidos", "vencido"],
-  ["Ausentes", "ausente"],
+  ["Pendentes", "pendente"],
   ["A vencer", "a_vencer"],
   ["Dispensados", "dispensado"],
   ["Em dia", "em_dia"],
@@ -193,7 +213,7 @@ function DocsView({ professionals }: { professionals: Professional[] }) {
   const rows = professionals
     .filter((p) => !name || norm(p.name).includes(norm(name)) || norm(p.council).includes(norm(name)))
     .filter((p) => !specialty || p.specialty === specialty)
-    .filter((p) => !status || profStatus(p, TODAY) === status)
+    .filter((p) => matchesStatus(p, status))
     .filter((p) => !situation || matchesSituation(byId.get(p.id)!, situation))
     .sort(byStatus(TODAY))
     .map((p) => byId.get(p.id)!);
@@ -208,20 +228,16 @@ function DocsView({ professionals }: { professionals: Professional[] }) {
     <>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] items-end gap-3">
         <SearchFilter id="docs_name" label="Nome/Conselho" placeholder="Buscar por nome ou conselho" value={name} onChange={setName} />
-        <SelectFilter id="docs_specialty" label="Especialidade" prompt="Todas" options={pairs(specialties)} value={specialty} onChange={setSpecialty} />
+        <SelectFilter id="docs_specialty" label="Especialidade" prompt="Selecione a especialidade" options={pairs(specialties)} value={specialty} onChange={setSpecialty} />
         <SelectFilter
           id="docs_status"
           label="Status"
-          prompt="Todos"
-          options={[
-            ["Ativo", "ativo"],
-            ["Em inativação", "deactivating"],
-            ["Inativo", "inativo"],
-          ]}
+          prompt="Selecione o status"
+          options={STATUS_OPTIONS}
           value={status}
           onChange={setStatus}
         />
-        <SelectFilter id="docs_situation" label="Situação da documentação" prompt="Todas" options={SITUATIONS} value={situation} onChange={(v) => setSituation(v as DocSituation)} />
+        <SelectFilter id="docs_situation" label="Situação da documentação" prompt="Selecione a situação" options={SITUATIONS} value={situation} onChange={(v) => setSituation(v as DocSituation)} />
         <SelectFilter
           id="docs_category"
           label="Categoria"
@@ -320,16 +336,14 @@ function DocsView({ professionals }: { professionals: Professional[] }) {
                   if (trainings.length)
                     return (
                       <td key={t.id} onClick={stop}>
-                        {/* Uma tag por formação especial; o clique abre o drawer do documento. */}
+                        {/* Uma tag por formação especial, numa linha só: a partir da terceira, "+N" (`tag_list` com `limit`). O clique abre o drawer do documento. */}
                         <button
                           type="button"
                           title={trainings.map((d) => trainingName(d.training!)).join(" · ")}
                           onClick={() => setDocDrawer({ prof: r.prof, cell: c })}
-                          className="inline-flex cursor-pointer flex-wrap justify-center gap-1"
+                          className="inline-flex cursor-pointer justify-center"
                         >
-                          {trainings.map((d) => (
-                            <Tag key={d.id} item={trainingShort(d.training!)} className="whitespace-nowrap" />
-                          ))}
+                          <TagList items={trainings.map((d) => trainingShort(d.training!))} limit={2} className="flex-nowrap whitespace-nowrap" />
                         </button>
                       </td>
                     );
@@ -350,7 +364,7 @@ function DocsView({ professionals }: { professionals: Professional[] }) {
         </tbody>
       </SimpleTable>
 
-      {cat !== "overview" && cat !== "ops" && <p className="mt-4 text-xs text-brand-purple-dark/50">* documento obrigatório — conta na completude. Dispensados saem do cálculo.</p>}
+      {cat !== "overview" && cat !== "ops" && <p className="mt-4 text-xs text-brand-purple-dark/50">* documento padrão (obrigatório) — conta na completude. Dispensados saem do cálculo.</p>}
 
       <DocDrawer prof={docDrawer?.prof ?? professionals[0]!} cell={docDrawer?.cell ?? null} onClose={() => setDocDrawer(null)} />
       <OpDrawer prof={opDrawer?.prof ?? professionals[0]!} cell={opDrawer?.cell ?? null} onClose={() => setOpDrawer(null)} />
@@ -369,11 +383,14 @@ function abaHours(docs: ProfDoc[] | undefined): number {
   return (docs ?? []).filter((d) => d.typeId === "aba_course").reduce((sum, d) => sum + (d.hours ?? 0), 0);
 }
 
-/** Cabeçalho de coluna estreita: até duas linhas, com o nome inteiro no `title`. */
+/**
+ * Cabeçalho de coluna estreita: até duas linhas, com o nome inteiro no `title`.
+ * A largura mínima evita que "Curso ABA * (h)" quebre em três e seja cortado.
+ */
 function RotHead({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <th title={title}>
-      <span className="mx-auto line-clamp-2 max-w-[120px] leading-tight whitespace-normal">{children}</span>
+      <span className="mx-auto line-clamp-2 max-w-[120px] min-w-[80px] leading-tight whitespace-normal">{children}</span>
     </th>
   );
 }
@@ -398,7 +415,7 @@ function HoursView({ professionals, initialProcessed }: { professionals: Profess
     setProfIds(v ? professionals.filter((p) => p.active && p.specialty === v).map((p) => p.id) : []);
   }
 
-  const rows = processed ? professionals.filter((p) => processed.includes(p.id)) : [];
+  const rows = processed ? professionals.filter((p) => processed.includes(p.id)).sort(byStatus(TODAY)) : [];
 
   return (
     <>
@@ -465,7 +482,7 @@ function HoursView({ professionals, initialProcessed }: { professionals: Profess
 function ProfessionalsCard({ fixture, canCreate }: { fixture: ProfessionalsFixture; canCreate: boolean }) {
   const { rows } = useDocs();
   const [view, setView] = useState<ProfessionalsView>(fixture.view);
-  // Quantos profissionais têm documento vencido ou obrigatório ausente.
+  // Quantos profissionais têm documento vencido ou padrão pendente.
   const pending = useMemo(() => rows.filter((r) => r.expired.length || r.missing.length).length, [rows]);
 
   return (

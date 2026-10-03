@@ -59,7 +59,7 @@ export function SearchFilter({ id, label, placeholder, value, onChange }: { id: 
   return <Input id={id} name={id} label={label} placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />;
 }
 
-/** Um filtro de lista: `input type="select"`, vazio é "Todas"/"Todos". */
+/** Um filtro de lista: `input type="select"`; o `prompt` é o valor vazio, sem filtro. */
 export function SelectFilter({
   id,
   label,
@@ -99,7 +99,7 @@ export function NameCell({ prof, status, today }: { prof: Professional; status: 
         {status === "deactivating" && (
           <span className="inline-flex items-center gap-[5px] text-[11.5px] font-bold whitespace-nowrap text-orange-dark">
             <Icon name="fa-arrow-right-from-bracket" type="solid" className="text-[10px]" />
-            Em inativação · sai {isoToBr(prof.deactivationAt!)} · {days === 0 ? "hoje" : `${days} dia${days! > 1 ? "s" : ""}`}
+            Em inativação · sai {isoToBr(prof.deactivationAt!)} · {days} dia{days! > 1 ? "s" : ""}
           </span>
         )}
         {status === "inativo" && <span className="text-[11.5px] font-bold text-brand-purple-dark/50">Inativo</span>}

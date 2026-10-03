@@ -4,7 +4,7 @@
  * Dez profissionais da clínica (nomes fictícios), os totais de horas do mês,
  * os documentos de cada um, o que já foi compartilhado com cada operadora e
  * os documentos internos e ocupacionais. Hoje é `TODAY` (05/08/2026): Tânia e
- * Lucinara estão em inativação, Carina já foi desligada.
+ * Luciana estão em inativação, Carina já foi desligada.
  */
 import type { Fixture } from "@brucesantos/design-space";
 import {
@@ -26,22 +26,23 @@ import {
 export const TODAY = "2026-08-05";
 
 export const PROFESSIONALS: Professional[] = [
-  { id: "p1", name: "Helena Martins Costa", active: true, specialty: "Psicologia", council: "06233962", types: ["Aplicador"], formation: "Psicologia (CRP)", supervisor: "Rafael Andrade Nunes" },
-  { id: "p2", name: "Tânia Abreu Pinho", active: true, deactivationAt: "2026-08-12", specialty: "Psicologia", council: "06113517", types: ["Coordenador"], formation: "Psicologia (CRP)", supervisor: null },
-  { id: "p3", name: "Mariana Palmeira Stein", active: true, specialty: "Terapia Ocupacional", council: "25044", types: ["Terapeuta"], formation: "Terapia Ocupacional (CREFITO)", supervisor: "Helena Martins Costa" },
-  { id: "p4", name: "Tiago Alves da Rocha", active: true, specialty: "Terapia Ocupacional", council: "25067", types: ["Terapeuta"], formation: "Terapia Ocupacional (CREFITO)", supervisor: "Helena Martins Costa" },
-  { id: "p5", name: "Lívia Cardoso da Mata", active: true, tbd: true, specialty: "Psicopedagogia", council: "00015", types: ["Terapeuta"], formation: "Outros", supervisor: null },
-  { id: "p6", name: "Larissa Wippich Faria", active: true, specialty: "Psicologia", council: "123", types: ["Terapeuta", "Aplicador", "Supervisor"], formation: "Psicologia (CRP)", supervisor: "Rafael Andrade Nunes" },
-  { id: "p7", name: "Raiane Almeida Longo", active: true, specialty: "Fisioterapia", council: "448485", types: ["Terapeuta"], formation: "Fisioterapia (CREFITO)", supervisor: null },
-  { id: "p8", name: "Lucinara Rodrigues Lima", active: true, deactivationAt: "2026-08-31", specialty: "Fisioterapia", council: "239861", types: ["Terapeuta"], formation: "Fisioterapia (CREFITO)", supervisor: "Rafael Andrade Nunes" },
-  { id: "p9", name: "Fábio Stoll Pereira", active: true, specialty: "Fonoaudiologia", council: "123123", types: ["Coordenador"], formation: "Fonoaudiologia (CRF)", supervisor: null },
-  { id: "p10", name: "Carina Ferreira de Araújo", active: false, specialty: "Aplicador Psicologia", council: "123123", types: ["Aplicador"], formation: "Psicologia (CRP)", supervisor: "Helena Martins Costa" },
+  { id: "p1", name: "Helena Martins Costa", active: true, specialty: "Psicologia", council: "06900101", email: "helena.martins@bloomy.com.br", phone: "(11) 99873-9084", types: ["Aplicador"], formation: "Psicologia (CRP)", supervisor: "Rafael Andrade Nunes" },
+  { id: "p2", name: "Tânia Abreu Pinho", active: true, deactivationAt: "2026-08-12", specialty: "Psicologia", council: "06900102", email: "tania.pinho@bloomy.com.br", phone: "(11) 99812-4410", types: ["Coordenador"], formation: "Psicologia (CRP)", supervisor: null },
+  { id: "p3", name: "Mariana Palmeira Stein", active: true, specialty: "Terapia Ocupacional", council: "25044", email: "mariana.stein@bloomy.com.br", phone: "(11) 99745-2031", types: ["Terapeuta"], formation: "Terapia Ocupacional (CREFITO)", supervisor: "Helena Martins Costa" },
+  { id: "p4", name: "Tiago Alves da Rocha", active: true, specialty: "Terapia Ocupacional", council: "25067", email: "tiago.rocha@bloomy.com.br", phone: "(11) 99630-5578", types: ["Terapeuta"], formation: "Terapia Ocupacional (CREFITO)", supervisor: "Helena Martins Costa" },
+  { id: "p5", name: "Lívia Cardoso da Mata", active: true, tbd: true, specialty: "Psicopedagogia", council: "90106", email: "livia.mata@bloomy.com.br", phone: "(11) 99521-8806", types: ["Terapeuta"], formation: "Outros", supervisor: null },
+  { id: "p6", name: "Larissa Moura Faria", active: true, specialty: "Psicologia", council: "06900103", email: "larissa.faria@bloomy.com.br", phone: "(11) 99417-3392", types: ["Terapeuta", "Aplicador", "Supervisor"], formation: "Psicologia (CRP)", supervisor: "Rafael Andrade Nunes" },
+  { id: "p7", name: "Raiane Almeida Longo", active: true, specialty: "Fisioterapia", council: "448485", email: "raiane.longo@bloomy.com.br", phone: "(11) 99308-6614", types: ["Terapeuta"], formation: "Fisioterapia (CREFITO)", supervisor: null },
+  { id: "p8", name: "Luciana Rodrigues Lima", active: true, deactivationAt: "2026-08-31", specialty: "Fisioterapia", council: "239861", email: "luciana.lima@bloomy.com.br", phone: "(11) 99284-1157", types: ["Terapeuta"], formation: "Fisioterapia (CREFITO)", supervisor: "Rafael Andrade Nunes" },
+  { id: "p9", name: "Fábio Teixeira Pereira", active: true, specialty: "Fonoaudiologia", council: "90104", email: "fabio.pereira@bloomy.com.br", phone: "(11) 99176-9023", types: ["Coordenador"], formation: "Fonoaudiologia (CRF)", supervisor: null },
+  { id: "p10", name: "Carina Ferreira de Araújo", active: false, specialty: "Aplicador Psicologia", council: "06900105", email: "carina.araujo@bloomy.com.br", phone: "(11) 99065-4480", types: ["Aplicador"], formation: "Psicologia (CRP)", supervisor: "Helena Martins Costa" },
 ];
 
 /** Os totais que `hours_control.ex` calcula para o mês, por profissional. */
 export const MONTH_HOURS: Record<string, MonthHours> = {
   p1: { planned: 120, worked: 114, appointments: 46, compensation: "R$ 3.420,00" },
-  p2: { planned: 160, worked: 164, appointments: 62, compensation: "R$ 4.920,00" },
+  // Tânia sai em 12/08: as horas do mês vão só até a saída.
+  p2: { planned: 56, worked: 54, appointments: 21, compensation: "R$ 1.620,00" },
   p3: { planned: 80, worked: 76, appointments: 30, compensation: "R$ 2.280,00" },
   p4: { planned: 80, worked: 80, appointments: 32, compensation: "R$ 2.400,00" },
   p5: { planned: 48, worked: 32, appointments: 12, compensation: "R$ 960,00" },
@@ -84,10 +85,10 @@ export const PROFILE: Record<string, { abaHours: number; badges: string[] }> = {
   p1: { abaHours: 320, badges: ["Integração Sensorial", "PECS", "Denver"] },
   p2: { abaHours: 480, badges: ["Supervisão BCaBA", "PECS"] },
   p3: { abaHours: 180, badges: ["Integração Sensorial"] },
-  p4: { abaHours: 120, badges: [] },
+  p4: { abaHours: 120, badges: ["Integração Sensorial"] },
   p5: { abaHours: 240, badges: ["Psicopedagogia clínica"] },
   p6: { abaHours: 400, badges: ["Integração Sensorial", "ABLLS-R"] },
-  p7: { abaHours: 80, badges: [] },
+  p7: { abaHours: 80, badges: ["Bobath"] },
   p8: { abaHours: 200, badges: ["Bobath"] },
   p9: { abaHours: 520, badges: ["Integração Sensorial", "PROMPT", "Supervisão BCBA"] },
   p10: { abaHours: 60, badges: [] },
@@ -103,14 +104,14 @@ export function abaBand(hours: number): string {
 /** Documentos do cadastro: tipo, atualizado em, válido até. */
 const SEED_DOCS: Record<string, [string, string, string | null][]> = {
   p1: [["diploma", "01/02/2024", null], ["council", "10/01/2026", "10/01/2027"], ["id", "01/02/2024", null], ["cv", "14/03/2026", null], ["specialization", "20/05/2025", null]],
-  p2: [["diploma", "05/03/2024", null], ["council", "02/02/2026", "02/02/2027"], ["id", "05/03/2024", null], ["cv", "02/02/2026", null]],
-  p3: [["diploma", "18/04/2024", null], ["council", "12/07/2025", "12/07/2026"], ["id", "18/04/2024", null], ["address", "02/03/2026", "02/09/2026"]],
-  p4: [["diploma", "22/05/2024", null], ["council", "01/03/2026", "01/03/2027"], ["id", "22/05/2024", null]],
-  p5: [["diploma", "12/06/2024", null], ["council", "15/04/2026", "15/04/2027"], ["cv", "15/04/2026", null]],
-  p6: [["diploma", "30/06/2024", null], ["council", "20/05/2026", "20/05/2027"], ["id", "30/06/2024", null], ["cv", "20/05/2026", null], ["address", "10/07/2026", "10/01/2027"]],
-  p7: [["diploma", "14/08/2024", null], ["council", "08/08/2025", "08/08/2026"], ["id", "14/08/2024", null]],
-  p8: [["diploma", "03/09/2024", null], ["council", "11/06/2026", "11/06/2027"], ["id", "03/09/2024", null], ["contract", "01/01/2026", "31/12/2026"]],
-  p9: [["diploma", "27/10/2024", null], ["council", "19/02/2026", "19/02/2027"], ["id", "27/10/2024", null], ["cv", "19/02/2026", null], ["specialization", "05/05/2026", null]],
+  p2: [["diploma", "05/03/2024", null], ["council", "02/02/2026", "02/02/2027"], ["id", "05/03/2024", null], ["cv", "02/02/2026", null], ["council_card", "02/02/2026", "02/02/2029"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p3: [["diploma", "18/04/2024", null], ["council", "12/07/2025", "12/07/2026"], ["id", "18/04/2024", null], ["address", "02/03/2026", "02/09/2026"], ["council_card", "18/04/2024", "18/04/2029"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p4: [["diploma", "22/05/2024", null], ["council", "01/03/2026", "01/03/2027"], ["id", "22/05/2024", null], ["council_card", "01/03/2026", "01/03/2031"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p5: [["diploma", "12/06/2024", null], ["council", "15/04/2026", "15/04/2027"], ["cv", "15/04/2026", null], ["council_card", "15/04/2026", "15/04/2031"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p6: [["diploma", "30/06/2024", null], ["council", "20/05/2026", "20/05/2027"], ["id", "30/06/2024", null], ["cv", "20/05/2026", null], ["address", "10/07/2026", "10/01/2027"], ["council_card", "20/05/2026", "20/05/2031"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p7: [["diploma", "14/08/2024", null], ["council", "08/08/2025", "08/08/2026"], ["id", "14/08/2024", null], ["council_card", "14/08/2024", "14/08/2029"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p8: [["diploma", "03/09/2024", null], ["council", "11/06/2026", "11/06/2027"], ["id", "03/09/2024", null], ["contract", "01/01/2026", "31/12/2026"], ["council_card", "11/06/2026", "11/06/2031"], ["council_quit", "10/03/2026", "31/03/2027"]],
+  p9: [["diploma", "27/10/2024", null], ["council", "19/02/2026", "19/02/2027"], ["id", "27/10/2024", null], ["cv", "19/02/2026", null], ["specialization", "05/05/2026", null], ["council_card", "19/02/2026", "19/02/2031"], ["council_quit", "10/03/2026", "31/03/2027"]],
   p10: [["diploma", "09/11/2024", null], ["council", "03/01/2025", "03/01/2026"], ["id", "09/11/2024", null]],
 };
 
@@ -178,19 +179,22 @@ function hash(s: string): number {
 
 /**
  * Documentos internos e ocupacionais: cada profissional recebe um recorte
- * plausível, com faltas e vencimentos para a matriz ter o que mostrar.
+ * plausível, com faltas e vencimentos para a matriz ter o que mostrar. As
+ * faixas são estreitas para a pendência ser exceção: com os documentos do
+ * cadastro, 4 dos 10 têm vencido ou padrão pendente (Helena, Mariana, Fábio
+ * e Carina).
  */
 function extraDocs(profId: string): Record<string, ExtraDoc> {
   const docs: Record<string, ExtraDoc> = {};
   for (const t of EXTRA_DOC_TYPES) {
     const h = hash(profId + t.id);
     const roll = h % 100;
-    if (roll < 8) continue; // ausente
+    if (roll < 4) continue; // pendente
     const waived = roll < 13 && !t.required;
     let validUntil: string | null = null;
     if (t.expires) {
-      const bucket = (h >> 5) % 100;
-      const offset = bucket < 8 ? -(10 + (h % 60)) : bucket < 22 ? 4 + (h % 26) : 70 + (h % 260);
+      const bucket = (h >>> 5) % 100;
+      const offset = bucket < 5 ? -(10 + (h % 60)) : bucket < 22 ? 4 + (h % 26) : 70 + (h % 260);
       validUntil = addDays(TODAY, offset);
     }
     docs[t.id] = {
@@ -198,7 +202,7 @@ function extraDocs(profId: string): Record<string, ExtraDoc> {
       waived,
       updatedAt: addDays(TODAY, -(30 + ((h >>> 3) % 500))),
       validUntil,
-      by: ["Marcus Vinícius Gimenes", "Ana Paula Ribeiro", "Coordenação"][(h >>> 7) % 3]!,
+      by: ["Marina Alves", "Ana Paula Ribeiro", "Coordenação"][(h >>> 7) % 3]!,
     };
   }
   return docs;
@@ -241,7 +245,7 @@ export const PROFESSIONALS_FIXTURES: Fixture<ProfessionalsFixture>[] = [
   {
     id: "professionals.list",
     label: "Profissionais › Cadastro",
-    description: "Dez profissionais: sete ativos, dois em inativação (Tânia sai em 12/08, Lucinara em 31/08) e uma inativa.",
+    description: "Dez profissionais: sete ativos, dois em inativação (Tânia sai em 12/08, Luciana em 31/08) e uma inativa, que o filtro Ativo esconde.",
     data: () => build("list"),
   },
   {

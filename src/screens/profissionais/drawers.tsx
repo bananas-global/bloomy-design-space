@@ -134,7 +134,7 @@ export function OpDrawer({ prof, cell, onClose }: { prof: Professional; cell: Op
   function onShare(typeId: string) {
     const doc = docs.find((d) => d.typeId === typeId);
     if (!doc || !op) {
-      toast("error", "Documento ausente", `${docTypeName(typeId)} não está no cadastro do profissional.`);
+      toast("error", "Documento pendente", `${docTypeName(typeId)} não está no cadastro do profissional.`);
       return;
     }
     share(prof.id, doc.id, op.id);
