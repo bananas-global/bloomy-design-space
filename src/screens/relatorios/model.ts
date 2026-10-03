@@ -18,8 +18,8 @@ export const REL_TODAY = new Date(2026, 6, 16, 9, 0, 0);
 /** Profissional logado quando visto pelo perfil "Profissional responsável". */
 export const REL_ME = "Helena Martins Costa";
 /** Quem cria as solicitações no protótipo (coordenação). */
-export const REL_REQUESTED_BY = "Marcus Vinícius Gimenes";
-export const REL_REQUESTED_BY_SHORT = "Marcus V. Gimenes";
+export const REL_REQUESTED_BY = "Marina Alves";
+export const REL_REQUESTED_BY_SHORT = "Marina Alves";
 
 /* ============================================================
    Tipos
@@ -168,7 +168,7 @@ export const REL_PROFS: Professional[] = [
   { id: "s2", name: "Helena Martins Costa", specialty: "Psicologia" },
   { id: "a3", name: "Mariana Palmeira Stein", specialty: "Terapia Ocupacional" },
   { id: "s1", name: "Rafael Andrade Nunes", specialty: "Psicologia" },
-  { id: "s4", name: "Fábio Stoll Pereira", specialty: "Fonoaudiologia" },
+  { id: "s4", name: "Fábio Teixeira Pereira", specialty: "Fonoaudiologia" },
   { id: "s3", name: "Tânia Abreu Pinho", specialty: "Psicologia" },
 ];
 export const relProfById = (id: string | null | undefined) => REL_PROFS.find((p) => p.id === id) ?? null;

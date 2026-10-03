@@ -49,7 +49,7 @@ import {
 import { ModalHost } from "./relatorios/views.js";
 
 const CURRENT_USER = {
-  name: "Marcus Vinícius Gimenes",
+  name: "Marina Alves",
   units: ["Unidade Teste", "Santana"],
   roles: [],
   professional: true,

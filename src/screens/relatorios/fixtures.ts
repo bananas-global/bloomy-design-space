@@ -46,118 +46,118 @@ export const LUCAS: ReportsPatient = {
 
 const PT: PatientRef = { id: "pt1", name: "Lucas Almeida Ferreira", age: 8 };
 export const HELENA = { id: "s2", name: "Helena Martins Costa", specialty: "Psicologia" };
-export const FABIO = { id: "s4", name: "Fábio Stoll Pereira", specialty: "Fonoaudiologia" };
-export const MARCUS = "Marcus Vinícius Gimenes";
+export const FABIO = { id: "s4", name: "Fábio Teixeira Pereira", specialty: "Fonoaudiologia" };
+export const MARINA = "Marina Alves";
 
 /** As solicitações do Lucas em `REL_SEED`, na ordem do protótipo. */
 export function seedReports(): Report[] {
   return [
     {
       id: "r-111", patient: PT, typeId: "protocolo", period: "1º Semestre 2026", protocolAppId: "pa1",
-      requester: "Equipe", requestedBy: MARCUS, requestedAt: "23/06/2026", due: "10/07/2026", prof: HELENA,
+      requester: "Equipe", requestedBy: MARINA, requestedAt: "23/06/2026", due: "10/07/2026", prof: HELENA,
       status: "solicitado", hasDraft: false, updatedAt: "23/06/2026 09:40",
       obs: "Relatório da reavaliação do VB-MAPP concluída em 22/06.", extra: "", support: [], finalDoc: null, cancelReason: "",
-      history: [{ at: "23/06/2026 09:40", who: "Marcus V. Gimenes", text: "Solicitação criada e atribuída a Helena Martins Costa", icon: "fa-inbox" }],
+      history: [{ at: "23/06/2026 09:40", who: "Marina Alves", text: "Solicitação criada e atribuída a Helena Martins Costa", icon: "fa-inbox" }],
     },
     {
       id: "r-103", patient: PT, typeId: "alta", period: "Julho 2026",
-      requester: "Família", requestedBy: MARCUS, requestedAt: "12/07/2026", due: "30/07/2026", prof: HELENA,
+      requester: "Família", requestedBy: MARINA, requestedAt: "12/07/2026", due: "30/07/2026", prof: HELENA,
       status: "solicitado", hasDraft: false, updatedAt: "12/07/2026 08:15",
       obs: "Família solicitou relatório de alta para transição escolar.",
       extra: "Encaminhar cópia também para a coordenação pedagógica da escola.",
       support: [], finalDoc: null, cancelReason: "",
-      history: [{ at: "12/07/2026 08:15", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" }],
+      history: [{ at: "12/07/2026 08:15", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" }],
     },
     {
       id: "r-105", patient: PT, typeId: "evolucao_mensal", period: "Junho 2026",
-      requester: "Operadora", requestedBy: MARCUS, requestedAt: "28/06/2026", due: "05/07/2026", prof: HELENA,
+      requester: "Operadora", requestedBy: MARINA, requestedAt: "28/06/2026", due: "05/07/2026", prof: HELENA,
       status: "assinaturas", hasDraft: false, updatedAt: "15/07/2026 18:20",
       coauthors: [FABIO], signatures: { s2: "15/07/2026 18:20" },
       obs: "Evolução mensal de junho para a operadora.", extra: "",
-      support: [{ name: "grafico-metas-junho.png", kind: "Imagem", size: "310 KB", at: "28/06/2026", by: "Marcus V. Gimenes" }],
+      support: [{ name: "grafico-metas-junho.png", kind: "Imagem", size: "310 KB", at: "28/06/2026", by: "Marina Alves" }],
       finalDoc: null, cancelReason: "",
       draft: { updatedAt: "09/07/2026 14:02", by: "Helena Martins Costa" },
       history: [
-        { at: "28/06/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "28/06/2026 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
         { at: "01/07/2026 10:20", who: "Helena Martins Costa", text: "Relatório iniciado", icon: "fa-play" },
         { at: "09/07/2026 14:02", who: "Helena Martins Costa", text: "Rascunho salvo", icon: "fa-floppy-disk" },
-        { at: "10/07/2026 08:30", who: "Marcus V. Gimenes", text: "Fábio Stoll Pereira adicionado(a) como coautor(a)", icon: "fa-user-plus" },
-        { at: "14/07/2026 16:05", who: "Fábio Stoll Pereira", text: "Rascunho salvo", icon: "fa-floppy-disk" },
+        { at: "10/07/2026 08:30", who: "Marina Alves", text: "Fábio Teixeira Pereira adicionado(a) como coautor(a)", icon: "fa-user-plus" },
+        { at: "14/07/2026 16:05", who: "Fábio Teixeira Pereira", text: "Rascunho salvo", icon: "fa-floppy-disk" },
         { at: "15/07/2026 18:10", who: "Helena Martins Costa", text: "Enviado para assinaturas de 2 autores", icon: "fa-signature" },
         { at: "15/07/2026 18:20", who: "Helena Martins Costa", text: "Assinado por Helena Martins Costa", icon: "fa-signature" },
       ],
     },
     {
       id: "r-120", patient: PT, typeId: "evolucao_mensal", period: "Maio 2026",
-      requester: "Operadora", requestedBy: MARCUS, requestedAt: "28/05/2026", due: "10/06/2026", prof: HELENA,
+      requester: "Operadora", requestedBy: MARINA, requestedAt: "28/05/2026", due: "10/06/2026", prof: HELENA,
       status: "finalizado", hasDraft: false, updatedAt: "06/06/2026 16:00", obs: "", extra: "", support: [],
       finalDoc: { name: "evolucao-lucas-mai2026.pdf", size: "1,1 MB", at: "06/06/2026" }, cancelReason: "",
       share: {
-        sharedAt: "06/06/2026 17:00", sharedBy: MARCUS, revokedAt: null, note: "",
+        sharedAt: "06/06/2026 17:00", sharedBy: MARINA, revokedAt: null, note: "",
         recipients: [{ id: "g1", name: "Patrícia Almeida Ferreira", relation: "Mãe", viewedAt: "06/06/2026 20:14", viewCount: 2 }],
       },
       history: [
-        { at: "28/05/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "28/05/2026 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
         { at: "06/06/2026 16:00", who: "Helena Martins Costa", text: "Relatório finalizado", icon: "fa-circle-check" },
       ],
     },
     {
       id: "r-121", patient: PT, typeId: "evolucao_mensal", period: "Abril 2026",
-      requester: "Operadora", requestedBy: MARCUS, requestedAt: "28/04/2026", due: "10/05/2026", prof: HELENA,
+      requester: "Operadora", requestedBy: MARINA, requestedAt: "28/04/2026", due: "10/05/2026", prof: HELENA,
       status: "finalizado", hasDraft: false, updatedAt: "09/05/2026 16:00", obs: "", extra: "", support: [],
       finalDoc: { name: "evolucao-lucas-abr2026.pdf", size: "1,1 MB", at: "09/05/2026" }, cancelReason: "",
       share: {
-        sharedAt: "09/05/2026 17:00", sharedBy: MARCUS, revokedAt: null, note: "",
+        sharedAt: "09/05/2026 17:00", sharedBy: MARINA, revokedAt: null, note: "",
         recipients: [{ id: "g1", name: "Patrícia Almeida Ferreira", relation: "Mãe", viewedAt: null, viewCount: 0 }],
       },
       history: [
-        { at: "28/04/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "28/04/2026 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
         { at: "09/05/2026 16:00", who: "Helena Martins Costa", text: "Relatório finalizado", icon: "fa-circle-check" },
       ],
     },
     {
       id: "r-122", patient: PT, typeId: "trimestral", period: "1º Tri 2026",
       coauthors: [FABIO], signatures: { s2: "17/04/2026 15:40", s4: "17/04/2026 16:00" },
-      requester: "Operadora", requestedBy: MARCUS, requestedAt: "01/04/2026", due: "20/04/2026", prof: HELENA,
+      requester: "Operadora", requestedBy: MARINA, requestedAt: "01/04/2026", due: "20/04/2026", prof: HELENA,
       status: "finalizado", hasDraft: false, updatedAt: "17/04/2026 16:00", obs: "", extra: "", support: [],
       finalDoc: { name: "trimestral-lucas-1tri2026.pdf", size: "1,1 MB", at: "17/04/2026" }, cancelReason: "",
       share: {
-        sharedAt: "17/04/2026 17:00", sharedBy: MARCUS, revokedAt: null, note: "",
+        sharedAt: "17/04/2026 17:00", sharedBy: MARINA, revokedAt: null, note: "",
         recipients: [{ id: "g1", name: "Patrícia Almeida Ferreira", relation: "Mãe", viewedAt: "17/04/2026 20:14", viewCount: 2 }],
       },
       history: [
-        { at: "01/04/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "01/04/2026 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
         { at: "17/04/2026 16:00", who: "Helena Martins Costa", text: "Relatório finalizado", icon: "fa-circle-check" },
       ],
     },
     {
       id: "r-123", patient: PT, typeId: "avaliacao", period: "Fonoaudiologia",
-      requester: "Equipe", requestedBy: MARCUS, requestedAt: "03/03/2026", due: "20/03/2026", prof: FABIO,
+      requester: "Equipe", requestedBy: MARINA, requestedAt: "03/03/2026", due: "20/03/2026", prof: FABIO,
       status: "finalizado", hasDraft: false, updatedAt: "18/03/2026 16:00", obs: "", extra: "", support: [],
       finalDoc: { name: "avaliacao-fono-lucas.pdf", size: "1,1 MB", at: "18/03/2026" }, cancelReason: "",
       history: [
-        { at: "03/03/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "03/03/2026 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
         { at: "18/03/2026 16:00", who: "Helena Martins Costa", text: "Relatório finalizado", icon: "fa-circle-check" },
       ],
     },
     {
       id: "r-124", patient: PT, typeId: "admissao", period: "Admissão",
-      requester: "Equipe", requestedBy: MARCUS, requestedAt: "04/09/2025", due: "20/09/2025", prof: HELENA,
+      requester: "Equipe", requestedBy: MARINA, requestedAt: "04/09/2025", due: "20/09/2025", prof: HELENA,
       status: "finalizado", hasDraft: false, updatedAt: "15/09/2025 16:00", obs: "", extra: "", support: [],
       finalDoc: { name: "admissao-lucas-2025.pdf", size: "1,1 MB", at: "15/09/2025" }, cancelReason: "",
       history: [
-        { at: "04/09/2025 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "04/09/2025 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
         { at: "15/09/2025 16:00", who: "Helena Martins Costa", text: "Relatório finalizado", icon: "fa-circle-check" },
       ],
     },
     {
       id: "r-125", patient: PT, typeId: "outro", customName: "Relatório para a escola", period: "Março 2026",
-      requester: "Família", requestedBy: MARCUS, requestedAt: "10/03/2026", due: "25/03/2026", prof: HELENA,
+      requester: "Família", requestedBy: MARINA, requestedAt: "10/03/2026", due: "25/03/2026", prof: HELENA,
       status: "cancelado", hasDraft: false, updatedAt: "14/03/2026 10:20", obs: "", extra: "", support: [], finalDoc: null,
       cancelReason: "Família informou que a escola dispensou o relatório.",
       history: [
-        { at: "10/03/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada", icon: "fa-inbox" },
-        { at: "14/03/2026 10:20", who: "Marcus V. Gimenes", text: "Solicitação cancelada", icon: "fa-ban" },
+        { at: "10/03/2026 09:00", who: "Marina Alves", text: "Solicitação criada", icon: "fa-inbox" },
+        { at: "14/03/2026 10:20", who: "Marina Alves", text: "Solicitação cancelada", icon: "fa-ban" },
       ],
     },
   ];
@@ -236,7 +236,7 @@ export function extraReports(): Report[] {
   return [
     {
       id: "r-130", patient: PT, typeId: "evolucao_mensal", period: "Julho 2026",
-      requester: "Operadora", requestedBy: MARCUS, requestedAt: "01/07/2026", due: "10/08/2026", prof: HELENA,
+      requester: "Operadora", requestedBy: MARINA, requestedAt: "01/07/2026", due: "10/08/2026", prof: HELENA,
       status: "em_andamento", hasDraft: true, updatedAt: "15/07/2026 18:05",
       obs: "Evolução mensal de julho para a operadora.", extra: "", support: [], finalDoc: null, cancelReason: "",
       draft: { updatedAt: "15/07/2026 18:05", by: "Helena Martins Costa" },
@@ -247,17 +247,17 @@ export function extraReports(): Report[] {
         __extraImages: [{ id: "xi-1", title: "Registro de comportamentos-alvo" }],
       },
       history: [
-        { at: "01/07/2026 09:00", who: "Marcus V. Gimenes", text: "Solicitação criada e atribuída a Helena Martins Costa", icon: "fa-inbox" },
+        { at: "01/07/2026 09:00", who: "Marina Alves", text: "Solicitação criada e atribuída a Helena Martins Costa", icon: "fa-inbox" },
         { at: "08/07/2026 10:10", who: "Helena Martins Costa", text: "Relatório iniciado", icon: "fa-play" },
         { at: "15/07/2026 18:05", who: "Helena Martins Costa", text: "Rascunho salvo", icon: "fa-floppy-disk" },
       ],
     },
     {
       id: "r-131", patient: PT, typeId: "externo", customName: "Laudo neuropediátrico", period: "Julho 2026",
-      requester: "Família", requestedBy: MARCUS, requestedAt: "14/07/2026", due: "31/07/2026", prof: HELENA,
+      requester: "Família", requestedBy: MARINA, requestedAt: "14/07/2026", due: "31/07/2026", prof: HELENA,
       status: "solicitado", hasDraft: false, updatedAt: "14/07/2026 11:20",
       obs: "Família vai trazer o laudo da neuropediatra para anexar ao prontuário.", extra: "", support: [], finalDoc: null, cancelReason: "",
-      history: [{ at: "14/07/2026 11:20", who: "Marcus V. Gimenes", text: "Solicitação criada e atribuída a Helena Martins Costa", icon: "fa-inbox" }],
+      history: [{ at: "14/07/2026 11:20", who: "Marina Alves", text: "Solicitação criada e atribuída a Helena Martins Costa", icon: "fa-inbox" }],
     },
   ];
 }

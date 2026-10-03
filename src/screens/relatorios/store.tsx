@@ -286,7 +286,7 @@ export function ReportsProvider({ context, patient, state, setState, children }:
           requester: data.requester, requestedBy: REL_REQUESTED_BY, requestedAt: now.split(" ")[0]!,
           due: data.due ? isoToBR(data.due) : "", prof: data.prof, status: "solicitado", hasDraft: false, updatedAt: now,
           obs: data.obs, extra: "", support: data.support, finalDoc: null, cancelReason: "",
-          history: [{ at: now, who: "Marcus V. Gimenes", text: data.prof ? `Solicitação criada e atribuída a ${data.prof.name}` : "Solicitação criada — sem responsável", icon: "fa-inbox" }],
+          history: [{ at: now, who: "Marina Alves", text: data.prof ? `Solicitação criada e atribuída a ${data.prof.name}` : "Solicitação criada — sem responsável", icon: "fa-inbox" }],
         });
         closeModal();
         toast("success", "Sucesso!", "Relatório solicitado a partir do prontuário.");
@@ -299,7 +299,7 @@ export function ReportsProvider({ context, patient, state, setState, children }:
           requestedBy: REL_REQUESTED_BY, requestedAt: now.split(" ")[0]!, due: fc.due, prof: relProfById(fc.profId),
           status: "solicitado", hasDraft: false, updatedAt: now, obs: `Solicitado a partir da rotina (${fc.source}): ${fc.rule}.`,
           extra: "", support: [], finalDoc: null, cancelReason: "",
-          history: [{ at: now, who: "Marcus V. Gimenes", text: fc.profId ? "Solicitação criada a partir da rotina" : "Solicitação criada a partir da rotina — sem responsável", icon: "fa-inbox" }],
+          history: [{ at: now, who: "Marina Alves", text: fc.profId ? "Solicitação criada a partir da rotina" : "Solicitação criada a partir da rotina — sem responsável", icon: "fa-inbox" }],
         });
         toast("success", "Sucesso!", `${fc.name} · ${fc.period} solicitado.${fc.profId ? "" : " Atribua um responsável."}`);
       },

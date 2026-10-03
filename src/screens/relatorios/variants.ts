@@ -10,7 +10,7 @@
  * Carimbos fixos, sempre antes de hoje (16/07/2026 09:00), sem relógio.
  */
 import type { Controls } from "./flow.js";
-import { CHART_SVG, FABIO, HELENA, MARCUS, extraReports, PROTOCOL_APPS, protoApp, seedReports } from "./fixtures.js";
+import { CHART_SVG, FABIO, HELENA, MARINA, extraReports, PROTOCOL_APPS, protoApp, seedReports } from "./fixtures.js";
 import {
   REL_REQUESTED_BY_SHORT,
   filledSections,
@@ -176,13 +176,13 @@ export function withShare(r: Report, state: ShareState): Report {
   return {
     ...r,
     share: {
-      sharedAt, sharedBy: MARCUS, recipients, revokedAt: state === "revoked" ? "16/07/2026 08:30" : null,
+      sharedAt, sharedBy: MARINA, recipients, revokedAt: state === "revoked" ? "16/07/2026 08:30" : null,
       note: state === "partial" ? "Qualquer dúvida, falem com a Helena na próxima sessão." : "",
     },
     history: [
       ...history,
-      entry(sharedAt, MARCUS, `Documento compartilhado com ${n} no app da família`, "fa-share-nodes"),
-      ...(state === "revoked" ? [entry("16/07/2026 08:30", MARCUS, "Acesso da família ao documento revogado", "fa-ban")] : []),
+      entry(sharedAt, MARINA, `Documento compartilhado com ${n} no app da família`, "fa-share-nodes"),
+      ...(state === "revoked" ? [entry("16/07/2026 08:30", MARINA, "Acesso da família ao documento revogado", "fa-ban")] : []),
     ],
   };
 }
