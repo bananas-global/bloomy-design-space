@@ -3,7 +3,7 @@
  *
  * Os controles (`ControlGroup`, painel Variações do motor) montam os dados
  * sintéticos da tela; quando a própria UI muda o que um controle representa
- * (trocar a sub-aba, a origem, distribuir), o controle acompanha por
+ * (a origem, distribuir), o controle acompanha por
  * `context.setControls`.
  *
  * `useControlledState` é o mesmo de `mapa-salas/flow.ts` e dos outros PRs
@@ -22,27 +22,15 @@ export const FLOW = "Central de Transferências";
 
 export const PATH = "/backoffice/central_transferencias";
 
-/** Controles de cada sub-aba: mudar um deles de fora abre a sub-aba. */
-export const MAPS_CONTROLS = ["origin", "cross", "distribute", "when", "scheduled"];
-export const SESSIONS_CONTROLS = ["period", "sCross", "sDistribute"];
+/**
+ * Os `button_tabs` da tela: a sub-aba aberta fica em
+ * `?transfer_tab=transfer_center|<slug>`. A tela não existe no Phoenix; o
+ * `tracker_id` segue o padrão de `main_tab` com um nome próprio.
+ */
+export const TAB_TRACKER = "transfer_tab";
+export const TAB_ID = "transfer_center";
 
 export const TRANSFER_CENTER_CONTROLS: ControlGroup[] = [
-  {
-    id: "sub",
-    title: "Sub-aba · button_tabs",
-    component: "core.button-tabs",
-    note: "Mapas de horas: movimenta o mapa de um profissional para outros, horário a horário. Sessões do período: cobre sessões concretas sem mudar o mapa.",
-    controls: [
-      {
-        id: "sub",
-        label: "Sub-aba",
-        options: [
-          { value: "maps", label: "Mapas de horas" },
-          { value: "sessions", label: "Sessões do período" },
-        ],
-      },
-    ],
-  },
   {
     id: "maps",
     title: "Mapas de horas",
@@ -95,7 +83,7 @@ export const TRANSFER_CENTER_CONTROLS: ControlGroup[] = [
   {
     id: "sessions",
     title: "Sessões do período",
-    note: "O período começa no primeiro dia útil a partir de hoje (sexta, 21/08). Distribuir dá a cada sessão o substituto que recebeu menos; o que não tem substituto fica para escolher.",
+    note: "O período começa no primeiro dia útil a partir de hoje (sexta, 21/08). Distribuir dá a cada sessão o substituto que recebeu menos; o que não tem substituto fica para escolher. Vale para a sub-aba Sessões do período.",
     controls: [
       {
         id: "period",

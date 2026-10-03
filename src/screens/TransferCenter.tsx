@@ -5,17 +5,18 @@
  * Movimentação em bloco dos mapas de horas dos pacientes, feita antes de
  * inativar ou alterar a escala de um profissional, e cobertura pontual de
  * sessões de um período. Os `button_tabs` Mapas de horas / Sessões do período
- * ficam no card da lista; ao lado, o painel da sub-aba aberta.
+ * ficam no card da lista; ao lado, o painel da sub-aba aberta. A sub-aba fica
+ * na URL pelo `tracker_id` (`?transfer_tab=transfer_center|sessoes-do-periodo`).
  *
  * A tela monta os dados a partir dos controles (`central-transferencias/flow.ts`)
  * sobre a unidade do protótipo (`central-transferencias/fixtures.ts`).
  */
 import type { ScenarioContext, ScreenProps } from "@brucesantos/design-space";
 import { Card } from "../components/Card.js";
-import { ButtonTabs } from "../components/Tabs.js";
+import { ButtonTabs, titleToSlug, useTrackedTab } from "../components/Tabs.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { HOURS_MAPS, PROFESSIONALS, SCHEDULED, TODAY, type TransferCenterFixture } from "./central-transferencias/fixtures.js";
-import { MAPS_CONTROLS, SESSIONS_CONTROLS, TRANSFER_CENTER_CONTROLS, useControlledState, type Controls } from "./central-transferencias/flow.js";
+import { TAB_ID, TAB_TRACKER, TRANSFER_CENTER_CONTROLS, useControlledState, type Controls } from "./central-transferencias/flow.js";
 import { MapsList, MapsSide } from "./central-transferencias/MapsTab.js";
 import { addDays } from "./central-transferencias/model.js";
 import { ListTitle } from "./central-transferencias/parts.js";
@@ -23,18 +24,20 @@ import { SessionsList, SessionsSide } from "./central-transferencias/SessionsTab
 import {
   FIRST_DAY,
   TransferCenterProvider,
-  useTransferCenter,
   withDistributedMaps,
   withDistributedSessions,
   type TransferCenterState,
 } from "./central-transferencias/store.js";
 
 const CURRENT_USER = {
-  name: "Marcus Vinícius Gimenes",
+  name: "Marina Alves",
   units: ["Unidade Teste", "Santana"],
   roles: [],
   professional: false,
 };
+
+const SESSIONS_TAB = "Sessões do período";
+const SESSIONS_SLUG = titleToSlug(SESSIONS_TAB);
 
 /** O fim do período "Uma semana": seis dias depois do primeiro dia útil. */
 const WEEK_END = addDays(FIRST_DAY, 6);
@@ -46,8 +49,6 @@ function seedWith(fixture: TransferCenterFixture) {
   return function seed(c: Controls, prev?: TransferCenterState, changed?: string[]): TransferCenterState {
     const has = (id: string) => !prev || Boolean(changed?.includes(id));
     let s: TransferCenterState = prev ?? {
-      sub: "maps",
-      tabsKey: 0,
       professionals: fixture.professionals,
       maps: fixture.maps,
       scheduled: fixture.scheduled,
@@ -86,14 +87,6 @@ function seedWith(fixture: TransferCenterFixture) {
     if (["period", "sCross", "sDistribute"].some(has)) {
       s = { ...s, sAssign: c.sDistribute === "auto" ? withDistributedSessions({ ...s, sAssign: {} }).assign : has("sDistribute") ? {} : s.sAssign };
     }
-
-    /* A sub-aba: a do controle, ou a do grupo que mudou de fora */
-    const sub = has("sub")
-      ? c.sub === "sessions" ? "sessions" : "maps"
-      : changed?.some((id) => SESSIONS_CONTROLS.includes(id)) ? "sessions"
-      : changed?.some((id) => MAPS_CONTROLS.includes(id)) ? "maps"
-      : s.sub;
-    if (sub !== s.sub || !prev) s = { ...s, sub, tabsKey: s.tabsKey + 1 };
     return s;
   };
 }
@@ -101,7 +94,6 @@ function seedWith(fixture: TransferCenterFixture) {
 function derive(s: TransferCenterState, c: Controls): Controls {
   const period = s.sFrom === FIRST_DAY && s.sTo === FIRST_DAY ? "day" : s.sFrom === FIRST_DAY && s.sTo === WEEK_END ? "week" : (c.period ?? "day");
   return {
-    sub: s.sub,
     origin: s.origin || "auto",
     cross: s.cross ? "on" : "off",
     distribute: Object.keys(s.assign).length ? "auto" : "none",
@@ -114,22 +106,19 @@ function derive(s: TransferCenterState, c: Controls): Controls {
 }
 
 function TransferCenterPage() {
-  const { state, setSub } = useTransferCenter();
-  const sessions = state.sub === "sessions";
+  const sessions = useTrackedTab(TAB_TRACKER, TAB_ID) === SESSIONS_SLUG;
 
   return (
     <div className="grid grid-cols-1 items-start gap-4 min-[1100px]:grid-cols-[minmax(0,1.55fr)_minmax(360px,1fr)]">
       <Card className="min-w-0">
         <ButtonTabs
-          key={state.tabsKey}
-          id="transfer_center"
+          id={TAB_ID}
+          trackerId={TAB_TRACKER}
           className="flex-row-reverse flex-wrap gap-4"
-          initialTab={sessions ? 1 : 0}
-          onChange={(i) => setSub(i === 1 ? "sessions" : "maps")}
           actions={<ListTitle>{sessions ? "Transferência de sessões" : "Transferência de mapas de horas"}</ListTitle>}
           tab={[
             { title: "Mapas de horas", content: <MapsList /> },
-            { title: "Sessões do período", content: <SessionsList /> },
+            { title: SESSIONS_TAB, content: <SessionsList /> },
           ]}
         />
       </Card>

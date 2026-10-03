@@ -5,7 +5,10 @@ import { LAYOUT_PREVIEWS } from "../catalog/layouts.js";
 import { personas } from "../personas/index.js";
 import { TransferCenter } from "../screens/TransferCenter.js";
 import { TRANSFER_CENTER_FIXTURES } from "../screens/central-transferencias/fixtures.js";
-import { FLOW as TRANSFER_CENTER_FLOW, PATH as TRANSFER_CENTER_PATH, TRANSFER_CENTER_CONTROLS } from "../screens/central-transferencias/flow.js";
+import { FLOW as TRANSFER_CENTER_FLOW, PATH as TRANSFER_CENTER_PATH, TAB_ID as TRANSFER_TAB_ID, TAB_TRACKER as TRANSFER_TAB_TRACKER, TRANSFER_CENTER_CONTROLS } from "../screens/central-transferencias/flow.js";
+
+/** A Central aberta na sub-aba Sessões do período (o `tracker_id` dos `button_tabs`). */
+const TRANSFER_CENTER_SESSIONS = `${TRANSFER_CENTER_PATH}?${TRANSFER_TAB_TRACKER}=${encodeURIComponent(`${TRANSFER_TAB_ID}|sessoes-do-periodo`)}`;
 
 /** Componentes do catálogo que a Central de Transferências usa. */
 const TRANSFER_CENTER_COMPONENTS = [
@@ -127,10 +130,9 @@ export const productDefinition: ProductDefinition = {
     {
       id: "transfer-center.sessions",
       title: "Sessões do período (hoje)",
-      route: TRANSFER_CENTER_PATH,
+      route: TRANSFER_CENTER_SESSIONS,
       fixture: "transfer-center.unit",
       persona: "admin",
-      controls: { sub: "sessions" },
       intent: "Cobertura pontual de sexta, 21/08: as sessões concretas de todos os profissionais, por titular, sem mexer nos mapas.",
       expected: [
         "Filtros De / Até 21/08/2026, Especialidade e Profissional; \"Sex, 21/08 · 87 sessões\".",
@@ -142,10 +144,10 @@ export const productDefinition: ProductDefinition = {
     {
       id: "transfer-center.sessions-week",
       title: "Cobrir uma semana inteira",
-      route: TRANSFER_CENTER_PATH,
+      route: TRANSFER_CENTER_SESSIONS,
       fixture: "transfer-center.unit",
       persona: "admin",
-      controls: { sub: "sessions", period: "week", sDistribute: "auto" },
+      controls: { period: "week", sDistribute: "auto" },
       intent: "Uma semana (21/08 a 27/08) com os substitutos distribuídos; Transferir pede o motivo da ausência.",
       expected: [
         "446 sessões em cinco dias; Distribuir dá substituto a 196.",

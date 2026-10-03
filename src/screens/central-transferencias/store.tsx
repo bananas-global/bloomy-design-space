@@ -41,12 +41,7 @@ import {
   type Slot,
 } from "./model.js";
 
-export type TransferSub = "maps" | "sessions";
-
 export type TransferCenterState = {
-  sub: TransferSub;
-  /** Muda quando a sub-aba vem de fora, para os `button_tabs` remontarem nela. */
-  tabsKey: number;
   professionals: Professional[];
   maps: HoursMap[];
   scheduled: ScheduledTransfer[];
@@ -99,7 +94,6 @@ export type TransferCenterStore = {
   state: TransferCenterState;
   professionals: Professional[];
   profById: (id: string | null | undefined) => Professional | undefined;
-  setSub: (sub: TransferSub) => void;
 
   /* Mapas de horas */
   origins: { id: string; label: string; n: number }[];
@@ -314,7 +308,6 @@ export function TransferCenterProvider({ state, setState, children }: ProviderPr
       state,
       professionals: profs,
       profById,
-      setSub: (sub) => set({ sub }),
 
       origins,
       orphanCount,
