@@ -106,6 +106,20 @@ export function useTrackedTab(trackerId: string, id: string): string | undefined
   return useSyncExternalStore(subscribeTracker, () => trackedSlug(trackerId, id), () => undefined);
 }
 
+/**
+ * Põe `?<trackerId>=<id>|<slug>` na URL quando ainda não há aba guardada para
+ * esse `trackerId`. Serve aos layouts do design space, que têm uma rota por aba
+ * (`/unidades/:id/salas`) onde o Phoenix tem uma página só com a aba na URL:
+ * chamado antes de montar as abas, faz a rota abrir na aba dela.
+ */
+export function ensureTrackedTab(trackerId: string, id: string, slug: string) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  if (params.has(trackerId)) return;
+  params.set(trackerId, `${id}|${slug}`);
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+}
+
 const lineMarker = (el: HTMLElement, m: HTMLDivElement) => {
   m.style.width = `${el.offsetWidth}px`;
   m.style.height = `${el.offsetHeight + 4}px`;
