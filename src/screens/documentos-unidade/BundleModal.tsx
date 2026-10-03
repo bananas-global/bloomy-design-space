@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { Icon } from "../../components/Icon.js";
+import { Input } from "../../components/Input.js";
 import { DrawerModal } from "../../components/Overlay.js";
 import { buildRows, docState, pluralize, type UnitDocument } from "./model.js";
 import { DRAWER_SIZE, DocStatusTag, DrawerFooter, validityText } from "./parts.js";
@@ -52,33 +53,33 @@ export function BundleModal() {
           {ordered.map((d) => {
             const on = sel.includes(d.id);
             return (
-              <label
+              <div
                 key={d.id}
-                htmlFor={`exportar-unidade-${d.id}`}
                 className={[
-                  "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-colors",
+                  "flex items-center gap-3 rounded-xl border p-3 transition-colors",
                   on ? "border-brand-blue/40 bg-brand-blue/10" : "border-brand-purple-dark/10 bg-white",
-                  !d.file && "cursor-not-allowed opacity-60",
+                  !d.file && "opacity-60",
                 ]
                   .filter(Boolean)
                   .join(" ")}
               >
-                <input
+                <Input
                   id={`exportar-unidade-${d.id}`}
+                  name={`exportar[${d.id}]`}
                   type="checkbox"
+                  aria-label={d.name}
                   checked={on}
                   disabled={!d.file}
                   onChange={() => toggle(d.id)}
-                  className="rounded border-neutral-100 text-brand-blue focus:ring-0"
                 />
-                <span className="min-w-0 flex-1">
+                <label htmlFor={`exportar-unidade-${d.id}`} className={["min-w-0 flex-1", d.file ? "cursor-pointer" : "cursor-not-allowed"].join(" ")}>
                   <span className="block font-bold text-brand-purple-dark">{d.name}</span>
                   <span className="block text-sm text-brand-purple-dark/60">
                     {d.file ? `${validityText(d)} · ${d.file}` : "sem arquivo anexado — não entra no PDF"}
                   </span>
-                </span>
+                </label>
                 <DocStatusTag doc={d} />
-              </label>
+              </div>
             );
           })}
         </div>
