@@ -22,7 +22,7 @@ import { UnitDocumentsProvider, type DocumentsModal, type UnitDocumentsState } f
 import { ModalHost } from "./documentos-unidade/views.js";
 
 const CURRENT_USER = {
-  name: "Marcus Vinícius Gimenes",
+  name: "Marina Alves",
   units: UNITS.map((u) => u.name),
   roles: [],
   professional: false,
