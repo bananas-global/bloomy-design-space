@@ -9,7 +9,7 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from "re
 import { OPERATORS, TODAY } from "./fixtures.js";
 import { addDays, docRow, EXTRA_DOC_TYPES, linkKey, reconcile, type DocRow, type DocsState, type Professional } from "./model.js";
 
-const ME = "Marcus Vinícius Gimenes";
+const ME = "Marina Alves";
 
 type Store = {
   state: DocsState;
