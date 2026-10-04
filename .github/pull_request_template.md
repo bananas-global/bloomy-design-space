@@ -5,7 +5,7 @@
 ## Preview
 
 <!-- O workflow comenta neste PR o link fixo da branch e um link por cenário
-     registrado em `src/app/product.ts`. O link não muda entre pushes e mostra
+     registrado no `registro.ts` da tela. O link não muda entre pushes e mostra
      sempre a última versão. Para o dev ver outro estado, registre outro cenário. -->
 
 Ver o comentário do preview abaixo.
