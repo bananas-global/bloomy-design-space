@@ -7,7 +7,7 @@ import { permissionsByRole } from "./permissions.js";
  *
  * Não são arquétipos inventados para o Design Space. São os dez valores do campo
  * `roles` de `Bloomy.Backoffice.User`, com os rótulos que o produto mostra em
- * `priv/gettext/pt_BR/LC_MESSAGES/enums.po` e as permissões extraídas das 26
+ * `priv/gettext/pt_BR/LC_MESSAGES/enums.po` e as permissões extraídas das 28
  * policies em `lib/**\/*_policy.ex`.
  *
  * Duas propriedades do modelo real valem ser ditas em voz alta, porque mudam o
@@ -27,7 +27,7 @@ import { permissionsByRole } from "./permissions.js";
  *
  * As permissões não são escritas aqui: vêm de `./permissions.ts`, que é gerado
  * por `scripts/gen-permissions.mjs` a partir da matriz das policies. Escrever
- * cento e quatro permissões à mão dez vezes é como se erra em silêncio.
+ * cento e dezessete permissões à mão dez vezes é como se erra em silêncio.
  *
  * Derivar em vez de transcrever expôs duas coisas que valem revisão com o time,
  * e que estão descritas na decisão 0002:
@@ -136,7 +136,7 @@ const applicator: Persona = {
   name: "Aplicador",
   goal: "Aplicar o programa como está desenhado e registrar o que aconteceu na tentativa.",
   description:
-    "Aplicador ABA, normalmente sob supervisão formal. Nenhuma das vinte e seis policies lhe dá permissão de escrita: nem editar sessão, nem escrever resumo clínico, nem sequer criar programa — só leitura, chat e mapa da unidade. É a persona que revela ação bloqueada: se uma tela fica inútil para o aplicador, o desenho está assumindo permissão que ele não tem.",
+    "Aplicador ABA, normalmente sob supervisão formal. A única escrita que as policies lhe dão é o acompanhamento periódico (`PeriodicMonitoringPolicy`): não edita sessão, não escreve resumo clínico, nem sequer cria programa — fora isso, só leitura, chat e mapa da unidade. É a persona que revela ação bloqueada: se uma tela fica inútil para o aplicador, o desenho está assumindo permissão que ele não tem.",
   permissions: [...permissionsByRole.applicator],
 };
 
