@@ -49,10 +49,12 @@ e escreve `<.button variant="outline" color="red">` sem pensar.
    daqui).
 2. Crie uma branch e traga a tela para `src/screens/<Nome>.tsx`, usando um
    layout de `src/layouts/` e componentes de `src/components/`.
-3. Registre em `src/app/product.ts`: uma rota em `routes` e um cenário em
-   `scenarios` para cada estado que o dev precisa ver (vazio, com dados, erro…),
-   cada um com `id`, `title`, `route`, `fixture` e, se o menu importar, `persona`.
-   Os dados ficam em `fixtures`, sintéticos.
+3. Registre a tela em `src/screens/<pasta>/registro.ts`, com
+   `export const feature: Feature` (tipo em `src/app/features.ts`): uma rota em
+   `routes` e um cenário em `scenarios` para cada estado que o dev precisa ver
+   (vazio, com dados, erro…), cada um com `id`, `title`, `route`, `fixture` e, se
+   o menu importar, `persona`. Os dados ficam em `fixtures`, sintéticos. O
+   `product.ts` junta os registros sozinho: não edite ele num PR de tela.
 4. Abra o PR com o modelo de `.github/pull_request_template.md`. Cada push no PR
    publica um preview (workflow `deploy.yml`, com o token da Vercel) e aponta para
    ele o link fixo da branch, `bloomy-ds-<branch>.vercel.app`. Um comentário no
