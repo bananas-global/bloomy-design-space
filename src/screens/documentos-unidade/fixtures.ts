@@ -26,8 +26,9 @@ export const UNITS: DocumentsUnit[] = [
     header: {
       name: "Unidade Teste",
       active: true,
-      professionalsCount: 4,
-      roomsCount: 4,
+      // Os mesmos números do Mapa de Salas (PR #34), para a unidade ser uma só.
+      professionalsCount: 8,
+      roomsCount: 11,
       phone: "(11) 3255-8890",
       address: { street: "Av. Paulista", number: "1578", neighborhood: "Bela Vista", city: "São Paulo", state: "SP" },
     },
