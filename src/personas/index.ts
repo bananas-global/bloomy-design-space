@@ -58,9 +58,9 @@ const admin: Persona = {
 const clinicAdmin: Persona = {
   id: "clinic_admin",
   name: "Admin de Clínica",
-  goal: "Administrar uma clínica inteira — colaboradores, pacientes, agenda e faturamento — sem tocar na configuração do produto.",
+  goal: "Administrar uma clínica inteira — pacientes, agenda e faturamento — sem tocar na configuração do produto.",
   description:
-    "Vê quase tudo do admin dentro do escopo da sua unidade, mas não cancela atendimento e não edita autorização. Nota: no monólito, `UnitPolicy.can?/2` compara com `admin_clinic` em vez de `clinic_admin`, então este papel não consegue listar unidades. Está registrado como divergência, não reproduzido como intenção.",
+    "Vê boa parte do admin dentro do escopo da sua unidade, mas não cancela atendimento, não edita autorização e, desde as policies de setembro, não chega a Colaboradores, Operadoras, Serviços nem à Biblioteca de programas. Nota: no monólito, `UnitPolicy.can?/2` compara com `admin_clinic` em vez de `clinic_admin`, então este papel não consegue listar unidades. Está registrado como divergência, não reproduzido como intenção.",
   permissions: [...permissionsByRole.clinic_admin],
 };
 
