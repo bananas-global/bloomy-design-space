@@ -24,8 +24,16 @@ const TODAY_BR = `${DAY}/${MONTH}/${YEAR}`;
 
 type State = { monitorings: Monitoring[]; open: boolean; view: DrawerView };
 
-const fixtureOf = (context: ScenarioContext) =>
-  (context.data as MonitoringFixture | undefined) ?? { patient: PATIENT, monitorings: MONITORINGS };
+/**
+ * Os dados da fixture do cenário. Lidos da própria fixture, e não de
+ * `context.data`: ao trocar de atalho, a fixture nova chega no mesmo render que
+ * o cenário, mas `context.data` ainda traz a anterior por um render, e a tela
+ * guardaria os dados errados no estado.
+ */
+const fixtureOf = (context: ScenarioContext): MonitoringFixture => {
+  const data = context.fixture?.data;
+  return ((typeof data === "function" ? data() : data) as MonitoringFixture | undefined) ?? { patient: PATIENT, monitorings: MONITORINGS };
+};
 
 function viewOf(drawer: string | undefined, monitorings: Monitoring[]): Pick<State, "open" | "view"> {
   const first = monitorings[0];
@@ -128,5 +136,6 @@ function MonitoringScreen({ context }: { context: ScenarioContext }) {
 
 export function PatientPeriodicMonitoring({ context }: ScreenProps) {
   if (context.isLoading) return null;
-  return <MonitoringScreen key={context.fixture?.id} context={context} />;
+  // Cada atalho começa dos dados da fixture, sem herdar o que se fez no anterior.
+  return <MonitoringScreen key={`${context.scenario?.id}|${context.fixture?.id}`} context={context} />;
 }
