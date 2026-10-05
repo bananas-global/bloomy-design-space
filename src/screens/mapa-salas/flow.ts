@@ -43,10 +43,26 @@ export const ROOMS_MAP_CONTROLS: ControlGroup[] = [
     ],
   },
   {
+    id: "view",
+    title: "Visão · radio_selector",
+    component: "core.radio-selector",
+    note: "O seletor de ícones ao lado dos dias: o Mapa de Salas do dia ou a Capacidade das salas no dia (escala × espaço).",
+    controls: [
+      {
+        id: "view",
+        label: "Aba",
+        options: [
+          { value: "rooms", label: "Mapa de Salas" },
+          { value: "capacity", label: "Capacidade" },
+        ],
+      },
+    ],
+  },
+  {
     id: "day",
     title: "Dia da semana · radio_selector",
     component: "core.radio-selector",
-    note: "O dia que o mapa mostra, na semana de hoje (27 a 31/07/2026).",
+    note: "O dia que o mapa e a Capacidade mostram, na semana de hoje (27 a 31/07/2026).",
     controls: [
       {
         id: "day",

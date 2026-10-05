@@ -8,18 +8,29 @@
  * Bloqueios não ficam aqui: o PR #1646 do monólito tirou os `button_tabs`
  * Salas / Bloqueios da unidade e unificou os bloqueios em `blocking_live`
  * (`/backoffice/bloqueios`, no menu lateral).
+ *
+ * A visão (Mapa de Salas / Capacidade) é um segundo `radio_selector`, só com
+ * ícones, à direita dos dias, como o seletor de visão (tabela / cartões) que o
+ * Mapa de Salas substituiu. O dia vale para as duas visões. A visão
+ * Capacidade é nova: não existe no Phoenix.
  */
 import { Button } from "../../components/Button.js";
 import { RadioSelector } from "../../components/Choice.js";
 import { Header } from "../../components/Layout.js";
 import { Board } from "./Board.js";
+import { Capacity } from "./Capacity.js";
 import { dayShort, type DayKey } from "./model.js";
 import { PlanDrawer } from "./PlanDrawer.js";
 import { RoomDrawer } from "./RoomDrawer.js";
-import { useRoomsMap } from "./store.js";
+import { useRoomsMap, type RoomsView } from "./store.js";
+
+const VIEWS: { value: RoomsView; icon: string; title: string }[] = [
+  { value: "rooms", icon: "fa-chart-gantt", title: "Mapa de Salas" },
+  { value: "capacity", icon: "fa-table-cells", title: "Capacidade" },
+];
 
 export function RoomsTab() {
-  const { days, day, setDay, canEdit, openModal } = useRoomsMap();
+  const { view, setView, days, day, setDay, canEdit, openModal } = useRoomsMap();
 
   return (
     <div>
@@ -33,6 +44,12 @@ export function RoomsTab() {
               radio={days.map((k) => ({ value: k, label: dayShort(k) }))}
               onChange={(e) => setDay(e.target.value as DayKey)}
             />
+            <RadioSelector
+              field={{ id: "mapa-salas-visao", name: "mapa[visao]", value: view }}
+              className="inline-flex"
+              radio={VIEWS}
+              onChange={(e) => setView(e.target.value as RoomsView)}
+            />
             {canEdit && (
               <Button type="button" rightIcon="fa-plus" iconType="solid" onClick={() => openModal({ kind: "room", roomId: null })}>
                 Nova Sala
@@ -43,7 +60,7 @@ export function RoomsTab() {
       >
         Salas
       </Header>
-      <Board />
+      {view === "capacity" ? <Capacity /> : <Board />}
     </div>
   );
 }

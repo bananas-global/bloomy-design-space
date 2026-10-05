@@ -17,7 +17,7 @@ import { UNITS, unitById, type MapUnit, type RoomsMapFixture, type UnitId } from
 import { ROOMS_MAP_CONTROLS, useControlledState, type Controls } from "./mapa-salas/flow.js";
 import { TODAY_KEY, headerCounts, type DayKey, type Focus } from "./mapa-salas/model.js";
 import { ModalHost, RoomsTab } from "./mapa-salas/RoomsTab.js";
-import { RoomsMapProvider, dayModelOf, type MapModal, type RoomsMapState } from "./mapa-salas/store.js";
+import { RoomsMapProvider, dayModelOf, type MapModal, type RoomsMapState, type RoomsView } from "./mapa-salas/store.js";
 
 const CURRENT_USER = {
   name: "Marina Alves",
@@ -29,6 +29,7 @@ const CURRENT_USER = {
 const unitsOf = (context: ScenarioContext) => (context.data as RoomsMapFixture | undefined)?.units ?? UNITS;
 const DAY_KEYS: DayKey[] = ["monday", "tuesday", "wednesday", "thursday", "friday"];
 const FOCUS: Focus[] = ["all", "ok", "open", "extra", "noplan", "divergent", "temp"];
+const viewOf = (v: string | undefined): RoomsView => (v === "capacity" ? "capacity" : "rooms");
 
 /** A gaveta que cada valor do controle "Aberta" abre, achada no estado atual. */
 function modalOf(overlay: string | undefined, s: RoomsMapState, unit: MapUnit): MapModal | null {
@@ -59,7 +60,7 @@ const OVERLAY_OF: Record<MapModal["kind"], (m: MapModal) => string> = {
 };
 
 /** Controles que re-semeiam só a parte deles, sem refazer a unidade. */
-const PATCHABLE = ["day", "focus", "overlay"];
+const PATCHABLE = ["view", "day", "focus", "overlay"];
 
 function seedWith(units: MapUnit[]) {
   const unitOf = (id: string) => units.find((u) => u.id === id) ?? unitById(id);
@@ -72,10 +73,12 @@ function seedWith(units: MapUnit[]) {
     if (prev && changed && patch) {
       s = { ...prev };
       if (changed.includes("day")) s = { ...s, day: DAY_KEYS.includes(c.day as DayKey) ? (c.day as DayKey) : TODAY_KEY };
+      if (changed.includes("view")) s = { ...s, view: viewOf(c.view) };
       if (changed.includes("focus")) s = { ...s, focus: FOCUS.includes(c.focus as Focus) ? (c.focus as Focus) : "all" };
     } else {
       s = {
         unitId,
+        view: viewOf(c.view),
         rooms: unit.rooms,
         day: DAY_KEYS.includes(c.day as DayKey) ? (c.day as DayKey) : TODAY_KEY,
         q: "",
@@ -91,6 +94,7 @@ function seedWith(units: MapUnit[]) {
 function derive(s: RoomsMapState): Controls {
   return {
     unit: s.unitId,
+    view: s.view,
     day: s.day,
     focus: s.focus,
     overlay: s.modal ? OVERLAY_OF[s.modal.kind](s.modal) : "none",

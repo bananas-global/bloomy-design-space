@@ -40,8 +40,12 @@ export type MapModal =
   | { kind: "plan"; roomId: string; point: string; from: number }
   | { kind: "planEdit"; roomId: string; point: string; from: number };
 
+/** A aba da visão: o Mapa de Salas do dia ou a Capacidade. */
+export type RoomsView = "rooms" | "capacity";
+
 export type RoomsMapState = {
   unitId: string;
+  view: RoomsView;
   rooms: Room[];
   day: DayKey;
   q: string;
@@ -60,6 +64,8 @@ export type RoomsMapStore = {
   rooms: Room[];
   canEdit: boolean;
   days: DayKey[];
+  view: RoomsView;
+  setView: (view: RoomsView) => void;
   day: DayKey;
   setDay: (day: DayKey) => void;
   model: DayModel;
@@ -131,6 +137,8 @@ export function RoomsMapProvider({ context, unit, state, setState, children }: P
       rooms: state.rooms,
       canEdit,
       days: uDays,
+      view: state.view,
+      setView: (view) => set({ view }),
       day,
       setDay: (d) => set({ day: d }),
       model,
