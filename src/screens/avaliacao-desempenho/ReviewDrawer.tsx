@@ -107,7 +107,7 @@ function PendingFeedback() {
 function List({ items, canCreate, onOpen, onNew }: { items: Review[]; canCreate: boolean; onOpen: (id: string) => void; onNew: () => void }) {
   return (
     <>
-      <div className="space-y-3 flex-1">
+      <div className="space-y-3 flex-1 pb-6">
         {items.length === 0 ? (
           <div className="rounded-2xl border border-brand-purple-dark/10 bg-brand-purple-dark/5 p-4">
             <p className="text-sm font-semibold text-brand-purple-dark/70">Avaliações</p>
@@ -324,7 +324,7 @@ function ReviewForm({
 
   return (
     <>
-      <div ref={form} className="space-y-6 flex-1">
+      <div ref={form} className="space-y-6 flex-1 pb-6">
         <Breadcrumbs items={[{ label: "Todas avaliações", to: "list" }, { label: current }]} onNavigate={onCancel} />
         <div className="rounded-2xl border border-brand-purple-dark/10 p-3">
           <Who item={item} />
@@ -452,7 +452,7 @@ function View({
 
   return (
     <>
-      <div className="space-y-6 flex-1">
+      <div className="space-y-6 flex-1 pb-6">
         <Breadcrumbs items={[{ label: "Todas avaliações", to: "list" }, { label: item.cycle }]} onNavigate={onBack} />
         <div className="rounded-2xl border border-brand-purple-dark/10 p-3">
           <Who item={item} />
