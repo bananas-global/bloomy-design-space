@@ -1,8 +1,9 @@
 import { writeFileSync } from "node:fs";
 
 /**
- * Gera a matriz de permissões por papel a partir das 26 policies do monólito.
- * Fonte: lib/**\/*_policy.ex do repositório bloomy, extraídas em 2026-08-01.
+ * Gera a matriz de permissões por papel a partir das 28 policies do monólito.
+ * Fonte: lib/**\/*_policy.ex do repositório bloomy, em origin/main no commit
+ * 074e247e, extraídas em 2026-10-02.
  *
  * Cada entrada é `"recurso.acao": <regra>`, onde a regra é:
  *   ["in", ...roles]     -> role in ~W(...)
@@ -21,6 +22,9 @@ const ROLES = [
   "therapeutic_companion",
   "applicator",
 ];
+// `seller` existe no enum `roles` de `Bloomy.Backoffice.User` em origin/main,
+// mas ainda não é persona aqui. Aparece só nas listas negativas (["not", ...])
+// para que a matriz fique fiel ao Elixir; não muda nada para os dez papéis.
 
 const M = {
   // authorizations/authorization_policy.ex
@@ -34,15 +38,17 @@ const M = {
   "authorizations.hub": ["in", "admin", "clinic_admin", "operation"],
 
   // backoffice/user_policy.ex
-  "users.list": ["in", "admin", "clinic_admin"],
-  "users.create": ["in", "admin", "clinic_admin"],
-  "users.edit": ["in", "admin", "clinic_admin"],
+  "users.list": ["in", "admin"],
+  "users.create": ["in", "admin"],
+  "users.edit": ["in", "admin"],
   "users.manage_status": ["in", "admin"],
   "users.add_units": ["in", "admin"],
 
   // blockings/blocking_policy.ex
+  "blockings.list": ["in", "admin", "clinic_admin"],
   "blockings.create": ["in", "admin", "clinic_admin", "attendant", "coordinator"],
   "blockings.edit": ["in", "admin", "clinic_admin", "attendant", "coordinator"],
+  "blockings.delete": ["in", "admin", "clinic_admin", "attendant", "coordinator"],
 
   // clinical_summaries/clinical_summary_policy.ex
   "clinical_summaries.create": ["in", "supervisor", "specialist", "therapeutic_companion", "coordinator", "admin", "clinic_admin"],
@@ -61,8 +67,8 @@ const M = {
   "audits.create": ["in", "admin", "clinic_admin", "coordinator", "operation"],
 
   // health_cares/health_care_policy.ex
-  "health_cares.list": ["in", "admin", "clinic_admin", "operation"],
-  "health_cares.show": ["in", "admin", "clinic_admin", "operation"],
+  "health_cares.list": ["in", "admin", "operation"],
+  "health_cares.show": ["in", "admin", "operation"],
   "health_cares.create": ["in", "admin", "operation"],
   "health_cares.edit": ["in", "admin", "operation"],
   "health_cares.create_agreement": ["in", "coordinator", "admin"],
@@ -73,6 +79,14 @@ const M = {
   "healthcare_invoices.create": ["in", "admin"],
   "healthcare_invoices.edit": ["in", "admin"],
   "healthcare_invoices.delete": ["in", "admin"],
+
+  // legal_documents/legal_document_policy.ex
+  "legal_documents.list": ["in", "admin"],
+  "legal_documents.create": ["in", "admin"],
+  "legal_documents.edit": ["in", "admin"],
+  "legal_documents.publish": ["in", "admin"],
+  "legal_documents.archive": ["in", "admin"],
+  "legal_documents.delete": ["in", "admin"],
 
   // multidisciplinary_chat/chat_policy.ex
   "chat.show": ["in", "admin", "clinic_admin", "coordinator", "therapeutic_companion", "supervisor", "applicator", "specialist"],
@@ -93,9 +107,10 @@ const M = {
 
   // patients/patient_policy.ex
   "patients.create": ["in", "admin", "clinic_admin", "attendant", "coordinator"],
-  "patients.list": ["not", "people"],
-  "patients.show": ["not", "people"],
+  "patients.list": ["not", "people", "seller"],
+  "patients.show": ["not", "people", "seller"],
   "patients.edit": ["in", "admin", "clinic_admin", "attendant", "coordinator", "operation"],
+  "patients.manage_clinical_responsibles": ["in", "admin", "clinic_admin", "attendant", "coordinator", "operation", "supervisor"],
   "patients.edit_checkin_checkout": ["in", "admin", "clinic_admin", "coordinator"],
   "patients.create_agreement": ["in", "coordinator", "admin"],
   "patients.ability_maps": ["in", "coordinator", "admin"],
@@ -116,16 +131,21 @@ const M = {
   "patients.view_personal_document": ["in"],
   "patients.view_administrative_document": ["in"],
 
+  // patients/periodic_monitoring/periodic_monitoring_policy.ex
+  "periodic_monitorings.create": ["in", "coordinator", "therapeutic_companion", "supervisor", "applicator", "specialist"],
+  "periodic_monitorings.edit": ["in", "coordinator", "therapeutic_companion", "supervisor", "applicator", "specialist"],
+  "periodic_monitorings.delete": ["in", "coordinator", "therapeutic_companion", "supervisor", "applicator", "specialist", "admin", "clinic_admin", "people"],
+
   // products/service_policy.ex
-  "services.list": ["in", "admin", "clinic_admin", "attendant", "coordinator", "operation"],
+  "services.list": ["in", "admin", "attendant", "operation"],
   "services.create": ["in", "admin", "operation"],
   "services.edit": ["in", "admin", "operation"],
-  "services.show": ["in", "admin", "clinic_admin", "coordinator", "operation"],
+  "services.show": ["in", "admin", "operation"],
 
   // professional_patients/professional_patients_policy.ex
-  "professional_patients.create": ["in", "admin", "clinic_admin", "coordinator"],
-  "professional_patients.list": ["in", "admin", "clinic_admin", "coordinator"],
-  "professional_patients.delete": ["in", "admin", "clinic_admin", "coordinator"],
+  "professional_patients.create": ["in", "admin", "clinic_admin", "coordinator", "supervisor"],
+  "professional_patients.list": ["in", "admin", "clinic_admin", "coordinator", "supervisor"],
+  "professional_patients.delete": ["in", "admin", "clinic_admin", "coordinator", "supervisor"],
 
   // professionals/clinical_hours/clinical_hour_record_policy.ex
   // `app` também aparece na lista real; não é papel de pessoa e fica de fora.
@@ -133,7 +153,7 @@ const M = {
   "clinical_hours.edit": ["in", "admin", "coordinator", "clinic_admin", "people"],
 
   // professionals/closures/closure_policy.ex
-  "closures.list": ["all"],
+  "closures.list": ["not", "seller"],
 
   // professionals/professional_policy.ex
   "professionals.create": ["in", "admin", "clinic_admin", "coordinator", "people"],
@@ -146,14 +166,15 @@ const M = {
   "professionals.list_supervisor": ["in", "admin", "clinic_admin", "coordinator"],
 
   // programs/program_policy.ex
-  "programs.list": ["in", "admin", "clinic_admin", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
-  "programs.create": ["in", "admin", "clinic_admin", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
-  "programs.edit": ["in", "admin", "clinic_admin", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
-  "programs.delete": ["in", "admin", "clinic_admin", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
-  "programs.import": ["in", "coordinator", "therapeutic_companion", "supervisor", "specialist"],
+  "programs.list": ["in", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
+  "programs.create": ["in", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
+  "programs.edit": ["in", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
+  "programs.delete": ["in", "coordinator", "supervisor", "therapeutic_companion", "specialist"],
+  "programs.import": ["in", "admin", "coordinator", "therapeutic_companion", "supervisor", "specialist"],
   "programs.create_behavior_intervention_plan_programs": ["in", "coordinator", "therapeutic_companion", "supervisor", "specialist"],
   "programs.discard_behavior_intervention_plan_programs": ["in", "coordinator", "therapeutic_companion", "supervisor", "specialist"],
   "programs.edit_behavior_intervention_plan_programs": ["in", "coordinator", "therapeutic_companion", "supervisor", "specialist"],
+  "programs.edit_patient_program": ["in", "coordinator", "supervisor", "therapeutic_companion"],
 
   // protocols/protocol_policy.ex
   "protocols.list": ["in", "admin", "clinic_admin", "coordinator", "therapeutic_companion", "specialist"],
@@ -162,7 +183,7 @@ const M = {
 
   // schedules/schedule_policy.ex
   "schedules.create": ["in", "admin", "clinic_admin", "attendant", "coordinator", "operation"],
-  "schedules.list": ["not", "people"],
+  "schedules.list": ["not", "people", "seller"],
   "schedules.revert": ["in", "coordinator", "admin", "attendant"],
   "schedules.cancel": ["in", "coordinator", "admin", "attendant"],
   "schedules.edit": ["in", "coordinator", "admin", "attendant"],
@@ -221,7 +242,8 @@ if (target) {
     `/**
  * Permissões por papel — DERIVADO, não escrito à mão.
  *
- * Gerado a partir das 26 policies de \`lib/**\\/*_policy.ex\` do monólito Bloomy.
+ * Gerado a partir das 28 policies de \`lib/**\\/*_policy.ex\` do monólito Bloomy
+ * (origin/main, commit 074e247e, 2026-10-02).
  * Cada id é \`recurso.acao\`, onde \`recurso\` é o módulo da policy e \`acao\` é o
  * átomo passado para \`can?/2\`. A tradução é mecânica de propósito: quem for
  * conferir contra o Elixir precisa achar a linha.
