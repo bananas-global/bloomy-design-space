@@ -24,6 +24,10 @@ import { permissionsByRole } from "../personas/permissions.js";
  * `:if` de cada item: por policy (`context.can`) ou pela lista de papéis do
  * layout (`context.persona.id`). Sem `context`, é a visão do Admin.
  * `SignatureNotificationModal` não foi portado.
+ *
+ * Diferença: o `sticky` do HEEx está no `div` de dentro do `<header>`, que tem
+ * a mesma altura, então não gruda. Aqui o `<header>` é que é `sticky`; levar
+ * a mesma correção para o Phoenix.
  */
 
 export type LayoutContext = Pick<ScenarioContext, "navigate" | "can" | "persona">;
@@ -149,7 +153,7 @@ export function BackofficeLayout({
           ].join(" ")}
         >
           {!hideMenu && (
-            <header className="flex items-stretch">
+            <header className="sticky top-0 z-40 flex items-stretch">
               <button id="header-drawer-button-mobile" onClick={toggle} className="flex lg:hidden items-center justify-center bg-brand-blue min-w-20">
                 <img src={symbolNegative} alt="Logo da Bloomy" className="w-12 h-12" />
               </button>
