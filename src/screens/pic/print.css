@@ -1,29 +1,25 @@
-/* Exportar PIC: "Baixar PDF" imprime só a folha, em A4 e sem margem. */
+/* Exportar PIC: "Baixar PDF" imprime só uma cópia da folha, em A4 e sem margem. */
+.pic-print-root {
+  display: none;
+}
+
 @media print {
   @page {
     size: A4;
     margin: 0;
   }
 
-  body.pic-printing * {
-    visibility: hidden !important;
+  body.pic-printing > :not(.pic-print-root) {
+    display: none !important;
   }
 
-  body.pic-printing .pic-doc,
-  body.pic-printing .pic-doc * {
-    visibility: visible !important;
+  body.pic-printing .pic-print-root {
+    display: block;
   }
 
-  body.pic-printing .pic-doc {
-    position: fixed;
-    left: 0;
-    top: 0;
+  body.pic-printing .pic-print-root .pic-doc {
     box-shadow: none;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-
-  body.pic-printing .pic-zoom {
-    transform: none !important;
   }
 }

@@ -100,12 +100,20 @@ function ExportPicBody({ onCancel, plan, goals, patientName }: Props) {
 
   const zoomBy = (delta: number) => setZoom((z) => Math.min(2, Math.max(0.5, Math.round((z + delta) * 10) / 10)));
 
+  // Imprime uma cópia da folha, direto no `body`: o resto da página sai do
+  // layout (`display: none`) e não sobra página em branco depois da folha.
   function download() {
+    if (!doc.current) return;
     const previous = document.title;
+    const root = document.createElement("div");
+    root.className = "pic-print-root";
+    root.appendChild(doc.current.cloneNode(true));
+    document.body.appendChild(root);
     document.title = `PIC - ${patientName}`;
     document.body.classList.add("pic-printing");
     const done = () => {
       document.body.classList.remove("pic-printing");
+      root.remove();
       document.title = previous;
       window.removeEventListener("afterprint", done);
     };
