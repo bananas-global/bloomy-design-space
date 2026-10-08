@@ -4,8 +4,7 @@
  * e envio). "Próximo" só avança com o passo completo; "Enviar" volta ao
  * primeiro passo com pendência.
  *
- * `modal/1` com `input/1`, `radio_group/1` e `file_uploader/1`. O indicador de
- * passos é novo: não há um no sistema.
+ * `modal/1` com `steps/1`, `input/1`, `radio_group/1` e `file_uploader/1`.
  */
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
@@ -13,8 +12,9 @@ import { RadioGroup } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
 import { Modal } from "../../components/Overlay.js";
+import { Steps } from "../../components/Steps.js";
 import { FORM_STEPS, L, formFor, opts, stepErrors, validateForm, type Role, type SmForm } from "./model.js";
-import { SmUploader, cx } from "./parts.js";
+import { SmUploader } from "./parts.js";
 
 export function NovaSolicitacao({ show, role, onClose, onSubmit }: { show: boolean; role: Role; onClose: () => void; onSubmit: (form: SmForm) => void }) {
   return (
@@ -66,35 +66,10 @@ function Wizard({ role, onClose, onSubmit }: { role: Role; onClose: () => void; 
 
   return (
     <div className="space-y-6">
-      <ol className="grid grid-cols-2 gap-2 md:grid-cols-4">
-        {FORM_STEPS.map((s, i) => {
-          const cur = i === step;
-          const bad = tried && s.keys.some((k) => all[k]);
-          const done = !cur && i < step && !s.keys.some((k) => all[k]);
-          return (
-            <li key={s.label}>
-              <button
-                type="button"
-                onClick={() => setStep(i)}
-                className={cx(
-                  "flex w-full items-center gap-2 border-b-4 pb-2.5 text-left",
-                  bad ? "border-red" : cur || done ? "border-brand-blue" : "border-neutral-100",
-                )}
-              >
-                <span
-                  className={cx(
-                    "inline-flex h-6.5 w-6.5 flex-none items-center justify-center rounded-full text-xs font-black",
-                    bad ? "bg-red-light text-red-dark" : cur ? "bg-brand-blue text-white" : done ? "bg-blue-light text-blue-dark" : "bg-brand-purple-dark/6 text-brand-purple-dark/60",
-                  )}
-                >
-                  {done ? <Icon name="fa-check" type="solid" /> : i + 1}
-                </span>
-                <span className={cx("text-sm font-extrabold leading-tight", cur ? "text-brand-purple-dark" : "text-brand-purple-dark/60")}>{s.label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      <div className="space-y-2 text-center">
+        <Steps stepCount={FORM_STEPS.length} current={step + 1} />
+        <p className="font-bold text-brand-purple-dark">{FORM_STEPS[step]!.label}</p>
+      </div>
 
       {step === 0 && (
         <div className="space-y-8">

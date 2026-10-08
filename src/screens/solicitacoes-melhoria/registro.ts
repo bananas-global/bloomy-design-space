@@ -7,7 +7,7 @@ import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, MANAGE_CONTROLS, MANAGE
 const HUB_COMPONENTS = [
   "layout.backoffice", "core.card-tabs", "core.header", "core.button", "core.card", "core.inside-card", "core.progress",
   "core.table", "core.simple-table", "core.tag", "core.input", "core.custom-select", "core.radio-selector",
-  "core.empty-state-card", "core.modal", "core.radio-group", "core.file-uploader", "core.item", "core.notification",
+  "core.empty-state-card", "core.modal", "core.steps", "core.radio-group", "core.file-uploader", "core.item", "core.notification",
   "core.breadcrumbs", "core.toast-wrapper", "core.error",
 ];
 
@@ -122,7 +122,8 @@ export const feature: Feature = {
       intent: "O formulário de 16 perguntas em quatro passos, aberto pelo solicitante.",
       expected: [
         "Identificação já vem com nome, contato, área e unidade de quem abre.",
-        "\"Próximo\" não avança com campo obrigatório vazio: marca o passo em vermelho e conta as pendências.",
+        "Indicador de etapas com `steps/1` e o nome do passo embaixo.",
+        "\"Próximo\" não avança com campo obrigatório vazio: marca os campos e conta as pendências no rodapé.",
         "\"Como você contorna essa situação hoje?\" é obrigatório, com a explicação do porquê.",
         "Com prazo \"Sim\", pede os detalhes da data limite.",
         "Enviar exige confirmar que não há dados de pacientes; cria a SM em triagem, notifica o PMO e abre o detalhe.",
