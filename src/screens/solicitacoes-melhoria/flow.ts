@@ -1,11 +1,14 @@
 /**
  * Solicitações de melhoria — as rotas e os controles das telas.
  *
- * Duas telas: a central (`/backoffice/solicitacoes-de-melhoria`, com as abas
- * Painel executivo, Solicitações e Ideias e o modal Nova solicitação) e o
- * detalhe de uma SM (`/backoffice/solicitacoes-de-melhoria/:id`). O papel no
- * fluxo (PMO, Solicitante ou Tech) é um controle das duas: no protótipo era o
- * seletor "Visualizar como" do cabeçalho.
+ * Três telas, sem item no menu lateral:
+ * - Minhas solicitações (`/backoffice/solicitacoes-de-melhoria`): qualquer
+ *   colaborador, pelo item "Solicitações de melhoria" do menu do usuário. Abas
+ *   Minhas solicitações e Ideias, e o modal Nova solicitação.
+ * - Gestão (`…/gestao`): só PMO e Tech, por URL. Abas Painel executivo,
+ *   Solicitações (lista ou kanban) e Ideias. Sem a permissão, a tela barra.
+ * - Detalhe (`…/:id`): a mesma SM para os três papéis, cada um com o que pode
+ *   fazer na etapa.
  *
  * `useControlledState` é o mesmo de `crm/flow.ts` e `documentos-unidade/flow.ts`
  * (branches ainda fora da `main`). Quando estiverem na `main`, pode ir para um
@@ -20,36 +23,35 @@ export type Controls = Record<string, string>;
 export const FLOW = "Solicitações de melhoria";
 
 export const PATH = "/backoffice/solicitacoes-de-melhoria";
+export const MANAGE_PATH = `${PATH}/gestao`;
 export const DETAIL_PATH = `${PATH}/:id`;
 export const detailPath = (id: string) => `${PATH}/${id}`;
+
+/** Para onde "Voltar" leva cada papel: o solicitante às dele, PMO e Tech à gestão. */
+export const homeOf = (role: Role) => (role === "solicitante" ? PATH : MANAGE_PATH);
 
 /** A SM que o detalhe abre sem cenário: a que está na triagem, com comentários. */
 export const DEFAULT_SM = "SM-008";
 
-export const ROLE_CONTROL: ControlGroup = {
+const roleControl = (note: string, options: { value: Role; label: string }[]): ControlGroup => ({
   id: "papel",
   title: "Papel no fluxo",
-  note: "Quem está usando a tela. Não é um papel do Bloomy: qualquer colaborador abre SM; PMO e Tech são da governança.",
-  controls: [
-    {
-      id: "papel",
-      label: "Visualizar como",
-      options: [
-        { value: "pmo", label: "PMO" },
-        { value: "solicitante", label: "Solicitante" },
-        { value: "tech", label: "Tech" },
-      ],
-    },
-  ],
-};
+  note,
+  controls: [{ id: "papel", label: "Visualizar como", options }],
+});
 
 export const roleOf = (controls: Controls): Role =>
   controls.papel === "solicitante" || controls.papel === "tech" ? controls.papel : "pmo";
 
 export type TabId = "painel" | "solicitacoes" | "ideias";
+export type Area = "mine" | "manage";
 
-/** As abas da central por papel, na ordem: a primeira é a de abertura. */
-export const TABS: Record<Role, { id: TabId; title: string }[]> = {
+/** As abas de cada tela, na ordem: a primeira é a de abertura. */
+export const TABS: Record<"mine" | "pmo" | "tech", { id: TabId; title: string }[]> = {
+  mine: [
+    { id: "solicitacoes", title: "Minhas solicitações" },
+    { id: "ideias", title: "Ideias" },
+  ],
   pmo: [
     { id: "painel", title: "Painel executivo" },
     { id: "solicitacoes", title: "Solicitações" },
@@ -59,19 +61,55 @@ export const TABS: Record<Role, { id: TabId; title: string }[]> = {
     { id: "solicitacoes", title: "Solicitações" },
     { id: "painel", title: "Painel executivo" },
   ],
-  solicitante: [
-    { id: "solicitacoes", title: "Minhas solicitações" },
-    { id: "ideias", title: "Ideias" },
+};
+
+const NOVA_CONTROL: ControlGroup = {
+  id: "nova",
+  title: "Nova solicitação · modal",
+  component: "core.modal",
+  note: "O formulário de 16 perguntas em quatro passos.",
+  controls: [
+    {
+      id: "nova",
+      label: "Modal",
+      options: [
+        { value: "fechado", label: "Fechado" },
+        { value: "aberto", label: "Aberto" },
+      ],
+    },
   ],
 };
 
-export const HUB_CONTROLS: ControlGroup[] = [
-  ROLE_CONTROL,
+export const MINE_CONTROLS: ControlGroup[] = [
   {
     id: "aba",
     title: "Aba · card_tabs",
     component: "core.card-tabs",
-    note: "PMO: Painel executivo, Solicitações e Ideias. Tech: Solicitações e Painel. Solicitante: Minhas solicitações e Ideias.",
+    controls: [
+      {
+        id: "aba",
+        label: "Aba",
+        options: [
+          { value: "solicitacoes", label: "Minhas solicitações" },
+          { value: "ideias", label: "Ideias" },
+        ],
+      },
+    ],
+  },
+  NOVA_CONTROL,
+];
+
+export const MANAGE_CONTROLS: ControlGroup[] = [
+  roleControl("Quem abre a URL da gestão. Sem a permissão (um solicitante que recebeu o link), a tela barra e leva às solicitações dele.", [
+    { value: "pmo", label: "PMO" },
+    { value: "tech", label: "Tech" },
+    { value: "solicitante", label: "Sem acesso (solicitante)" },
+  ]),
+  {
+    id: "aba",
+    title: "Aba · card_tabs",
+    component: "core.card-tabs",
+    note: "PMO: Painel executivo, Solicitações e Ideias. Tech: Solicitações e Painel executivo.",
     controls: [
       {
         id: "aba",
@@ -100,25 +138,16 @@ export const HUB_CONTROLS: ControlGroup[] = [
       },
     ],
   },
-  {
-    id: "nova",
-    title: "Nova solicitação · modal",
-    component: "core.modal",
-    note: "O formulário de 16 perguntas em quatro passos.",
-    controls: [
-      {
-        id: "nova",
-        label: "Modal",
-        options: [
-          { value: "fechado", label: "Fechado" },
-          { value: "aberto", label: "Aberto" },
-        ],
-      },
-    ],
-  },
+  { ...NOVA_CONTROL, note: "O PMO também registra em nome de quem pediu por outro canal." },
 ];
 
-export const DETAIL_CONTROLS: ControlGroup[] = [ROLE_CONTROL];
+export const DETAIL_CONTROLS: ControlGroup[] = [
+  roleControl("Quem abre a SM. Cada papel vê o que pode fazer na etapa atual.", [
+    { value: "pmo", label: "PMO" },
+    { value: "solicitante", label: "Solicitante" },
+    { value: "tech", label: "Tech" },
+  ]),
+];
 
 /**
  * Põe a aba da central em `?sm_tab=sm|<slug>`, sobrescrevendo a que estiver lá.

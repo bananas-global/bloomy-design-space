@@ -1,7 +1,7 @@
 import type { Feature } from "../../app/features.js";
-import { ImprovementRequest, ImprovementRequests } from "../SolicitacoesMelhoria.js";
+import { ImprovementRequest, ImprovementRequestsManagement, MyImprovementRequests } from "../SolicitacoesMelhoria.js";
 import { SM_FIXTURES } from "./fixtures.js";
-import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, HUB_CONTROLS, PATH, detailPath } from "./flow.js";
+import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, MANAGE_CONTROLS, MANAGE_PATH, MINE_CONTROLS, PATH, detailPath } from "./flow.js";
 
 /** Componentes do catálogo que a central usa. */
 const HUB_COMPONENTS = [
@@ -19,8 +19,10 @@ const DETAIL_COMPONENTS = [
   "core.breadcrumbs", "core.toast-wrapper",
 ];
 
-const hub = (s: { id: string; title: string; controls: Record<string, string>; intent: string; expected: string[]; fixture?: string }) => ({
-  route: PATH,
+type HubScenario = { id: string; title: string; controls: Record<string, string>; intent: string; expected: string[]; fixture?: string };
+
+const hub = (route: string) => (s: HubScenario) => ({
+  route,
   fixture: s.fixture ?? "sm.base",
   persona: "admin",
   components: HUB_COMPONENTS,
@@ -39,10 +41,13 @@ const detail = (s: { id: string; title: string; sm: string; papel?: string; inte
   components: DETAIL_COMPONENTS,
 });
 
-/** Solicitações de melhoria: a central, o detalhe e um atalho por etapa do fluxo. */
+const mine = hub(PATH);
+const manage = hub(MANAGE_PATH);
+
+/** Solicitações de melhoria: Minhas solicitações, a gestão, o detalhe e um atalho por etapa do fluxo. */
 export const feature: Feature = {
   scenarios: [
-    hub({
+    manage({
       id: "sm.painel",
       title: "Painel executivo (PMO)",
       controls: { papel: "pmo", aba: "painel" },
@@ -54,7 +59,7 @@ export const feature: Feature = {
         "Fila priorizada do backlog: as cinco primeiras por prioridade e score, entre backlog, cenários, modelagem e desenvolvimento. Clicar abre o detalhe.",
       ],
     }),
-    hub({
+    manage({
       id: "sm.lista",
       title: "Solicitações em lista",
       controls: { papel: "pmo", aba: "solicitacoes", view: "lista" },
@@ -66,7 +71,7 @@ export const feature: Feature = {
         "Clicar numa linha abre o detalhe.",
       ],
     }),
-    hub({
+    manage({
       id: "sm.kanban",
       title: "Kanban do fluxo (Tech)",
       controls: { papel: "tech", aba: "solicitacoes", view: "kanban" },
@@ -78,21 +83,31 @@ export const feature: Feature = {
         "A Tech não tem Ideias nem Nova solicitação.",
       ],
     }),
-    hub({
+    manage({
+      id: "sm.sem-acesso",
+      title: "Gestão sem acesso",
+      controls: { papel: "solicitante" },
+      intent: "Um solicitante que recebeu o link da gestão: a URL não basta, a permissão é que libera.",
+      expected: [
+        "\"Você não tem acesso à gestão de melhorias\", com o botão para as solicitações dele.",
+        "Nenhum dado da base aparece.",
+      ],
+    }),
+    mine({
       id: "sm.minhas",
       title: "Minhas solicitações (Solicitante)",
-      controls: { papel: "solicitante", aba: "solicitacoes", view: "lista" },
-      intent: "Carla Mendes, da recepção de Santana, vê só as SMs que abriu.",
+      controls: { aba: "solicitacoes" },
+      intent: "Carla Mendes, da recepção de Santana, chega pelo item Solicitações de melhoria do menu do usuário e vê só as SMs que abriu.",
       expected: [
-        "Duas SMs: SM-009 (Em triagem) e SM-002 (Concluída).",
-        "Abas Minhas solicitações e Ideias; sem Exportar base.",
+        "No menu do usuário, \"Solicitações de melhoria\" entre Meu perfil e Base de Conhecimento, para qualquer colaborador.",
+        "Duas SMs: SM-009 (Em triagem) e SM-002 (Concluída), em lista; sem kanban nem Exportar base.",
         "No sino, \"Aceite pendente\" da SM-006 e o pedido de esclarecimento da SM-008, já lido.",
       ],
     }),
-    hub({
+    mine({
       id: "sm.ideias",
       title: "Votação em ideias",
-      controls: { papel: "solicitante", aba: "ideias" },
+      controls: { aba: "ideias" },
       intent: "As SMs em andamento por número de apoios, para apoiar as que também afetam a sua rotina.",
       expected: [
         "Concluídas, recusadas e canceladas não aparecem.",
@@ -100,10 +115,10 @@ export const feature: Feature = {
         "Os apoios não mudam o score.",
       ],
     }),
-    hub({
+    mine({
       id: "sm.nova",
       title: "Nova solicitação",
-      controls: { papel: "solicitante", aba: "solicitacoes", nova: "aberto" },
+      controls: { aba: "solicitacoes", nova: "aberto" },
       intent: "O formulário de 16 perguntas em quatro passos, aberto pelo solicitante.",
       expected: [
         "Identificação já vem com nome, contato, área e unidade de quem abre.",
@@ -113,7 +128,7 @@ export const feature: Feature = {
         "Enviar exige confirmar que não há dados de pacientes; cria a SM em triagem, notifica o PMO e abre o detalhe.",
       ],
     }),
-    hub({
+    manage({
       id: "sm.vazio",
       title: "Base de SMs vazia",
       fixture: "sm.empty",
@@ -214,16 +229,32 @@ export const feature: Feature = {
   routes: [
     {
       path: PATH,
-      screen: ImprovementRequests,
-      name: "Solicitações de melhoria",
+      screen: MyImprovementRequests,
+      name: "Minhas solicitações",
       group: FLOW,
-      description: "A central de SMs: painel executivo, a base em lista ou kanban, a votação em ideias e a abertura de uma nova solicitação.",
-      controls: HUB_CONTROLS,
+      description: "Para qualquer colaborador, pelo menu do usuário: as SMs que abriu, a votação em ideias e a abertura de uma nova solicitação.",
+      controls: MINE_CONTROLS,
       expected: [
-        "As abas mudam com o papel: PMO vê Painel executivo, Solicitações e Ideias; Tech, Solicitações e Painel; o solicitante, Minhas solicitações e Ideias.",
+        "Entrada pelo item \"Solicitações de melhoria\" do menu do usuário; sem item no menu lateral.",
+        "Abas Minhas solicitações (só as da pessoa, em lista) e Ideias.",
         "Nova solicitação abre o formulário de 16 perguntas em quatro passos.",
+        "O sino mostra as notificações da pessoa; clicar abre a SM.",
+      ],
+      components: HUB_COMPONENTS,
+    },
+    {
+      path: MANAGE_PATH,
+      screen: ImprovementRequestsManagement,
+      name: "Gestão de melhorias",
+      group: FLOW,
+      description: "Para PMO e Tech, por URL: painel executivo, a base em lista ou kanban e a votação em ideias.",
+      controls: MANAGE_CONTROLS,
+      expected: [
+        "Sem item em menu: PMO e Tech chegam pela URL ou pelas notificações.",
+        "PMO vê Painel executivo, Solicitações e Ideias; Tech, Solicitações (no kanban) e Painel executivo.",
+        "Sem a permissão, a tela barra e leva às solicitações da pessoa.",
+        "O PMO também registra uma nova solicitação em nome de quem pediu por outro canal.",
         "Exportar base baixa um CSV com separador ;.",
-        "O sino mostra as notificações do papel; clicar abre a SM.",
       ],
       components: HUB_COMPONENTS,
     },
@@ -240,6 +271,7 @@ export const feature: Feature = {
         "O fluxo marca os passos feitos, o atual e os que não se aplicam ao caminho escolhido.",
         "Comentar notifica os outros dois papéis; anexar evidência registra no histórico.",
         "O solicitante pode cancelar a própria SM enquanto ela está em triagem ou priorização.",
+        "Voltar leva o solicitante às solicitações dele, e PMO e Tech à gestão.",
       ],
       components: DETAIL_COMPONENTS,
     },

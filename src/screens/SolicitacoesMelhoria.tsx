@@ -2,9 +2,10 @@
  * Solicitações de melhoria (SM) — proposta nova, sem equivalente no Phoenix.
  *
  * Trazido do protótipo `Solicitações de Melhoria v2` do Claude Design para os
- * componentes do sistema. Duas telas (`solicitacoes-melhoria/flow.ts`):
- * - Central: moldura do backoffice com as `card_tabs` Painel executivo,
- *   Solicitações (lista ou kanban) e Ideias, e o modal Nova solicitação.
+ * componentes do sistema. Três telas, sem item no menu lateral
+ * (`solicitacoes-melhoria/flow.ts`):
+ * - Minhas solicitações: qualquer colaborador, pelo menu do usuário.
+ * - Gestão: PMO e Tech, por URL; sem a permissão, barra.
  * - Detalhe: a SM com a etapa atual, a governança, as respostas, o fluxo e o
  *   histórico.
  *
@@ -22,8 +23,8 @@ import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { Detalhe } from "./solicitacoes-melhoria/Detalhe.js";
 import type { SmNotification } from "./solicitacoes-melhoria/fixtures.js";
 import {
-  HUB_CONTROLS, PATH, TABS, detailPath, roleOf, setTrackedTab, useControlledState,
-  type Controls, type TabId,
+  MANAGE_CONTROLS, MINE_CONTROLS, PATH, TABS, detailPath, homeOf, roleOf, setTrackedTab, useControlledState,
+  type Area, type Controls, type TabId,
 } from "./solicitacoes-melhoria/flow.js";
 import { Ideias } from "./solicitacoes-melhoria/Ideias.js";
 import { PRIO, STATUS, TODAY_BR, USERS, daysFromToday, fmt, prioOf, routeText, scoreOf, type Role, type Sm } from "./solicitacoes-melhoria/model.js";
@@ -57,53 +58,83 @@ const notificationsOf = (list: SmNotification[], role: Role): UserNotification[]
       onClickUrl: detailPath(n.smId),
     }));
 
-/** O que cada papel vê da base: o solicitante, só as dele. */
-const visibleTo = (sms: Sm[], role: Role) => (role === "solicitante" ? sms.filter((s) => s.requester === USERS.solicitante.name) : sms);
-
-/** O contexto da moldura: navegar leva o papel junto. */
+/**
+ * O contexto da moldura: o detalhe e a gestão recebem o papel; Minhas
+ * solicitações não tem esse controle.
+ */
 function layoutContext(context: ScenarioContext, role: Role) {
-  return { ...context, navigate: (to: string) => context.navigate(to, { controls: { papel: role } }) };
+  return {
+    ...context,
+    navigate: (to: string) => (to === PATH ? context.navigate(to) : context.navigate(to, { controls: { papel: role } })),
+  };
+}
+
+/** A moldura das telas de SM: backoffice com o item do menu do usuário. */
+function SmLayout({ context, role, breadcrumbs, notifications, children }: {
+  context: ScenarioContext;
+  role: Role;
+  breadcrumbs: { label: string; to?: string }[];
+  notifications: SmNotification[];
+  children: ReactNode;
+}) {
+  return (
+    <BackofficeLayout
+      key={role}
+      context={layoutContext(context, role)}
+      currentPath={PATH}
+      breadcrumbs={breadcrumbs}
+      currentUser={userOf(role)}
+      notifications={notificationsOf(notifications, role)}
+      improvementRequests
+    >
+      {children}
+    </BackofficeLayout>
+  );
 }
 
 /* ============================================================
-   Central
+   Minhas solicitações e Gestão
    ============================================================ */
 
 type HubState = { tab: TabId; view: View; nova: boolean; filters: Filters };
 
-const tabsOf = (role: Role) => TABS[role];
-const validTab = (role: Role, tab: string | undefined): TabId => {
-  const list = tabsOf(role);
-  return (list.find((t) => t.id === tab) ?? list[0]!).id;
-};
+const tabsOf = (area: Area, role: Role) => TABS[area === "mine" ? "mine" : role === "tech" ? "tech" : "pmo"];
 
-function hubSeed(c: Controls, prev?: HubState, changed?: string[]): HubState {
-  const role = roleOf(c);
-  const fresh: HubState = {
-    tab: validTab(role, c.aba),
-    view: c.view === "kanban" || (!c.view && role === "tech") ? "kanban" : "lista",
-    nova: c.nova === "aberto",
-    filters: EMPTY_FILTERS,
+function hubOptions(area: Area) {
+  const roleIn = (c: Controls): Role => (area === "mine" ? "solicitante" : roleOf(c));
+  const seed = (c: Controls, prev?: HubState, changed?: string[]): HubState => {
+    const role = roleIn(c);
+    const tabs = tabsOf(area, role);
+    const fresh: HubState = {
+      tab: (tabs.find((t) => t.id === c.aba) ?? tabs[0]!).id,
+      view: c.view === "kanban" || (!c.view && role === "tech") ? "kanban" : "lista",
+      nova: c.nova === "aberto",
+      filters: EMPTY_FILTERS,
+    };
+    if (!prev || !changed) return fresh;
+    return {
+      tab: changed.includes("aba") || changed.includes("papel") ? fresh.tab : prev.tab,
+      view: changed.includes("view") ? fresh.view : prev.view,
+      nova: changed.includes("nova") ? fresh.nova : prev.nova,
+      filters: prev.filters,
+    };
   };
-  if (!prev || !changed) return fresh;
-  return {
-    tab: changed.includes("aba") || changed.includes("papel") ? fresh.tab : prev.tab,
-    view: changed.includes("view") ? fresh.view : prev.view,
-    nova: changed.includes("nova") ? fresh.nova : prev.nova,
-    filters: prev.filters,
-  };
+  const derive = (s: HubState, c: Controls): Controls =>
+    area === "mine"
+      ? { aba: s.tab, nova: s.nova ? "aberto" : "fechado" }
+      : { papel: roleIn(c), aba: s.tab, view: s.view, nova: s.nova ? "aberto" : "fechado" };
+  return { groups: area === "mine" ? MINE_CONTROLS : MANAGE_CONTROLS, seed, derive, roleIn };
 }
 
-function hubDerive(s: HubState, c: Controls): Controls {
-  return { papel: roleOf(c), aba: s.tab, view: s.view, nova: s.nova ? "aberto" : "fechado" };
-}
+const HUB = { mine: hubOptions("mine"), manage: hubOptions("manage") };
 
-function HubScreen({ context }: { context: ScenarioContext }) {
-  const role = roleOf(context.controls);
+function HubScreen({ context, area }: { context: ScenarioContext; area: Area }) {
+  const options = HUB[area];
+  const role = options.roleIn(context.controls);
   const data = useSmData(context);
-  const [state, setState] = useControlledState<HubState>(context, { groups: HUB_CONTROLS, seed: hubSeed, derive: hubDerive });
+  const [state, setState] = useControlledState<HubState>(context, options);
 
-  const tabs = tabsOf(role);
+  const tabs = tabsOf(area, role);
   const active = tabs.find((t) => t.id === state.tab) ?? tabs[0]!;
   // A aba vai para a URL antes de as `card_tabs` montarem, mas só quando muda
   // aqui (controle ou papel): no clique, quem escreve a URL é a própria aba.
@@ -121,7 +152,22 @@ function HubScreen({ context }: { context: ScenarioContext }) {
   }, [tracked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const open = (s: Sm) => context.navigate(detailPath(s.id), { controls: { papel: role } });
-  const sms = visibleTo(data.sms, role);
+  const sms = area === "mine" ? data.sms.filter((s) => s.requester === USERS.solicitante.name) : data.sms;
+  const title = area === "mine" ? "Solicitações de melhoria" : "Gestão de melhorias";
+  const crumbs = [{ label: title }, { label: active.title }];
+
+  if (area === "manage" && role === "solicitante") {
+    return (
+      <SmLayout context={context} role={role} breadcrumbs={[{ label: title }]} notifications={data.notifications}>
+        <Card>
+          <EmptyStateCard icon="fa-lock" text="Você não tem acesso à gestão de melhorias">
+            <p>A gestão é do PMO e da Tech. Suas solicitações estão em Solicitações de melhoria, no menu do seu usuário.</p>
+            <Button type="button" className="mx-auto mt-4" onClick={() => context.navigate(PATH)}>Ver minhas solicitações</Button>
+          </EmptyStateCard>
+        </Card>
+      </SmLayout>
+    );
+  }
 
   const content: Record<TabId, { noCard?: boolean; node: ReactNode }> = {
     painel: { noCard: true, node: <Painel sms={data.sms} onOpen={open} /> },
@@ -130,8 +176,8 @@ function HubScreen({ context }: { context: ScenarioContext }) {
         <Solicitacoes
           sms={sms}
           all={data.sms}
-          view={state.view}
-          onView={(view) => setState((s) => ({ ...s, view }))}
+          view={area === "mine" ? "lista" : state.view}
+          onView={area === "mine" ? undefined : (view) => setState((s) => ({ ...s, view }))}
           filters={state.filters}
           onFilters={(filters) => setState((s) => ({ ...s, filters }))}
           onOpen={open}
@@ -141,21 +187,15 @@ function HubScreen({ context }: { context: ScenarioContext }) {
     ideias: { noCard: true, node: <Ideias sms={data.sms} onOpen={open} /> },
   };
 
-  const subtitle = {
-    pmo: "Triagem, priorização, backlog e ganhos das solicitações de mudança e melhoria.",
-    tech: "A fila de parametrização e desenvolvimento e a homologação das entregas.",
-    solicitante: "Abra uma solicitação, acompanhe o andamento e apoie as ideias dos colegas.",
-  }[role];
+  const subtitle =
+    area === "mine"
+      ? "Abra uma solicitação, acompanhe o andamento e apoie as ideias dos colegas."
+      : role === "tech"
+        ? "A fila de parametrização e desenvolvimento e a homologação das entregas."
+        : "Triagem, priorização, backlog e ganhos das solicitações de mudança e melhoria.";
 
   return (
-    <BackofficeLayout
-      key={role}
-      context={layoutContext(context, role)}
-      currentPath={PATH}
-      breadcrumbs={[{ label: "Solicitações de melhoria" }, { label: active.title }]}
-      currentUser={userOf(role)}
-      notifications={notificationsOf(data.notifications, role)}
-    >
+    <SmLayout context={context} role={role} breadcrumbs={crumbs} notifications={data.notifications}>
       <CardTabs
         key={`${role}-${active.id}`}
         id={TABS_ID}
@@ -167,7 +207,7 @@ function HubScreen({ context }: { context: ScenarioContext }) {
             subtitle={subtitle}
             actions={
               <div className="flex flex-wrap gap-3">
-                {role !== "solicitante" && (
+                {area === "manage" && (
                   <Button type="button" variant="outline" leftIcon="fa-file-export" onClick={() => exportCsv(data.sms)}>
                     Exportar base (.csv)
                   </Button>
@@ -180,7 +220,7 @@ function HubScreen({ context }: { context: ScenarioContext }) {
               </div>
             }
           >
-            Solicitações de melhoria
+            {title}
           </Header>
         }
       />
@@ -195,7 +235,7 @@ function HubScreen({ context }: { context: ScenarioContext }) {
           context.navigate(detailPath(id), { controls: { papel: role } });
         }}
       />
-    </BackofficeLayout>
+    </SmLayout>
   );
 }
 
@@ -218,9 +258,14 @@ function exportCsv(sms: Sm[]) {
   showToast({ title: "Base exportada", content: `${sms.length} SMs em CSV (separador ;).`, type: "success", closeTime: 4000 });
 }
 
-export function ImprovementRequests({ context }: ScreenProps) {
+export function MyImprovementRequests({ context }: ScreenProps) {
   if (context.isLoading) return null;
-  return <HubScreen context={context} />;
+  return <HubScreen context={context} area="mine" />;
+}
+
+export function ImprovementRequestsManagement({ context }: ScreenProps) {
+  if (context.isLoading) return null;
+  return <HubScreen context={context} area="manage" />;
 }
 
 /* ============================================================
@@ -231,17 +276,12 @@ function DetailScreen({ context, id }: { context: ScenarioContext; id: string })
   const role = roleOf(context.controls);
   const data = useSmData(context);
   const s = data.sms.find((x) => x.id === id);
-  const back = () => context.navigate(PATH, { controls: { papel: role } });
+  const home = homeOf(role);
+  const back = () => (home === PATH ? context.navigate(PATH) : context.navigate(home, { controls: { papel: role } }));
+  const crumb = home === PATH ? "Solicitações de melhoria" : "Gestão de melhorias";
 
   return (
-    <BackofficeLayout
-      key={role}
-      context={layoutContext(context, role)}
-      currentPath={PATH}
-      breadcrumbs={[{ label: "Solicitações de melhoria", to: PATH }, { label: id }]}
-      currentUser={userOf(role)}
-      notifications={notificationsOf(data.notifications, role)}
-    >
+    <SmLayout context={context} role={role} breadcrumbs={[{ label: crumb, to: home }, { label: id }]} notifications={data.notifications}>
       {s ? (
         <Detalhe s={s} role={role} onBack={back} />
       ) : (
@@ -251,7 +291,7 @@ function DetailScreen({ context, id }: { context: ScenarioContext; id: string })
           </EmptyStateCard>
         </Card>
       )}
-    </BackofficeLayout>
+    </SmLayout>
   );
 }
 

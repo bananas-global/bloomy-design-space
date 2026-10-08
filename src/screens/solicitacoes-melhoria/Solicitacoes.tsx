@@ -48,7 +48,8 @@ export function Solicitacoes({
   /** Todas, para o kanban contar as recusadas. */
   all: Sm[];
   view: View;
-  onView: (view: View) => void;
+  /** Sem ele, só a lista (Minhas solicitações). */
+  onView?: (view: View) => void;
   filters: Filters;
   onFilters: (f: Filters) => void;
   onOpen: (s: Sm) => void;
@@ -62,19 +63,19 @@ export function Solicitacoes({
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <p className="text-brand-purple-dark/80">{rows.length} solicitações</p>
         <div className="flex items-center gap-3">
-          {view === "kanban" && rejected > 0 && (
+          {onView && view === "kanban" && rejected > 0 && (
             <Button type="button" variant="tint" color="red" size="medium" leftIcon="fa-ban" onClick={() => { onView("lista"); set({ status: "rejeitada" }); }}>
               Ver recusadas ({rejected})
             </Button>
           )}
-          <RadioSelector
+          {onView && <RadioSelector
             field={{ id: "sm_view", name: "sm_view", value: view }}
             radio={[
               { value: "lista", icon: "fa-table-list", title: "Lista" },
               { value: "kanban", icon: "fa-table-columns", title: "Kanban" },
             ]}
             onChange={(e) => onView(e.target.value as View)}
-          />
+          />}
         </div>
       </div>
 

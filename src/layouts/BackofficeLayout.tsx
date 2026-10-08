@@ -24,6 +24,9 @@ import { permissionsByRole } from "../personas/permissions.js";
  * `:if` de cada item: por policy (`context.can`) ou pela lista de papéis do
  * layout (`context.persona.id`). Sem `context`, é a visão do Admin.
  * `SignatureNotificationModal` não foi portado.
+ *
+ * Proposta nova: `improvementRequests` põe "Solicitações de melhoria" no menu
+ * do usuário, para qualquer colaborador abrir uma SM. Não existe no HEEx.
  */
 
 export type LayoutContext = Pick<ScenarioContext, "navigate" | "can" | "persona">;
@@ -85,6 +88,7 @@ export function BackofficeLayout({
   now,
   notifications,
   universityEnabled = false,
+  improvementRequests = false,
   flash,
   children,
 }: {
@@ -106,6 +110,8 @@ export function BackofficeLayout({
   notifications?: UserNotification[];
   /** `Bloomy.University.enabled?()`. */
   universityEnabled?: boolean;
+  /** Proposta nova: o item "Solicitações de melhoria" no menu do usuário. */
+  improvementRequests?: boolean;
   /** Onde o `flash_group/1` do layout fica. */
   flash?: ReactNode;
   children: ReactNode;
@@ -260,6 +266,20 @@ export function BackofficeLayout({
                           <a {...link("/backoffice/perfil")} className={ITEM_LINK_V4}>
                             <Icon name="fa-user" className="mr-2 w-4" />
                             <span>Meu perfil</span>
+                          </a>
+                        )}
+
+                        {improvementRequests && (
+                          <a
+                            href="/backoffice/solicitacoes-de-melhoria"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              navigate("/backoffice/solicitacoes-de-melhoria");
+                            }}
+                            className={ITEM_LINK_V4}
+                          >
+                            <Icon name="fa-lightbulb" className="mr-2 w-4" />
+                            <span>Solicitações de melhoria</span>
                           </a>
                         )}
 
