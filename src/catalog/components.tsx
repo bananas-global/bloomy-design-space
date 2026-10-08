@@ -24,7 +24,6 @@ import { ButtonTabs, CardTabs, DropdownTabs, LazyTabs, Tabs, useTrackedTab } fro
 import { Breadcrumbs, Drawer, FormGrid, Timer } from "../components/BackofficeComponents.js";
 import { Pagination } from "../components/Pagination.js";
 import { NotificationComponent } from "../components/Notification.js";
-import { Steps } from "../components/Steps.js";
 
 /**
  * Índice dos componentes do sistema.
@@ -854,20 +853,6 @@ export const GALLERY: GalleryEntry[] = [
       },
     ],
   },
-  { name: "steps", origem: "custom_services/components/common_components.ex → steps/1", descricao: "Indicador de etapas: a atual vira uma pílula \"Etapa N\", as outras ficam como círculos numerados. Fora do core: hoje só o carrossel de etapas do atendimento usa.",
-    demos: [
-      {
-        titulo: "Etapa atual e sem etapa marcada",
-        nota: "No Phoenix quem marca a etapa atual é o hook `Carrousel`; aqui é `current`. Sem ele, como no HEEx, nenhuma fica ativa.",
-        render: () => (
-          <div className="space-y-4">
-            <Steps stepCount={4} current={2} />
-            <Steps stepCount={4} />
-          </div>
-        ),
-      },
-    ],
-  },
   { name: "progress", origem: "core_components.ex → progress/1", descricao: "Barra de progresso.",
     demos: [
       {
@@ -1072,7 +1057,6 @@ const GROUP_OF: Record<string, string> = {
   pagination: "Dados",
   timeline_list: "Dados",
   progress: "Dados",
-  steps: "Dados",
   avatar: "Dados",
   tag: "Dados",
   tag_list: "Dados",
