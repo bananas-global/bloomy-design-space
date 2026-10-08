@@ -21,9 +21,9 @@ export function StageTag({ status }: { status: StatusId }) {
 /** A prioridade (P0–P4) como `tag/1`; sem notas, "A definir". `full` mostra o nome e o score. */
 export function PrioTag({ sm, full = false }: { sm: Pick<Sm, "scores" | "p0">; full?: boolean }) {
   const p = prioOf(sm);
-  if (!p) return <Tag item={full ? "Sem prioridade" : "A definir"} variant="dark-purple" />;
+  if (!p) return <Tag item={full ? "Sem prioridade" : "A definir"} title="Ainda sem notas do PMO" variant="dark-purple" />;
   const m = PRIO[p];
-  return <Tag item={full ? `${m.full} · ${fmt(scoreOf(sm))} pts` : m.short} variant={TAG_OF[m.tone]} className="whitespace-nowrap" />;
+  return <Tag item={full ? `${m.full} · ${fmt(scoreOf(sm))} pts` : m.short} title={`${m.full} · ${fmt(scoreOf(sm))} pts`} variant={TAG_OF[m.tone]} className="whitespace-nowrap" />;
 }
 
 /** Quadradinho com o ícone de uma etapa, no tom dela. */

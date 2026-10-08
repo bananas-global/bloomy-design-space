@@ -12,7 +12,8 @@ import { RadioSelector } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
 import { Table } from "../../components/Table.js";
-import { L, ORDER, PRIO, STATUS, TONE_CLASS, fmt, opts, prioOf, prioRank, scoreOf, type Sm, type StatusId } from "./model.js";
+import { Tag } from "../../components/Tag.js";
+import { L, ORDER, PRIO, STATUS, TAG_OF, TONE_CLASS, fmt, opts, prioOf, prioRank, scoreOf, type Sm, type StatusId } from "./model.js";
 import { PrioTag, StageTag, cx } from "./parts.js";
 
 export type Filters = { q: string; unit: string; status: string; prio: string };
@@ -60,24 +61,23 @@ export function Solicitacoes({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <p className="text-brand-purple-dark/80">{rows.length} solicitações</p>
-        <div className="flex items-center gap-3">
-          {onView && view === "kanban" && rejected > 0 && (
+      {onView && (
+        <div className="flex items-center justify-end gap-3">
+          {view === "kanban" && rejected > 0 && (
             <Button type="button" variant="tint" color="red" size="medium" leftIcon="fa-ban" onClick={() => { onView("lista"); set({ status: "rejeitada" }); }}>
               Ver recusadas ({rejected})
             </Button>
           )}
-          {onView && <RadioSelector
+          <RadioSelector
             field={{ id: "sm_view", name: "sm_view", value: view }}
             radio={[
               { value: "lista", icon: "fa-table-list", title: "Lista" },
               { value: "kanban", icon: "fa-table-columns", title: "Kanban" },
             ]}
             onChange={(e) => onView(e.target.value as View)}
-          />}
+          />
         </div>
-      </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Input id="sm_filter_q" label="Buscar" leftIcon="fa-magnifying-glass" placeholder="Buscar por código, título ou solicitante" value={filters.q} onChange={(e) => set({ q: e.target.value })} />
@@ -114,6 +114,27 @@ export function Solicitacoes({
       ) : (
         <Board sms={rows} onOpen={onOpen} />
       )}
+
+      <PrioLegend />
+    </div>
+  );
+}
+
+/** A legenda das prioridades, abaixo da lista e do kanban. */
+function PrioLegend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-brand-purple-dark/70">
+      <span className="font-bold">Prioridade</span>
+      {(Object.keys(PRIO) as (keyof typeof PRIO)[]).map((id) => (
+        <span key={id} className="inline-flex items-center gap-1.5">
+          <Tag item={id} variant={TAG_OF[PRIO[id].tone]} />
+          {PRIO[id].full.split("– ")[1]}
+        </span>
+      ))}
+      <span className="inline-flex items-center gap-1.5">
+        <Tag item="A definir" variant="dark-purple" />
+        ainda sem notas do PMO
+      </span>
     </div>
   );
 }

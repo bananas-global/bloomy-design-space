@@ -98,11 +98,6 @@ function Wizard({ role, onClose, onSubmit }: { role: Role; onClose: () => void; 
 
       {step === 0 && (
         <div className="space-y-8">
-          <p className="text-sm text-brand-purple-dark/80">Leva cerca de 5 minutos. Descreva a dor e o resultado esperado — a solução técnica é definida pelo PMO.</p>
-          <div className="flex items-start gap-3 rounded-xl bg-orange-light p-3.5 text-sm text-orange-dark">
-            <Icon name="fa-shield-halved" type="solid" className="mt-0.5" />
-            <p><b>Não inclua dados de pacientes.</b> Nomes, prontuários ou prints com informações sensíveis devem ser anonimizados antes do envio.</p>
-          </div>
           <div className="grid gap-8 md:grid-cols-2">
             <Input label="Nome do solicitante *" {...text("requester")} />
             <Input label="E-mail ou ramal *" {...text("contact")} />

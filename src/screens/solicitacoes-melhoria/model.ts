@@ -309,9 +309,9 @@ export type FormErrors = Partial<Record<keyof SmForm, string>>;
 
 export const FORM_STEPS: { label: string; keys: (keyof SmForm)[] }[] = [
   { label: "Identificação", keys: ["requester", "contact", "area", "unit", "title"] },
-  { label: "Necessidade e contorno", keys: ["need", "asIs", "workaround", "expected"] },
-  { label: "Impacto e urgência", keys: ["audience", "frequency", "impactType", "deadline", "consequence"] },
-  { label: "Evidências e envio", keys: ["lgpd"] },
+  { label: "Necessidade", keys: ["need", "asIs", "workaround", "expected"] },
+  { label: "Impacto", keys: ["audience", "frequency", "impactType", "deadline", "consequence"] },
+  { label: "Evidências", keys: ["lgpd"] },
 ];
 
 export function validateForm(f: SmForm): FormErrors {
