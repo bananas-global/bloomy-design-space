@@ -32,7 +32,7 @@ import {
 import { PRIO, STATUS, TODAY_BR, USERS, daysFromToday, fmt, isMine, prioOf, reachOf, routeText, scoreOf, type Role, type Sm } from "./solicitacoes-melhoria/model.js";
 import { NovaSolicitacao } from "./solicitacoes-melhoria/NovaSolicitacao.js";
 import { Painel } from "./solicitacoes-melhoria/Painel.js";
-import { EMPTY_FILTERS, Solicitacoes, type Filters, type View } from "./solicitacoes-melhoria/Solicitacoes.js";
+import { EMPTY_FILTERS, Solicitacoes, ViewSelector, type Filters, type View } from "./solicitacoes-melhoria/Solicitacoes.js";
 import { sm as actions, useSmData } from "./solicitacoes-melhoria/store.js";
 
 const TRACKER = "sm_tab";
@@ -90,6 +90,18 @@ function SmLayout({ context, role, breadcrumbs, notifications, hideMenu, childre
   hideMenu?: boolean;
   children: ReactNode;
 }) {
+  // Reserva o espaço da barra de rolagem: sem isso, trocar de lista (alta) para
+  // kanban ou cards (que podem caber na tela) faz a barra sumir e a página
+  // inteira alargar 15px. Só nas telas de SM; o CSS global é o do monólito.
+  useEffect(() => {
+    const root = document.documentElement;
+    const prev = root.style.scrollbarGutter;
+    root.style.scrollbarGutter = "stable";
+    return () => {
+      root.style.scrollbarGutter = prev;
+    };
+  }, []);
+
   return (
     <BackofficeLayout
       key={role}
@@ -198,12 +210,12 @@ function HubScreen({ context, area }: { context: ScenarioContext; area: Area }) 
   const list = (
     <Solicitacoes
       sms={visible}
-      all={data.sms}
       role={role}
       view={state.view}
       views={viewsOf(area)}
       onView={(view) => setState((s) => ({ ...s, view }))}
       title={area === "manage"}
+      viewSelector={area === "manage"}
       filters={state.filters}
       onFilters={(filters) => setState((s) => ({ ...s, filters }))}
       onOpen={open}
@@ -222,7 +234,8 @@ function HubScreen({ context, area }: { context: ScenarioContext; area: Area }) 
       variant="large"
       subtitle={subtitle}
       actions={
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {area === "mine" && <ViewSelector view={state.view} views={viewsOf(area)} onView={(view) => setState((s) => ({ ...s, view }))} />}
           {area === "manage" && (
             <Button type="button" variant="outline" leftIcon="fa-file-export" onClick={() => exportCsv(data.sms)}>
               Exportar base (.csv)

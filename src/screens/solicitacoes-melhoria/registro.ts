@@ -7,13 +7,13 @@ import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, MANAGE_CONTROLS, MANAGE
 const HUB_COMPONENTS = [
   "layout.backoffice", "core.card-tabs", "core.header", "core.button", "core.card", "core.inside-card", "core.progress",
   "core.table", "core.simple-table", "core.tag", "core.input", "core.custom-select", "core.radio-selector",
-  "core.empty-state-card", "core.item", "core.notification", "core.breadcrumbs", "core.toast-wrapper", "core.error", "core.modal",
+  "core.empty-state-card", "core.item", "core.notification", "core.breadcrumbs", "core.toast-wrapper", "core.error", "core.drawer-modal",
 ];
 
 /** Componentes do catálogo que a página Nova solicitação usa. */
 const NEW_COMPONENTS = [
   "layout.backoffice", "core.card", "core.button", "core.input", "core.custom-select", "core.radio-group",
-  "core.file-uploader", "core.item", "core.progress", "core.error", "core.breadcrumbs", "core.notification", "core.tag", "core.modal",
+  "core.file-uploader", "core.item", "core.progress", "core.error", "core.breadcrumbs", "core.notification", "core.tag", "core.drawer-modal",
 ];
 
 /** Componentes do catálogo que o detalhe usa. */
@@ -21,7 +21,7 @@ const DETAIL_COMPONENTS = [
   "layout.backoffice", "core.card", "core.header", "core.button", "core.tag", "core.input", "core.custom-select",
   "core.radio-selector", "core.radio-group", "core.checkbox-group", "core.switch-card",
   "core.timeline-list", "core.file-uploader", "core.item", "core.empty-state-card", "core.notification",
-  "core.breadcrumbs", "core.toast-wrapper", "core.modal",
+  "core.breadcrumbs", "core.toast-wrapper", "core.modal", "core.drawer-modal",
 ];
 
 type HubScenario = {
@@ -89,7 +89,7 @@ export const feature: Feature = {
       controls: { papel: "pmo", aba: "painel" },
       intent: "O que o PMO precisa ver: o que está parado, se o fluxo anda, o valor entregue, onde a operação mais sofre e a fila.",
       expected: [
-        "Filtros de período (30 dias, 90 dias, 12 meses) e unidade, aplicados a tudo.",
+        "Sem filtros: os últimos 3 meses (entradas e saídas em 6), todas as unidades.",
         "Precisa de atenção: SM-003 (P0), SM-008 e SM-009 em triagem fora do prazo, SM-012 e SM-004 paradas, o esclarecimento sem resposta da SM-009 e as que ganharam gente afetada na semana. Clicar abre a SM.",
         "Tempo médio em cada etapa contra o prazo (provisório), com a etapa mais lenta destacada e as acima do prazo em vermelho.",
         "Entradas e saídas por mês, com o aviso de que o backlog está crescendo, e \"Ver números\" em tabela.",
@@ -128,7 +128,7 @@ export const feature: Feature = {
       expected: [
         "Nove colunas, de Em triagem a Concluída; rejeitadas, canceladas e excluídas ficam fora.",
         "Cartões ordenados por prioridade e score: código, prioridade, título, unidade e área, score e esforço (ou a data de abertura) e os apoios.",
-        "\"Ver rejeitadas (1)\" volta para a lista filtrada pela etapa Rejeitada.",
+        "As rejeitadas ficam fora do kanban; a lista as mostra com o filtro de etapa Rejeitada.",
         "A Tech não tem Nova solicitação.",
       ],
     }),
@@ -151,10 +151,13 @@ export const feature: Feature = {
         "Uma página só, sem abas, com o título dentro do card: todas as SMs, em Cards, Lista ou Kanban (o kanban só para olhar).",
         "No menu do usuário, \"Solicitações de melhoria\" entre Meu perfil e Base de Conhecimento, para qualquer colaborador.",
         "Ordenadas por mais pessoas afetadas; as encerradas vão para o fim, com o relato fechado.",
-        "Na base de cada card, como numa rede social: \"Também me afeta\" com o número de pessoas afetadas e as visualizações (5600 aparece como \"5,6 mil\").",
-        "\"Também me afeta\" abre o modal com a unidade e a área de quem clica e um relato opcional.",
-        "Na SM-008 e na SM-012 ela já está entre os afetados (ícone preenchido); clicar de novo a retira.",
-        "Nas SMs que ela abriu e nas encerradas, só o número, sem botão.",
+        "Seletor Cards, Lista e Kanban no cabeçalho, ao lado de Nova solicitação.",
+        "Na base de cada card, à esquerda, só informação: pessoas afetadas e visualizações (5600 aparece como \"5,6 mil\"). À direita, as ações: Detalhes e \"Também me afeta\".",
+        "Sua solicitação (SM-006): borda azul e o selo, sem o botão. Te afeta (SM-008, SM-012): o selo, o seu relato e o \"Me afeta\" discreto, que a retira.",
+        "Mostrar: Mais recentes, Mais pessoas afetadas e, para o colaborador, Minhas solicitações e Que me afetam.",
+        "Encerradas: o desfecho no lugar do botão (\"Entregue · +32 h/mês\", \"Rejeitada na triagem\").",
+        "A mesma ação na lista (coluna Ação) e no cartão do kanban; clicar no botão não abre o detalhe.",
+        "\"Também me afeta\" abre um drawer pela direita com o resumo da SM, a unidade e a área de quem clica e um relato opcional. Abre igual nos cards, na lista e no kanban.",
         "Abrir o detalhe soma uma visualização, uma vez por SM na sessão.",
       ],
     }),
@@ -183,7 +186,7 @@ export const feature: Feature = {
       title: "Solicitações em cards (PMO)",
       controls: { papel: "pmo", aba: "solicitacoes", view: "cards" },
       intent: "O PMO vê a mesma base pelo alcance: quantas pessoas, unidades e áreas cada SM afeta.",
-      expected: ["\"Mais pessoas afetadas\" em Ordenar por põe primeiro as que mais alcançam gente; a lista ganha a coluna Afetados."],
+      expected: ["\"Mais pessoas afetadas\" em Mostrar põe primeiro as que mais alcançam gente; a lista ganha a coluna Afetados."],
     }),
     mine({
       id: "sm.vazio-colaborador",
@@ -395,7 +398,7 @@ export const feature: Feature = {
       controls: MANAGE_CONTROLS,
       expected: [
         "PMO e Tech chegam pelo item Solicitações de melhoria do menu lateral, pela URL ou pelas notificações.",
-        "PMO vê Painel executivo e Solicitações; Tech, Solicitações (no kanban) e Painel executivo.",
+        "PMO e Tech veem Painel executivo e Solicitações, nessa ordem; a Tech abre Solicitações no kanban.",
         "Sem a permissão, a tela barra e leva às solicitações da pessoa.",
         "O PMO também registra uma nova solicitação em nome de quem pediu por outro canal.",
         "Exportar base baixa um CSV com separador ;.",

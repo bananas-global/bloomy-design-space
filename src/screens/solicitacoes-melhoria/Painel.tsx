@@ -8,25 +8,24 @@
  * 4. Onde dói — unidades × macroprocessos pelo número de pessoas afetadas.
  * 5. Fila do backlog — com a espera e o esforço, e a carga da Tech.
  *
- * Período e unidade filtram tudo. As SMs da base cobrem o mês corrente; os meses
- * anteriores vêm do consolidado mensal (`MonthAgg`).
+ * O período é fixo: os últimos 3 meses (o gráfico de entradas e saídas mostra 6),
+ * todas as unidades. As SMs da base cobrem o mês corrente; os meses anteriores
+ * vêm do consolidado mensal (`MonthAgg`).
  *
- * `card/1`, `inside_card/1`, `table/1`, `tag/1`, `radio_selector/1` e `input/1`.
+ * `card/1`, `inside_card/1`, `table/1` e `tag/1`.
  * Os gráficos (barras por etapa, entradas × saídas e o mapa de calor) são novos:
  * não há componente de gráfico no sistema.
  */
 import { useState, type ReactNode } from "react";
 import { Button } from "../../components/Button.js";
 import { Card } from "../../components/Card.js";
-import { RadioSelector } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
-import { Input } from "../../components/Input.js";
 import { Header, InsideCard } from "../../components/Layout.js";
 import { SimpleTable, Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
 import type { MonthAgg } from "./fixtures.js";
 import {
-  L, SLA_DAYS, STATUS, USERS, daysFromToday, daysInStage, isClosed, lastMonths, monthLabel, monthOf, opts, plural, prioRank, scoreOf, stageTimes,
+  L, SLA_DAYS, STATUS, USERS, daysFromToday, daysInStage, isClosed, lastMonths, monthLabel, monthOf, plural, prioRank, scoreOf, stageTimes,
   type Role, type Sm, type StageId,
 } from "./model.js";
 import { reachText } from "./Afetados.js";
@@ -41,28 +40,20 @@ const STAGES = Object.keys(SLA_DAYS) as Stage[];
 
 const noDev = (s: Sm) => s.routes.includes("processo") && !s.routes.includes("dev") && s.subpath === "sem";
 
+/** O período do painel: os últimos 3 meses. */
+const PERIOD: Period = "90";
+
 export function Painel({ sms: all, monthly, role, onOpen }: { sms: Sm[]; monthly: MonthAgg[]; role: Role; onOpen: (s: Sm) => void }) {
-  const [period, setPeriod] = useState<Period>("90");
-  const [unit, setUnit] = useState("");
+  const period = PERIOD;
   const tech = role === "tech";
 
   // Excluída não conta em nada: foi aberta por engano, duplicada ou de teste.
-  const sms = all.filter((s) => s.status !== "excluida" && (!unit || s.unit === unit));
-  const agg = monthly.filter((m) => !unit || m.unit === unit);
-  const months = monthsOf(sms, agg, lastMonths(Math.max(6, PERIOD_MONTHS[period])));
+  const sms = all.filter((s) => s.status !== "excluida");
+  const months = monthsOf(sms, monthly, lastMonths(Math.max(6, PERIOD_MONTHS[period])));
   const inPeriod = months.slice(-PERIOD_MONTHS[period]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <RadioSelector
-          label="Período"
-          field={{ id: "sm_panel_period", name: "sm_panel_period", value: period }}
-          radio={[{ value: "30", label: "30 dias" }, { value: "90", label: "90 dias" }, { value: "365", label: "12 meses" }]}
-          onChange={(e) => setPeriod(e.target.value as Period)}
-        />
-        <Input type="select" id="sm_panel_unit" label="Unidade" prompt="Todas as unidades" options={opts(L.units)} value={unit} className="min-w-60" onChange={(v) => setUnit(v ?? "")} />
-      </div>
 
       <Attention sms={sms} role={role} onOpen={onOpen} />
 

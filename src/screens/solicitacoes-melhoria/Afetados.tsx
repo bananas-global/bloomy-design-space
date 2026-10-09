@@ -3,87 +3,74 @@
  * que o mesmo problema aparece na rotina dela. Entra com a unidade e a área
  * (para o PMO medir a abrangência) e, se quiser, um relato.
  *
- * `button/1`, `modal/1`, `input/1` e `tag/1`. Quem pediu não se soma à própria
+ * `button/1`, `drawer_modal/1`, `input/1` e `tag/1`. Quem pediu não se soma à própria
  * SM; encerrada não recebe mais, mas continua visível. PMO e Tech veem o número.
  */
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "../../components/Button.js";
 import { Card } from "../../components/Card.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
 import { Header } from "../../components/Layout.js";
-import { Modal } from "../../components/Overlay.js";
+import { DrawerModal } from "../../components/Overlay.js";
 import { Tag } from "../../components/Tag.js";
 import { USERS, affectsMe, compact as compactNumber, isClosed, isMine, plural, reachOf, type Role, type Sm } from "./model.js";
 import { Fact, cx } from "./parts.js";
 import { sm as actions } from "./store.js";
 
+/** Quem pode dizer "Também me afeta": colaborador, em SM aberta que não é dele. */
+export const canAffect = (s: Sm, role: Role) => role === "solicitante" && !isMine(s, role) && !isClosed(s);
+
 /**
- * O botão "Também me afeta". `compact` é o contador da base dos cards, como a
- * curtida de uma rede social; o padrão é o botão com texto, do detalhe e das
- * sugestões da Nova solicitação.
+ * O botão "Também me afeta", o mesmo nos cards, na lista, no kanban, no detalhe
+ * e nas sugestões da Nova solicitação. Marcado, vira "Me afeta"; clicar de novo
+ * tira a pessoa. Não aparece para quem pediu, em SM encerrada, nem para PMO e
+ * Tech. Os cliques não chegam à linha ou ao cartão em volta.
  */
-export function AffectButton({ s, role, compact = false }: { s: Sm; role: Role; compact?: boolean }) {
+export function AffectButton({ s, role, size = "medium" }: { s: Sm; role: Role; size?: "small" | "medium" }) {
   const [open, setOpen] = useState(false);
-  const n = s.affected.length;
-  const mine = isMine(s, role);
-  const closed = isClosed(s);
+  if (!canAffect(s, role)) return null;
   const me = affectsMe(s, role);
 
-  // PMO e Tech acompanham o número; quem se soma aos afetados é o colaborador.
-  const staff = role !== "solicitante";
-  if (mine || closed || staff) {
-    if (!compact) return null;
-    return (
-      <span
-        title={`${plural(n, "pessoa afetada", "pessoas afetadas")}${staff ? "" : ` · ${mine ? "sua solicitação" : "encerrada, não recebe mais"}`}`}
-        className="inline-flex h-8 items-center gap-1.5 px-2 text-sm font-bold text-brand-purple-dark/60"
-      >
-        <Icon name="fa-users" type="solid" />
-        {compactNumber(n)}
-      </span>
-    );
-  }
-
-  const click = () => (me ? actions.unaffect(s.id, role) : setOpen(true));
-  const label = me ? "Me afeta" : "Também me afeta";
-
   return (
-    <>
-      {compact ? (
-        <Button
-          type="button"
-          variant={me ? "tint" : "ghost"}
-          size="small"
-          aria-label={me ? `Me afeta, ${n} pessoas afetadas. Clique para sair` : `Também me afeta, ${n} pessoas afetadas`}
-          aria-pressed={me}
-          title={me ? "Você está entre os afetados. Clique para sair" : "Também me afeta"}
-          onClick={click}
-          leftIcon={me ? "fa-user-check" : "fa-user-plus"}
-          iconType={me ? "solid" : "regular"}
-        >
-          {compactNumber(n)}
-        </Button>
-      ) : (
-        <Button
-          type="button"
-          variant={me ? "default" : "tint"}
-          size="medium"
-          aria-pressed={me}
-          title={me ? "Clique para sair dos afetados" : undefined}
-          leftIcon={me ? "fa-user-check" : "fa-user-plus"}
-          iconType="solid"
-          onClick={click}
-        >
-          {label}
-        </Button>
-      )}
-      <AffectModal s={s} role={role} show={open} onClose={() => setOpen(false)} />
-    </>
+    <span className="inline-flex" onClick={(e) => e.stopPropagation()}>
+      {/* Marcado, fica discreto: o convite é o "Também me afeta"; o "Me afeta" só confirma. */}
+      <Button
+        type="button"
+        variant={me ? "ghost" : "tint"}
+        size={size}
+        className={cx("whitespace-nowrap", me && "text-brand-blue-dark!")}
+        aria-pressed={me}
+        title={me ? "Você está entre os afetados. Clique para sair" : "O mesmo problema aparece na sua rotina"}
+        leftIcon={me ? "fa-user-check" : "fa-user-plus"}
+        iconType="solid"
+        onClick={() => (me ? actions.unaffect(s.id, role) : setOpen(true))}
+      >
+        {me ? "Me afeta" : "Também me afeta"}
+      </Button>
+      <AffectDrawer s={s} role={role} show={open} onClose={() => setOpen(false)} />
+    </span>
   );
 }
 
-function AffectModal({ s, role, show, onClose }: { s: Sm; role: Role; show: boolean; onClose: () => void }) {
+/** Quantas pessoas são afetadas: só informação, sem ação. */
+export function AffectedCount({ s }: { s: Sm }) {
+  const n = s.affected.length;
+  return (
+    <span title={plural(n, "pessoa afetada", "pessoas afetadas")} className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-purple-dark/60">
+      <Icon name="fa-users" type="solid" />
+      {compactNumber(n)}
+    </span>
+  );
+}
+
+/**
+ * "Também me afeta" em `drawer_modal/1`, aberto pela direita. Vai direto para o
+ * `body` (portal): dentro de um cartão com `transform` (o kanban sobe no hover),
+ * o `fixed` do drawer ficaria preso ao cartão.
+ */
+function AffectDrawer({ s, role, show, onClose }: { s: Sm; role: Role; show: boolean; onClose: () => void }) {
   const [text, setText] = useState("");
   const me = USERS[role];
   const close = () => {
@@ -91,12 +78,28 @@ function AffectModal({ s, role, show, onClose }: { s: Sm; role: Role; show: bool
     onClose();
   };
 
-  return (
-    <Modal id={`modal-afeta-${s.id}`} show={show} title="Também me afeta" variant="small" onCancel={close}>
-      <div className="space-y-6">
-        <div>
-          <p className="text-sm font-bold text-brand-purple-dark/60">{s.id}</p>
-          <p className="font-bold text-brand-purple-dark">{s.title}</p>
+  return createPortal(
+    <DrawerModal
+      id={`drawer-afeta-${s.id}`}
+      show={show}
+      title="Também me afeta"
+      variant="extra_small"
+      // O conteúdo do drawer vira a moldura: a parte de cima rola, o rodapé fica fixo
+      // de borda a borda (o cabeçalho do componente já é fixo).
+      contentClass="flex flex-col overflow-hidden! p-0!"
+      // Sem o canto arredondado do `drawer_modal/1`: o painel encosta reto na lateral.
+      // `className` substitui o do componente, então repete o `relative z-50` dele.
+      className="relative z-50 [&_[id$=-container]]:rounded-none!"
+      onCancel={close}
+    >
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-6">
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-brand-purple-dark/60">{s.id} · {s.unit}</p>
+          <p className="text-lg font-bold leading-snug text-brand-purple-dark">{s.title}</p>
+          <p className="text-sm text-brand-purple-dark/70">{s.need}</p>
+          <p className="text-xs font-bold text-brand-purple-dark/60">
+            <Icon name="fa-users" type="solid" /> Alcança {reachText(s)}
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-4 rounded-xl bg-brand-purple-dark/5 p-4">
           <Fact label="Sua unidade">{me.unit}</Fact>
@@ -107,7 +110,7 @@ function AffectModal({ s, role, show, onClose }: { s: Sm; role: Role; show: bool
           type="textarea"
           id={`sm_affect_${s.id}`}
           name="affect_text"
-          rows={3}
+          rows={4}
           label="Como isso aparece no seu dia a dia? (opcional)"
           placeholder="Ex.: Acontece toda semana na minha unidade e remarco os atendimentos na mão."
           value={text}
@@ -116,22 +119,23 @@ function AffectModal({ s, role, show, onClose }: { s: Sm; role: Role; show: bool
         <p className="text-sm text-brand-purple-dark/60">
           <Icon name="fa-shield-halved" type="solid" /> Não inclua dados de pacientes.
         </p>
-        <div className="flex justify-end gap-3 border-t border-neutral-100 pt-4">
-          <Button type="button" variant="outline" onClick={close}>Cancelar</Button>
-          <Button
-            type="button"
-            leftIcon="fa-user-plus"
-            iconType="solid"
-            onClick={() => {
-              actions.affect(s.id, role, text.trim());
-              close();
-            }}
-          >
-            Também me afeta
-          </Button>
-        </div>
       </div>
-    </Modal>
+      <div className="flex shrink-0 justify-end gap-3 border-t border-neutral-100 bg-white px-6 py-4">
+        <Button type="button" variant="outline" onClick={close}>Cancelar</Button>
+        <Button
+          type="button"
+          leftIcon="fa-user-plus"
+          iconType="solid"
+          onClick={() => {
+            actions.affect(s.id, role, text.trim());
+            close();
+          }}
+        >
+          Também me afeta
+        </Button>
+      </div>
+    </DrawerModal>,
+    document.body,
   );
 }
 

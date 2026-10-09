@@ -58,8 +58,8 @@ export const TABS: Record<"pmo" | "tech", { id: TabId; title: string }[]> = {
     { id: "solicitacoes", title: "Solicitações" },
   ],
   tech: [
-    { id: "solicitacoes", title: "Solicitações" },
     { id: "painel", title: "Painel executivo" },
+    { id: "solicitacoes", title: "Solicitações" },
   ],
 };
 
@@ -93,7 +93,7 @@ export const MANAGE_CONTROLS: ControlGroup[] = [
     id: "aba",
     title: "Aba · card_tabs",
     component: "core.card-tabs",
-    note: "PMO: Painel executivo e Solicitações. Tech: Solicitações e Painel executivo.",
+    note: "Painel executivo e Solicitações, nessa ordem, para PMO e Tech. A Tech abre Solicitações no kanban.",
     controls: [
       {
         id: "aba",
