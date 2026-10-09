@@ -1,7 +1,9 @@
 /**
- * Solicitações de melhoria — aba Solicitações: a base de SMs em lista
+ * Solicitações de melhoria — aba Solicitações: a base de SMs em cards, em lista
  * (`table/1`) ou no kanban do fluxo, com os filtros de unidade, etapa e
- * prioridade.
+ * prioridade e a ordem por data ou por pessoas afetadas. O colaborador vê todas
+ * as SMs, nas mesmas três visualizações (o kanban só para olhar: a etapa anda
+ * pelo detalhe).
  *
  * O kanban é novo: não existe no Phoenix. Uma coluna por etapa, cartões
  * ordenados por prioridade e score, sem arrastar (a etapa só anda pelo
@@ -11,16 +13,25 @@ import { Button } from "../../components/Button.js";
 import { RadioSelector } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
+import { Header } from "../../components/Layout.js";
 import { Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
-import { L, ORDER, PRIO, STATUS, TAG_OF, TONE_CLASS, fmt, opts, prioOf, prioRank, scoreOf, type Sm, type StatusId } from "./model.js";
+import { L, ORDER, PRIO, STATUS, TAG_OF, TONE_CLASS, fmt, isClosed, opts, prioOf, prioRank, scoreOf, type Role, type Sm, type StatusId } from "./model.js";
+import { Cards } from "./Cards.js";
 import { PrioTag, StageTag, cx } from "./parts.js";
 
-export type Filters = { q: string; unit: string; status: string; prio: string };
-export const EMPTY_FILTERS: Filters = { q: "", unit: "", status: "", prio: "" };
-export type View = "lista" | "kanban";
+export type Sort = "recentes" | "afetados";
+export type Filters = { q: string; unit: string; status: string; prio: string; sort: Sort };
+export const EMPTY_FILTERS: Filters = { q: "", unit: "", status: "", prio: "", sort: "recentes" };
+export type View = "cards" | "lista" | "kanban";
 
-const STATUS_OPTIONS = ([...ORDER, "rejeitada", "cancelada"] as StatusId[]).map((id) => [STATUS[id].label, id] as const);
+const VIEW_OPTIONS: Record<View, { icon: string; title: string }> = {
+  cards: { icon: "fa-grid-2", title: "Cards" },
+  lista: { icon: "fa-table-list", title: "Lista" },
+  kanban: { icon: "fa-table-columns", title: "Kanban" },
+};
+
+const STATUS_OPTIONS = ([...ORDER, "rejeitada", "cancelada", "excluida"] as StatusId[]).map((id) => [STATUS[id].label, id] as const);
 const PRIO_OPTIONS = (Object.keys(PRIO) as (keyof typeof PRIO)[]).map((id) => [PRIO[id].full, id] as const);
 
 const createdKey = (s: Sm) => s.createdAt.slice(6, 10) + s.createdAt.slice(3, 5) + s.createdAt.slice(0, 2) + s.createdAt.slice(11);
@@ -32,67 +43,93 @@ export function applyFilters(sms: Sm[], f: Filters): Sm[] {
     .filter((s) => !f.status || s.status === f.status)
     .filter((s) => !f.prio || prioOf(s) === f.prio)
     .filter((s) => !q || [s.id, s.title, s.requester].some((v) => v.toLowerCase().includes(q)))
-    .sort((a, b) => (createdKey(b) > createdKey(a) ? 1 : -1));
+    .sort((a, b) =>
+      f.sort === "afetados"
+        ? Number(isClosed(a)) - Number(isClosed(b)) || b.affected.length - a.affected.length
+        : createdKey(b) > createdKey(a) ? 1 : -1,
+    );
 }
 
 export function Solicitacoes({
   sms,
   all,
+  role,
   view,
+  views,
   onView,
   filters,
   onFilters,
   onOpen,
+  title = true,
 }: {
-  /** As SMs que a pessoa vê (o solicitante vê só as dele). */
+  /** As SMs que a pessoa vê. */
   sms: Sm[];
   /** Todas, para o kanban contar as recusadas. */
   all: Sm[];
+  role: Role;
   view: View;
-  /** Sem ele, só a lista (Minhas solicitações). */
-  onView?: (view: View) => void;
+  /** As visualizações que o papel tem; com uma só, o seletor some. */
+  views: View[];
+  onView: (view: View) => void;
+  /** O título "Solicitações": a gestão mostra; o colaborador já tem o da página no mesmo card. */
+  title?: boolean;
   filters: Filters;
   onFilters: (f: Filters) => void;
   onOpen: (s: Sm) => void;
 }) {
   const rows = applyFilters(sms, filters);
   const set = (patch: Partial<Filters>) => onFilters({ ...filters, ...patch });
+  const filtered = !!(filters.q.trim() || filters.unit || filters.status || filters.prio);
+  // Com filtro, o problema é o filtro; sem, a base ainda está vazia.
+  const empty = filtered
+    ? "Nenhuma solicitação com esses filtros"
+    : "Nenhuma solicitação ainda. Use Nova solicitação para registrar uma dor da sua rotina.";
   const rejected = all.filter((s) => s.status === "rejeitada").length;
 
   return (
     <div className="space-y-6">
-      {onView && (
-        <div className="flex items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>{title && <Header variant="small">Solicitações</Header>}</div>
+        <div className="flex items-center gap-3">
           {view === "kanban" && rejected > 0 && (
             <Button type="button" variant="tint" color="red" size="medium" leftIcon="fa-ban" onClick={() => { onView("lista"); set({ status: "rejeitada" }); }}>
-              Ver recusadas ({rejected})
+              Ver rejeitadas ({rejected})
             </Button>
           )}
-          <RadioSelector
-            field={{ id: "sm_view", name: "sm_view", value: view }}
-            radio={[
-              { value: "lista", icon: "fa-table-list", title: "Lista" },
-              { value: "kanban", icon: "fa-table-columns", title: "Kanban" },
-            ]}
-            onChange={(e) => onView(e.target.value as View)}
-          />
+          {views.length > 1 && (
+            <RadioSelector
+              field={{ id: "sm_view", name: "sm_view", value: view }}
+              radio={views.map((v) => ({ value: v, ...VIEW_OPTIONS[v] }))}
+              onChange={(e) => onView(e.target.value as View)}
+            />
+          )}
         </div>
-      )}
+      </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Input id="sm_filter_q" label="Buscar" leftIcon="fa-magnifying-glass" placeholder="Buscar por código, título ou solicitante" value={filters.q} onChange={(e) => set({ q: e.target.value })} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <Input id="sm_filter_q" label="Buscar" leftIcon="fa-magnifying-glass" placeholder="Código, título ou solicitante" value={filters.q} onChange={(e) => set({ q: e.target.value })} />
         <Input type="select" id="sm_filter_unit" label="Unidade" prompt="Todas as unidades" options={opts(L.units)} value={filters.unit} onChange={(v) => set({ unit: v ?? "" })} />
         <Input type="select" id="sm_filter_status" label="Etapa" prompt="Todas as etapas" options={STATUS_OPTIONS} value={filters.status} onChange={(v) => set({ status: v ?? "" })} />
         <Input type="select" id="sm_filter_prio" label="Prioridade" prompt="Todas as prioridades" options={PRIO_OPTIONS} value={filters.prio} onChange={(v) => set({ prio: v ?? "" })} />
+        <Input
+          type="select"
+          id="sm_filter_sort"
+          label="Ordenar por"
+          options={[["Mais recentes", "recentes"], ["Mais pessoas afetadas", "afetados"]]}
+          value={filters.sort}
+          clear={false}
+          onChange={(v) => set({ sort: (v as Sort) || "recentes" })}
+        />
       </div>
 
-      {view === "lista" ? (
+      {view === "cards" && <Cards sms={rows} role={role} emptyText={empty} onOpen={onOpen} />}
+      {view === "lista" && (
         <Table
           id="sm_list"
           rows={rows}
           rowId={(s) => s.id}
           rowClick={onOpen}
-          emptyMessage="Nenhuma solicitação encontrada"
+          emptyMessage={empty}
           col={[
             { label: "Código", render: (s) => <span className="tabular-nums font-bold">{s.id}</span> },
             {
@@ -106,16 +143,16 @@ export function Solicitacoes({
             },
             { label: "Unidade", render: (s) => s.unit },
             { label: "Aberta em", render: (s) => s.createdAt.slice(0, 10) },
+            { label: "Afetados", render: (s) => <span className="tabular-nums font-bold"><Icon name="fa-users" type="solid" className="mr-1.5 text-brand-purple-dark/40" />{s.affected.length}</span> },
             { label: "Score", render: (s) => <span className="tabular-nums font-bold">{fmt(scoreOf(s))}</span> },
             { label: "Prioridade", render: (s) => <PrioTag sm={s} /> },
             { label: "Etapa", render: (s) => <StageTag status={s.status} /> },
           ]}
         />
-      ) : (
-        <Board sms={rows} onOpen={onOpen} />
       )}
+      {view === "kanban" && <Board sms={rows} onOpen={onOpen} />}
 
-      <PrioLegend />
+      {view !== "cards" && <PrioLegend />}
     </div>
   );
 }
@@ -180,7 +217,7 @@ function SmCard({ sm: s, onClick }: { sm: Sm; onClick: () => void }) {
       <p className="text-sm text-brand-purple-dark/60">{s.unit} · {s.area}</p>
       <div className="flex items-center justify-between border-t border-brand-purple-dark/10 pt-2 text-xs font-bold text-brand-purple-dark/60">
         <span>{sc != null ? `${fmt(sc)} pts${s.effort ? ` · ${s.effort}` : ""}` : s.createdAt.slice(0, 10)}</span>
-        <span><Icon name="fa-thumbs-up" type="solid" /> {s.votes}</span>
+        <span title="Pessoas afetadas"><Icon name="fa-users" type="solid" /> {s.affected.length}</span>
       </div>
     </article>
   );

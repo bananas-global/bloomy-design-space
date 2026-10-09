@@ -25,6 +25,10 @@ import { permissionsByRole } from "../personas/permissions.js";
  * layout (`context.persona.id`). Sem `context`, é a visão do Admin.
  * `SignatureNotificationModal` não foi portado.
  *
+ * Diferença: o `sticky` do HEEx está no `div` de dentro do `<header>`, que tem
+ * a mesma altura, então não gruda. Aqui o `<header>` é que é `sticky`; levar
+ * a mesma correção para o Phoenix.
+ *
  * Proposta nova: `improvementRequests` põe "Solicitações de melhoria" no menu
  * do usuário, para qualquer colaborador abrir uma SM. Não existe no HEEx.
  */
@@ -89,6 +93,7 @@ export function BackofficeLayout({
   notifications,
   universityEnabled = false,
   improvementRequests = false,
+  menu,
   flash,
   children,
 }: {
@@ -112,6 +117,11 @@ export function BackofficeLayout({
   universityEnabled?: boolean;
   /** Proposta nova: o item "Solicitações de melhoria" no menu do usuário. */
   improvementRequests?: boolean;
+  /**
+   * Só no Design Space: troca os itens do menu lateral pelos da tela, para o
+   * protótipo focar no fluxo. Sem ele, o menu do Bloomy filtrado por papel.
+   */
+  menu?: DrawerItem[];
   /** Onde o `flash_group/1` do layout fica. */
   flash?: ReactNode;
   children: ReactNode;
@@ -123,7 +133,7 @@ export function BackofficeLayout({
   const role = context?.persona?.id ?? "admin";
   const roleLabel = context?.persona?.name ?? "Admin";
   const can = context ? context.can : (permission: string) => (permissionsByRole.admin as readonly string[]).includes(permission);
-  const items = BACKOFFICE_MENU.filter((item) => item.visible(role, can));
+  const items = menu ?? BACKOFFICE_MENU.filter((item) => item.visible(role, can));
   const unitName = currentUnit ?? currentUser.units[0] ?? "";
   const roles = currentUser.roles.length ? currentUser.roles : [roleLabel];
   const link = (href: string) => ({
@@ -155,7 +165,7 @@ export function BackofficeLayout({
           ].join(" ")}
         >
           {!hideMenu && (
-            <header className="flex items-stretch">
+            <header className="sticky top-0 z-40 flex items-stretch">
               <button id="header-drawer-button-mobile" onClick={toggle} className="flex lg:hidden items-center justify-center bg-brand-blue min-w-20">
                 <img src={symbolNegative} alt="Logo da Bloomy" className="w-12 h-12" />
               </button>

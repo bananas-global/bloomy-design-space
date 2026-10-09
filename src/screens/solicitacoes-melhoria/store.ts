@@ -3,7 +3,7 @@
  * central e o detalhe.
  *
  * Nasce da fixture e guarda o que a pessoa faz (abrir uma SM, avançar uma
- * etapa, comentar, apoiar uma ideia), para a outra tela mostrar o mesmo. Vive
+ * etapa, comentar, dizer que também é afetado), para a outra tela mostrar o mesmo. Vive
  * só em memória: recarregar a página volta à fixture. Trocar de fixture também.
  *
  * As ações são as do protótipo, com os mesmos textos de histórico,
@@ -12,17 +12,19 @@
 import { useSyncExternalStore } from "react";
 import type { ScenarioContext } from "@brucesantos/design-space";
 import { showToast, type ToastType } from "../../components/Action.js";
-import { SMS, NOTIFICATIONS, type SmFixture, type SmNotification } from "./fixtures.js";
+import { MONTHLY, SMS, NOTIFICATIONS, type MonthAgg, type SmFixture, type SmNotification } from "./fixtures.js";
 import {
   CUR_LABEL, PRIO, USERS, blankSm, fmt, hasWorkaround, nowStamp, prioOf, routeText, scoreOf, TODAY_BR,
   type HistoryEntry, type Role, type Sm, type SmFile, type SmForm,
 } from "./model.js";
 
-type Data = { key: string; sms: Sm[]; notifications: SmNotification[] };
+type Data = { key: string; sms: Sm[]; notifications: SmNotification[]; monthly: MonthAgg[] };
 
-let data: Data = { key: "", sms: [], notifications: [] };
+let data: Data = { key: "", sms: [], notifications: [], monthly: [] };
 const listeners = new Set<() => void>();
 let seq = 0;
+/** As SMs já abertas nesta sessão: cada pessoa conta uma visualização por SM. */
+const seen = new Set<string>();
 
 function set(next: Partial<Omit<Data, "key">>) {
   data = { ...data, ...next };
@@ -37,13 +39,16 @@ const subscribe = (l: () => void) => {
 function fixtureOf(context: ScenarioContext): { key: string; value: SmFixture } {
   const raw = context.fixture?.data;
   const value = (typeof raw === "function" ? raw() : raw) as SmFixture | undefined;
-  return { key: context.fixture?.id ?? "sm.base", value: value ?? { sms: SMS, notifications: NOTIFICATIONS } };
+  return { key: context.fixture?.id ?? "sm.base", value: value ?? { sms: SMS, notifications: NOTIFICATIONS, monthly: MONTHLY } };
 }
 
 /** A base da sessão. Re-semeia quando a fixture muda. */
 export function useSmData(context: ScenarioContext): Data {
   const { key, value } = fixtureOf(context);
-  if (data.key !== key) data = { key, sms: value.sms, notifications: value.notifications };
+  if (data.key !== key) {
+    data = { key, sms: value.sms, notifications: value.notifications, monthly: value.monthly ?? [] };
+    seen.clear();
+  }
   return useSyncExternalStore(subscribe, () => data, () => data);
 }
 
@@ -55,8 +60,8 @@ function update(id: string, fn: (s: Sm) => Sm) {
   set({ sms: data.sms.map((s) => (s.id === id ? fn({ ...s }) : s)) });
 }
 
-function log(s: Sm, role: Role, kind: HistoryEntry["kind"], text: string, files?: SmFile[]): Sm {
-  return { ...s, history: [...s.history, { at: nowStamp(), who: USERS[role].name, kind, text, ...(files ? { files } : {}) }] };
+function log(s: Sm, role: Role, kind: HistoryEntry["kind"], text: string, files?: SmFile[], audit = false): Sm {
+  return { ...s, history: [...s.history, { at: nowStamp(), who: USERS[role].name, kind, text, ...(files ? { files } : {}), ...(audit ? { audit } : {}) }] };
 }
 
 function notify(forRole: Role, smId: string, title: string, text: string) {
@@ -94,6 +99,24 @@ export const sm = {
     return id;
   },
 
+  /** Exceção mandatória P0 (RN-004): sobrepõe o score e fica no histórico com o motivo. */
+  applyP0: (id: string, role: Role, reason: string, just: string) => {
+    update(id, (s) => log({ ...s, p0: true, p0Reason: reason, p0Just: just }, role, s.status, `Exceção mandatória P0 aplicada (${reason}). Justificativa: ${just}`, undefined, true));
+    toast("Exceção P0 aplicada", "Registrada no histórico com o motivo e a justificativa.", "info");
+  },
+
+  removeP0: (id: string, role: Role, why: string) => {
+    update(id, (s) => log({ ...s, p0: false, p0Reason: "", p0Just: "" }, role, s.status, `Exceção mandatória P0 retirada. Motivo: ${why}`, undefined, true));
+    toast("Exceção P0 retirada", "A prioridade volta a seguir o score. Registrado no histórico.", "info");
+  },
+
+  /** O PMO exclui a SM (engano, duplicada, teste). Sai das listas dos colaboradores e fica no histórico. */
+  remove: (id: string, role: Role, reason: string, just: string) => {
+    update(id, (s) => log({ ...s, status: "excluida", closedAt: TODAY_BR }, role, "excluida", `Solicitação excluída (${reason}).${just ? ` Justificativa: ${just}` : ""}`, undefined, true));
+    notify("solicitante", id, "Solicitação excluída", `${reason}${just ? ` — ${just}` : ""}`);
+    toast("Solicitação excluída", "Registrada no histórico com o motivo. O solicitante foi notificado.", "info");
+  },
+
   cancel: (id: string, role: Role) => {
     update(id, (s) => log({ ...s, status: "cancelada", closedAt: TODAY_BR }, role, "cancelada", "Solicitação cancelada pelo solicitante."));
     notify("pmo", id, "Solicitação cancelada", "O solicitante retirou a SM do fluxo.");
@@ -108,8 +131,8 @@ export const sm = {
 
   reject: (id: string, role: Role) => {
     const s0 = get(id);
-    update(id, (s) => log({ ...s, status: "rejeitada" }, role, "rejeitada", `Demanda inelegível (${s.rejectCriterion}). Solicitante notificado com motivo de recusa.`));
-    notify("solicitante", id, "Solicitação recusada na triagem", `${s0.rejectCriterion} — ${s0.rejection}`);
+    update(id, (s) => log({ ...s, status: "rejeitada" }, role, "rejeitada", `Demanda inelegível (${s.rejectCriterion}). Justificativa: ${s.rejection} Solicitante notificado.`, undefined, true));
+    notify("solicitante", id, "Solicitação rejeitada na triagem", `${s0.rejectCriterion} — ${s0.rejection}`);
     toast("Recusa registrada", "Solicitante notificado com a justificativa.", "info");
   },
 
@@ -168,10 +191,12 @@ export const sm = {
 
   homolog: (id: string, role: Role, field: "homologTech" | "homologReq") => {
     update(id, (s) => {
-      let next = log({ ...s, [field]: true }, role, "homologacao", field === "homologTech" ? "Entrega validada pela Tech em produção." : "Aceite do solicitante registrado.");
-      next.homologatedBy = [next.homologatedBy, USERS[role].name].filter(Boolean).join(" e ");
+      const at = nowStamp();
+      const who = USERS[role].name;
+      const signed = field === "homologTech" ? { homologTechBy: who, homologTechAt: at } : { homologReqBy: who, homologReqAt: at };
+      let next = log({ ...s, [field]: true, ...signed }, role, "homologacao", field === "homologTech" ? "Entrega validada pela Tech em produção." : "Aceite do solicitante registrado.");
       if (next.homologTech && next.homologReq) {
-        next = log({ ...next, status: "encerramento", homologatedAt: TODAY_BR }, role, "encerramento", "Entrega homologada em produção.");
+        next = log({ ...next, status: "encerramento" }, role, "encerramento", "Entrega homologada em produção.");
       }
       return next;
     });
@@ -199,6 +224,30 @@ export const sm = {
     toast("Evidência anexada", `${files.length} arquivo(s) registrado(s) no histórico.`);
   },
 
-  vote: (id: string) =>
-    set({ sms: data.sms.map((s) => (s.id === id ? { ...s, voted: !s.voted, votes: s.votes + (s.voted ? -1 : 1) } : s)) }),
+  /**
+   * "Também me afeta": entra na lista de afetados com a unidade e a área de
+   * quem clica e, se quiser, como o problema aparece na rotina. Avisa o
+   * solicitante (o dos cenários); o PMO vê o número no painel, sem aviso.
+   */
+  affect: (id: string, role: Role, text: string) => {
+    const me = USERS[role];
+    const s0 = get(id);
+    update(id, (s) => ({ ...s, affected: [...s.affected, { at: nowStamp(), who: me.name, unit: me.unit ?? "", area: me.area ?? "", text }] }));
+    if (s0.requester === USERS.solicitante.name && role !== "solicitante") {
+      notify("solicitante", id, "Mais pessoas afetadas", `${me.name} (${me.unit}) também é afetado pela sua solicitação.`);
+    }
+    toast("Registrado", text ? "Seu relato foi somado à solicitação e ajuda o PMO a medir a abrangência." : "Você foi somado aos afetados por esta solicitação.");
+  },
+
+  /** Abrir o detalhe conta uma visualização, uma vez por SM na sessão. */
+  view: (id: string) => {
+    if (seen.has(id) || !data.sms.some((s) => s.id === id)) return;
+    seen.add(id);
+    update(id, (s) => ({ ...s, views: s.views + 1 }));
+  },
+
+  unaffect: (id: string, role: Role) => {
+    update(id, (s) => ({ ...s, affected: s.affected.filter((a) => a.who !== USERS[role].name) }));
+    toast("Removido", "Você não aparece mais entre os afetados.", "info");
+  },
 };

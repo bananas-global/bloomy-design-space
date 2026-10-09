@@ -1,25 +1,58 @@
 import type { Feature } from "../../app/features.js";
-import { ImprovementRequest, ImprovementRequestsManagement, MyImprovementRequests } from "../SolicitacoesMelhoria.js";
+import { ImprovementRequest, ImprovementRequestsManagement, MyImprovementRequests, NewImprovementRequest } from "../SolicitacoesMelhoria.js";
 import { SM_FIXTURES } from "./fixtures.js";
-import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, MANAGE_CONTROLS, MANAGE_PATH, MINE_CONTROLS, PATH, detailPath } from "./flow.js";
+import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, MANAGE_CONTROLS, MANAGE_PATH, MINE_CONTROLS, NEW_CONTROLS, NEW_PATH, PATH, detailPath } from "./flow.js";
 
 /** Componentes do catálogo que a central usa. */
 const HUB_COMPONENTS = [
   "layout.backoffice", "core.card-tabs", "core.header", "core.button", "core.card", "core.inside-card", "core.progress",
   "core.table", "core.simple-table", "core.tag", "core.input", "core.custom-select", "core.radio-selector",
-  "core.empty-state-card", "core.modal", "core.radio-group", "core.file-uploader", "core.item", "core.notification",
-  "core.breadcrumbs", "core.toast-wrapper", "core.error",
+  "core.empty-state-card", "core.item", "core.notification", "core.breadcrumbs", "core.toast-wrapper", "core.error", "core.modal",
+];
+
+/** Componentes do catálogo que a página Nova solicitação usa. */
+const NEW_COMPONENTS = [
+  "layout.backoffice", "core.card", "core.button", "core.input", "core.custom-select", "core.radio-group",
+  "core.file-uploader", "core.item", "core.progress", "core.error", "core.breadcrumbs", "core.notification", "core.tag", "core.modal",
 ];
 
 /** Componentes do catálogo que o detalhe usa. */
 const DETAIL_COMPONENTS = [
   "layout.backoffice", "core.card", "core.header", "core.button", "core.tag", "core.input", "core.custom-select",
-  "core.radio-selector", "core.radio-cards", "core.radio-group", "core.checkbox-group", "core.switch-card",
+  "core.radio-selector", "core.radio-group", "core.checkbox-group", "core.switch-card",
   "core.timeline-list", "core.file-uploader", "core.item", "core.empty-state-card", "core.notification",
-  "core.breadcrumbs", "core.toast-wrapper",
+  "core.breadcrumbs", "core.toast-wrapper", "core.modal",
 ];
 
-type HubScenario = { id: string; title: string; controls: Record<string, string>; intent: string; expected: string[]; fixture?: string };
+type HubScenario = {
+  id: string;
+  title: string;
+  controls: Record<string, string>;
+  intent: string;
+  expected: string[];
+  fixture?: string;
+  rules?: string[];
+  network?: "error";
+};
+
+/** As regras de negócio da especificação v3 do PMO, citadas pelos cenários. */
+const RULES = [
+  { id: "sm.rn-001", statement: "RN-001 · O solicitante descreve a dor, não a solução." },
+  { id: "sm.rn-002", statement: "RN-002 · Score = (Impacto×0,30 + Risco×0,20 + Urgência×0,20 + Abrangência×0,15 + Alinhamento×0,15) × 20, com notas inteiras de 0 a 5." },
+  { id: "sm.rn-003", statement: "RN-003 · P0 com exceção mandatória ou score ≥ 80; P1 de 65 a 79,9; P2 de 45 a 64,9; P3 de 25 a 44,9; P4 abaixo de 25." },
+  { id: "sm.rn-004", statement: "RN-004 · A exceção P0 sobrepõe o score e exige justificativa (risco ao paciente, parada de faturamento, exigência legal com prazo, compliance)." },
+  { id: "sm.rn-005", statement: "RN-005 · Dúvida operacional, erro de infraestrutura conhecido ou pedido sem viabilidade é recusado na triagem, com motivo e aviso ao solicitante." },
+  { id: "sm.rn-006", statement: "RN-006 · Havendo workaround (planilha, papel, controle paralelo), Risco e Impacto têm nota mínima 3." },
+  { id: "sm.rn-007", statement: "RN-007 · Nada vai para a Tech sem reunião de desenho de cenários com regras e requisitos validados." },
+  { id: "sm.rn-008", statement: "RN-008 · No ramo de processo, a SM resolve sem software e encerra, ou exige automação e vai para a Tech." },
+  { id: "sm.rn-009", statement: "RN-009 · Só conclui depois de homologar em produção com o solicitante." },
+  { id: "sm.rn-010", statement: "RN-010 · O encerramento exige registro de ganho (horas, retrabalho, erros, valor) e recálculo dos KPIs." },
+  {
+    id: "sm.auditoria",
+    statement: "Mudança de P0, recusa e exclusão ficam no histórico com data, responsável e motivo.",
+    rationale: "Requisito não funcional da especificação: o PMO responde por essas decisões.",
+  },
+];
 
 const hub = (route: string) => (s: HubScenario) => ({
   route,
@@ -29,34 +62,50 @@ const hub = (route: string) => (s: HubScenario) => ({
   ...s,
 });
 
-const detail = (s: { id: string; title: string; sm: string; papel?: string; intent: string; expected: string[] }) => ({
+const detail = (s: { id: string; title: string; sm: string; papel?: string; aviso?: string; intent: string; expected: string[]; rules?: string[]; network?: "error" }) => ({
   id: s.id,
   title: s.title,
   route: detailPath(s.sm),
   fixture: "sm.base",
   persona: "admin",
-  controls: { papel: s.papel ?? "pmo" },
+  controls: { papel: s.papel ?? "pmo", ...(s.aviso ? { aviso: s.aviso } : {}) },
   intent: s.intent,
   expected: s.expected,
   components: DETAIL_COMPONENTS,
+  ...(s.rules ? { rules: s.rules } : {}),
+  ...(s.network ? { network: s.network } : {}),
 });
 
 const mine = hub(PATH);
 const manage = hub(MANAGE_PATH);
 
-/** Solicitações de melhoria: Minhas solicitações, a gestão, o detalhe e um atalho por etapa do fluxo. */
+/** Solicitações de melhoria: a página do colaborador, a gestão, o detalhe e um atalho por etapa do fluxo. */
 export const feature: Feature = {
   scenarios: [
     manage({
-      id: "sm.painel",
-      title: "Painel executivo (PMO)",
+      id: "sm.dashboard",
+      rules: ["sm.rn-010"],
+      title: "Dashboard executivo (PMO)",
       controls: { papel: "pmo", aba: "painel" },
-      intent: "A visão do PMO: volume, etapa, prioridade, eficiência da triagem, fila do backlog e ganhos.",
+      intent: "O que o PMO precisa ver: o que está parado, se o fluxo anda, o valor entregue, onde a operação mais sofre e a fila.",
       expected: [
-        "Seis indicadores: Total de SMs (13), Em análise (4), Backlog aprovado (2), Em execução (3), Entregues (2) e Economia de TI (38 h/mês, 2 resolvidas sem desenvolvimento).",
-        "SMs por etapa do fluxo, uma caixa por etapa na ordem do kanban.",
-        "Distribuição por prioridade de P0 a P4; a recusada não conta.",
-        "Fila priorizada do backlog: as cinco primeiras por prioridade e score, entre backlog, cenários, modelagem e desenvolvimento. Clicar abre o detalhe.",
+        "Filtros de período (30 dias, 90 dias, 12 meses) e unidade, aplicados a tudo.",
+        "Precisa de atenção: SM-003 (P0), SM-008 e SM-009 em triagem fora do prazo, SM-012 e SM-004 paradas, o esclarecimento sem resposta da SM-009 e as que ganharam gente afetada na semana. Clicar abre a SM.",
+        "Tempo médio em cada etapa contra o prazo (provisório), com a etapa mais lenta destacada e as acima do prazo em vermelho.",
+        "Entradas e saídas por mês, com o aviso de que o backlog está crescendo, e \"Ver números\" em tabela.",
+        "Valor entregue no período: capacidade liberada em h/mês, total concluído, % sem desenvolvimento, lead time e as últimas entregas.",
+        "Onde dói: pessoas afetadas por macroprocesso e unidade, e as SMs com mais gente afetada fora do backlog.",
+        "Fila do backlog com esforço e espera na etapa, e a carga da Tech. SMs excluídas não entram em nada.",
+      ],
+    }),
+    manage({
+      id: "sm.dashboard-tech",
+      title: "Dashboard da Tech",
+      controls: { papel: "tech", aba: "painel" },
+      intent: "A Tech vê o que é dela: o que está parado na execução e na validação, o fluxo e a fila.",
+      expected: [
+        "Precisa de atenção só com execução fora do prazo, validações pendentes e P0 em execução (SM-003).",
+        "Sem Valor entregue e Onde dói, que são do PMO.",
       ],
     }),
     manage({
@@ -65,7 +114,7 @@ export const feature: Feature = {
       controls: { papel: "pmo", aba: "solicitacoes", view: "lista" },
       intent: "A base de SMs numa tabela, da mais recente para a mais antiga.",
       expected: [
-        "Colunas: Código, Solicitação (título, solicitante e área), Unidade, Aberta em, Score, Prioridade e Etapa.",
+        "Colunas: Código, Solicitação (título, solicitante e área), Unidade, Aberta em, Afetados, Score, Prioridade e Etapa.",
         "Busca por código, título ou solicitante; filtros de unidade, etapa e prioridade.",
         "Sem notas, a prioridade aparece \"A definir\" e o score \"—\".",
         "Clicar numa linha abre o detalhe.",
@@ -77,10 +126,10 @@ export const feature: Feature = {
       controls: { papel: "tech", aba: "solicitacoes", view: "kanban" },
       intent: "A Tech abre no kanban: uma coluna por etapa, com o responsável da etapa no cabeçalho.",
       expected: [
-        "Nove colunas, de Em triagem a Concluída; recusadas e canceladas ficam fora.",
+        "Nove colunas, de Em triagem a Concluída; rejeitadas, canceladas e excluídas ficam fora.",
         "Cartões ordenados por prioridade e score: código, prioridade, título, unidade e área, score e esforço (ou a data de abertura) e os apoios.",
-        "\"Ver recusadas (1)\" volta para a lista filtrada pela etapa Recusada.",
-        "A Tech não tem Ideias nem Nova solicitação.",
+        "\"Ver rejeitadas (1)\" volta para a lista filtrada pela etapa Rejeitada.",
+        "A Tech não tem Nova solicitação.",
       ],
     }),
     manage({
@@ -94,39 +143,63 @@ export const feature: Feature = {
       ],
     }),
     mine({
-      id: "sm.minhas",
-      title: "Minhas solicitações (Solicitante)",
-      controls: { aba: "solicitacoes" },
-      intent: "Carla Mendes, da recepção de Santana, chega pelo item Solicitações de melhoria do menu do usuário e vê só as SMs que abriu.",
+      id: "sm.cards",
+      title: "Todas as solicitações em cards (Solicitante)",
+      controls: { view: "cards" },
+      intent: "Carla Mendes, da recepção de Santana, chega pelo item Solicitações de melhoria do menu do usuário e vê as SMs da organização, para dizer quais também afetam a rotina dela.",
       expected: [
+        "Uma página só, sem abas, com o título dentro do card: todas as SMs, em Cards, Lista ou Kanban (o kanban só para olhar).",
         "No menu do usuário, \"Solicitações de melhoria\" entre Meu perfil e Base de Conhecimento, para qualquer colaborador.",
-        "Duas SMs: SM-009 (Em triagem) e SM-002 (Concluída), em lista; sem kanban nem Exportar base.",
-        "No sino, \"Aceite pendente\" da SM-006 e o pedido de esclarecimento da SM-008, já lido.",
+        "Ordenadas por mais pessoas afetadas; as encerradas vão para o fim, com o relato fechado.",
+        "Na base de cada card, como numa rede social: \"Também me afeta\" com o número de pessoas afetadas e as visualizações (5600 aparece como \"5,6 mil\").",
+        "\"Também me afeta\" abre o modal com a unidade e a área de quem clica e um relato opcional.",
+        "Na SM-008 e na SM-012 ela já está entre os afetados (ícone preenchido); clicar de novo a retira.",
+        "Nas SMs que ela abriu e nas encerradas, só o número, sem botão.",
+        "Abrir o detalhe soma uma visualização, uma vez por SM na sessão.",
       ],
     }),
-    mine({
-      id: "sm.ideias",
-      title: "Votação em ideias",
-      controls: { aba: "ideias" },
-      intent: "As SMs em andamento por número de apoios, para apoiar as que também afetam a sua rotina.",
+    {
+      id: "sm.abertura",
+      rules: ["sm.rn-001"],
+      title: "Abertura: nova solicitação",
+      route: NEW_PATH,
+      fixture: "sm.base",
+      persona: "admin",
+      controls: { papel: "solicitante" },
+      intent: "O formulário de 16 perguntas numa página, um card por seção, aberto pelo solicitante.",
       expected: [
-        "Concluídas, recusadas e canceladas não aparecem.",
-        "Apoiar soma um ao contador e pinta o botão; clicar de novo retira o apoio.",
-        "Os apoios não mudam o score.",
-      ],
-    }),
-    mine({
-      id: "sm.nova",
-      title: "Nova solicitação",
-      controls: { aba: "solicitacoes", nova: "aberto" },
-      intent: "O formulário de 16 perguntas em quatro passos, aberto pelo solicitante.",
-      expected: [
+        "Quatro cards, um abaixo do outro: Identificação, Necessidade e contorno, Impacto e urgência, Evidências e envio.",
+        "Sem o menu lateral e o cabeçalho do sistema. Cabeçalho fixo com Voltar, o título e o progresso das seções; rodapé fixo com Cancelar e Enviar solicitação.",
         "Identificação já vem com nome, contato, área e unidade de quem abre.",
-        "\"Próximo\" não avança com campo obrigatório vazio: marca o passo em vermelho e conta as pendências.",
-        "\"Como você contorna essa situação hoje?\" é obrigatório, com a explicação do porquê.",
         "Com prazo \"Sim\", pede os detalhes da data limite.",
+        "Ao digitar o título (ex.: \"bloqueio de sala\"), sugere as SMs em andamento parecidas, com \"Também me afeta\" em cada uma.",
+        "Enviar com pendência marca os campos e o card em vermelho, conta as pendências no rodapé e rola até o primeiro card pendente.",
         "Enviar exige confirmar que não há dados de pacientes; cria a SM em triagem, notifica o PMO e abre o detalhe.",
       ],
+      components: NEW_COMPONENTS,
+    },
+    manage({
+      id: "sm.cards-gestao",
+      title: "Solicitações em cards (PMO)",
+      controls: { papel: "pmo", aba: "solicitacoes", view: "cards" },
+      intent: "O PMO vê a mesma base pelo alcance: quantas pessoas, unidades e áreas cada SM afeta.",
+      expected: ["\"Mais pessoas afetadas\" em Ordenar por põe primeiro as que mais alcançam gente; a lista ganha a coluna Afetados."],
+    }),
+    mine({
+      id: "sm.vazio-colaborador",
+      title: "Base vazia (Solicitante)",
+      fixture: "sm.empty",
+      controls: { view: "cards" },
+      intent: "Antes da primeira SM da organização.",
+      expected: ["\"Nenhuma solicitação ainda\", apontando para Nova solicitação."],
+    }),
+    mine({
+      id: "sm.erro",
+      title: "Erro ao carregar",
+      network: "error",
+      controls: { view: "cards" },
+      intent: "A base não respondeu.",
+      expected: ["\"Não foi possível carregar as solicitações\", com \"Tentar de novo\". O detalhe mostra o mesmo aviso."],
     }),
     manage({
       id: "sm.vazio",
@@ -138,6 +211,7 @@ export const feature: Feature = {
     }),
     detail({
       id: "sm.triagem",
+      rules: ["sm.rn-005"],
       title: "Triagem preliminar (PMO)",
       sm: "SM-008",
       intent: "O PMO analisa a SM-008: causa raiz, macroprocesso, tipo, dependências, esforço e o resultado da triagem.",
@@ -149,19 +223,36 @@ export const feature: Feature = {
       ],
     }),
     detail({
+      id: "sm.afetados",
+      title: "Também me afeta, pelo detalhe (Solicitante)",
+      sm: "SM-008",
+      papel: "solicitante",
+      intent: "Carla abre a SM-008 de outra recepção pelos cards: vê o problema e quem mais é afetado, sem o contato nem os anexos de quem pediu.",
+      expected: [
+        "Card \"Quem também é afetado\": unidades alcançadas, os relatos e quantos não escreveram nada.",
+        "Ela já está entre os afetados; \"Me afeta\" a retira.",
+        "Contato, links de apoio e anexos ficam para quem pediu, o PMO e a Tech.",
+        "No lugar da etapa atual, o aviso de que a SM é de Beatriz Nogueira; sem a etapa, o rodapé de ações e o histórico de conversa.",
+      ],
+    }),
+    detail({
       id: "sm.priorizacao",
+      rules: ["sm.rn-002", "sm.rn-003", "sm.rn-004", "sm.rn-006", "sm.auditoria"],
       title: "Matriz de critérios (PMO)",
       sm: "SM-012",
       intent: "Notas de 0 a 5 em cinco critérios ponderados geram o score de 0 a 100 e a prioridade P0–P4.",
       expected: [
         "Pesos: Impacto 30%, Risco 20%, Urgência 20%, Abrangência 15% e Alinhamento 15%.",
         "Com contorno relatado, Impacto e Risco não aceitam nota abaixo de 3.",
-        "Exceção mandatória P0 sobrepõe o score e exige motivo e justificativa.",
+        "Abaixo de Abrangência, o alcance real: unidades, áreas e pessoas afetadas. É evidência para a nota, não muda o score sozinho.",
+        "Exceção mandatória P0: ligar abre motivo e justificativa; só vale depois de \"Aplicar exceção P0\". Aplicada, sobrepõe o score e mostra quem aplicou e quando.",
+        "\"Retirar exceção\" pede o motivo. Aplicar e retirar entram no histórico como Registro auditável.",
         "\"Salvar na base de backlog\" aprova a SM e notifica o solicitante.",
       ],
     }),
     detail({
       id: "sm.cenarios",
+      rules: ["sm.rn-007"],
       title: "Reunião de desenho de cenários",
       sm: "SM-004",
       intent: "Backlog ativo: a reunião com solicitante, áreas de interface e Tech mapeia regras e requisitos.",
@@ -169,6 +260,7 @@ export const feature: Feature = {
     }),
     detail({
       id: "sm.direcionar",
+      rules: ["sm.rn-007", "sm.rn-008"],
       title: "Direcionar demanda",
       sm: "SM-005",
       intent: "Com os cenários mapeados, o PMO escolhe o caminho: processo, desenvolvimento ou os dois.",
@@ -176,6 +268,7 @@ export const feature: Feature = {
     }),
     detail({
       id: "sm.modelagem",
+      rules: ["sm.rn-008"],
       title: "Modelagem de processo",
       sm: "SM-011",
       intent: "Fluxo, POP e capacitação, com as evidências anexadas na etapa.",
@@ -185,8 +278,21 @@ export const feature: Feature = {
       ],
     }),
     detail({
+      id: "sm.modelagem-solicitante",
+      rules: ["sm.rn-008"],
+      title: "Modelagem com quem pediu (Solicitante)",
+      sm: "SM-011",
+      papel: "solicitante",
+      intent: "Carla Mendes pediu a SM-011 e modela o processo junto com o PMO (R e R no RACI).",
+      expected: [
+        "Na SM dela, os mesmos campos do PMO: entregas de processo, resultado da modelagem e \"Concluir modelagem\" no rodapé.",
+        "Numa SM de outra pessoa, a mesma etapa não aparece: ela é colega ali.",
+      ],
+    }),
+    detail({
       id: "sm.desenvolvimento",
-      title: "Em desenvolvimento, P0 (Tech)",
+      rules: ["sm.rn-004", "sm.rn-007"],
+      title: "Em execução (Tech), P0",
       sm: "SM-003",
       papel: "tech",
       intent: "A Tech recebe a SM-003, P0 por exigência contratual, e marca a entrega em homologação.",
@@ -194,50 +300,88 @@ export const feature: Feature = {
     }),
     detail({
       id: "sm.homologacao",
+      rules: ["sm.rn-009"],
       title: "Aceite pendente (Solicitante)",
       sm: "SM-006",
       papel: "solicitante",
-      intent: "A Tech já validou em produção; falta o aceite do solicitante.",
-      expected: ["\"Confirmar aceite\" fecha a homologação e leva a SM ao registro de ganhos."],
+      intent: "A Tech já validou em produção; falta o aceite de Carla Mendes, que pediu a SM-006.",
+      expected: [
+        "Validação da Tech: \"Confirmado por Diego Martins\" com a data e a hora.",
+        "\"Confirmar aceite\" fecha a homologação e leva a SM ao registro de ganhos.",
+        "Só quem pediu confirma o aceite: o PMO acompanha, com o aviso de que a etapa é da Tech e de quem pediu.",
+      ],
     }),
     detail({
       id: "sm.ganhos",
+      rules: ["sm.rn-008", "sm.rn-010"],
       title: "Registro de ganhos (PMO)",
       sm: "SM-013",
       intent: "Processo implementado sem desenvolvimento: o PMO registra o ganho e encerra o ciclo.",
       expected: [
-        "Tipo de ganho e descrição são obrigatórios; horas por mês alimentam a Economia de TI do painel.",
+        "Tipo de ganho e descrição são obrigatórios; horas por mês alimentam a Economia gerada do dashboard.",
         "No fluxo, desenvolvimento e homologação aparecem riscados: \"Não se aplica neste caminho\".",
       ],
     }),
     detail({
       id: "sm.concluida",
+      rules: ["sm.rn-009", "sm.rn-010"],
       title: "Ciclo encerrado",
       sm: "SM-001",
       intent: "Uma SM que percorreu o fluxo inteiro, com a governança completa.",
       expected: ["Faixa verde com o ganho registrado; o fluxo todo em verde, com o evento de cada passo."],
     }),
     detail({
-      id: "sm.recusada",
-      title: "Recusada na triagem",
+      id: "sm.recusa",
+      rules: ["sm.rn-005", "sm.auditoria"],
+      title: "Rejeitada na triagem",
       sm: "SM-007",
       intent: "Dúvida operacional simples: a exportação já existia.",
-      expected: ["Faixa vermelha com o critério e a justificativa; o fluxo para em \"Registrar recusa com justificativa\"."],
+      expected: [
+        "Faixa vermelha com o critério e a justificativa; o fluxo para em \"Registrar recusa com justificativa\".",
+        "Status \"Rejeitada\". Uma recusa feita agora entra no histórico com critério e justificativa, marcada como Registro auditável.",
+      ],
+    }),
+    detail({
+      id: "sm.enviada",
+      title: "Confirmação de envio (Solicitante)",
+      sm: "SM-009",
+      papel: "solicitante",
+      aviso: "enviada",
+      rules: ["sm.rn-001"],
+      intent: "O que Carla vê logo depois de enviar: a SM aberta com a confirmação no topo.",
+      expected: [
+        "Faixa verde \"Solicitação enviada · SM-009\": o PMO foi notificado e faz a triagem; ela é avisada a cada etapa.",
+        "O \"x\" fecha a confirmação. Enviar uma nova solicitação abre o detalhe já com ela.",
+      ],
+    }),
+    detail({
+      id: "sm.exclusao",
+      title: "Excluir solicitação (PMO)",
+      sm: "SM-010",
+      rules: ["sm.auditoria"],
+      intent: "O PMO exclui uma SM aberta por engano, duplicada, de teste ou com dado de paciente.",
+      expected: [
+        "\"Excluir solicitação\", no rodapé à esquerda, abre o modal com motivo obrigatório e justificativa.",
+        "Excluída: faixa \"Excluída pelo PMO\", Registro auditável no histórico e aviso ao solicitante.",
+        "Some das listas dos colaboradores e dos indicadores do dashboard; na gestão, aparece com o filtro de etapa Excluída.",
+      ],
     }),
   ],
+  rules: RULES,
   fixtures: [...SM_FIXTURES],
   routes: [
     {
       path: PATH,
       screen: MyImprovementRequests,
-      name: "Minhas solicitações",
+      name: "Solicitações de melhoria",
       group: FLOW,
-      description: "Para qualquer colaborador, pelo menu do usuário: as SMs que abriu, a votação em ideias e a abertura de uma nova solicitação.",
+      description: "Para qualquer colaborador, pelo menu do usuário: as SMs da organização e as dele, \"Também me afeta\" e a abertura de uma nova solicitação.",
       controls: MINE_CONTROLS,
       expected: [
-        "Entrada pelo item \"Solicitações de melhoria\" do menu do usuário; sem item no menu lateral.",
-        "Abas Minhas solicitações (só as da pessoa, em lista) e Ideias.",
-        "Nova solicitação abre o formulário de 16 perguntas em quatro passos.",
+        "Entrada pelo item \"Solicitações de melhoria\" do menu do usuário ou pelo menu lateral, que só tem esse item.",
+        "Sem abas: todas as SMs em cards, lista ou kanban.",
+        "\"Também me afeta\" soma a pessoa à SM com a unidade, a área e um relato opcional.",
+        "Nova solicitação abre a página do formulário de 16 perguntas.",
         "O sino mostra as notificações da pessoa; clicar abre a SM.",
       ],
       components: HUB_COMPONENTS,
@@ -247,16 +391,29 @@ export const feature: Feature = {
       screen: ImprovementRequestsManagement,
       name: "Gestão de melhorias",
       group: FLOW,
-      description: "Para PMO e Tech, por URL: painel executivo, a base em lista ou kanban e a votação em ideias.",
+      description: "Para PMO e Tech, por URL: painel executivo e a base em lista, kanban ou cards, com as pessoas afetadas.",
       controls: MANAGE_CONTROLS,
       expected: [
-        "Sem item em menu: PMO e Tech chegam pela URL ou pelas notificações.",
-        "PMO vê Painel executivo, Solicitações e Ideias; Tech, Solicitações (no kanban) e Painel executivo.",
+        "PMO e Tech chegam pelo item Solicitações de melhoria do menu lateral, pela URL ou pelas notificações.",
+        "PMO vê Painel executivo e Solicitações; Tech, Solicitações (no kanban) e Painel executivo.",
         "Sem a permissão, a tela barra e leva às solicitações da pessoa.",
         "O PMO também registra uma nova solicitação em nome de quem pediu por outro canal.",
         "Exportar base baixa um CSV com separador ;.",
       ],
       components: HUB_COMPONENTS,
+    },
+    {
+      path: NEW_PATH,
+      screen: NewImprovementRequest,
+      name: "Nova solicitação",
+      group: FLOW,
+      description: "O formulário de 16 perguntas numa página sem o menu do sistema: um card por seção, cabeçalho e rodapé fixos.",
+      controls: NEW_CONTROLS,
+      expected: [
+        "Abre pelo botão Nova solicitação de Solicitações de melhoria (colaborador) ou da gestão (PMO).",
+        "Voltar e Cancelar levam de volta à tela de origem; Enviar cria a SM e abre o detalhe.",
+      ],
+      components: NEW_COMPONENTS,
     },
     {
       path: DETAIL_PATH,
@@ -268,6 +425,7 @@ export const feature: Feature = {
       controls: DETAIL_CONTROLS,
       expected: [
         "O cartão Etapa atual mostra o que a etapa pede e o RACI; quem não executa vê os campos desabilitados e o aviso de quem executa.",
+        "Um colega (quem não pediu) não vê a etapa nem a conversa: vê o fluxo, quem também é afetado e as respostas, sem contato e anexos.",
         "O fluxo marca os passos feitos, o atual e os que não se aplicam ao caminho escolhido.",
         "Comentar notifica os outros dois papéis; anexar evidência registra no histórico.",
         "O solicitante pode cancelar a própria SM enquanto ela está em triagem ou priorização.",

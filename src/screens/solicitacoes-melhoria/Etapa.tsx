@@ -7,20 +7,22 @@
  * modelagem e encerramento também; desenvolvimento é da Tech; a homologação
  * fecha com a validação da Tech e o aceite do solicitante.
  */
+import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { Card } from "../../components/Card.js";
-import { CheckboxGroup, RadioCards, RadioGroup, RadioSelector } from "../../components/Choice.js";
+import { CheckboxGroup, RadioGroup, RadioSelector } from "../../components/Choice.js";
 import { FileUploader } from "../../components/FileUploader.js";
 import { Icon } from "../../components/Icon.js";
 import { Input, SwitchCard } from "../../components/Input.js";
 import { Header } from "../../components/Layout.js";
 import { Tag } from "../../components/Tag.js";
 import {
-  CRITS, CUR_LABEL, L, OWNER, PRIO, RACI, STATUS, TAG_OF, TONE_BORDER,
+  CRITS, CUR_LABEL, L, OWNER, PRIO, RACI, TAG_OF, canAct, homologOf, isMine,
   effortOf, fmt, hasWorkaround, minScore, opts, prioOf, roleLabel, routeText, scoreOf,
   type Role, type Route, type Sm,
 } from "./model.js";
-import { Fact, Pending, cx } from "./parts.js";
+import { reachText } from "./Afetados.js";
+import { Fact, Pending, StageFooter, cx } from "./parts.js";
 import { filesOf, sm as actions } from "./store.js";
 
 type Props = { s: Sm; role: Role };
@@ -28,12 +30,11 @@ type Props = { s: Sm; role: Role };
 export function Etapa({ s, role }: Props) {
   const label = CUR_LABEL[s.status];
   if (!label) return null;
-  const st = STATUS[s.status];
-  const owner = OWNER[s.status];
-  const waiting = owner !== "both" && owner !== role;
+  const owners = (OWNER[s.status] ?? []).map((r) => (r === "solicitante" ? "quem pediu" : roleLabel(r)));
+  const waiting = !canAct(s, role);
 
   return (
-    <Card className={cx("space-y-6 border-t-4", TONE_BORDER[st.tone])}>
+    <Card className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black text-brand-purple-dark/60">Etapa atual</p>
@@ -67,7 +68,7 @@ export function Etapa({ s, role }: Props) {
 
       {waiting && (
         <p className="text-sm font-bold text-brand-purple-dark/60">
-          <Icon name="fa-eye" /> Você está visualizando como {roleLabel(role)}. Esta etapa é executada por {owner === "tech" ? "Tech" : "PMO"}.
+          <Icon name="fa-eye" /> Você está visualizando como {roleLabel(role)}. Esta etapa é executada por {owners.join(" e ")}.
         </p>
       )}
     </Card>
@@ -85,17 +86,16 @@ function Triagem({ s, role }: Props) {
   return (
     <div className="space-y-8">
       <Input type="textarea" id="sm_root_cause" rows={3} label="Causa raiz — problema real identificado *" placeholder="Distinta da solução sugerida pelo solicitante." value={s.rootCause} disabled={!pmo} onChange={(e) => set({ rootCause: e.target.value })} />
-      <div className="grid gap-8 md:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-2 2xl:grid-cols-3">
         <Input type="select" id="sm_macro" label="Macroprocesso *" prompt="Selecionar" options={opts(L.macros)} value={s.macro} disabled={!pmo} onChange={(v) => set({ macro: v ?? "" })} />
         <Input type="select" id="sm_type" label="Tipo da solicitação" prompt="Selecionar" options={opts(L.types)} value={s.type} disabled={!pmo} onChange={(v) => set({ type: v ?? "" })} />
         <Input type="select" id="sm_dependency" label="Dependências" options={opts(L.deps)} value={s.dependency} disabled={!pmo} clear={false} onChange={(v) => set({ dependency: v ?? "Nenhuma" })} />
       </div>
       <div className="space-y-2">
-        <RadioSelector
+        <RadioGroup
           label="Esforço estimado *"
           field={{ id: "sm_effort", name: "effort", value: s.effort }}
           radio={L.efforts.map(([v]) => ({ value: v, label: v, disabled: !pmo }))}
-          className="inline-block"
           onChange={(e) => set({ effort: e.target.value })}
         />
         <p className="text-sm text-brand-purple-dark/60">{eff ? `Estratégia recomendada: ${eff[1]}` : "PP a GG — estimativa preliminar"}</p>
@@ -108,43 +108,42 @@ function Triagem({ s, role }: Props) {
       </div>
 
       {pmo ? (
-        <RadioCards
-          id="sm_eligibility"
-          title="Resultado da triagem *"
-          value={s.eligibility}
-          onChange={(v) => set({ eligibility: v as Sm["eligibility"] })}
-          option={[
-            { id: "elegivel", title: "Demanda elegível para avaliação", subtitle: "Segue para a matriz de critérios", icon: "fa-circle-check" },
-            {
-              id: "inelegivel",
-              title: "Demanda considerada inelegível",
-              subtitle: "Registrar recusa com justificativa",
-              icon: "fa-ban",
-              children: (
-                <div className="space-y-8">
-                  <Input type="select" id="sm_reject_criterion" label="Critério de inelegibilidade *" prompt="Selecionar" options={opts(L.inelig)} value={s.rejectCriterion} onChange={(v) => set({ rejectCriterion: v ?? "" })} />
-                  <Input type="textarea" id="sm_rejection" rows={3} label="Justificativa detalhada *" placeholder="Será enviada ao solicitante." value={s.rejection} onChange={(e) => set({ rejection: e.target.value })} />
-                  <Button type="button" color="red" leftIcon="fa-ban" disabled={!s.rejectCriterion || !s.rejection.trim()} onClick={() => actions.reject(s.id, role)}>
-                    Registrar recusa e notificar solicitante
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
-        />
+        <div className="space-y-8">
+          <RadioGroup
+            label="Resultado da triagem *"
+            field={{ id: "sm_eligibility", name: "eligibility", value: s.eligibility }}
+            radio={[
+              { value: "elegivel", label: "Elegível · segue para a matriz de critérios" },
+              { value: "inelegivel", label: "Inelegível · registrar recusa com justificativa" },
+            ]}
+            onChange={(e) => set({ eligibility: e.target.value as Sm["eligibility"] })}
+          />
+          {s.eligibility === "inelegivel" && (
+            <div className="space-y-8">
+              <Input type="select" id="sm_reject_criterion" label="Critério de inelegibilidade *" prompt="Selecionar" options={opts(L.inelig)} value={s.rejectCriterion} onChange={(v) => set({ rejectCriterion: v ?? "" })} />
+              <Input type="textarea" id="sm_rejection" rows={3} label="Justificativa detalhada *" placeholder="Será enviada ao solicitante." value={s.rejection} onChange={(e) => set({ rejection: e.target.value })} />
+              <StageFooter>
+                <Pending missing={[!s.rejectCriterion && "critério", !s.rejection.trim() && "justificativa"].filter(Boolean) as string[]} ready="Recusa pronta." joiner=" e " />
+                <Button type="button" color="red" leftIcon="fa-ban" disabled={!s.rejectCriterion || !s.rejection.trim()} onClick={() => actions.reject(s.id, role)}>
+                  Registrar recusa e notificar solicitante
+                </Button>
+              </StageFooter>
+            </div>
+          )}
+        </div>
       ) : (
         <Fact label="Resultado da triagem">{s.eligibility === "elegivel" ? "Elegível" : s.eligibility === "inelegivel" ? "Inelegível" : "Em análise pelo PMO"}</Fact>
       )}
 
       {s.eligibility === "elegivel" && (
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <StageFooter>
           <Pending missing={missing} ready="Triagem pronta." />
           {pmo && (
             <Button type="button" rightIcon="fa-arrow-right" disabled={missing.length > 0} onClick={() => actions.finishTriage(s.id, role)}>
               Concluir triagem · seguir para a matriz
             </Button>
           )}
-        </div>
+        </StageFooter>
       )}
     </div>
   );
@@ -154,7 +153,9 @@ function Priorizacao({ s, role }: Props) {
   const pmo = role === "pmo";
   const set = patch(s);
   const p = prioOf(s);
-  const missing = s.p0 && (!s.p0Reason || !s.p0Just.trim()) ? ["motivo e justificativa P0"] : [];
+  // A exceção só vale depois de aplicada: ligar o switch abre o rascunho.
+  const [drafting, setDrafting] = useState(false);
+  const missing = drafting && !s.p0 ? ["aplicar ou desligar a exceção P0"] : [];
 
   return (
     <div className="space-y-6">
@@ -187,6 +188,11 @@ function Priorizacao({ s, role }: Props) {
                   {c.label} <span className="text-xs font-extrabold text-brand-purple-dark/60">· peso {Math.round(c.w * 100)}%</span>
                 </p>
                 <p className="text-xs text-brand-purple-dark/60">{v} — {c.rub[v]}</p>
+                {c.key === "reach" && (
+                  <p className="mt-1 text-xs font-bold text-blue-dark">
+                    <Icon name="fa-users" type="solid" /> Alcança {reachText(s)}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-3">
                 <RadioSelector
@@ -202,32 +208,81 @@ function Priorizacao({ s, role }: Props) {
       </div>
 
       {pmo ? (
-        <div className="space-y-4">
-          <SwitchCard
-            field={{ id: "sm_p0", name: "p0", value: s.p0 }}
-            title="Exceção mandatória P0"
-            description="Sobrepõe o score. Exige motivo e justificativa para auditoria."
-            onChange={(e) => set({ p0: e.target.checked })}
-          />
-          {s.p0 && (
-            <div className="grid gap-8 md:grid-cols-2">
-              <Input type="select" id="sm_p0_reason" label="Motivo *" prompt="Selecionar" options={opts(L.p0Reasons)} value={s.p0Reason} onChange={(v) => set({ p0Reason: v ?? "" })} />
-              <Input id="sm_p0_just" label="Justificativa *" value={s.p0Just} onChange={(e) => set({ p0Just: e.target.value })} />
-            </div>
-          )}
-        </div>
+        <P0Exception s={s} role={role} drafting={drafting} onDrafting={setDrafting} />
       ) : (
         s.p0 && <Fact label="Exceção mandatória P0">{s.p0Reason} — {s.p0Just}</Fact>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <StageFooter>
         <Pending missing={missing} ready="Score e prioridade gerados." />
         {pmo && (
           <Button type="button" leftIcon="fa-floppy-disk" disabled={missing.length > 0} onClick={() => actions.saveBacklog(s.id, role)}>
             Salvar na base de backlog
           </Button>
         )}
+      </StageFooter>
+    </div>
+  );
+}
+
+/**
+ * Exceção mandatória P0 (RN-004, RF-007): aplicar pede motivo e justificativa;
+ * retirar pede o motivo. As duas ficam no histórico como registro auditável.
+ */
+function P0Exception({ s, role, drafting, onDrafting }: Props & { drafting: boolean; onDrafting: (v: boolean) => void }) {
+  const [reason, setReason] = useState(s.p0Reason);
+  const [just, setJust] = useState(s.p0Just);
+  const [removing, setRemoving] = useState(false);
+  const [why, setWhy] = useState("");
+  const applied = s.history.filter((h) => h.audit && h.text.startsWith("Exceção mandatória P0 aplicada")).at(-1);
+
+  if (s.p0) {
+    return (
+      <div className="space-y-4 rounded-xl border-2 border-red/40 bg-red-light p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <p className="font-bold text-red-dark"><Icon name="fa-triangle-exclamation" type="solid" /> Exceção mandatória P0 aplicada</p>
+            <p className="text-sm text-brand-purple-dark"><b>{s.p0Reason}</b> — {s.p0Just}</p>
+            {applied && <p className="text-xs font-bold text-brand-purple-dark/60">{applied.who} · {applied.at}</p>}
+          </div>
+          {!removing && <Button type="button" variant="tint" color="red" size="medium" onClick={() => setRemoving(true)}>Retirar exceção</Button>}
+        </div>
+        {removing && (
+          <div className="space-y-4 border-t border-red/20 pt-4">
+            <Input id="sm_p0_remove" label="Motivo da retirada *" placeholder="Fica no histórico, com data e responsável." value={why} onChange={(e) => setWhy(e.target.value)} />
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" size="medium" onClick={() => { setRemoving(false); setWhy(""); }}>Cancelar</Button>
+              <Button type="button" color="red" size="medium" disabled={!why.trim()} onClick={() => { actions.removeP0(s.id, role, why.trim()); setRemoving(false); setWhy(""); onDrafting(false); setReason(""); setJust(""); }}>
+                Retirar e registrar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <SwitchCard
+        field={{ id: "sm_p0", name: "p0", value: drafting }}
+        title="Exceção mandatória P0"
+        description="Sobrepõe o score. Exige motivo e justificativa, que ficam no histórico para auditoria."
+        onChange={(e) => onDrafting(e.target.checked)}
+      />
+      {drafting && (
+        <div className="space-y-4">
+          <div className="grid gap-8 md:grid-cols-2">
+            <Input type="select" id="sm_p0_reason" label="Motivo *" prompt="Selecionar" options={opts(L.p0Reasons)} value={reason} onChange={(v) => setReason(v ?? "")} />
+            <Input id="sm_p0_just" label="Justificativa *" value={just} onChange={(e) => setJust(e.target.value)} />
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" color="red" size="medium" leftIcon="fa-triangle-exclamation" disabled={!reason || !just.trim()} onClick={() => actions.applyP0(s.id, role, reason, just.trim())}>
+              Aplicar exceção P0
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -260,14 +315,14 @@ function Cenarios({ s, role }: Props) {
       />
       <Input type="textarea" id="sm_rules" rows={4} label="Regras de negócio mapeadas" placeholder="RN-01 — ..." value={s.rules} disabled={!pmo} onChange={(e) => set({ rules: e.target.value })} />
       <Input type="textarea" id="sm_reqs" rows={4} label="Requisitos funcionais mapeados" placeholder="RF-01 — ..." value={s.reqs} disabled={!pmo} onChange={(e) => set({ reqs: e.target.value })} />
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <StageFooter>
         <Pending missing={missing} ready="Pronto para direcionamento." joiner=" e " />
         {pmo && (
           <Button type="button" leftIcon="fa-diagram-project" disabled={missing.length > 0} onClick={() => actions.finishScenarios(s.id, role)}>
             Concluir reunião de cenários
           </Button>
         )}
-      </div>
+      </StageFooter>
     </div>
   );
 }
@@ -306,14 +361,14 @@ function Direcionar({ s, role }: Props) {
       ) : (
         <Fact label="Direcionamento">{s.routes.length ? routeText(s.routes) : "Aguardando o PMO"}</Fact>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <StageFooter>
         <p className="text-sm font-bold text-brand-purple-dark/60">{result}</p>
         {pmo && (
           <Button type="button" leftIcon="fa-signs-post" disabled={!s.routes.length} onClick={() => actions.confirmRouting(s.id, role)}>
             Direcionar demanda
           </Button>
         )}
-      </div>
+      </StageFooter>
     </div>
   );
 }
@@ -325,7 +380,8 @@ const PROC_CHECKS: { name: "procFlow" | "procPop" | "procTraining"; title: strin
 ];
 
 function Modelagem({ s, role }: Props) {
-  const pmo = role === "pmo";
+  // PMO e quem pediu modelam juntos (R e R no RACI).
+  const can = canAct(s, role);
   const set = patch(s);
   const devToo = s.routes.includes("dev");
   const evidence = s.history.filter((h) => h.kind === s.status).reduce((a, h) => a + (h.files?.length ?? 0), 0);
@@ -337,7 +393,7 @@ function Modelagem({ s, role }: Props) {
         Modelagem do processo com o solicitante e as áreas de interface. Anexe o fluxo, o POP e o material de treinamento como evidências desta etapa —{" "}
         {evidence ? `${evidence} arquivo(s) anexado(s) nesta etapa` : "nenhum arquivo anexado ainda"}.
       </p>
-      {pmo ? (
+      {can ? (
         <div className="grid gap-3">
           {PROC_CHECKS.map((p) => (
             <SwitchCard key={p.name} field={{ id: `sm_${p.name}`, name: p.name, value: s[p.name] }} title={p.title} description={p.description} onChange={(e) => set({ [p.name]: e.target.checked })} />
@@ -351,8 +407,8 @@ function Modelagem({ s, role }: Props) {
           label="Resultado da modelagem *"
           field={{ id: "sm_subpath", name: "subpath", value: s.subpath }}
           radio={[
-            { value: "sem", label: "Processo implementado sem desenvolvimento", disabled: !pmo || devToo },
-            { value: "com", label: "Processo implementado com desenvolvimento", disabled: !pmo },
+            { value: "sem", label: "Processo implementado sem desenvolvimento", disabled: !can || devToo },
+            { value: "com", label: "Processo implementado com desenvolvimento", disabled: !can },
           ]}
           onChange={(e) => set({ subpath: e.target.value as Sm["subpath"] })}
         />
@@ -362,14 +418,14 @@ function Modelagem({ s, role }: Props) {
             : "Sem desenvolvimento vai direto para o registro de ganhos. Com desenvolvimento segue para a Tech."}
         </p>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <StageFooter>
         <Pending missing={missing} ready="Modelagem pronta." joiner=" e " />
-        {pmo && (
+        {can && (
           <Button type="button" leftIcon="fa-sitemap" disabled={missing.length > 0} onClick={() => actions.finishModeling(s.id, role)}>
             Concluir modelagem
           </Button>
         )}
-      </div>
+      </StageFooter>
     </div>
   );
 }
@@ -383,9 +439,11 @@ function Execucao({ s, role }: Props) {
           : "Parametrizar e desenvolver o sistema com base nas regras e requisitos mapeados no desenho de cenários."}
       </p>
       {role === "tech" ? (
-        <Button type="button" leftIcon="fa-rocket" onClick={() => actions.markDeployed(s.id, role)}>
-          Funcionalidade implementada em homologação
-        </Button>
+        <StageFooter>
+          <Button type="button" leftIcon="fa-rocket" onClick={() => actions.markDeployed(s.id, role)}>
+            Funcionalidade implementada em homologação
+          </Button>
+        </StageFooter>
       ) : (
         <p className="font-bold text-brand-purple-dark"><Icon name="fa-hourglass-half" /> Aguardando a Tech.</p>
       )}
@@ -395,8 +453,8 @@ function Execucao({ s, role }: Props) {
 
 function Homologacao({ s, role }: Props) {
   const steps = [
-    { field: "homologTech" as const, title: "Validação da Tech", sub: "Resultado prático verificado em produção.", cta: "Validar entrega", done: s.homologTech, can: role === "tech" },
-    { field: "homologReq" as const, title: "Aceite do solicitante", sub: "Teste assistido com o solicitante confirma que a dor foi resolvida.", cta: "Confirmar aceite", done: s.homologReq, can: role === "solicitante" || role === "pmo" },
+    { field: "homologTech" as const, title: "Validação da Tech", sub: "Resultado prático verificado em produção.", cta: "Validar entrega", done: s.homologTech, signed: homologOf(s).tech, can: role === "tech" },
+    { field: "homologReq" as const, title: "Aceite do solicitante", sub: "Teste assistido com o solicitante confirma que a dor foi resolvida.", cta: "Confirmar aceite", done: s.homologReq, signed: homologOf(s).req, can: role === "solicitante" && isMine(s, role) },
   ];
   return (
     <div className="space-y-4">
@@ -408,7 +466,7 @@ function Homologacao({ s, role }: Props) {
               <Icon name={h.done ? "fa-circle-check" : "fa-circle"} type="solid" className={h.done ? "text-green" : "text-neutral-300"} />
               {h.title}
             </p>
-            <p className="text-sm text-brand-purple-dark/60">{h.done ? "Confirmado." : h.sub}</p>
+            <p className="text-sm text-brand-purple-dark/60">{h.done ? `Confirmado por ${h.signed || "—"}.` : h.sub}</p>
             {!h.done && h.can && (
               <Button type="button" color="green" size="medium" leftIcon="fa-check" onClick={() => actions.homolog(s.id, role, h.field)}>
                 {h.cta}
@@ -428,7 +486,7 @@ function Encerramento({ s, role }: Props) {
   const intro =
     s.subpath === "sem" && !devToo
       ? "Processo implementado sem desenvolvimento"
-      : `Entrega homologada em produção por ${s.homologatedBy || "Tech e solicitante"}${s.homologatedAt ? ` em ${s.homologatedAt}` : ""}`;
+      : `Entrega homologada em produção · Tech: ${homologOf(s).tech || "—"} · Aceite: ${homologOf(s).req || "—"}`;
 
   return (
     <div className="space-y-8">
@@ -442,9 +500,12 @@ function Encerramento({ s, role }: Props) {
       </div>
       <Input type="textarea" id="sm_gain_desc" rows={2} label="Descrição do valor gerado *" placeholder="Ex.: Eliminou a conferência manual de guias na recepção." value={s.gainDesc} disabled={!pmo} onChange={(e) => set({ gainDesc: e.target.value })} />
       {pmo && (
-        <Button type="button" leftIcon="fa-flag-checkered" disabled={!s.gainType || !s.gainDesc.trim()} onClick={() => actions.close(s.id, role)}>
-          Atualizar status e encerrar ciclo
-        </Button>
+        <StageFooter>
+          <Pending missing={[!s.gainType && "tipo de ganho", !s.gainDesc.trim() && "descrição do valor"].filter(Boolean) as string[]} ready="Ganho registrado." joiner=" e " />
+          <Button type="button" leftIcon="fa-flag-checkered" disabled={!s.gainType || !s.gainDesc.trim()} onClick={() => actions.close(s.id, role)}>
+            Atualizar status e encerrar ciclo
+          </Button>
+        </StageFooter>
       )}
     </div>
   );

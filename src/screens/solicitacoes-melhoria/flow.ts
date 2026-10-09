@@ -1,12 +1,16 @@
 /**
  * Solicitações de melhoria — as rotas e os controles das telas.
  *
- * Três telas, sem item no menu lateral:
+ * Quatro telas. No menu lateral, só o item Solicitações de melhoria, que leva o
+ * colaborador às solicitações dele e PMO e Tech à gestão:
  * - Minhas solicitações (`/backoffice/solicitacoes-de-melhoria`): qualquer
- *   colaborador, pelo item "Solicitações de melhoria" do menu do usuário. Abas
- *   Minhas solicitações e Ideias, e o modal Nova solicitação.
+ *   colaborador, pelo item "Solicitações de melhoria" do menu do usuário. Uma
+ *   página só, com todas as SMs em cards, lista ou kanban, e o botão Nova
+ *   solicitação.
  * - Gestão (`…/gestao`): só PMO e Tech, por URL. Abas Painel executivo,
- *   Solicitações (lista ou kanban) e Ideias. Sem a permissão, a tela barra.
+ *   Solicitações (lista, kanban ou cards). Sem a permissão, a tela barra.
+ * - Nova solicitação (`…/nova`): a página do formulário, aberta pelo botão das
+ *   duas telas acima. Volta para a tela de origem do papel.
  * - Detalhe (`…/:id`): a mesma SM para os três papéis, cada um com o que pode
  *   fazer na etapa.
  *
@@ -24,6 +28,7 @@ export const FLOW = "Solicitações de melhoria";
 
 export const PATH = "/backoffice/solicitacoes-de-melhoria";
 export const MANAGE_PATH = `${PATH}/gestao`;
+export const NEW_PATH = `${PATH}/nova`;
 export const DETAIL_PATH = `${PATH}/:id`;
 export const detailPath = (id: string) => `${PATH}/${id}`;
 
@@ -43,19 +48,14 @@ const roleControl = (note: string, options: { value: Role; label: string }[]): C
 export const roleOf = (controls: Controls): Role =>
   controls.papel === "solicitante" || controls.papel === "tech" ? controls.papel : "pmo";
 
-export type TabId = "painel" | "solicitacoes" | "ideias";
+export type TabId = "painel" | "solicitacoes";
 export type Area = "mine" | "manage";
 
-/** As abas de cada tela, na ordem: a primeira é a de abertura. */
-export const TABS: Record<"mine" | "pmo" | "tech", { id: TabId; title: string }[]> = {
-  mine: [
-    { id: "solicitacoes", title: "Minhas solicitações" },
-    { id: "ideias", title: "Ideias" },
-  ],
+/** As abas da gestão, na ordem: a primeira é a de abertura. Minhas solicitações não tem abas. */
+export const TABS: Record<"pmo" | "tech", { id: TabId; title: string }[]> = {
   pmo: [
     { id: "painel", title: "Painel executivo" },
     { id: "solicitacoes", title: "Solicitações" },
-    { id: "ideias", title: "Ideias" },
   ],
   tech: [
     { id: "solicitacoes", title: "Solicitações" },
@@ -63,40 +63,24 @@ export const TABS: Record<"mine" | "pmo" | "tech", { id: TabId; title: string }[
   ],
 };
 
-const NOVA_CONTROL: ControlGroup = {
-  id: "nova",
-  title: "Nova solicitação · modal",
-  component: "core.modal",
-  note: "O formulário de 16 perguntas em quatro passos.",
-  controls: [
-    {
-      id: "nova",
-      label: "Modal",
-      options: [
-        { value: "fechado", label: "Fechado" },
-        { value: "aberto", label: "Aberto" },
-      ],
-    },
-  ],
-};
-
 export const MINE_CONTROLS: ControlGroup[] = [
   {
-    id: "aba",
-    title: "Aba · card_tabs",
-    component: "core.card-tabs",
+    id: "view",
+    title: "Visualização · radio_selector",
+    component: "core.radio-selector",
+    note: "Cards, com \"Também me afeta\" em cada SM, lista ou kanban. No kanban o colaborador só olha: a etapa anda pelo detalhe.",
     controls: [
       {
-        id: "aba",
-        label: "Aba",
+        id: "view",
+        label: "Visualização",
         options: [
-          { value: "solicitacoes", label: "Minhas solicitações" },
-          { value: "ideias", label: "Ideias" },
+          { value: "cards", label: "Cards" },
+          { value: "lista", label: "Lista" },
+          { value: "kanban", label: "Kanban" },
         ],
       },
     ],
   },
-  NOVA_CONTROL,
 ];
 
 export const MANAGE_CONTROLS: ControlGroup[] = [
@@ -109,7 +93,7 @@ export const MANAGE_CONTROLS: ControlGroup[] = [
     id: "aba",
     title: "Aba · card_tabs",
     component: "core.card-tabs",
-    note: "PMO: Painel executivo, Solicitações e Ideias. Tech: Solicitações e Painel executivo.",
+    note: "PMO: Painel executivo e Solicitações. Tech: Solicitações e Painel executivo.",
     controls: [
       {
         id: "aba",
@@ -117,7 +101,6 @@ export const MANAGE_CONTROLS: ControlGroup[] = [
         options: [
           { value: "painel", label: "Painel executivo" },
           { value: "solicitacoes", label: "Solicitações" },
-          { value: "ideias", label: "Ideias" },
         ],
       },
     ],
@@ -126,7 +109,7 @@ export const MANAGE_CONTROLS: ControlGroup[] = [
     id: "view",
     title: "Solicitações · radio_selector",
     component: "core.radio-selector",
-    note: "A mesma base em lista ou no kanban do fluxo (uma coluna por etapa). A Tech abre no kanban.",
+    note: "A mesma base em lista, no kanban do fluxo (uma coluna por etapa) ou em cards, com as pessoas afetadas. A Tech abre no kanban.",
     controls: [
       {
         id: "view",
@@ -134,11 +117,18 @@ export const MANAGE_CONTROLS: ControlGroup[] = [
         options: [
           { value: "lista", label: "Lista" },
           { value: "kanban", label: "Kanban" },
+          { value: "cards", label: "Cards" },
         ],
       },
     ],
   },
-  { ...NOVA_CONTROL, note: "O PMO também registra em nome de quem pediu por outro canal." },
+];
+
+export const NEW_CONTROLS: ControlGroup[] = [
+  roleControl("Quem abre a página: o solicitante, pelas solicitações dele, ou o PMO, pela gestão, em nome de quem pediu por outro canal.", [
+    { value: "solicitante", label: "Solicitante" },
+    { value: "pmo", label: "PMO" },
+  ]),
 ];
 
 export const DETAIL_CONTROLS: ControlGroup[] = [
@@ -147,6 +137,21 @@ export const DETAIL_CONTROLS: ControlGroup[] = [
     { value: "solicitante", label: "Solicitante" },
     { value: "tech", label: "Tech" },
   ]),
+  {
+    id: "aviso",
+    title: "Confirmação de envio",
+    note: "Logo depois de enviar, o detalhe abre com a confirmação: o protocolo, quem foi avisado e o próximo passo.",
+    controls: [
+      {
+        id: "aviso",
+        label: "Confirmação",
+        options: [
+          { value: "nenhum", label: "Sem confirmação" },
+          { value: "enviada", label: "Solicitação enviada" },
+        ],
+      },
+    ],
+  },
 ];
 
 /**
