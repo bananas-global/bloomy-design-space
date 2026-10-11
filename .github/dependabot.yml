@@ -1,8 +1,9 @@
 # Atualização das dependências por PR do Dependabot, uma vez por semana.
 #
-# O merge é automático: `.github/workflows/automerge.yml` mescla os PRs do
-# Dependabot na main como brucesantos. O motor fica num grupo próprio para que o
-# PR dele seja separado e fácil de achar no histórico quando uma tela mudar.
+# O merge é automático só para o Dependabot: `.github/workflows/automerge.yml`
+# mescla os PRs dele na main como brucesantos. PR de pessoa do time é handoff
+# e fica aberto. O motor fica num grupo próprio para que o PR dele seja
+# separado e fácil de achar no histórico quando uma tela mudar.
 version: 2
 updates:
   - package-ecosystem: npm

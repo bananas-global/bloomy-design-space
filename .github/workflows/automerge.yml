@@ -62,20 +62,13 @@ jobs:
             exit 0
           fi
 
+          # Só o Dependabot. PR de pessoa do time fica aberto: é o handoff para
+          # o time de tecnologia, e o merge acontece quando eles terminam a
+          # implementação no outro repositório.
           author=$(jq -r .user.login <<< "$pr")
           if [[ "$author" != "dependabot[bot]" ]]; then
-            if [[ $(jq -r .user.type <<< "$pr") == "Bot" ]]; then
-              echo "PR #$PR ignorado: bot não autorizado." | tee -a "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
-            permission=$(gh api "repos/$REPO/collaborators/$author/permission" --jq .permission)
-            case "$permission" in
-              admin|maintain|write) ;;
-              *)
-                echo "PR #$PR ignorado: $author tem permissão $permission." | tee -a "$GITHUB_STEP_SUMMARY"
-                exit 0
-                ;;
-            esac
+            echo "PR #$PR ignorado: autor $author não é o Dependabot." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
 
           head_sha=$(jq -r .head.sha <<< "$pr")
