@@ -8,9 +8,11 @@
  *   tabela de planos; vigência encerrada fica somente leitura;
  * - o botão "Exportar PDF" e o modal Exportar PIC (`./pic/ExportPicModal.tsx`),
  *   com a pré-visualização do PIC em uma página A4 e o "Baixar PDF";
+ * - o botão "Pré-visualizar" e o modal de simulação do atendimento, em tela cheia
+ *   (`./pic/PicPreviewModal.tsx`), com os programas da especialidade da aba;
  * - as abas e as pílulas de especialidade (`./pic/parts.tsx`).
  *
- * Fora do protótipo: Pré-visualizar (a simulação da sessão), Nova vigência, a
+ * Fora do protótipo: Nova vigência, a
  * visão em Lista (desabilitada no seletor) e os modais de área, objetivo e
  * programa. Os botões ficam, com um toast.
  */
@@ -25,8 +27,9 @@ import { Dropdown } from "../components/Overlay.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { PatientLayout } from "../layouts/PatientLayout.js";
 import { ExportPicModal } from "./pic/ExportPicModal.js";
+import { PicPreviewModal } from "./pic/PicPreviewModal.js";
 import { MY_SPECIALTY, PIC_FIXTURES, TODAY, type PicFixture, type Plan, type SpecialtyId } from "./pic/fixtures.js";
-import { GridLayout, goalsOf, SpecialtyTabs } from "./pic/parts.js";
+import { GridLayout, goalsOf, SpecialtyTabs, specialtyOf } from "./pic/parts.js";
 
 export const PIC_PATH = "/backoffice/pacientes/pt1/pic";
 
@@ -128,8 +131,10 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
   const [planId, setPlanId] = useState(ordered[0]?.id);
   const [spec, setSpec] = useState<SpecialtyId | "all">("all");
   const [exporting, setExporting] = useState(fixture.exportOpen ?? false);
+  const [previewing, setPreviewing] = useState(fixture.previewOpen ?? false);
   // Os dados chegam do adapter depois do primeiro render.
   useEffect(() => setExporting(fixture.exportOpen ?? false), [fixture.exportOpen]);
+  useEffect(() => setPreviewing(fixture.previewOpen ?? false), [fixture.previewOpen]);
 
   const plan = plans.find((p) => p.id === planId) ?? ordered[0];
   if (!plan) return null;
@@ -148,7 +153,7 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
             </span>
           )}
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <Button type="button" variant="tint" leftIcon="fa-eye" iconType="solid" onClick={() => notInPrototype("Pré-visualizar")}>
+            <Button type="button" variant="tint" leftIcon="fa-eye" iconType="solid" onClick={() => setPreviewing(true)}>
               Pré-visualizar
             </Button>
             <Button type="button" variant="tint" color="purple" leftIcon="fa-file-pdf" iconType="solid" onClick={() => setExporting(true)}>
@@ -184,6 +189,14 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
       <SpecialtyTabs goals={goals} value={spec} mine={MY_SPECIALTY} onChange={setSpec} />
 
       <GridLayout key={`${plan.id}-${spec}`} goals={goalsOf(goals, spec)} canEdit={canEdit} canDiscard={canEdit && context.can("behavior_intervention_plans.discard")} />
+
+      <PicPreviewModal
+        show={previewing}
+        onCancel={() => setPreviewing(false)}
+        planName={plan.name}
+        subtitle={spec === "all" ? "Todas as especialidades" : specialtyOf(spec).label}
+        goals={goalsOf(goals, spec)}
+      />
 
       <ExportPicModal show={exporting} onCancel={() => setExporting(false)} plan={plan} goals={goals} patientName={patient.name} />
     </Card>

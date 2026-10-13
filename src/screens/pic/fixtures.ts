@@ -78,6 +78,8 @@ export type PicFixture = {
   goals: Goal[];
   /** Abre a tela com o modal Exportar PIC aberto. */
   exportOpen?: boolean;
+  /** Abre a tela com o modal Pré-visualizar aberto. */
+  previewOpen?: boolean;
 };
 
 const DISCRETE = "Treinamento Habilidades / Tentativas discretas";
@@ -343,5 +345,17 @@ export const PIC_FIXTURES: Fixture<PicFixture>[] = [
     label: "Exportar PIC com muitas áreas",
     description: "Nove áreas: o texto é reduzido para caber numa página.",
     data: { patient: PATIENT, plans: PLANS, goals: [...GOALS, ...EXTRA_GOALS], exportOpen: true },
+  },
+  {
+    id: "pic.preview",
+    label: "Pré-visualizar aberto",
+    description: "O mesmo PIC, com o modal de simulação do atendimento aberto.",
+    data: { patient: PATIENT, plans: PLANS, goals: GOALS, previewOpen: true },
+  },
+  {
+    id: "pic.preview-empty",
+    label: "Pré-visualizar sem programas",
+    description: "Plano sem áreas: o modal não tem o que simular.",
+    data: { patient: PATIENT, plans: PLANS, goals: [], previewOpen: true },
   },
 ];

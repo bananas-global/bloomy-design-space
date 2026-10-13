@@ -2,7 +2,7 @@ import type { Feature } from "../../app/features.js";
 import { BehaviorInterventionPlan, PIC_PATH } from "../BehaviorInterventionPlan.js";
 import { PIC_FIXTURES } from "./fixtures.js";
 
-/** PIC do paciente: a aba redesenhada e o Exportar PIC. */
+/** PIC do paciente: a aba redesenhada, o Exportar PIC e o Pré-visualizar. */
 export const feature: Feature = {
   scenarios: [
     {
@@ -51,6 +51,32 @@ export const feature: Feature = {
       ],
     },
     {
+      id: "pic.preview",
+      title: "Pré-visualizar PIC",
+      route: PIC_PATH,
+      fixture: "pic.preview",
+      persona: "admin",
+      intent: "O modal Pré-visualizar, em tela cheia como o Exportar PIC: simula o atendimento com todos os programas do plano, alvo a alvo, sem gravar nada.",
+      expected: [
+        "Cabeçalho: Pré-visualização do atendimento, Plano Terapêutico 2026 · 1º Semestre e Todas as especialidades; o X fecha.",
+        "À esquerda, a Fila de alvos com os 9 programas: nome, área · fase e o tipo de registro. O alvo atual fica destacado.",
+        "Tentativas discretas: abas de fase, Nível de ajuda simulado (AV → I) na Intervenção e os botões Erro, Ajuda e Independente. Com 10 tentativas aparece o resultado: avança, mantém ou volta.",
+        "Duração: cronômetro com Iniciar/Parar e a meta 01:00. Frequência: contador com Finalizar intervalo.",
+        "Programa adquirido mostra o card Adquirido, sem aplicação.",
+        "Rodapé: Alvo N de 9, a barra de alvos concluídos, Anterior e Próximo alvo; no último, Encerrar simulação.",
+        "Filtrar a aba por especialidade antes de abrir limita a fila aos programas dela.",
+      ],
+    },
+    {
+      id: "pic.preview-empty",
+      title: "Pré-visualizar PIC › Sem programas",
+      route: PIC_PATH,
+      fixture: "pic.preview-empty",
+      persona: "admin",
+      intent: "Plano sem programas: o modal avisa que não há o que simular.",
+      expected: ["\"Este plano ainda não tem programas para simular.\" no lugar da fila e da simulação."],
+    },
+    {
       id: "pic.read-only",
       title: "PIC › Sem permissão de editar",
       route: PIC_PATH,
@@ -66,7 +92,7 @@ export const feature: Feature = {
       path: PIC_PATH,
       screen: BehaviorInterventionPlan,
       name: "PIC do paciente",
-      description: "A aba PIC da ficha do paciente redesenhada (vigências, especialidades), com o novo Exportar PDF: a pré-visualização do PIC em uma página e o Baixar PDF.",
+      description: "A aba PIC da ficha do paciente redesenhada (vigências, especialidades), com o novo Exportar PDF (a folha do PIC e o Baixar PDF) e o Pré-visualizar (a simulação do atendimento).",
     },
   ],
 };
