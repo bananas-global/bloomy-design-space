@@ -1,7 +1,7 @@
 /**
  * Pré-visualizar PIC — novo, não existe no Phoenix.
  *
- * Modal em tela cheia, como o Exportar PIC, que simula o atendimento com o
+ * Modal em tela cheia que simula o atendimento com o
  * plano inteiro: à esquerda a fila de
  * alvos (todos os programas das áreas da especialidade selecionada), à direita
  * a aplicação do alvo atual, como o aplicador vê. Nada é gravado: o resultado
@@ -9,7 +9,7 @@
  * programa.
  *
  * Componentes usados: `modal/1` (variant custom, sem `title`: o cabeçalho e o
- * fechar ficam no corpo, como no Exportar PIC) e `button/1`. O tipo de registro sai do
+ * fechar ficam no corpo) e `button/1`. O tipo de registro sai do
  * `format_pattern_type/1` do programa: tentativas discretas, duração ou
  * frequência.
  */

@@ -6,8 +6,6 @@
  * Novo — não existe no Phoenix:
  * - as vigências no formato da Escala (o seletor no cabeçalho), no lugar da
  *   tabela de planos; vigência encerrada fica somente leitura;
- * - o botão "Exportar PDF" e o modal Exportar PIC (`./pic/ExportPicModal.tsx`),
- *   com a pré-visualização do PIC em uma página A4 e o "Baixar PDF";
  * - o botão "Pré-visualizar" e o modal de simulação do atendimento, em tela cheia
  *   (`./pic/PicPreviewModal.tsx`), com os programas da especialidade da aba;
  * - as abas e as pílulas de especialidade (`./pic/parts.tsx`).
@@ -26,7 +24,6 @@ import { Icon } from "../components/Icon.js";
 import { Dropdown } from "../components/Overlay.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { PatientLayout } from "../layouts/PatientLayout.js";
-import { ExportPicModal } from "./pic/ExportPicModal.js";
 import { PicPreviewModal } from "./pic/PicPreviewModal.js";
 import { MY_SPECIALTY, PIC_FIXTURES, TODAY, type PicFixture, type Plan, type SpecialtyId } from "./pic/fixtures.js";
 import { GridLayout, goalsOf, SpecialtyTabs, specialtyOf } from "./pic/parts.js";
@@ -126,14 +123,12 @@ function VigencyDropdown({ plans, current, onSelect, canCreate }: { plans: Plan[
 }
 
 function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicFixture }) {
-  const { plans, goals, patient } = fixture;
+  const { plans, goals } = fixture;
   const ordered = [...plans].sort((a, b) => statusOf(a).order - statusOf(b).order || iso(b.startAt).localeCompare(iso(a.startAt)));
   const [planId, setPlanId] = useState(ordered[0]?.id);
   const [spec, setSpec] = useState<SpecialtyId | "all">("all");
-  const [exporting, setExporting] = useState(fixture.exportOpen ?? false);
   const [previewing, setPreviewing] = useState(fixture.previewOpen ?? false);
   // Os dados chegam do adapter depois do primeiro render.
-  useEffect(() => setExporting(fixture.exportOpen ?? false), [fixture.exportOpen]);
   useEffect(() => setPreviewing(fixture.previewOpen ?? false), [fixture.previewOpen]);
 
   const plan = plans.find((p) => p.id === planId) ?? ordered[0];
@@ -155,9 +150,6 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button type="button" variant="tint" leftIcon="fa-eye" iconType="solid" onClick={() => setPreviewing(true)}>
               Pré-visualizar
-            </Button>
-            <Button type="button" variant="tint" color="purple" leftIcon="fa-file-pdf" iconType="solid" onClick={() => setExporting(true)}>
-              Exportar PDF
             </Button>
             <RadioSelector
               field={{ id: "layout_opts_layout", name: "layout_opts[layout]", value: "grid" }}
@@ -197,8 +189,6 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
         subtitle={spec === "all" ? "Todas as especialidades" : specialtyOf(spec).label}
         goals={goalsOf(goals, spec)}
       />
-
-      <ExportPicModal show={exporting} onCancel={() => setExporting(false)} plan={plan} goals={goals} patientName={patient.name} />
     </Card>
   );
 }
