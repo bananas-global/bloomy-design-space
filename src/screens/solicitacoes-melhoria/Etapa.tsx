@@ -10,7 +10,7 @@
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { Card } from "../../components/Card.js";
-import { CheckboxGroup, RadioGroup, RadioSelector } from "../../components/Choice.js";
+import { CheckboxGroup, RadioGroup } from "../../components/Choice.js";
 import { FileUploader } from "../../components/FileUploader.js";
 import { Icon } from "../../components/Icon.js";
 import { Input, SwitchCard } from "../../components/Input.js";
@@ -182,26 +182,22 @@ function Priorizacao({ s, role }: Props) {
           const v = s.scores?.[c.key] ?? 0;
           const min = minScore(s, c.key);
           return (
-            <div key={c.key} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
-              <div className="min-w-48">
-                <p className="text-sm font-bold text-brand-purple-dark">
-                  {c.label} <span className="text-xs font-extrabold text-brand-purple-dark/60">· peso {Math.round(c.w * 100)}%</span>
-                </p>
-                <p className="text-xs text-brand-purple-dark/60">{v} — {c.rub[v]}</p>
-                {c.key === "reach" && (
-                  <p className="mt-1 text-xs font-bold text-blue-dark">
-                    <Icon name="fa-users" type="solid" /> Alcança {reachText(s)}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                <RadioSelector
+            <div key={c.key} className="space-y-1 py-4">
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+                <RadioGroup
+                  label={`${c.label} · peso ${Math.round(c.w * 100)}%`}
                   field={{ id: `sm_score_${c.key}`, name: `score_${c.key}`, value: String(v) }}
                   radio={[0, 1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n), disabled: !pmo || n < min }))}
                   onChange={(e) => set({ scores: { ...(s.scores ?? { impact: 0, risk: 0, urgency: 0, reach: 0, alignment: 0 }), [c.key]: Number(e.target.value) } })}
                 />
-                <span className="w-11 text-right tabular-nums text-sm font-bold text-brand-purple-dark">{fmt(v * c.w * 20)}</span>
+                <span className="pb-4 text-right tabular-nums text-sm font-bold text-brand-purple-dark" title="Pontos no score">{fmt(v * c.w * 20)} pts</span>
               </div>
+              <p className="text-xs text-brand-purple-dark/60">{v} — {c.rub[v]}</p>
+              {c.key === "reach" && (
+                <p className="text-xs font-bold text-blue-dark">
+                  <Icon name="fa-users" type="solid" /> Alcança {reachText(s)}
+                </p>
+              )}
             </div>
           );
         })}
@@ -296,16 +292,14 @@ function Cenarios({ s, role }: Props) {
   return (
     <div className="space-y-8">
       <p className="text-sm text-brand-purple-dark/70">Demanda formalizada no backlog ativo. A reunião de desenho de cenários gera regras de negócio e/ou requisitos funcionais.</p>
-      <div className="grid gap-8 md:grid-cols-2">
-        <Input type="date" id="sm_meeting_date" label="Data da reunião" value={s.meetingDate} disabled={!pmo} onChange={(e) => set({ meetingDate: e.target.value })} />
-        <CheckboxGroup
-          label="Participantes consultados *"
-          field={{ id: "sm_participants", name: "participants", value: s.participants }}
-          checkbox={L.participants.map((v) => ({ value: v, label: v, disable: !pmo }))}
-          wrapperClass="flex flex-wrap gap-2 space-x-0!"
-          onChange={(e) => actions.toggle(s.id, "participants", e.target.value)}
-        />
-      </div>
+      <Input type="date" id="sm_meeting_date" label="Data da reunião" value={s.meetingDate} disabled={!pmo} className="md:max-w-xs" onChange={(e) => set({ meetingDate: e.target.value })} />
+      <CheckboxGroup
+        label="Participantes consultados *"
+        field={{ id: "sm_participants", name: "participants", value: s.participants }}
+        checkbox={L.participants.map((v) => ({ value: v, label: v, disable: !pmo }))}
+        wrapperClass="flex flex-wrap gap-2 space-x-0!"
+        onChange={(e) => actions.toggle(s.id, "participants", e.target.value)}
+      />
       <CheckboxGroup
         label="Áreas de interface consultadas"
         field={{ id: "sm_interface_areas", name: "interfaceAreas", value: s.interfaceAreas }}
@@ -347,7 +341,7 @@ function Direcionar({ s, role }: Props) {
     <div className="space-y-6">
       <p className="text-sm text-brand-purple-dark/70">Direcione conforme o tipo de solicitação. É possível seguir pelos dois caminhos ao mesmo tempo.</p>
       {pmo ? (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3">
           {ROUTES.map((r) => (
             <SwitchCard
               key={r.v}

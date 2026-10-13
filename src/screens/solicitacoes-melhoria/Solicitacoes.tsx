@@ -15,7 +15,7 @@ import { Input } from "../../components/Input.js";
 import { Header } from "../../components/Layout.js";
 import { Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
-import { L, ORDER, PRIO, STATUS, TAG_OF, TONE_CLASS, affectsMe, fmt, isClosed, isMine, opts, prioOf, prioRank, scoreOf, type Role, type Sm, type StatusId } from "./model.js";
+import { L, ORDER, PRIO, SLA_DAYS, STATUS, TAG_OF, affectsMe, daysInStage, fmt, isClosed, isMine, opts, prioOf, prioRank, scoreOf, type Role, type Sm, type StatusId, type Tone } from "./model.js";
 import { AffectButton, canAffect } from "./Afetados.js";
 import { Cards, Outcome } from "./Cards.js";
 import { PrioTag, StageTag, cx } from "./parts.js";
@@ -197,6 +197,21 @@ function PrioLegend() {
   );
 }
 
+/** A cor de cada etapa no quadro, pelo tom dela: fundo da coluna e bolinha do cabeçalho (como no funil do CRM). */
+const COLUMN_BG: Record<Tone, string> = {
+  blue: "bg-blue/10", purple: "bg-purple/10", yellow: "bg-yellow/10", orange: "bg-brand-orange/10",
+  green: "bg-green/10", red: "bg-red/10", navy: "bg-brand-purple-dark/5",
+};
+const COLUMN_DOT: Record<Tone, string> = {
+  blue: "bg-blue", purple: "bg-purple", yellow: "bg-yellow", orange: "bg-brand-orange",
+  green: "bg-green", red: "bg-red", navy: "bg-brand-purple-dark/60",
+};
+
+/**
+ * O quadro por etapa, no mesmo desenho do funil do CRM de Leads (branch `crm`,
+ * `screens/crm/Board.tsx`), para os dois virarem um componente só. A diferença:
+ * aqui não se arrasta; a etapa só anda pelo detalhe, e clicar no cartão o abre.
+ */
 function Board({ sms, role, onOpen }: { sms: Sm[]; role: Role; onOpen: (s: Sm) => void }) {
   return (
     <div className="-mx-6 flex items-start gap-3.5 overflow-x-auto px-6 pb-2.5 thin-scrollbar">
@@ -204,21 +219,19 @@ function Board({ sms, role, onOpen }: { sms: Sm[]; role: Role; onOpen: (s: Sm) =
         const st = STATUS[k];
         const items = sms.filter((s) => s.status === k).sort((a, b) => prioRank(a) - prioRank(b) || (scoreOf(b) ?? -1) - (scoreOf(a) ?? -1));
         return (
-          <section key={k} aria-label={st.label} className="flex min-h-44 w-64 flex-none flex-col gap-2.5 rounded-2xl bg-brand-purple-dark/5 p-3">
-            <header className="space-y-1 px-1">
-              <div className="flex items-center gap-2">
-                <span className={cx("inline-flex h-7 w-7 flex-none items-center justify-center rounded-lg text-xs", TONE_CLASS[st.tone])}>
-                  <Icon name={st.icon} type="solid" />
-                </span>
-                <h3 className="flex-1 truncate text-sm font-extrabold text-brand-purple-dark">{st.label}</h3>
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-extrabold text-brand-purple-dark/70">{items.length}</span>
-              </div>
-              <p className="text-xs font-semibold text-brand-purple-dark/50">{st.owner}</p>
+          <section key={k} aria-label={st.label} className={cx("flex min-h-44 w-66 flex-none flex-col gap-2.5 rounded-2xl border border-transparent p-3", COLUMN_BG[st.tone])}>
+            <header className="flex items-center gap-2 px-1">
+              <span className={cx("h-2 w-2 flex-none rounded-full", COLUMN_DOT[st.tone])} />
+              <h3 className="flex-1 truncate text-sm font-extrabold text-brand-purple-dark">{st.label}</h3>
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-xs font-extrabold text-brand-purple-dark/70">{items.length}</span>
             </header>
-            {items.map((s) => (
-              <SmCard key={s.id} sm={s} role={role} onClick={() => onOpen(s)} />
-            ))}
-            {items.length === 0 && <p className="py-4 text-center text-sm text-brand-purple-dark/40">Sem solicitações</p>}
+            <p className="px-1 text-xs font-semibold text-brand-purple-dark/50">{st.owner || "—"}</p>
+            <div className="flex flex-col gap-2.5">
+              {items.map((s) => (
+                <SmCard key={s.id} sm={s} role={role} onClick={() => onOpen(s)} />
+              ))}
+              {items.length === 0 && <p className="py-4 text-center text-sm text-brand-purple-dark/40">Nenhuma solicitação</p>}
+            </div>
           </section>
         );
       })}
@@ -226,23 +239,43 @@ function Board({ sms, role, onOpen }: { sms: Sm[]; role: Role; onOpen: (s: Sm) =
   );
 }
 
-/** O cartão do kanban: a mesma ação dos cards e da lista, "Também me afeta". */
+/**
+ * O cartão do quadro, no desenho do cartão de lead do CRM: título e subtítulo,
+ * a prioridade no canto, um selo, e o rodapé com o score à esquerda e os dias
+ * na etapa à direita. Mais a mesma ação das outras visões, "Também me afeta".
+ */
 function SmCard({ sm: s, role, onClick }: { sm: Sm; role: Role; onClick: () => void }) {
   const sc = scoreOf(s);
   const mine = role === "solicitante" && isMine(s, role);
+  const days = daysInStage(s);
+  const sla = SLA_DAYS[s.status as keyof typeof SLA_DAYS];
+  const late = sla != null && days > sla;
   return (
-    <article onClick={onClick} className="cursor-pointer space-y-2 rounded-xl bg-white p-3 shadow-main transition-all hover:-translate-y-0.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="tabular-nums text-sm font-bold text-brand-purple-dark/60">{s.id}</span>
-        <PrioTag sm={s} />
+    <article onClick={onClick} className="cursor-pointer space-y-2.5 rounded-xl bg-white p-3 shadow-main transition-all hover:-translate-y-0.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="line-clamp-2 font-bold leading-snug text-brand-purple-dark">{s.title}</p>
+          <p className="truncate text-sm text-brand-purple-dark/60">{s.id} · {s.unit}</p>
+        </div>
+        <span className="flex-none whitespace-nowrap"><PrioTag sm={s} /></span>
       </div>
-      <p className="font-bold leading-snug text-brand-purple-dark">{s.title}</p>
-      <p className="text-sm text-brand-purple-dark/60">{s.unit} · {s.area}</p>
-      <div className="flex items-center justify-between border-t border-brand-purple-dark/10 pt-2 text-xs font-bold text-brand-purple-dark/60">
-        <span>{sc != null ? `${fmt(sc)} pts${s.effort ? ` · ${s.effort}` : ""}` : s.createdAt.slice(0, 10)}</span>
-        <span title="Pessoas afetadas"><Icon name="fa-users" type="solid" /> {s.affected.length}</span>
+      <div className="flex flex-wrap gap-1">
+        {mine ? (
+          <Tag item="Sua solicitação" variant="light-blue" leftIcon="fa-user" className="text-xs" />
+        ) : (
+          <Tag item={s.area} variant="dark-purple" leftIcon="fa-building" className="text-xs" />
+        )}
       </div>
-      {mine && <Tag item="Sua solicitação" variant="light-blue" leftIcon="fa-user" />}
+      <div className="flex items-center justify-between border-t border-brand-purple-dark/10 pt-2 text-xs font-bold">
+        <span className="flex items-center gap-3 text-brand-purple-dark/60">
+          <span>{sc != null ? `${fmt(sc)} pts${s.effort ? ` · ${s.effort}` : ""}` : "Sem notas"}</span>
+          <span title="Pessoas afetadas"><Icon name="fa-users" type="solid" /> {s.affected.length}</span>
+        </span>
+        <span className={late ? "text-red" : "text-brand-purple-dark/50"} title={late ? `Na etapa há ${days} dias · prazo ${sla}` : "Dias nesta etapa"}>
+          {late && <Icon name="fa-hourglass-end" type="solid" className="mr-1" />}
+          {days}d
+        </span>
+      </div>
       {canAffect(s, role) && <AffectButton s={s} role={role} size="small" />}
     </article>
   );

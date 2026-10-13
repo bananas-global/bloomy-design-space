@@ -4,8 +4,9 @@
  * fluxo oficial com o caminho que a SM tomou, e o histórico com os
  * comentários.
  *
- * Três colunas: o fluxo à esquerda; a etapa, a governança e o histórico no meio;
- * quem também é afetado e as respostas do formulário à direita. As ações da etapa ficam no rodapé fixo
+ * No topo, o cabeçalho da SM com o fluxo na horizontal. Abaixo, três colunas: os
+ * dados da solicitação à esquerda; a etapa, a governança e o histórico no meio;
+ * quem também é afetado à direita. As ações da etapa ficam no rodapé fixo
  * (`StageFooter`), como no painel do negócio do CRM.
  */
 import { useState } from "react";
@@ -22,7 +23,7 @@ import {
   CRITS, L, ORDER, STATUS, USERS, effortOf, homologOf, isClosed, isColleague, opts, isoToBR, prioOf, routeText, sortKey, stageIndex,
   type Role, type Sm, type SmFile,
 } from "./model.js";
-import { Answer, Fact, FileList, FooterSlot, PrioTag, SmUploader, StageTag } from "./parts.js";
+import { Answer, Fact, FileList, FooterSlot, PrioTag, SmUploader, StageTag, cx } from "./parts.js";
 import { sm as actions } from "./store.js";
 
 export function Detalhe({ s, role, sent = false, onDismissSent }: {
@@ -44,27 +45,28 @@ export function Detalhe({ s, role, sent = false, onDismissSent }: {
     <FooterSlot.Provider value={slot}>
       <div className="flex min-h-[calc(100vh-8rem)] flex-col lg:min-h-[calc(100vh-9rem)]">
         {sent && <SentBanner s={s} onDismiss={onDismissSent} />}
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="tabular-nums text-lg font-bold text-brand-purple-dark/60">{s.id}</span>
-            <StageTag status={s.status} />
-            {prioOf(s) && <PrioTag sm={s} full />}
-            {s.p0 && <Tag item="Exceção mandatória" variant="red" leftIcon="fa-triangle-exclamation" />}
+        {/* O cabeçalho da SM e o fluxo na horizontal, no mesmo card. */}
+        <Card className="space-y-6">
+          {/* Código, título e situação na mesma linha; quem pediu logo abaixo. */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="tabular-nums text-3xl font-extrabold text-brand-purple-dark/50">{s.id}</span>
+              <h1 className="text-3xl font-extrabold text-brand-purple-dark">{s.title}</h1>
+              <StageTag status={s.status} />
+              {prioOf(s) && <PrioTag sm={s} full />}
+              {s.p0 && <Tag item="Exceção mandatória" variant="red" leftIcon="fa-triangle-exclamation" />}
+            </div>
+            <p className="text-sm leading-6 text-neutral-900">{`${s.requester} · ${s.area} · ${s.unit} · aberta em ${s.createdAt}`}</p>
           </div>
-          <Header variant="large" subtitle={`${s.requester} · ${s.area} · ${s.unit} · aberta em ${s.createdAt}`}>{s.title}</Header>
-        </div>
+          <FlowStepper s={s} />
+        </Card>
 
         <div className="mt-6 grid flex-1 items-start gap-6 lg:grid-cols-4">
           <aside className="min-w-0 space-y-6">
-            <Card className="space-y-4">
-              <Header variant="small">Fluxo da SM</Header>
-              <div className="pl-4">
-                <TimelineList item={flowOf(s)} />
-              </div>
-            </Card>
+            <Respostas s={s} role={role} />
           </aside>
 
-          <div className="order-first min-w-0 space-y-6 lg:order-none lg:col-span-2">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             {colleague ? <ColleagueNote s={s} /> : <Etapa s={s} role={role} />}
             <Desfecho s={s} />
             {(idx >= 2 || s.status === "rejeitada") && <Governanca s={s} />}
@@ -73,7 +75,6 @@ export function Detalhe({ s, role, sent = false, onDismissSent }: {
 
           <aside className="min-w-0 space-y-6">
             <AffectedCard s={s} role={role} />
-            <Respostas s={s} role={role} />
           </aside>
         </div>
 
@@ -256,8 +257,9 @@ function Respostas({ s, role }: { s: Sm; role: Role }) {
 
   return (
     <Card className="space-y-6">
-      <Header variant="small">Solicitação · 16 perguntas</Header>
-      {answers.map(([k, v]) => <Answer key={k} label={k}>{v}</Answer>)}
+      <Header variant="small">Dados da solicitação</Header>
+      {/* Tudo no mesmo padrão de pergunta e resposta; os anexos por último. */}
+      {[...answers, ...facts].map(([k, v]) => <Answer key={k} label={k}>{v}</Answer>)}
       <div className="space-y-2">
         <p className="text-xs font-black text-brand-purple-dark/60">Anexos da solicitação · {s.files.length}</p>
         {restricted ? (
@@ -267,9 +269,6 @@ function Respostas({ s, role }: { s: Sm; role: Role }) {
         ) : (
           <p className="text-sm text-brand-purple-dark/60">Nenhum arquivo anexado.</p>
         )}
-      </div>
-      <div className="grid gap-4 border-t border-brand-purple-dark/10 pt-4">
-        {facts.map(([k, v]) => <Fact key={k} label={k}>{v}</Fact>)}
       </div>
     </Card>
   );
@@ -299,7 +298,11 @@ const FLOW = [
  * Os passos com o estado de cada um: feito (verde, com o evento que gerou),
  * atual (azul), por fazer e "não se aplica neste caminho" (riscado).
  */
-function flowOf(s: Sm): TimelineListItem[] {
+type StepState = "done" | "cur" | "todo" | "rej";
+type FlowStep = (typeof FLOW)[number] & { state: StepState; skip: boolean; event: string };
+
+/** Os passos do fluxo oficial com o estado de cada um no caminho desta SM. */
+function flowSteps(s: Sm): FlowStep[] {
   const rej = s.status === "rejeitada";
   const idx = stageIndex(s);
   const decided = idx > ORDER.indexOf("cenarios");
@@ -311,28 +314,81 @@ function flowOf(s: Sm): TimelineListItem[] {
     f8: s.subpath === "sem" ? "Processo implementado sem desenvolvimento" : s.subpath === "com" ? "Processo implementado com desenvolvimento" : "Processo implementado sem ou com desenvolvimento",
   };
 
-  return FLOW.filter((f) => (rej ? ["f1", "f2", "f3", "rej"].includes(f.key) : f.key !== "rej")).map((f) => {
-    let state: "done" | "cur" | "todo" | "rej" = f.at < idx ? "done" : f.at === idx ? "cur" : "todo";
+  // Sem preencher (f1) e registrar (f2): acontecem no mesmo clique de envio e o
+  // cabeçalho já diz quem pediu e quando. O fluxo começa na triagem.
+  return FLOW.filter((f) => f.key !== "f1" && f.key !== "f2" && (rej ? ["f3", "rej"].includes(f.key) : f.key !== "rej")).map((f) => {
+    let state: StepState = f.at < idx ? "done" : f.at === idx ? "cur" : "todo";
     if (f.key === "f5") state = idx > 1 ? "done" : "todo";
     if (f.key === "rej") state = "rej";
     if (rej && f.key === "f3") state = "done";
     const skip = (decided && f.key === "f8" && !proc) || ((f.key === "f9" || f.key === "f10") && noDev);
     if (s.status === "concluida" && !skip) state = "done";
-    const event = events[f.key] || f.event;
-    const showEvent = !skip && (state === "done" || state === "rej") && !!event;
-
-    return {
-      icon: skip ? f.icon : state === "done" ? "fa-check" : f.icon,
-      color: skip ? undefined : state === "done" ? "green" : state === "cur" ? "blue" : undefined,
-      children: (
-        <div className={skip || state === "todo" ? "opacity-60" : undefined}>
-          <p className={`text-sm font-bold leading-tight ${state === "rej" ? "text-red-dark" : "text-brand-purple-dark"} ${skip ? "line-through" : ""}`}>{f.label}</p>
-          <p className="mt-0.5 text-xs font-bold text-brand-purple-dark/60">{skip ? "Não se aplica neste caminho" : f.raci}</p>
-          {showEvent && <Tag item={event} variant="orange" leftIcon="fa-bolt" className="mt-1.5 text-xs" />}
-        </div>
-      ),
-    };
+    return { ...f, state, skip, event: events[f.key] || f.event };
   });
+}
+
+const STEP_TAG: Record<StepState, { item: string; variant: "green" | "light-blue" | "dark-purple" | "red" }> = {
+  done: { item: "Concluída", variant: "green" },
+  cur: { item: "Em andamento", variant: "light-blue" },
+  todo: { item: "Pendente", variant: "dark-purple" },
+  rej: { item: "Recusada", variant: "red" },
+};
+
+/**
+ * O fluxo da SM na horizontal: um nó por passo, ligados por uma linha que fica
+ * verde até onde a SM chegou. Verde é concluído; azul, em andamento. As etapas
+ * com texto têm a largura dele (sem quebrar linha); as outras dividem o resto. Só a etapa anterior, a atual e a próxima
+ * mostram nome e estado; as outras ficam só no nó (o nome vai no `title`).
+ * Passos fora do caminho escolhido aparecem esmaecidos. Novo: o `steps/1` do
+ * Phoenix só numera as etapas, sem nome nem estado.
+ */
+function FlowStepper({ s }: { s: Sm }) {
+  const steps = flowSteps(s);
+  const live = steps.map((st, i) => ({ st, i })).filter(({ st }) => !st.skip);
+  const curPos = live.findIndex(({ st }) => st.state === "cur" || st.state === "rej");
+  // Sem etapa atual (concluída): as duas últimas feitas.
+  const shown = new Set(
+    (curPos >= 0 ? live.slice(Math.max(0, curPos - 1), curPos + 2) : live.slice(-2)).map(({ i }) => i),
+  );
+  const reached = Math.max(...steps.map((st, i) => (st.state === "done" || st.state === "cur" || st.state === "rej" ? i : -1)));
+
+  return (
+    // O respiro (p-1) deixa o anel da etapa atual inteiro: a rolagem horizontal corta o que sai da caixa.
+    <div className="-m-1 overflow-x-auto p-1 thin-scrollbar">
+      <ol className="flex min-w-[48rem]">
+        {steps.map((st, i) => {
+          const labeled = shown.has(i);
+          const last = i === steps.length - 1;
+          return (
+            <li key={st.key} className={cx("relative min-w-0", labeled ? "flex-none" : "flex-1", last && "flex-none")} title={`${st.label}${st.skip ? " · não se aplica neste caminho" : ""}`}>
+              <div className="flex items-center">
+                <StepNode n={i + 1} state={st.state} skip={st.skip} />
+                {!last && <span className={cx("mx-1 h-0.5 flex-1 rounded-full", i < reached ? "bg-green" : "bg-brand-purple-dark/10")} />}
+              </div>
+              {labeled && (
+                <div className="mt-3 space-y-1 pr-10">
+                  <p className="text-xs font-bold uppercase tracking-wider text-brand-purple-dark/50">Etapa {i + 1}</p>
+                  <p className={cx("whitespace-nowrap text-sm font-bold", st.state === "todo" ? "text-brand-purple-dark/60" : "text-brand-purple-dark")}>{st.label}</p>
+                  <Tag item={STEP_TAG[st.state].item} variant={STEP_TAG[st.state].variant} className="text-xs" />
+                  {st.state !== "todo" && st.event && st.state !== "cur" && <p className="whitespace-nowrap text-xs text-brand-purple-dark/60">{st.event}</p>}
+                  {st.state === "cur" && <p className="whitespace-nowrap text-xs text-brand-purple-dark/60">{st.raci}</p>}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+function StepNode({ n, state, skip }: { n: number; state: StepState; skip: boolean }) {
+  const base = "flex h-8 w-8 flex-none items-center justify-center rounded-full text-sm font-black";
+  if (skip) return <span className={cx(base, "border border-dashed border-brand-purple-dark/20 text-brand-purple-dark/30")}><Icon name="fa-minus" /></span>;
+  if (state === "done") return <span className={cx(base, "bg-green text-white")}><Icon name="fa-check" type="solid" /></span>;
+  if (state === "rej") return <span className={cx(base, "bg-red text-white")}><Icon name="fa-xmark" type="solid" /></span>;
+  if (state === "cur") return <span className={cx(base, "bg-brand-blue text-white ring-2 ring-brand-blue ring-offset-2")}>{n}</span>;
+  return <span className={cx(base, "bg-brand-purple-dark/10")}><span className="h-2 w-2 rounded-full border-2 border-brand-purple-dark/50" /></span>;
 }
 
 /* ============================================================

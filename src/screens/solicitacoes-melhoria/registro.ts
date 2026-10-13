@@ -5,7 +5,7 @@ import { DEFAULT_SM, DETAIL_CONTROLS, DETAIL_PATH, FLOW, MANAGE_CONTROLS, MANAGE
 
 /** Componentes do catálogo que a central usa. */
 const HUB_COMPONENTS = [
-  "layout.backoffice", "core.card-tabs", "core.header", "core.button", "core.card", "core.inside-card", "core.progress",
+  "layout.backoffice", "core.card-tabs", "core.header", "core.button", "core.card", "core.inside-card",
   "core.table", "core.simple-table", "core.tag", "core.input", "core.custom-select", "core.radio-selector",
   "core.empty-state-card", "core.item", "core.notification", "core.breadcrumbs", "core.toast-wrapper", "core.error", "core.drawer-modal",
 ];
@@ -13,13 +13,13 @@ const HUB_COMPONENTS = [
 /** Componentes do catálogo que a página Nova solicitação usa. */
 const NEW_COMPONENTS = [
   "layout.backoffice", "core.card", "core.button", "core.input", "core.custom-select", "core.radio-group",
-  "core.file-uploader", "core.item", "core.progress", "core.error", "core.breadcrumbs", "core.notification", "core.tag", "core.drawer-modal",
+  "core.file-uploader", "core.item", "core.error", "core.breadcrumbs", "core.notification", "core.tag", "core.drawer-modal",
 ];
 
 /** Componentes do catálogo que o detalhe usa. */
 const DETAIL_COMPONENTS = [
   "layout.backoffice", "core.card", "core.header", "core.button", "core.tag", "core.input", "core.custom-select",
-  "core.radio-selector", "core.radio-group", "core.checkbox-group", "core.switch-card",
+  "core.radio-group", "core.checkbox-group", "core.switch-card",
   "core.timeline-list", "core.file-uploader", "core.item", "core.empty-state-card", "core.notification",
   "core.breadcrumbs", "core.toast-wrapper", "core.modal", "core.drawer-modal",
 ];
@@ -127,7 +127,8 @@ export const feature: Feature = {
       intent: "A Tech abre no kanban: uma coluna por etapa, com o responsável da etapa no cabeçalho.",
       expected: [
         "Nove colunas, de Em triagem a Concluída; rejeitadas, canceladas e excluídas ficam fora.",
-        "Cartões ordenados por prioridade e score: código, prioridade, título, unidade e área, score e esforço (ou a data de abertura) e os apoios.",
+        "Mesmo desenho do funil do CRM (colunas tingidas pela etapa, cartão com título, código e unidade, prioridade, área, score e esforço, afetados e dias na etapa em vermelho quando passa do prazo), sem arrastar: a etapa anda pelo detalhe.",
+        "Cartões ordenados por prioridade e score.",
         "As rejeitadas ficam fora do kanban; a lista as mostra com o filtro de etapa Rejeitada.",
         "A Tech não tem Nova solicitação.",
       ],
@@ -172,7 +173,7 @@ export const feature: Feature = {
       intent: "O formulário de 16 perguntas numa página, um card por seção, aberto pelo solicitante.",
       expected: [
         "Quatro cards, um abaixo do outro: Identificação, Necessidade e contorno, Impacto e urgência, Evidências e envio.",
-        "Sem o menu lateral e o cabeçalho do sistema. Cabeçalho fixo com Voltar, o título e o progresso das seções; rodapé fixo com Cancelar e Enviar solicitação.",
+        "Sem o menu lateral e o cabeçalho do sistema. Cabeçalho fixo com Voltar e o título; rodapé fixo com Cancelar e Enviar solicitação. Cada seção num card com o título, sem numeração.",
         "Identificação já vem com nome, contato, área e unidade de quem abre.",
         "Com prazo \"Sim\", pede os detalhes da data limite.",
         "Ao digitar o título (ex.: \"bloqueio de sala\"), sugere as SMs em andamento parecidas, com \"Também me afeta\" em cada uma.",

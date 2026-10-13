@@ -1,14 +1,14 @@
 /**
  * Solicitações de melhoria — página Nova solicitação: as 16 perguntas em quatro
  * cards, um abaixo do outro (Identificação, Necessidade e contorno, Impacto e
- * urgência, Evidências e envio). O cabeçalho com o progresso e o rodapé com as
- * ações ficam fixos na rolagem. "Enviar" marca os campos pendentes e rola até o
+ * urgência, Evidências e envio). O cabeçalho e o rodapé com as ações ficam
+ * fixos na rolagem. "Enviar" marca os campos pendentes e rola até o
  * primeiro card com pendência.
  *
  * Enquanto o título é digitado, sugere SMs em andamento parecidas: se for o
  * mesmo problema, a pessoa diz "Também me afeta" em vez de abrir outra.
  *
- * `card/1` com `input/1`, `radio_group/1`, `file_uploader/1` e `progress/1`. O
+ * `card/1` com `input/1`, `radio_group/1` e `file_uploader/1`. O
  * cabeçalho e o rodapé fixos são novos: não há uma página de formulário assim no
  * sistema.
  */
@@ -18,7 +18,6 @@ import { Card } from "../../components/Card.js";
 import { RadioGroup } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
-import { Progress } from "../../components/Layout.js";
 import { AffectButton, reachText } from "./Afetados.js";
 import { FORM_STEPS, L, formFor, opts, similarTo, stepErrors, validateForm, type Role, type Sm, type SmForm } from "./model.js";
 import { SmUploader, StageTag, cx } from "./parts.js";
@@ -47,7 +46,6 @@ export function NovaSolicitacao({ role, sms, onCancel, onSubmit }: { role: Role;
     <Input type="select" id={`nf_${k}`} label={label} prompt="Selecionar" options={opts(list)} value={form[k]} errors={err(k)} onChange={(v) => set({ [k]: v ?? "" } as Partial<SmForm>)} />
   );
 
-  const complete = FORM_STEPS.filter((_, i) => stepErrors(form, i).length === 0).length;
   const pending = Object.keys(shown).length;
 
   function submit() {
@@ -61,7 +59,7 @@ export function NovaSolicitacao({ role, sms, onCancel, onSubmit }: { role: Role;
   }
 
   const step = (i: number, children: ReactNode) => (
-    <StepCard index={i} done={stepErrors(form, i).length === 0} bad={FORM_STEPS[i]!.keys.filter((k) => shown[k]).length}>
+    <StepCard index={i} bad={FORM_STEPS[i]!.keys.filter((k) => shown[k]).length}>
       {children}
     </StepCard>
   );
@@ -76,10 +74,6 @@ export function NovaSolicitacao({ role, sms, onCancel, onSubmit }: { role: Role;
             <p className="text-sm text-neutral-900">
               {role === "pmo" ? "Registre em nome de quem pediu por outro canal." : "Responda as quatro seções; os campos com * são obrigatórios."}
             </p>
-          </div>
-          <div className="w-full sm:w-56">
-            <p className="mb-1 text-xs font-bold text-brand-purple-dark/60">{complete} de {FORM_STEPS.length} seções completas</p>
-            <Progress value={Math.round((complete / FORM_STEPS.length) * 100)} showPercentage={false} />
           </div>
         </div>
       </div>
@@ -168,19 +162,11 @@ export function NovaSolicitacao({ role, sms, onCancel, onSubmit }: { role: Role;
 }
 
 /** Um passo do formulário num `card/1`: número, título e o estado do passo. */
-function StepCard({ index, done, bad, children }: { index: number; done: boolean; bad: number; children: ReactNode }) {
+function StepCard({ index, bad, children }: { index: number; bad: number; children: ReactNode }) {
   return (
     <section id={cardId(index)} className="scroll-mt-32">
       <Card className={cx("space-y-6", bad > 0 && "ring-2 ring-red")}>
         <div className="flex items-center gap-3">
-          <span
-            className={cx(
-              "inline-flex h-8 w-8 flex-none items-center justify-center rounded-full text-sm font-black",
-              bad > 0 ? "bg-red-light text-red-dark" : done ? "bg-blue-light text-blue-dark" : "bg-brand-blue text-white",
-            )}
-          >
-            {done && !bad ? <Icon name="fa-check" type="solid" /> : index + 1}
-          </span>
           <h2 className="flex-1 text-lg font-bold text-brand-purple-dark">{TITLES[index]}</h2>
           {bad > 0 && <span className="text-sm font-bold text-red-dark">{bad} pendente(s)</span>}
         </div>
