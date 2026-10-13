@@ -10,7 +10,7 @@
  *   (`./pic/PicPreviewModal.tsx`), com os programas da especialidade da aba;
  * - as abas e as pílulas de especialidade (`./pic/parts.tsx`).
  *
- * Fora do protótipo: Nova vigência, a
+ * Fora do protótipo: Exportar PDF (no PR do Exportar PIC), Nova vigência, a
  * visão em Lista (desabilitada no seletor) e os modais de área, objetivo e
  * programa. Os botões ficam, com um toast.
  */
@@ -150,6 +150,9 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <Button type="button" variant="tint" leftIcon="fa-eye" iconType="solid" onClick={() => setPreviewing(true)}>
               Pré-visualizar
+            </Button>
+            <Button type="button" variant="tint" color="purple" leftIcon="fa-file-pdf" iconType="solid" onClick={() => notInPrototype("Exportar PDF")}>
+              Exportar PDF
             </Button>
             <RadioSelector
               field={{ id: "layout_opts_layout", name: "layout_opts[layout]", value: "grid" }}

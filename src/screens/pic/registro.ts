@@ -13,7 +13,7 @@ export const feature: Feature = {
       persona: "admin",
       intent: "A aba PIC redesenhada: vigências no cabeçalho, abas de especialidade e a grade Áreas → Objetivos → Programas, com o botão Pré-visualizar.",
       expected: [
-        "Cabeçalho: Plano de Intervenção Comportamental; Pré-visualizar, seletor Grade/Lista e a vigência 01/01/2026 – 30/06/2026 Em vigência.",
+        "Cabeçalho: Plano de Intervenção Comportamental; Pré-visualizar, Exportar PDF (tint roxo, fora deste protótipo), seletor Grade/Lista e a vigência 01/01/2026 – 30/06/2026 Em vigência.",
         "Abaixo, Plano Terapêutico 2026 · 1º Semestre, Criado por Marcus Vinícius Gimenes · Psicologia e Assinado por Fernanda Lima.",
         "Abas Todas, Fonoaudiologia, Psicologia (Você), Terapia Ocupacional, Análise do Comportamento e Psicopedagogia; cada uma filtra as áreas.",
         "Cada área com as pílulas de especialidade; áreas de mais de uma especialidade com Compartilhada.",
@@ -54,7 +54,7 @@ export const feature: Feature = {
       fixture: "pic.plan",
       persona: "applicator",
       intent: "Quem aplica vê o PIC e pode pré-visualizá-lo, mas não edita (BehaviorInterventionPlanPolicy).",
-      expected: ["Sem Áreas em lote, Novo, Importar e os menus de ação.", "Pré-visualizar continua disponível."],
+      expected: ["Sem Áreas em lote, Novo, Importar e os menus de ação.", "Pré-visualizar e Exportar PDF continuam disponíveis."],
     },
   ],
   fixtures: [...PIC_FIXTURES],
