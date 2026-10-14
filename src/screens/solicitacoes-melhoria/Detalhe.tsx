@@ -20,7 +20,7 @@ import { Tag } from "../../components/Tag.js";
 import { AffectedCard } from "./Afetados.js";
 import { Etapa } from "./Etapa.js";
 import {
-  CRITS, L, ORDER, STATUS, USERS, effortOf, homologOf, isClosed, isColleague, opts, isoToBR, prioOf, routeText, sortKey, stageIndex,
+  CRITS, L, ORDER, STATUS, USERS, fmt, homologOf, isClosed, isColleague, opts, isoToBR, prioOf, routeText, sortKey, stageIndex,
   type Role, type Sm, type SmFile,
 } from "./model.js";
 import { Answer, Fact, FileList, FooterSlot, PrioTag, SmUploader, StageTag, cx } from "./parts.js";
@@ -171,8 +171,10 @@ function Desfecho({ s }: { s: Sm }) {
   const gain = [s.gainType, s.gainHours ? `${s.gainHours} h/mês` : "", s.gainDesc].filter(Boolean).join(" · ");
   const banner = {
     concluida: { cls: "bg-green-light text-green-dark", icon: "fa-flag-checkered", title: `Ciclo de SM encerrado em ${s.closedAt} · valor capturado no KPI executivo`, text: gain },
-    cancelada: { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-circle-xmark", title: `Cancelada pelo solicitante em ${s.closedAt}`, text: "A solicitação foi retirada do fluxo antes da aprovação para o backlog." },
-    rejeitada: { cls: "bg-red-light text-red-dark", icon: "fa-ban", title: `Demanda inelegível · ${s.rejectCriterion}`, text: s.rejection },
+    cancelada: s.triage && s.rejection
+      ? { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-circle-xmark", title: `Cancelada na triagem em ${s.closedAt} · ${s.triage}`, text: s.rejection }
+      : { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-circle-xmark", title: `Cancelada pelo solicitante em ${s.closedAt}`, text: "A solicitação foi retirada do fluxo antes da aprovação para o backlog." },
+    rejeitada: { cls: "bg-red-light text-red-dark", icon: "fa-ban", title: `Rejeitada na triagem · ${s.triage}`, text: s.rejection },
     excluida: { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-trash-can", title: `Excluída pelo PMO em ${s.closedAt}`, text: s.history.filter((h) => h.kind === "excluida").at(-1)?.text ?? "" },
   }[s.status as "concluida" | "cancelada" | "rejeitada" | "excluida"];
   if (!banner) return null;
@@ -189,14 +191,15 @@ function Desfecho({ s }: { s: Sm }) {
 
 function Governanca({ s }: { s: Sm }) {
   const idx = stageIndex(s);
-  const eff = effortOf(s.effort);
   const dir = s.routes.length
     ? routeText(s.routes) + (s.routes.includes("processo") && s.subpath ? (s.subpath === "sem" ? " · sem desenvolvimento" : " · com desenvolvimento") : "")
     : "—";
   const facts: [string, string][] = [
+    ["Resultado da triagem", s.triage || "—"],
+    ["Responsável pela análise", s.analyst || "—"],
     ["Macroprocesso", s.macro || "—"],
     ["Tipo", s.type || "—"],
-    ["Esforço", s.effort ? `${s.effort}${eff ? ` · ${eff[1]}` : ""}` : "—"],
+    ["Esforço estimado", s.effort || "—"],
     ["Dependências", s.dependency || "—"],
     ["Direcionamento", dir],
     ["Áreas de interface", s.interfaceAreas.length ? s.interfaceAreas.join(", ") : "—"],
@@ -212,13 +215,13 @@ function Governanca({ s }: { s: Sm }) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {facts.map(([k, v]) => <Fact key={k} label={k}>{v}</Fact>)}
       </div>
-      <Answer label="Causa raiz">{s.rootCause || "—"}</Answer>
+      <Answer label="Problema real identificado">{s.rootCause || "—"}</Answer>
       {idx >= 2 && s.scores && (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
           {CRITS.map((c) => (
             <div key={c.key} className="rounded-lg bg-brand-purple-dark/5 px-3 py-2.5">
               <p className="text-xs font-bold text-brand-purple-dark/60">{c.label} · {Math.round(c.w * 100)}%</p>
-              <p className="tabular-nums font-bold text-brand-purple-dark">{s.scores![c.key]}/5</p>
+              <p className="tabular-nums font-bold text-brand-purple-dark">{s.scores![c.key]}/5 · {fmt(s.scores![c.key] * c.w * 20)} pts</p>
             </div>
           ))}
         </div>
@@ -282,9 +285,9 @@ function Respostas({ s, role }: { s: Sm; role: Role }) {
 const FLOW = [
   { key: "f1", at: -1, label: "Preencher solicitação de SM", raci: "R Solicitante · 16 perguntas", event: "Solicitação recebida pela governança", icon: "fa-pen-to-square" },
   { key: "f2", at: -1, label: "Registrar na base de SMs", raci: "Automático · PMO notificado", event: "Dados registrados na base", icon: "fa-database" },
-  { key: "f3", at: 0, label: "Realizar análise de triagem preliminar", raci: "R PMO · C Solicitante", event: "Análise de triagem preliminar concluída", icon: "fa-magnifying-glass" },
-  { key: "rej", at: 0, label: "Registrar recusa com justificativa", raci: "R PMO · Critérios de inelegibilidade", event: "Solicitante notificado com motivo de recusa", icon: "fa-ban" },
-  { key: "f4", at: 1, label: "Atribuir notas na matriz de critérios", raci: "R PMO · C Solicitante · C Tech", event: "Score 0–100 e prioridade P0–P4 gerados", icon: "fa-ranking-star" },
+  { key: "f3", at: 0, label: "Triagem e classificação interna", raci: "R PMO · C Solicitante", event: "Análise de triagem preliminar concluída", icon: "fa-magnifying-glass" },
+  { key: "rej", at: 0, label: "Registrar recusa com justificativa", raci: "R PMO · Não realizar", event: "Solicitante notificado com motivo de recusa", icon: "fa-ban" },
+  { key: "f4", at: 1, label: "Atribuir notas na matriz de priorização", raci: "R PMO · C Solicitante · C Tech", event: "Score 0–100 e prioridade P0–P4 gerados", icon: "fa-ranking-star" },
   { key: "f5", at: 1.5, label: "Aprovar para o backlog", raci: "R PMO", event: "Backlog ativo · KPIs recalculados", icon: "fa-floppy-disk" },
   { key: "f6", at: 2, label: "Realizar reunião de desenho de cenários", raci: "R PMO · C Solicitante · C Áreas de interface · C Tech", event: "Regras e/ou requisitos mapeados", icon: "fa-diagram-project" },
   { key: "f7", at: 3, label: "Direcionar demanda conforme tipo", raci: "R PMO", event: "", icon: "fa-signs-post" },

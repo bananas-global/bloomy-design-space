@@ -17,9 +17,9 @@ import { Input, SwitchCard } from "../../components/Input.js";
 import { Header } from "../../components/Layout.js";
 import { Tag } from "../../components/Tag.js";
 import {
-  CRITS, CUR_LABEL, L, OWNER, PRIO, RACI, TAG_OF, canAct, homologOf, isMine,
-  effortOf, fmt, hasWorkaround, minScore, opts, prioOf, roleLabel, routeText, scoreOf,
-  type Role, type Route, type Sm,
+  CRITS, CUR_LABEL, L, OWNER, PRIO, RACI, TAG_OF, TRIAGE, USERS, canAct, homologOf, isMine,
+  fmt, hasWorkaround, minScore, opts, prioOf, roleLabel, routeText, scoreOf, triageOf,
+  type PrioId, type Role, type Route, type Sm,
 } from "./model.js";
 import { reachText } from "./Afetados.js";
 import { Fact, Pending, StageFooter, cx } from "./parts.js";
@@ -77,28 +77,30 @@ export function Etapa({ s, role }: Props) {
 
 const patch = (s: Sm) => (p: Partial<Sm>) => actions.patch(s.id, p);
 
+/** Bloco 4 da planilha do PMO: triagem e classificação interna. */
 function Triagem({ s, role }: Props) {
   const pmo = role === "pmo";
   const set = patch(s);
-  const eff = effortOf(s.effort);
-  const missing = [!s.rootCause.trim() && "causa raiz", !s.macro && "macroprocesso", !s.effort && "esforço"].filter(Boolean) as string[];
+  const result = triageOf(s.triage);
+  const analyst = s.analyst || (pmo ? USERS.pmo.name : "");
+  const missing = [
+    !s.rootCause.trim() && "problema real",
+    !s.macro && "macroprocesso",
+    !s.type && "tipo",
+    !s.effort && "esforço",
+    !analyst.trim() && "responsável",
+  ].filter(Boolean) as string[];
+  const closing = result?.next === "rejeitar" || result?.next === "cancelar";
 
   return (
     <div className="space-y-8">
-      <Input type="textarea" id="sm_root_cause" rows={3} label="Causa raiz — problema real identificado *" placeholder="Distinta da solução sugerida pelo solicitante." value={s.rootCause} disabled={!pmo} onChange={(e) => set({ rootCause: e.target.value })} />
-      <div className="grid gap-8 md:grid-cols-2 2xl:grid-cols-3">
-        <Input type="select" id="sm_macro" label="Macroprocesso *" prompt="Selecionar" options={opts(L.macros)} value={s.macro} disabled={!pmo} onChange={(v) => set({ macro: v ?? "" })} />
-        <Input type="select" id="sm_type" label="Tipo da solicitação" prompt="Selecionar" options={opts(L.types)} value={s.type} disabled={!pmo} onChange={(v) => set({ type: v ?? "" })} />
-        <Input type="select" id="sm_dependency" label="Dependências" options={opts(L.deps)} value={s.dependency} disabled={!pmo} clear={false} onChange={(v) => set({ dependency: v ?? "Nenhuma" })} />
-      </div>
-      <div className="space-y-2">
-        <RadioGroup
-          label="Esforço estimado *"
-          field={{ id: "sm_effort", name: "effort", value: s.effort }}
-          radio={L.efforts.map(([v]) => ({ value: v, label: v, disabled: !pmo }))}
-          onChange={(e) => set({ effort: e.target.value })}
-        />
-        <p className="text-sm text-brand-purple-dark/60">{eff ? `Estratégia recomendada: ${eff[1]}` : "PP a GG — estimativa preliminar"}</p>
+      <Input type="textarea" id="sm_root_cause" rows={3} label="Problema real identificado *" placeholder="Causa raiz identificada pela governança, distinta da solução sugerida pelo solicitante." value={s.rootCause} disabled={!pmo} onChange={(e) => set({ rootCause: e.target.value })} />
+      <div className="grid gap-8 md:grid-cols-2">
+        <Input type="select" id="sm_macro" label="Macroprocesso impactado *" prompt="Selecionar" options={opts(L.macros)} value={s.macro} disabled={!pmo} onChange={(v) => set({ macro: v ?? "" })} />
+        <Input type="select" id="sm_type" label="Tipo da solicitação *" prompt="Selecionar" options={opts(L.types)} value={s.type} disabled={!pmo} onChange={(v) => set({ type: v ?? "" })} />
+        <Input type="select" id="sm_effort" label="Esforço estimado (preliminar) *" prompt="Selecionar" options={opts(L.efforts)} value={s.effort} disabled={!pmo} onChange={(v) => set({ effort: v ?? "" })} />
+        <Input type="select" id="sm_dependency" label="Dependências identificadas" options={opts(L.deps)} value={s.dependency} disabled={!pmo} clear={false} onChange={(v) => set({ dependency: v ?? "Nenhuma" })} />
+        <Input id="sm_analyst" label="Responsável pela análise *" value={analyst} disabled={!pmo} onChange={(e) => set({ analyst: e.target.value })} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-xl bg-brand-purple-dark/5 p-3.5">
@@ -108,34 +110,27 @@ function Triagem({ s, role }: Props) {
       </div>
 
       {pmo ? (
-        <div className="space-y-8">
-          <RadioGroup
-            label="Resultado da triagem *"
-            field={{ id: "sm_eligibility", name: "eligibility", value: s.eligibility }}
-            radio={[
-              { value: "elegivel", label: "Elegível · segue para a matriz de critérios" },
-              { value: "inelegivel", label: "Inelegível · registrar recusa com justificativa" },
-            ]}
-            onChange={(e) => set({ eligibility: e.target.value as Sm["eligibility"] })}
-          />
-          {s.eligibility === "inelegivel" && (
-            <div className="space-y-8">
-              <Input type="select" id="sm_reject_criterion" label="Critério de inelegibilidade *" prompt="Selecionar" options={opts(L.inelig)} value={s.rejectCriterion} onChange={(v) => set({ rejectCriterion: v ?? "" })} />
-              <Input type="textarea" id="sm_rejection" rows={3} label="Justificativa detalhada *" placeholder="Será enviada ao solicitante." value={s.rejection} onChange={(e) => set({ rejection: e.target.value })} />
-              <StageFooter>
-                <Pending missing={[!s.rejectCriterion && "critério", !s.rejection.trim() && "justificativa"].filter(Boolean) as string[]} ready="Recusa pronta." joiner=" e " />
-                <Button type="button" color="red" leftIcon="fa-ban" disabled={!s.rejectCriterion || !s.rejection.trim()} onClick={() => actions.reject(s.id, role)}>
-                  Registrar recusa e notificar solicitante
-                </Button>
-              </StageFooter>
-            </div>
-          )}
+        <div className="space-y-2">
+          <Input type="select" id="sm_triage" label="Resultado da triagem *" prompt="Selecionar" options={opts(TRIAGE.map((t) => t.value))} value={s.triage} onChange={(v) => set({ triage: v ?? "" })} />
+          {result && <p className="text-sm text-brand-purple-dark/60">{result.hint}</p>}
         </div>
       ) : (
-        <Fact label="Resultado da triagem">{s.eligibility === "elegivel" ? "Elegível" : s.eligibility === "inelegivel" ? "Inelegível" : "Em análise pelo PMO"}</Fact>
+        <Fact label="Resultado da triagem">{s.triage || "Em análise pelo PMO"}</Fact>
       )}
 
-      {s.eligibility === "elegivel" && (
+      {pmo && closing && (
+        <div className="space-y-8">
+          <Input type="textarea" id="sm_rejection" rows={3} label="Justificativa *" placeholder="Será enviada ao solicitante." value={s.rejection} onChange={(e) => set({ rejection: e.target.value })} />
+          <StageFooter>
+            <Pending missing={[!s.rejection.trim() && "justificativa"].filter(Boolean) as string[]} ready={result.next === "cancelar" ? "Cancelamento pronto." : "Recusa pronta."} />
+            <Button type="button" color="red" leftIcon={result.next === "cancelar" ? "fa-circle-xmark" : "fa-ban"} disabled={!s.rejection.trim()} onClick={() => actions.closeTriage(s.id, role)}>
+              {result.next === "cancelar" ? "Cancelar SM e notificar solicitante" : "Registrar recusa e notificar solicitante"}
+            </Button>
+          </StageFooter>
+        </div>
+      )}
+
+      {result?.next === "matriz" && (
         <StageFooter>
           <Pending missing={missing} ready="Triagem pronta." />
           {pmo && (
@@ -160,7 +155,7 @@ function Priorizacao({ s, role }: Props) {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl bg-brand-purple-dark/5 p-4">
-        <p className="max-w-sm text-sm font-bold text-brand-purple-dark/60">Notas de 0 a 5 com consulta ao solicitante e à Tech. Score e prioridade são gerados juntos.</p>
+        <p className="max-w-sm text-sm font-bold text-brand-purple-dark/60">Notas de 0 a 5 com consulta ao solicitante e à Tech. Cada critério vale nota × peso × 20; a soma é o score final ponderado.</p>
         <div className="flex items-center gap-3">
           <span className="tabular-nums text-3xl font-black leading-none text-brand-purple-dark">{fmt(scoreOf(s))}</span>
           <div className="flex flex-col gap-1">
@@ -192,7 +187,7 @@ function Priorizacao({ s, role }: Props) {
                 />
                 <span className="pb-4 text-right tabular-nums text-sm font-bold text-brand-purple-dark" title="Pontos no score">{fmt(v * c.w * 20)} pts</span>
               </div>
-              <p className="text-xs text-brand-purple-dark/60">{v} — {c.rub[v]}</p>
+              <p className="text-xs text-brand-purple-dark/60">{v} — {c.rub[v]} <span className="text-brand-purple-dark/40">· {c.ref}</span></p>
               {c.key === "reach" && (
                 <p className="text-xs font-bold text-blue-dark">
                   <Icon name="fa-users" type="solid" /> Alcança {reachText(s)}
@@ -209,6 +204,8 @@ function Priorizacao({ s, role }: Props) {
         s.p0 && <Fact label="Exceção mandatória P0">{s.p0Reason} — {s.p0Just}</Fact>
       )}
 
+      <Classificacao current={p} />
+
       <StageFooter>
         <Pending missing={missing} ready="Score e prioridade gerados." />
         {pmo && (
@@ -217,6 +214,30 @@ function Priorizacao({ s, role }: Props) {
           </Button>
         )}
       </StageFooter>
+    </div>
+  );
+}
+
+/** As faixas da classificação final, com a da SM em destaque: P0 pela exceção, P1 a P4 pelo score. */
+function Classificacao({ current }: { current: PrioId | null }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-bold text-brand-purple-dark">Classificação final</p>
+      <div className="divide-y divide-brand-purple-dark/10 overflow-hidden rounded-xl border border-brand-purple-dark/10">
+        {(Object.keys(PRIO) as PrioId[]).map((id) => (
+          <div key={id} className={cx("space-y-1 px-4 py-2.5 text-sm", id === current ? "bg-brand-purple-dark/6 font-bold text-brand-purple-dark" : "text-brand-purple-dark/70")}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <Tag item={PRIO[id].full} variant={TAG_OF[PRIO[id].tone]} />
+              <span className="tabular-nums">{PRIO[id].range}</span>
+              {id === current && <span className="text-xs text-brand-purple-dark/60">· esta SM</span>}
+            </div>
+            <p>{PRIO[id].treatment}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-brand-purple-dark/60">
+        A prioridade reflete o valor e a urgência relativos para a organização e não é compromisso de prazo: a programação depende de capacidade, esforço, dependências e do portfólio.
+      </p>
     </div>
   );
 }

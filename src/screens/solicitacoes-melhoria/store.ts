@@ -14,7 +14,7 @@ import type { ScenarioContext } from "@brucesantos/design-space";
 import { showToast, type ToastType } from "../../components/Action.js";
 import { MONTHLY, SMS, NOTIFICATIONS, type MonthAgg, type SmFixture, type SmNotification } from "./fixtures.js";
 import {
-  CUR_LABEL, PRIO, USERS, blankSm, fmt, hasWorkaround, nowStamp, prioOf, routeText, scoreOf, TODAY_BR,
+  CUR_LABEL, PRIO, USERS, blankSm, fmt, hasWorkaround, nowStamp, prioOf, routeText, scoreOf, triageOf, TODAY_BR,
   type HistoryEntry, type Role, type Sm, type SmFile, type SmForm,
 } from "./model.js";
 
@@ -129,20 +129,27 @@ export const sm = {
     toast("Solicitante consultado", "Pedido registrado nos comentários e notificado.", "info");
   },
 
-  reject: (id: string, role: Role) => {
+  /** "Não realizar" rejeita; "Cancelar / duplicidade" cancela. Os dois com justificativa, no histórico auditável. */
+  closeTriage: (id: string, role: Role) => {
     const s0 = get(id);
-    update(id, (s) => log({ ...s, status: "rejeitada" }, role, "rejeitada", `Demanda inelegível (${s.rejectCriterion}). Justificativa: ${s.rejection} Solicitante notificado.`, undefined, true));
-    notify("solicitante", id, "Solicitação rejeitada na triagem", `${s0.rejectCriterion} — ${s0.rejection}`);
-    toast("Recusa registrada", "Solicitante notificado com a justificativa.", "info");
+    const status = triageOf(s0.triage)?.next === "cancelar" ? "cancelada" : "rejeitada";
+    const analyst = s0.analyst || USERS[role].name;
+    update(id, (s) =>
+      log({ ...s, status, analyst, closedAt: TODAY_BR }, role, status, `Triagem: ${s.triage}. Justificativa: ${s.rejection} Solicitante notificado.`, undefined, true),
+    );
+    notify("solicitante", id, status === "cancelada" ? "Solicitação cancelada na triagem" : "Solicitação rejeitada na triagem", `${s0.triage} — ${s0.rejection}`);
+    toast(status === "cancelada" ? "Cancelamento registrado" : "Recusa registrada", "Solicitante notificado com a justificativa.", "info");
   },
 
   finishTriage: (id: string, role: Role) => {
     update(id, (s) => {
       const m = hasWorkaround(s) ? 3 : 0;
       const scores = s.scores ?? { impact: m, risk: m, urgency: 0, reach: 0, alignment: 0 };
-      return log({ ...s, scores, status: "priorizacao" }, role, "priorizacao", "Triagem preliminar concluída. Demanda elegível para avaliação.");
+      const route = triageOf(s.triage)?.route;
+      const routes = route && !s.routes.includes(route) ? [...s.routes, route] : s.routes;
+      return log({ ...s, scores, routes, analyst: s.analyst || USERS[role].name, status: "priorizacao" }, role, "priorizacao", `Triagem concluída: ${s.triage}. Segue para a matriz de priorização.`);
     });
-    toast("Triagem concluída", "Demanda elegível · seguir para a matriz de critérios.");
+    toast("Triagem concluída", "Seguir para a matriz de priorização.");
   },
 
   saveBacklog: (id: string, role: Role) => {

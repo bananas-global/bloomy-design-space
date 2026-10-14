@@ -450,7 +450,7 @@ function Queue({ sms, onOpen }: { sms: Sm[]; onOpen: (s: Sm) => void }) {
     .filter((s) => ["backlog", "cenarios", "modelagem", "execucao"].includes(s.status))
     .sort((a, b) => prioRank(a) - prioRank(b) || (scoreOf(b) ?? -1) - (scoreOf(a) ?? -1));
   const techLoad = sms.filter((s) => s.status === "execucao" || (s.status === "homologacao" && !s.homologTech));
-  const heavy = techLoad.filter((s) => ["G", "GG"].includes(s.effort)).length;
+  const heavy = techLoad.filter((s) => ["Alto", "Muito alto"].includes(s.effort)).length;
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)]">
@@ -488,7 +488,7 @@ function Queue({ sms, onOpen }: { sms: Sm[]; onOpen: (s: Sm) => void }) {
         <div>
           <Header variant="small">Carga da Tech</Header>
           <p className="text-sm text-brand-purple-dark/60">
-            {plural(techLoad.length, "SM", "SMs")} com a Tech{heavy ? `, ${heavy} de esforço G ou GG` : ""}.
+            {plural(techLoad.length, "SM", "SMs")} com a Tech{heavy ? `, ${heavy} de esforço alto ou muito alto` : ""}.
           </p>
         </div>
         {techLoad.length === 0 && <p className="text-sm text-brand-purple-dark/60">Nada com a Tech agora.</p>}

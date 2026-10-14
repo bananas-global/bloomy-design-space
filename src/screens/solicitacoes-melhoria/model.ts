@@ -27,23 +27,44 @@ export const roleLabel = (role: Role) => ROLES.find((r) => r.id === role)!.label
 export const L = {
   units: ["Santana", "Tatuapé", "Itu", "Salto", "Campinas", "Corporativo"],
   areas: ["Recepção", "Assistencial / Clínico", "Faturamento", "Financeiro", "Comercial", "Suprimentos / Farmácia", "People (RH)", "Tecnologia da Informação", "Governança & Processos", "Operações", "Marketing", "Administrativo"],
-  macros: ["Atendimento / Recepção", "Assistencial / Clínico", "Faturamento / Contas Médicas", "Financeiro / Controladoria", "Credenciamento", "Suprimentos / Farmácia", "Gestão de Pessoas (RH)"],
-  types: ["Melhoria de processo", "Alteração de funcionalidade", "Nova funcionalidade", "Integração entre sistemas", "Relatório / Indicador", "Dados / Cadastro / Parâmetro", "Correção de erro / Bug", "Acesso / Permissão", "Outro"],
+  macros: ["Atendimento / Recepção", "Assistencial / Clínico", "Faturamento / Contas Médicas", "Credenciamento", "Financeiro / Controladoria", "Suprimentos / Farmácia", "Gestão de Pessoas (RH)", "Tecnologia da Informação", "Governança & Qualidade", "Outro"],
+  types: ["Melhoria de processo", "Nova funcionalidade", "Alteração de funcionalidade", "Correção de erro / Bug", "Relatório / Indicador", "Integração entre sistemas", "Dados / Cadastro / Parâmetro", "Acesso / Permissão", "Mudança de processo sem desenvolvimento", "Orientação / Treinamento", "Outro"],
   audience: ["Eu / Minha atividade individual", "Minha equipe de trabalho", "Uma área inteira", "Duas ou mais áreas", "Uma unidade inteira", "Múltiplas unidades", "Toda a organização", "Pacientes / Clientes externos"],
   freq: ["Eventualmente (raro)", "Semanalmente", "Diariamente", "Várias vezes ao dia", "Sempre que determinado evento ocorre"],
   impacts: ["Retrabalho manual", "Erro operacional", "Perda de tempo / lentidão", "Risco assistencial / paciente", "Impacto financeiro / glosa", "Falta de informação / indicador", "Dificuldade de controle / compliance"],
   p0Reasons: ["Obrigação regulatória / legal (ANS, CFM, LGPD)", "Risco assistencial / segurança do paciente", "Indisponibilidade de processo crítico", "Impacto financeiro relevante / iminente", "Incidente operacional crítico", "Dependência externa com prazo improrrogável", "Outro motivo justificado"],
   deps: ["Nenhuma", "Outro desenvolvimento", "Fornecedor / Terceiro", "Outro processo / área", "Decisão da diretoria", "Infraestrutura / servidor", "A definir"],
-  inelig: ["Dúvida operacional simples", "Erro conhecido de infraestrutura", "Sem viabilidade de negócio", "Duplicidade de solicitação"],
   /** Por que o PMO exclui uma SM. Fica no histórico com data, responsável e motivo. */
   deleteReasons: ["Aberta por engano", "Duplicada de outra SM", "Teste ou treinamento", "Contém dado de paciente", "Outro motivo"],
   gains: ["Horas economizadas", "Retrabalho eliminado", "Redução de glosas", "Redução de erros", "Mitigação de risco", "Valor financeiro preservado"],
-  efforts: [["PP", "Quick win imediato"], ["P", "Ciclo curto (sprint)"], ["M", "Planejamento padrão"], ["G", "Projeto estruturante"], ["GG", "Comitê executivo / épico"]] as const,
+  /** Esforço estimado (preliminar), da planilha do PMO. */
+  efforts: ["Muito baixo", "Baixo", "Médio", "Alto", "Muito alto", "A estimar", "Não aplicável"],
   participants: ["Solicitante", "Áreas de interface", "Tech"],
 };
 
 /** Tuplas `{label, value}` para o `input/1` de `type="select"`. */
 export const opts = (list: readonly string[]) => list.map((v) => [v, v] as const);
+
+/**
+ * Resultado da triagem (bloco 4 da planilha do PMO) e para onde ele leva a SM.
+ * `matriz` segue para a priorização; `aprofundar` fica na triagem até o
+ * esclarecimento; `rejeitar` e `cancelar` encerram com justificativa.
+ * `route` já marca o direcionamento sem desenvolvimento.
+ */
+export type TriageNext = "matriz" | "aprofundar" | "rejeitar" | "cancelar";
+
+export const TRIAGE: { value: string; next: TriageNext; hint: string; route?: Route }[] = [
+  { value: "Aprovada para backlog", next: "matriz", hint: "Segue para a matriz de priorização." },
+  { value: "Execução imediata", next: "matriz", hint: "Segue para a matriz; avalie a exceção mandatória P0." },
+  { value: "Resolver por processo", next: "matriz", hint: "Segue para a matriz, já direcionada a processo, sem desenvolvimento.", route: "processo" },
+  { value: "Resolver por treinamento", next: "matriz", hint: "Segue para a matriz, já direcionada a treinamento, sem desenvolvimento.", route: "processo" },
+  { value: "Encaminhar para correção", next: "matriz", hint: "Segue para a matriz como correção de erro." },
+  { value: "Necessita aprofundamento", next: "aprofundar", hint: "Fica na triagem até o solicitante esclarecer." },
+  { value: "Não realizar", next: "rejeitar", hint: "Encerra a SM como rejeitada e avisa o solicitante." },
+  { value: "Cancelar / duplicidade", next: "cancelar", hint: "Encerra a SM como cancelada e avisa o solicitante." },
+];
+
+export const triageOf = (value: string) => TRIAGE.find((t) => t.value === value);
 
 /* ============================================================
    Etapas
@@ -96,8 +117,8 @@ export const TONE_CLASS: Record<Tone, string> = {
 
 /** O que cada etapa ativa pede, como título do cartão "Etapa atual". */
 export const CUR_LABEL: Partial<Record<StatusId, string>> = {
-  triagem: "Análise de triagem preliminar",
-  priorizacao: "Matriz de critérios ponderados",
+  triagem: "Triagem e classificação interna",
+  priorizacao: "Matriz de priorização",
   backlog: "Reunião de desenho de cenários",
   cenarios: "Direcionar demanda conforme tipo",
   modelagem: "Modelar processo, POP e treinamento",
@@ -137,23 +158,25 @@ export const OWNER: Partial<Record<StatusId, Role[]>> = {
 
 export type PrioId = "P0" | "P1" | "P2" | "P3" | "P4";
 
-export const PRIO: Record<PrioId, { short: string; full: string; tone: Tone }> = {
-  P0: { short: "P0", full: "P0 – Crítica / Bloqueante", tone: "red" },
-  P1: { short: "P1", full: "P1 – Alta", tone: "orange" },
-  P2: { short: "P2", full: "P2 – Média", tone: "yellow" },
-  P3: { short: "P3", full: "P3 – Baixa", tone: "blue" },
-  P4: { short: "P4", full: "P4 – Melhoria opcional", tone: "purple" },
+/** As faixas da planilha do PMO: P0 só por exceção mandatória; P1 a P4 pelo score. */
+export const PRIO: Record<PrioId, { short: string; full: string; tone: Tone; range: string; treatment: string }> = {
+  P0: { short: "P0", full: "P0 – Mandatória", tone: "red", range: "Exceção", treatment: "Entrada prioritária imediata no ciclo de execução, independentemente do score." },
+  P1: { short: "P1", full: "P1 – Crítica", tone: "orange", range: "80 a 100", treatment: "Prioridade absoluta no próximo ciclo de desenvolvimento." },
+  P2: { short: "P2", full: "P2 – Alta", tone: "yellow", range: "60 a 79", treatment: "Alocação no ciclo seguinte, conforme capacidade e dependências." },
+  P3: { short: "P3", full: "P3 – Média", tone: "blue", range: "40 a 59", treatment: "Entra no backlog geral, depois das P1 e P2." },
+  P4: { short: "P4", full: "P4 – Baixa", tone: "purple", range: "0 a 39", treatment: "Backlog de oportunidade: só havendo capacidade ociosa." },
 };
 
 export type CritKey = "impact" | "risk" | "urgency" | "reach" | "alignment";
 export type Scores = Record<CritKey, number>;
 
-export const CRITS: { key: CritKey; label: string; w: number; rub: string[] }[] = [
-  { key: "impact", label: "Impacto no negócio", w: 0.3, rub: ["Sem impacto relevante", "Muito baixo (ajuste estético)", "Baixo (pequeno incômodo)", "Relevante (retrabalho evidente)", "Alto (afeta rotina principal)", "Crítico (para operação ou faturamento)"] },
-  { key: "risk", label: "Risco operacional / assistencial", w: 0.2, rub: ["Sem risco relevante", "Muito baixo / desprezível", "Baixo (erro facilmente corrigido)", "Relevante (gera passivo/glosa)", "Alto (risco grave a processos)", "Crítico (risco assistencial/legal)"] },
-  { key: "urgency", label: "Urgência / oportunidade", w: 0.2, rub: ["Sem urgência (desejável)", "Baixa urgência", "Moderada (próximos ciclos)", "Urgente (impacto cumulativo)", "Muito urgente (prazo iminente)", "Imediata (prazo fatal / legal)"] },
-  { key: "reach", label: "Abrangência de público", w: 0.15, rub: ["Individual (1 usuário)", "Pequeno grupo (2 a 5)", "Uma equipe de trabalho", "Uma área ou unidade inteira", "Várias áreas ou unidades", "Toda a organização"] },
-  { key: "alignment", label: "Alinhamento estratégico", w: 0.15, rub: ["Sem relação com metas", "Relação indireta", "Contribuição pequena", "Contribuição relevante", "Diretamente ligado a objetivos", "Essencial para o plano estratégico"] },
+/** Os critérios do bloco 5 da planilha, na ordem dela. `ref` é a referência operacional (0 e 5). */
+export const CRITS: { key: CritKey; label: string; w: number; ref: string; rub: string[] }[] = [
+  { key: "impact", label: "Impacto no negócio / operação", w: 0.3, ref: "0 = sem impacto · 5 = impacto crítico", rub: ["Sem impacto relevante", "Muito baixo (ajuste estético)", "Baixo (pequeno incômodo)", "Relevante (retrabalho evidente)", "Alto (afeta rotina principal)", "Crítico (para operação ou faturamento)"] },
+  { key: "reach", label: "Abrangência de usuários / unidades", w: 0.15, ref: "0 = individual · 5 = toda a organização", rub: ["Individual (1 usuário)", "Pequeno grupo (2 a 5)", "Uma equipe de trabalho", "Uma área ou unidade inteira", "Várias áreas ou unidades", "Toda a organização / corporativo"] },
+  { key: "risk", label: "Risco operacional / assistencial", w: 0.2, ref: "0 = sem risco · 5 = risco gravíssimo", rub: ["Sem risco relevante", "Muito baixo / desprezível", "Baixo (erro facilmente corrigido)", "Relevante (gera passivo/glosa)", "Alto (risco grave a processos)", "Crítico (risco assistencial/legal fatal)"] },
+  { key: "alignment", label: "Alinhamento estratégico", w: 0.15, ref: "0 = sem relação · 5 = essencial para metas", rub: ["Sem relação com metas", "Relação indireta", "Contribuição pequena", "Contribuição relevante", "Diretamente ligado a objetivos", "Essencial para o plano estratégico"] },
+  { key: "urgency", label: "Urgência / janela de oportunidade", w: 0.2, ref: "0 = sem urgência · 5 = imediata / prazo fatal", rub: ["Sem urgência (desejável)", "Baixa urgência (confortável)", "Moderada (próximos ciclos)", "Urgente (impacto cumulativo)", "Muito urgente (prazo iminente)", "Imediata (prazo fatal / legal)"] },
 ];
 
 /* ============================================================
@@ -200,8 +223,11 @@ export type Sm = Omit<SmForm, "lgpd"> & {
   type: string;
   dependency: string;
   effort: string;
-  eligibility: "" | "elegivel" | "inelegivel";
-  rejectCriterion: string;
+  /** Um dos valores de `TRIAGE`. */
+  triage: string;
+  /** Responsável pela análise da triagem. */
+  analyst: string;
+  /** Justificativa de "Não realizar" ou "Cancelar / duplicidade", enviada ao solicitante. */
   rejection: string;
   // Priorização
   scores: Scores | null;
@@ -249,7 +275,7 @@ export type SmRequired = "id" | "createdAt" | "status" | "requester" | "area" | 
 
 export const blankSm = (): Omit<Sm, SmRequired> => ({
   files: [], contact: "", attachments: "", hasDeadline: "Não", deadline: "",
-  rootCause: "", macro: "", type: "", dependency: "Nenhuma", effort: "", eligibility: "", rejectCriterion: "", rejection: "",
+  rootCause: "", macro: "", type: "", dependency: "Nenhuma", effort: "", triage: "", analyst: "", rejection: "",
   scores: null, p0: false, p0Reason: "", p0Just: "", meetingDate: "", participants: [], interfaceAreas: [], rules: "", reqs: "",
   routes: [], procFlow: false, procPop: false, procTraining: false, subpath: "",
   homologTech: false, homologReq: false, homologTechBy: "", homologTechAt: "", homologReqBy: "", homologReqAt: "", gainType: "", gainHours: "", gainDesc: "", closedAt: "",
@@ -349,7 +375,7 @@ export function scoreOf(s: Pick<Sm, "scores">): number | null {
 export function prioOf(s: Pick<Sm, "scores" | "p0">): PrioId | null {
   const sc = scoreOf(s);
   if (sc == null) return null;
-  return s.p0 || sc >= 80 ? "P0" : sc >= 65 ? "P1" : sc >= 45 ? "P2" : sc >= 25 ? "P3" : "P4";
+  return s.p0 ? "P0" : sc >= 80 ? "P1" : sc >= 60 ? "P2" : sc >= 40 ? "P3" : "P4";
 }
 
 /** `n,n` com vírgula, ou travessão sem valor. */
@@ -357,8 +383,6 @@ export const fmt = (n: number | null | undefined) => (n == null ? "—" : n.toFi
 
 export const routeText = (routes: Route[]) =>
   routes.map((r) => (r === "processo" ? "Processo, POP ou treinamento" : "Parametrização ou desenvolvimento")).join(" + ");
-
-export const effortOf = (size: string) => L.efforts.find(([v]) => v === size);
 
 export const hasWorkaround = (s: Pick<Sm, "workaround">) => s.workaround.trim().length > 0;
 
