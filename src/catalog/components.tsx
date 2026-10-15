@@ -4,8 +4,12 @@ import { Button, type ButtonColor, type ButtonSize, type ButtonVariant } from ".
 import { Card, InfoCard } from "../components/Card.js";
 import { StatusTag, Tag, TagList, type TagListVariant, type TagVariant } from "../components/Tag.js";
 import { SimpleTable, Table } from "../components/Table.js";
-import { Checkgroup, FakeInput, FieldError, Input, InputSwitchCard, InputWithSelect, Label, SwitchCard } from "../components/Input.js";
+import { Checkgroup, CustomSelect, FakeInput, FieldError, Input, InputSwitchCard, InputWithSelect, Label, SwitchCard } from "../components/Input.js";
 import { MultiSelect } from "../components/MultiSelect.js";
+import { MultiSelectSearch } from "../components/MultiSelectSearch.js";
+import { MultiTagSelect } from "../components/MultiTagSelect.js";
+import { RichText } from "../components/RichText.js";
+import { SelectSearch } from "../components/SelectSearch.js";
 import { BrandButton, BrandInput } from "../components/Brand.js";
 import { FileItem, FileUploader } from "../components/FileUploader.js";
 import {
@@ -1085,6 +1089,86 @@ const GROUP_OF: Record<string, string> = {
   notification: "Feedback",
 };
 
+/**
+ * O componente React de cada entrada, pelo nome no monólito. É por esta
+ * referência que o "Destacar componentes" do motor acha cada instância na
+ * tela — sem `data-ds-component` no markup, que o Phoenix não tem. Entrada que
+ * não está aqui não é destacada.
+ */
+const COMPONENT_OF: Record<string, NonNullable<ComponentPreview["implementation"]>> = {
+  button: Button,
+  tabs: Tabs,
+  card_tabs: CardTabs,
+  button_tabs: ButtonTabs,
+  dropdown_tabs: DropdownTabs,
+  lazy_tabs: LazyTabs,
+  breadcrumbs: Breadcrumbs,
+  drawer: Drawer,
+  form_grid: FormGrid,
+  timer: Timer,
+  pagination: Pagination,
+  notification: NotificationComponent,
+  modal: Modal,
+  drawer_modal: DrawerModal,
+  modal_content: ModalContent,
+  flash: Flash,
+  flash_group: FlashGroup,
+  simple_form: SimpleForm,
+  link_button: LinkButton,
+  copy_button: CopyButton,
+  toast_wrapper: ToastWrapper,
+  input: Input,
+  input_with_select: InputWithSelect,
+  checkgroup: Checkgroup,
+  fake_input: FakeInput,
+  input_switch_card: InputSwitchCard,
+  fake_radio_group: FakeRadioGroup,
+  radio_group: RadioGroup,
+  radio_selector: RadioSelector,
+  checkbox_group: CheckboxGroup,
+  label: Label,
+  error: FieldError,
+  custom_select: CustomSelect,
+  select_search: SelectSearch,
+  multi_select_search: MultiSelectSearch,
+  multi_select: MultiSelect,
+  multi_tag_select: MultiTagSelect,
+  rich_text: RichText,
+  brand_button: BrandButton,
+  brand_input: BrandInput,
+  file_uploader: FileUploader,
+  item: FileItem,
+  radio_cards: RadioCards,
+  header: Header,
+  table: Table,
+  simple_table: SimpleTable,
+  list: List,
+  back: Back,
+  card: Card,
+  info_card: InfoCard,
+  inside_card: InsideCard,
+  dropdown: Dropdown,
+  dropdown_menu: DropdownMenu,
+  meta_info: MetaInfo,
+  image_upload: ImageUpload,
+  avatar: Avatar,
+  progress: Progress,
+  tag: Tag,
+  tag_list: TagList,
+  status_tag: StatusTag,
+  empty_state_card: EmptyStateCard,
+  range_datepicker: RangeDatePicker,
+  range_monthpicker: RangeMonthPicker,
+  monthpicker: MonthPicker,
+  week_selector: WeekSelector,
+  tooltip: Tooltip,
+  timeline_list: TimelineList,
+  loading_card: LoadingCard,
+  switch_card: SwitchCard,
+  date_navigator: DateNavigator,
+  kbd: Kbd,
+};
+
 const GROUP_ORDER = [...new Set(Object.values(GROUP_OF)), "Outros"];
 
 function sortByGroup(previews: ComponentPreview[]) {
@@ -1132,6 +1216,7 @@ export const COMPONENT_PREVIEWS: ComponentPreview[] = sortByGroup( portados().ma
     group: GROUP_OF[entry.name] ?? "Outros",
     description: entry.descricao,
     source: entry.origem,
+    implementation: COMPONENT_OF[entry.name],
     preview: Preview,
     fixtures,
     defaultFixture: fixtures[0]?.id,
