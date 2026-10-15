@@ -41,7 +41,6 @@ const CONTROLS: ControlGroup[] = [
           { value: "alterado", label: "Alterações pendentes" },
           { value: "propagar", label: "Vigência do novo padrão" },
           { value: "nova-vigencia", label: "Nova vigência" },
-          { value: "plano", label: "Plano Terapêutico" },
         ],
       },
     ],
@@ -149,17 +148,6 @@ export const feature: Feature = {
       controls: { vigencia: "v0" },
       intent: "Consultar o padrão de uma vigência que já terminou.",
       expected: ["Selo \"Vigência encerrada · somente leitura\" ao lado do título.", "O seletor mostra o selo Encerrada."],
-    }),
-    scenario({
-      id: "agenda.plano",
-      title: "Plano Terapêutico",
-      controls: { estado: "plano" },
-      intent: "A pré-visualização do resumo da semana padrão para envio à operadora.",
-      expected: [
-        "Paciente, unidade, vigência e data de emissão.",
-        "Sessões por semana, dias com atendimento, carga por especialidade com serviços e profissionais, e a semana dia a dia.",
-        "Fechar e Baixar PDF.",
-      ],
     }),
     scenario({
       id: "agenda.vazio",
