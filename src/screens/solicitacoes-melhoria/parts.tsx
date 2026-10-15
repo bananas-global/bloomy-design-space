@@ -3,7 +3,8 @@
  * Montadas com `tag/1`, `file_uploader/1` e `item/1`; nenhuma é componente novo
  * do sistema.
  */
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { FileItem, FileUploader } from "../../components/FileUploader.js";
 import { Icon } from "../../components/Icon.js";
 import { Tag } from "../../components/Tag.js";
@@ -55,16 +56,26 @@ export function Answer({ label, children }: { label: string; children: ReactNode
   );
 }
 
+/** O lugar do rodapé fixo do detalhe onde a etapa põe as ações dela. */
+export const FooterSlot = createContext<HTMLElement | null>(null);
+
+/** Leva as ações da etapa para o rodapé fixo do detalhe. */
+export function StageFooter({ children }: { children: ReactNode }) {
+  const slot = useContext(FooterSlot);
+  return slot ? createPortal(children, slot) : null;
+}
+
 /** "Pendente: …" ou a frase de pronto, ao lado do botão que fecha a etapa. */
 export function Pending({ missing, ready, joiner = ", " }: { missing: string[]; ready: string; joiner?: string }) {
   return <p className="text-sm font-bold text-brand-purple-dark/60">{missing.length ? `Pendente: ${missing.join(joiner)}.` : ready}</p>;
 }
 
 /** Os arquivos de uma SM, de um comentário ou de uma evidência, com `item/1` simplificado. */
-export function FileList({ files }: { files: SmFile[] }) {
+/** `stacked`: um arquivo por linha, para colunas estreitas como o histórico. */
+export function FileList({ files, stacked = false }: { files: SmFile[]; stacked?: boolean }) {
   if (!files.length) return null;
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
+    <div className={cx("grid gap-2", !stacked && "sm:grid-cols-2")}>
       {files.map((f) => (
         <FileItem key={f.id} fileName={f.name} size={f.size} url={f.url} variant="simplified" />
       ))}
