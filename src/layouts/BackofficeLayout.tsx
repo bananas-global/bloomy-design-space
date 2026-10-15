@@ -24,6 +24,10 @@ import { permissionsByRole } from "../personas/permissions.js";
  * `:if` de cada item: por policy (`context.can`) ou pela lista de papéis do
  * layout (`context.persona.id`). Sem `context`, é a visão do Admin.
  * `SignatureNotificationModal` não foi portado.
+ *
+ * `extraMenuItems` não existe no Phoenix: é a entrada de menu de uma feature
+ * que ainda não está lá (Compras, por exemplo). Só a tela que a passa mostra o
+ * item, e o PR dela declara a entrada nova.
  */
 
 export type LayoutContext = Pick<ScenarioContext, "navigate" | "can" | "persona">;
@@ -85,6 +89,7 @@ export function BackofficeLayout({
   now,
   notifications,
   universityEnabled = false,
+  extraMenuItems = [],
   flash,
   children,
 }: {
@@ -106,6 +111,8 @@ export function BackofficeLayout({
   notifications?: UserNotification[];
   /** `Bloomy.University.enabled?()`. */
   universityEnabled?: boolean;
+  /** Itens de menu de uma feature nova, ao fim do menu. Não existe no Phoenix. */
+  extraMenuItems?: DrawerItem[];
   /** Onde o `flash_group/1` do layout fica. */
   flash?: ReactNode;
   children: ReactNode;
@@ -117,7 +124,7 @@ export function BackofficeLayout({
   const role = context?.persona?.id ?? "admin";
   const roleLabel = context?.persona?.name ?? "Admin";
   const can = context ? context.can : (permission: string) => (permissionsByRole.admin as readonly string[]).includes(permission);
-  const items = BACKOFFICE_MENU.filter((item) => item.visible(role, can));
+  const items: DrawerItem[] = [...BACKOFFICE_MENU.filter((item) => item.visible(role, can)), ...extraMenuItems];
   const unitName = currentUnit ?? currentUser.units[0] ?? "";
   const roles = currentUser.roles.length ? currentUser.roles : [roleLabel];
   const link = (href: string) => ({
@@ -295,7 +302,8 @@ export function BackofficeLayout({
                     </div>
                   </Dropdown>
 
-                  <NotificationComponent notifications={notifications} onNavigate={navigate} />
+                  {/* A chave remonta o sino quando chega aviso novo, como o stream do LiveView. */}
+                  <NotificationComponent key={notifications?.map((n) => n.id).join(",")} notifications={notifications} onNavigate={navigate} />
                 </div>
               </div>
             </header>
