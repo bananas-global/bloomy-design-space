@@ -8,6 +8,8 @@
  *   tabela de planos; vigência encerrada fica somente leitura;
  * - o botão "Exportar PDF" e o modal Exportar PIC (`./pic/ExportPicModal.tsx`),
  *   com a pré-visualização do PIC em uma página A4 e o "Baixar PDF";
+ * - o modal Áreas em lote (`./pic/BatchAreasModal.tsx`), que cria várias áreas a
+ *   partir de um protocolo aplicado; as áreas importadas entram na grade;
  * - as abas e as pílulas de especialidade (`./pic/parts.tsx`).
  *
  * Fora do protótipo: Pré-visualizar (a simulação da sessão), Nova vigência, a
@@ -24,8 +26,9 @@ import { Icon } from "../components/Icon.js";
 import { Dropdown } from "../components/Overlay.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { PatientLayout } from "../layouts/PatientLayout.js";
+import { BatchAreasModal, COORDINATION_ROLES, type BatchArea } from "./pic/BatchAreasModal.js";
 import { ExportPicModal } from "./pic/ExportPicModal.js";
-import { MY_SPECIALTY, PIC_FIXTURES, TODAY, type PicFixture, type Plan, type SpecialtyId } from "./pic/fixtures.js";
+import { MY_SPECIALTY, PIC_FIXTURES, PROTOCOLS, TODAY, type Goal, type PicFixture, type Plan, type SpecialtyId } from "./pic/fixtures.js";
 import { GridLayout, goalsOf, SpecialtyTabs } from "./pic/parts.js";
 
 export const PIC_PATH = "/backoffice/pacientes/pt1/pic";
@@ -123,16 +126,46 @@ function VigencyDropdown({ plans, current, onSelect, canCreate }: { plans: Plan[
 }
 
 function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicFixture }) {
-  const { plans, goals, patient } = fixture;
+  const { plans, patient } = fixture;
   const ordered = [...plans].sort((a, b) => statusOf(a).order - statusOf(b).order || iso(b.startAt).localeCompare(iso(a.startAt)));
   const [planId, setPlanId] = useState(ordered[0]?.id);
   const [spec, setSpec] = useState<SpecialtyId | "all">("all");
   const [exporting, setExporting] = useState(fixture.exportOpen ?? false);
+  const [batching, setBatching] = useState(fixture.batchOpen ?? false);
+  /** As áreas criadas pelas Áreas em lote, até recarregar a tela. */
+  const [imported, setImported] = useState<Goal[]>([]);
   // Os dados chegam do adapter depois do primeiro render.
   useEffect(() => setExporting(fixture.exportOpen ?? false), [fixture.exportOpen]);
+  useEffect(() => setBatching(fixture.batchOpen ?? false), [fixture.batchOpen]);
+  useEffect(() => setImported([]), [fixture.goals]);
+  const goals = [...fixture.goals, ...imported];
 
   const plan = plans.find((p) => p.id === planId) ?? ordered[0];
   if (!plan) return null;
+
+  const importAreas = (areas: BatchArea[]) => {
+    setImported((list) => [
+      ...list,
+      ...areas.map((area, i) => ({
+        id: `batch-${list.length + i + 1}`,
+        name: area.name,
+        protocol: area.protocol,
+        description: area.description,
+        endDate: plan.endAt,
+        status: "active" as const,
+        specialties: [area.specialty],
+        objectives: [],
+      })),
+    ]);
+    setBatching(false);
+    const n = areas.length;
+    showToast({
+      type: "success",
+      title: `${n} ${n === 1 ? "área criada" : "áreas criadas"} a partir do protocolo`,
+      content: `${areas[0]?.protocol ?? ""} · as áreas entram no fim da coluna Áreas.`,
+      closeTime: 3000,
+    });
+  };
   const past = statusOf(plan).order === 2;
   const canCreate = context.can("behavior_intervention_plans.create");
   const canEdit = context.can("behavior_intervention_plans.edit") && !past;
@@ -183,8 +216,23 @@ function PlanTab({ context, fixture }: { context: ScenarioContext; fixture: PicF
 
       <SpecialtyTabs goals={goals} value={spec} mine={MY_SPECIALTY} onChange={setSpec} />
 
-      <GridLayout key={`${plan.id}-${spec}`} goals={goalsOf(goals, spec)} canEdit={canEdit} canDiscard={canEdit && context.can("behavior_intervention_plans.discard")} />
+      <GridLayout
+        key={`${plan.id}-${spec}`}
+        goals={goalsOf(goals, spec)}
+        canEdit={canEdit}
+        canDiscard={canEdit && context.can("behavior_intervention_plans.discard")}
+        onBatchAreas={() => setBatching(true)}
+      />
 
+      <BatchAreasModal
+        show={batching && canEdit}
+        onCancel={() => setBatching(false)}
+        onImport={importAreas}
+        protocols={fixture.protocols ?? PROTOCOLS}
+        goals={goals}
+        canChooseSpecialty={COORDINATION_ROLES.includes(context.persona?.id ?? "")}
+        mySpecialty={MY_SPECIALTY}
+      />
       <ExportPicModal show={exporting} onCancel={() => setExporting(false)} plan={plan} goals={goals} patientName={patient.name} />
     </Card>
   );
