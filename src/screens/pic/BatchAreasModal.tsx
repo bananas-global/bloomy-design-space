@@ -14,7 +14,7 @@
  *
  * Componentes usados: `modal/1` (variant custom, como o Pré-visualizar),
  * `button/1`, `input/1` (busca, select de nível, checkbox e o select de
- * especialidade), `table/1` e `dropdown/1` (o seletor de aplicação, no padrão
+ * especialidade), as classes do `table/1` e `dropdown/1` (o seletor de aplicação, no padrão
  * do seletor de vigências).
  */
 import { useMemo, useState } from "react";
@@ -22,7 +22,6 @@ import { Button } from "../../components/Button.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
 import { Dropdown, Modal } from "../../components/Overlay.js";
-import { Table } from "../../components/Table.js";
 import { SPECIALTIES, type Goal, type PatientProtocol, type ProtocolApplication, type SkillScore, type SpecialtyId, skillScores } from "./fixtures.js";
 import { specialtyOf } from "./parts.js";
 
@@ -35,6 +34,21 @@ export const COORDINATION_ROLES = ["admin", "clinic_admin", "coordinator"];
 
 /** O que cada habilidade marcada vira: uma área nova. */
 export type BatchArea = { name: string; protocol: string; level: number; specialty: SpecialtyId; description: string };
+
+/**
+ * As classes do `table_class/1` (`core_components.ex`). Novo: a tabela fica na
+ * tela porque o `table/1` não tem cabeçalho com checkbox (o "selecionar todas")
+ * nem linha marcada.
+ */
+const TABLE_CLASS = cx(
+  "w-full rounded-lg border border-brand-purple-dark/10 overflow-x-auto",
+  "[&_table]:w-full [&_table]:border-collapse [&_table]:rounded-lg",
+  "[&_thead]:border-b [&_thead]:border-brand-purple-dark/10",
+  "[&_thead_th]:bg-brand-blue/20 [&_thead_th]:px-3 [&_thead_th]:py-4 [&_thead_th]:text-left [&_thead_th]:text-brand-purple-dark",
+  "[&_tbody]:divide-y [&_tbody]:divide-brand-purple-dark/10",
+  "[&_tbody_tr]:hover:bg-brand-purple-dark/5",
+  "[&_tbody_tr_td]:px-3 [&_tbody_tr_td]:py-4 [&_tbody_tr_td]:text-left [&_tbody_tr_td]:text-brand-purple-dark/80",
+);
 
 const EYEBROW = "text-xs font-black tracking-wide uppercase text-brand-purple-dark/50";
 const NEED = 80;
@@ -271,12 +285,8 @@ function BatchBody({ onCancel, onImport, protocols, goals, canChooseSpecialty, m
             </div>
           ) : (
             <>
-              <div className="flex flex-col gap-2 items-start">
-                <span className={EYEBROW}>Aplicação</span>
-                <ApplicationDropdown applications={protocol.applications} current={application} onSelect={pickApplication} />
-              </div>
-
               <div className="flex flex-wrap items-center gap-3">
+                <ApplicationDropdown applications={protocol.applications} current={application} onSelect={pickApplication} />
                 <Input
                   type="search"
                   id="pic_batch_search"
@@ -304,91 +314,91 @@ function BatchBody({ onCancel, onImport, protocols, goals, canChooseSpecialty, m
                   checked={onlyGaps}
                   onChange={(event) => setOnlyGaps(event.target.checked)}
                 />
-                <Button type="button" variant="ghost" size="medium" leftIcon={allOn ? "fa-square-minus" : "fa-square-check"} disabled={selectable.length === 0} className="ml-auto text-blue! disabled:opacity-50" onClick={toggleAll}>
-                  {allOn ? "Desmarcar todas" : "Marcar todas"}
-                </Button>
               </div>
 
-              <Table
-                id="pic_batch_skills"
-                rows={filtered}
-                rowId={(r) => `pic_batch_${r.id}`}
-                rowClick={toggle}
-                emptyMessage="Nenhuma habilidade encontrada"
-                col={[
-                  {
-                    label: "",
-                    className: "w-11",
-                    render: (r) => (
-                      <span onClick={(event) => event.stopPropagation()}>
-                        <RowCheckbox label={`Selecionar ${r.skill}`} checked={!!selected[r.id]} disabled={isDuplicate(r)} onChange={() => toggle(r)} />
-                      </span>
-                    ),
-                  },
-                  {
-                    label: "Nível",
-                    className: "w-28",
-                    render: (r) => (
-                      <span className={cx("inline-block px-2.5 py-0.5 rounded-full bg-brand-purple-dark/6 text-xs font-extrabold text-brand-purple-dark whitespace-nowrap", isDuplicate(r) && "opacity-55")}>
-                        Nível {r.level}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: "Habilidade",
-                    render: (r) => (
-                      <span className={cx("inline-flex flex-wrap items-center gap-2", isDuplicate(r) && "opacity-55")}>
-                        <span className="text-sm font-bold text-brand-purple-dark">{r.skill}</span>
-                        {isDuplicate(r) && <span className="px-2 py-0.5 rounded-full bg-brand-purple-dark/7 text-[11px] font-extrabold text-brand-purple-dark/60">Já cadastrada</span>}
-                      </span>
-                    ),
-                  },
-                  {
-                    label: "Acerto",
-                    className: "w-44",
-                    render: (r) => {
+              <div className={TABLE_CLASS}>
+                <table className="table-fixed">
+                  <thead>
+                    <tr>
+                      <th className="w-11">
+                        <RowCheckbox label="Selecionar todas" checked={allOn} disabled={selectable.length === 0} onChange={toggleAll} />
+                      </th>
+                      <th className="w-28">Nível</th>
+                      <th>Habilidade</th>
+                      <th className="w-44">Acerto</th>
+                      <th className="w-80">Especialidade</th>
+                    </tr>
+                  </thead>
+                  <tbody id="pic_batch_skills">
+                    {filtered.map((r) => {
+                      const duplicate = isDuplicate(r);
+                      const on = !!selected[r.id];
                       const tone = toneOf(r.pct);
                       return (
-                        <span className={cx("grid grid-cols-[auto_auto] justify-start items-baseline gap-x-2 gap-y-0.5", isDuplicate(r) && "opacity-55")}>
-                          <span className={cx("text-[15px] font-black", tone.text)}>{r.pct}%</span>
-                          <span className="text-xs font-semibold text-brand-purple-dark/55 tabular-nums">
-                            {r.hits}/{r.total}
-                          </span>
-                          <span className="col-span-2 h-1 w-28 rounded-full bg-brand-purple-dark/8 overflow-hidden">
-                            <span className={cx("block h-full rounded-full", tone.bar)} style={{ width: `${r.pct}%` }} />
-                          </span>
-                        </span>
-                      );
-                    },
-                  },
-                  {
-                    label: "Especialidade",
-                    className: "w-60",
-                    render: (r) =>
-                      canChooseSpecialty ? (
-                        <span onClick={(event) => event.stopPropagation()}>
-                          <Input
-                            type="select"
-                            id={`pic_batch_specialty_${r.id}`}
-                            name={`pic_batch[specialty][${r.id}]`}
-                            value={selected[r.id] ?? mySpecialty}
-                            disabled={!selected[r.id]}
-                            options={SPECIALTIES.map((s) => [s.label, s.id] as const)}
-                            onChange={(value) => value && setSelected((s) => ({ ...s, [r.id]: value as SpecialtyId }))}
-                          />
-                        </span>
-                      ) : (
-                        <span
-                          className={cx("inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-purple-dark/5 text-[13px] font-bold text-brand-purple-dark/70", isDuplicate(r) && "opacity-55")}
-                          title="Sua especialidade de login"
+                        <tr
+                          key={r.id}
+                          id={`pic_batch_${r.id}`}
+                          className={cx(duplicate ? "[&>td]:opacity-55" : "cursor-pointer", on && "bg-brand-blue/10")}
+                          onClick={() => toggle(r)}
                         >
-                          <Icon type="solid" name="fa-lock" className="text-[11px] text-brand-purple-dark/45" />
-                          {specialtyOf(mySpecialty).label}
-                        </span>
-                      ),
-                  },
-                ]}
-              />
+                          <td onClick={(event) => event.stopPropagation()}>
+                            <RowCheckbox label={`Selecionar ${r.skill}`} checked={on} disabled={duplicate} onChange={() => toggle(r)} />
+                          </td>
+                          <td>
+                            <span className="inline-block px-2.5 py-0.5 rounded-full bg-brand-purple-dark/6 text-xs font-extrabold text-brand-purple-dark whitespace-nowrap">Nível {r.level}</span>
+                          </td>
+                          <td>
+                            <span className="inline-flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-bold text-brand-purple-dark">{r.skill}</span>
+                              {duplicate && <span className="px-2 py-0.5 rounded-full bg-brand-purple-dark/7 text-[11px] font-extrabold text-brand-purple-dark/60">Já cadastrada</span>}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="grid grid-cols-[auto_auto] justify-start items-baseline gap-x-2 gap-y-0.5">
+                              <span className={cx("text-[15px] font-black", tone.text)}>{r.pct}%</span>
+                              <span className="text-xs font-semibold text-brand-purple-dark/55 tabular-nums">
+                                {r.hits}/{r.total}
+                              </span>
+                              <span className="col-span-2 h-1 w-28 rounded-full bg-brand-purple-dark/8 overflow-hidden">
+                                <span className={cx("block h-full rounded-full", tone.bar)} style={{ width: `${r.pct}%` }} />
+                              </span>
+                            </span>
+                          </td>
+                          <td onClick={(event) => event.stopPropagation()}>
+                            {canChooseSpecialty ? (
+                              <Input
+                                type="select"
+                                id={`pic_batch_specialty_${r.id}`}
+                                name={`pic_batch[specialty][${r.id}]`}
+                                className="w-full"
+                                value={selected[r.id] ?? mySpecialty}
+                                disabled={!on}
+                                options={SPECIALTIES.map((s) => [s.label, s.id] as const)}
+                                onChange={(value) => value && setSelected((s) => ({ ...s, [r.id]: value as SpecialtyId }))}
+                              />
+                            ) : (
+                              <span
+                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-purple-dark/5 text-[13px] font-bold text-brand-purple-dark/70"
+                                title="Sua especialidade de login"
+                              >
+                                <Icon type="solid" name="fa-lock" className="text-[11px] text-brand-purple-dark/45" />
+                                {specialtyOf(mySpecialty).label}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="text-center! text-brand-purple-dark/40">
+                          Nenhuma habilidade encontrada
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </>
           )}
         </section>
