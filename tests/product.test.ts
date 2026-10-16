@@ -14,6 +14,14 @@ describe("catálogo", () => {
     expect(components.every((component) => typeof component.preview === "function")).toBe(true);
   });
 
+  it("todo item do catálogo aponta para o componente React real", () => {
+    // É o que o "Destacar componentes" usa para achar cada instância na tela.
+    const semComponente = (productDefinition.components ?? [])
+      .filter((component) => !component.implementation)
+      .map((component) => component.id);
+    expect(semComponente).toEqual([]);
+  });
+
   it("separa layouts de componentes", () => {
     const groups = new Set((productDefinition.components ?? []).map((component) => component.group));
     expect(groups.has("Layouts")).toBe(true);
