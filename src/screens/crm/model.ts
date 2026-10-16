@@ -436,7 +436,7 @@ export const pendingOf = (l: Lead) => (stageOf(l.status)?.needs ?? []).filter((i
 
 /** Onde cada item do checklist se preenche (o `data-anchor` do card). */
 export const ANCHORS: Record<string, string> = {
-  resp: "resp", contato: "contato", crianca: "crianca", plano: "crianca", carga: "carga", disp: "carga", laudo: "laudo", endereco: "endereco", agenda: "agenda",
+  resp: "resp", contato: "contato", crianca: "crianca", plano: "crianca", carga: "carga", disp: "disp", laudo: "laudo", endereco: "endereco", agenda: "agenda",
   realizada: "relatorio", relatorio: "relatorio", interesse: "relatorio", enviado: "relatorio", anamnese: "anamnese", grade: "grade",
   docs: "docs", solicitacao: "solicitacao", retorno: "solicitacao", autorizada: "autorizada",
 };

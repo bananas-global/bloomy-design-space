@@ -199,12 +199,14 @@ export function DealTabs({ lead, value, onChange }: { lead: Lead; value: TabId; 
 /* ---------- cartões de seção ---------- */
 
 export function Section({
-  title, desc, tag, tagVariant = "dark-purple", anchor, fam = false, children, className,
+  title, desc, tag, tagVariant = "dark-purple", action, anchor, fam = false, children, className,
 }: {
   title?: string;
   desc?: string;
   tag?: string | null;
   tagVariant?: "dark-purple" | "green";
+  /** Botão no canto do cabeçalho. */
+  action?: ReactNode;
   anchor?: string;
   /** Preenchido pela família, pelo link do WhatsApp. */
   fam?: boolean;
@@ -214,7 +216,7 @@ export function Section({
   return (
     <div data-anchor={anchor} className="scroll-mt-24 rounded-2xl transition-shadow duration-300">
       <Card className={cx("space-y-4", className)}>
-        {(title || tag || fam) && (
+        {(title || tag || fam || action) && (
           <header className="flex items-start justify-between gap-3">
             <div>
               {(title || fam) && (
@@ -225,7 +227,12 @@ export function Section({
               )}
               {desc && <p className="text-sm text-brand-purple-dark/60">{desc}</p>}
             </div>
-            {tag && <Tag item={tag} variant={tagVariant} pill />}
+            {(tag || action) && (
+              <div className="flex flex-none items-center gap-3">
+                {tag && <Tag item={tag} variant={tagVariant} pill />}
+                {action}
+              </div>
+            )}
           </header>
         )}
         {children}

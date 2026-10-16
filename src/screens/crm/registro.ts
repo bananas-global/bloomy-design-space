@@ -56,7 +56,7 @@ export const feature: Feature = {
       expected: [
         "Cabeçalho: \"Com: Comercial\", dias na etapa contra o SLA (5d) e \"faltam 4 itens\"; etapa e responsável pelo negócio à direita.",
         "Checklist do Comercial à esquerda; clicar num item rola até o cartão do campo, destaca e foca o primeiro campo vazio.",
-        "Cartões: Preenchimento pela família, Responsáveis, Contato e follow-up, Criança e plano de saúde, Carga horária e disponibilidade, Agenda anterior, Laudos, Unidade e endereço e Agendamento da visita. Contatos à direita.",
+        "Cartões: Preenchimento pela família, Responsáveis, Contato e follow-up, Criança e plano de saúde, Carga horária, Disponibilidade da família (grade de pintar direto no cartão), Agenda anterior, Laudos, Unidade e endereço e Agendamento da visita. Contatos à direita.",
         "Cada alteração salva sozinha (\"Salvando...\" → \"Salvo\").",
         "Avançar só libera com o checklist da etapa completo; o título do botão lista o que falta.",
       ],

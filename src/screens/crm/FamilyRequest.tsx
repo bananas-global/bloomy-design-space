@@ -15,7 +15,7 @@ import { Tag, type TagVariant } from "../../components/Tag.js";
 import { TODAY } from "../../components/today.js";
 import { fmtBR, guardianOf, type FamRequest, type Lead } from "./model.js";
 import type { Up } from "./NegocioTab.js";
-import { DISABLED, cx } from "./parts.js";
+import { DISABLED, Section, cx } from "./parts.js";
 import { FamilyFormPage } from "./FamilyForm.js";
 import { FAM_SECTIONS, applyAnswers, famSection, hasAnswer, simulatedAnswers, summarize, type FamAnswers } from "./family.js";
 import { Entry, SendStatus, SimButton, WhatsDrawer, fakeLink } from "./Send.js";
@@ -52,9 +52,13 @@ export function FamilyRequest({ lead, up, compact = false }: { lead: Lead; up: U
 
   const askAnamnese = compact && !req?.sections.includes("anamnese");
 
-  return (
+  const askBtn = (
+    <Button type="button" variant={req && !askAnamnese ? "tint" : "default"} color="green" rightIcon="fa-brands fa-whatsapp" onClick={() => setDrawer(true)}>{req && !askAnamnese ? "Novo pedido" : "Pedir para a família"}</Button>
+  );
+
+  const body = (
     <div className="space-y-3">
-      {(!compact || askAnamnese) && (
+      {askAnamnese && (
         <Entry
           icon="fa-paper-plane"
           title={!req || askAnamnese ? (compact ? "Pedir a pré-anamnese para a família" : "Pedir para a família preencher") : req.status === "enviado" ? `Link enviado para ${req.to || "responsável"} em ${fmtBR(req.sentAt)}` : `Respondido por ${req.to || "responsável"} em ${fmtBR(req.answeredAt)}`}
@@ -64,7 +68,7 @@ export function FamilyRequest({ lead, up, compact = false }: { lead: Lead; up: U
               : req.status === "enviado" ? req.sections.map((id) => famSection(id).title).join(", ")
               : req.status === "revisada" ? "Respostas conferidas pela equipe." : "As respostas já estão nos cards. Confira e marque como revisada."
           }
-          actions={<Button type="button" variant={req && !askAnamnese ? "tint" : "default"} color="green" rightIcon="fa-brands fa-whatsapp" onClick={() => setDrawer(true)}>{req && !askAnamnese ? "Novo pedido" : "Pedir para a família"}</Button>}
+          actions={askBtn}
         />
       )}
 
@@ -113,6 +117,23 @@ export function FamilyRequest({ lead, up, compact = false }: { lead: Lead; up: U
       {drawer && <RequestDrawer lead={lead} preset={compact ? ["anamnese"] : undefined} hidden={!!form} onPreview={setForm} onClose={() => setDrawer(false)} onSend={(r) => { up({ famReq: compact && req ? { ...r, sections: [...new Set([...req.sections, ...r.sections])] } : r }); setDrawer(false); }} />}
       {form && <FamilyFormPage lead={lead} ids={form} prev={req?.answers} onClose={() => setForm(null)} onSubmit={(a) => receive(form, a)} />}
     </div>
+  );
+
+  if (compact) return body;
+  return (
+    <Section
+      anchor="familia"
+      title="Preenchimento pela família"
+      desc={
+        !req ? "Escolha o que a família preenche pelo celular: cadastro, plano, carga horária, horários, agenda anterior, laudo, endereço e pré-anamnese."
+        : req.status === "enviado" ? req.sections.map((id) => famSection(id).title).join(", ")
+        : req.status === "revisada" ? "Respostas conferidas pela equipe."
+        : "As respostas já estão nos cards. Confira e marque como revisada."
+      }
+      action={askBtn}
+    >
+      {(req || drawer || form) && body}
+    </Section>
   );
 }
 

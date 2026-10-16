@@ -12,10 +12,11 @@ import { FileItem, FileUploader } from "../../components/FileUploader.js";
 import { Input, Label, type SelectItem } from "../../components/Input.js";
 import { TODAY } from "../../components/today.js";
 import { AgendaAnterior } from "./AgendaAnterior.js";
+import { Disponibilidade } from "./Disponibilidade.js";
 import { FamilyRequest, byFamily } from "./FamilyRequest.js";
 import { MedicalDocs } from "./MedicalDocs.js";
 import {
-  CHANNELS, COORDINATORS, OPERATOR_OPTIONS, OPERATOR_OTHER, ORIGINS, RELATIONS, SCHOOL_SHIFTS, SPECIALTIES, UFS, UNITS, WEEKDAYS,
+  CHANNELS, COORDINATORS, OPERATOR_OPTIONS, OPERATOR_OTHER, ORIGINS, RELATIONS, SCHOOL_SHIFTS, SPECIALTIES, UFS, UNITS,
   fmtBR, hoursOf, type Lead, type TabId,
 } from "./model.js";
 import { ChannelPicker, Checklist, DISABLED, Note, RemoveButton, Section, Subhead, cx, opts } from "./parts.js";
@@ -33,7 +34,7 @@ export function NegocioTab({ lead, up, goTab }: { lead: Lead; up: Up; goTab: (t:
       </aside>
 
       <div className="min-w-0 space-y-4 lg:col-start-2 xl:col-start-auto">
-        <Section anchor="familia" title="Preenchimento pela família"><FamilyRequest lead={lead} up={up} /></Section>
+        <FamilyRequest lead={lead} up={up} />
         <Section anchor="resp" title="Responsáveis" fam={byFamily(lead, "resp")}><Guardians lead={lead} up={up} /></Section>
         <Section title="Contato e follow-up">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -43,9 +44,10 @@ export function NegocioTab({ lead, up, goTab }: { lead: Lead; up: Up; goTab: (t:
           <Input id="deal-notes" name="notes" type="textarea" rows={3} label="Recado para a coordenação" placeholder="O que a coordenação precisa saber antes da visita" value={lead.notes} onChange={(e) => up({ notes: e.target.value })} />
         </Section>
         <Section anchor="crianca" title="Criança e plano de saúde" fam={byFamily(lead, "crianca", "plano")}><Child lead={lead} up={up} /></Section>
-        <Section anchor="carga" title="Carga horária e disponibilidade" desc="Solicitação inicial da família. A coordenação e o orçamento partem daqui." tag={`${hoursOf(lead)}h semanais`} fam={byFamily(lead, "carga", "disp")}>
+        <Section anchor="carga" title="Carga horária" desc="Solicitação inicial da família: quanto a criança precisa de cada especialidade. A coordenação e o orçamento partem daqui." tag={`${hoursOf(lead)}h semanais`} fam={byFamily(lead, "carga")}>
           <Workload lead={lead} up={up} />
         </Section>
+        <Disponibilidade lead={lead} up={up} />
         <Section
           anchor="agenda-anterior"
           title="Agenda anterior"
@@ -172,12 +174,9 @@ function Child({ lead, up }: { lead: Lead; up: Up }) {
 
 function Workload({ lead, up }: { lead: Lead; up: Up }) {
   const specs = lead.specialties;
-  const avail = lead.availability;
   const setSpec = (i: number, patch: Partial<Lead["specialties"][number]>) => up({ specialties: specs.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) });
-  const setAvail = (i: number, patch: Partial<Lead["availability"][number]>) => up({ availability: avail.map((a, idx) => (idx === i ? { ...a, ...patch } : a)) });
   return (
     <div className="space-y-4">
-      <Subhead>Carga horária semanal por especialidade</Subhead>
       {specs.map((s, i) => (
         <div key={i} className="grid grid-cols-[minmax(0,1fr)_160px_auto] items-end gap-3">
           <Input type="select" id={`spec-${i}`} name={`specialties[${i}][specialty]`} label={i === 0 ? "Especialidade" : undefined} clear={false} options={opts(SPECIALTIES)} value={s.spec} onChange={(v) => setSpec(i, { spec: v ?? s.spec })} />
@@ -187,16 +186,6 @@ function Workload({ lead, up }: { lead: Lead; up: Up }) {
       ))}
       <Button type="button" variant="tint" rightIcon="fa-plus" onClick={() => up({ specialties: [...specs, { spec: "Psicologia", hours: 2 }] })}>Adicionar Especialidade</Button>
 
-      <Subhead>Disponibilidade da família</Subhead>
-      {avail.map((a, i) => (
-        <div key={i} className="grid grid-cols-[minmax(0,1fr)_120px_120px_auto] items-end gap-3">
-          <Input type="select" id={`avail-${i}-day`} name={`availabilities[${i}][weekday]`} label={i === 0 ? "Dia" : undefined} clear={false} options={opts(WEEKDAYS)} value={a.day} onChange={(v) => setAvail(i, { day: v ?? a.day })} />
-          <Input id={`avail-${i}-from`} name={`availabilities[${i}][from]`} type="time" label={i === 0 ? "Das" : undefined} value={a.from} onChange={(e) => setAvail(i, { from: e.target.value })} />
-          <Input id={`avail-${i}-to`} name={`availabilities[${i}][to]`} type="time" label={i === 0 ? "Até" : undefined} value={a.to} onChange={(e) => setAvail(i, { to: e.target.value })} />
-          <RemoveButton title="Remover período" onClick={() => up({ availability: avail.filter((_, idx) => idx !== i) })} />
-        </div>
-      ))}
-      <Button type="button" variant="tint" onClick={() => up({ availability: [...avail, { day: "Quarta-Feira", from: "08:00", to: "12:00" }] })}>Adicionar Período</Button>
     </div>
   );
 }

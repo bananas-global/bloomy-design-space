@@ -16,7 +16,7 @@ import { fmtBR, guardianOf, type CurrentWeek, type Lead, type WeekBlock } from "
 import type { Up } from "./NegocioTab.js";
 import { SQUARE_DRAWER, Banner, fld } from "./parts.js";
 import { Entry, SendStatus, SimButton, WhatsDrawer, fakeLink } from "./Send.js";
-import { first, toAvailability, toSpecialties, tone, totals } from "./week.js";
+import { first, toSpecialties, tone, totals } from "./week.js";
 import { BlockEditor, HoursSummary, SpecPills, WeekGrid, WeekLayout, useWeekEditor } from "./WeekGrid.js";
 
 /** Protótipo: a resposta do responsável pelo link. */
@@ -101,7 +101,6 @@ function AgendaDrawer({ lead, onClose, onSave }: { lead: Lead; onClose: () => vo
   const init = lead.currentWeek;
   const [blocks, setBlocks] = useState<WeekBlock[]>(() => (init?.blocks ?? []).map((b) => ({ ...b })));
   const [useHours, setUseHours] = useState(false);
-  const [useAvail, setUseAvail] = useState(false);
   const editor = useWeekEditor({ blocks, setBlocks, defaultSpec: lead.specialties[0]?.spec ?? "Análise do Comportamento" });
   const fromFam = init?.src === "familia";
 
@@ -112,7 +111,6 @@ function AgendaDrawer({ lead, onClose, onSave }: { lead: Lead; onClose: () => vo
     onSave({
       currentWeek,
       ...(useHours && blocks.length ? { specialties: toSpecialties(blocks) } : {}),
-      ...(useAvail && blocks.length ? { availability: toAvailability(blocks) } : {}),
     });
   }
 
@@ -133,7 +131,6 @@ function AgendaDrawer({ lead, onClose, onSave }: { lead: Lead; onClose: () => vo
               <div className="flex flex-col gap-2">
                 <p className="m-0 text-xs font-bold uppercase tracking-widest text-brand-purple-dark/60">Replicar na Bloomy</p>
                 <SwitchCard field={fld("current_week_use_hours", useHours)} title="Usar como carga horária" description="Horas por especialidade no lead" onChange={(e) => setUseHours(e.target.checked)} />
-                <SwitchCard field={fld("current_week_use_avail", useAvail)} title="Usar como disponibilidade" description="Estes horários viram a disponibilidade da família" onChange={(e) => setUseAvail(e.target.checked)} />
               </div>
             </>
           }
