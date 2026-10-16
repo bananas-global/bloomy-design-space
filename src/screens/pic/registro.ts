@@ -2,7 +2,7 @@ import type { Feature } from "../../app/features.js";
 import { BehaviorInterventionPlan, PIC_PATH } from "../BehaviorInterventionPlan.js";
 import { PIC_FIXTURES } from "./fixtures.js";
 
-/** PIC do paciente: a aba redesenhada e o Exportar PIC. */
+/** PIC do paciente: a aba redesenhada, o Exportar PIC e as Áreas em lote. */
 export const feature: Feature = {
   scenarios: [
     {
@@ -19,6 +19,7 @@ export const feature: Feature = {
         "Cada área com as pílulas de especialidade; áreas de mais de uma especialidade com Compartilhada.",
         "O seletor de vigência lista as três, com o nome e o status; Nova vigência no fim.",
         "Exportar PDF abre o modal Exportar PIC em tela cheia.",
+        "Áreas em lote, na coluna Áreas, abre o modal Áreas em lote.",
       ],
     },
     {
@@ -51,6 +52,44 @@ export const feature: Feature = {
       ],
     },
     {
+      id: "pic.batch",
+      title: "Áreas em lote",
+      route: PIC_PATH,
+      fixture: "pic.batch",
+      persona: "admin",
+      intent: "O modal Áreas em lote, em tela cheia: cria várias áreas de uma vez a partir de um protocolo aplicado ao paciente. A coordenação escolhe a especialidade de cada área.",
+      expected: [
+        "Cabeçalho: Plano de Intervenção Comportamental, Áreas em lote e o texto de apoio; o X fecha.",
+        "À esquerda, Protocolos do paciente: VB-MAPP (5 aplicações), ABLLS-R (3) e AFLS (2), cada um com a última edição.",
+        "Sem protocolo escolhido, o painel pede para selecionar um.",
+        "Escolher a VB-MAPP carrega a Av 4 · 20/04/2026 Finalizada, a última finalizada; o seletor, no início da linha dos filtros, lista também a Av 5 Em andamento.",
+        "Busca por habilidade, select de nível e o checkbox Só abaixo de 80% filtram a tabela. O checkbox do cabeçalho marca ou desmarca as visíveis.",
+        "Tabela: checkbox, Nível, Habilidade, Acerto (verde a partir de 80%, laranja a partir de 50%, vermelho abaixo) e Especialidade.",
+        "Imitação aparece como Já cadastrada e não pode ser marcada.",
+        "A linha marcada fica destacada. A especialidade é um select, liberado quando a linha está marcada; começa em Psicologia e trocar não muda a largura da coluna.",
+        "Rodapé: Cancelar, o contador de áreas selecionadas e Importar, desabilitado sem seleção.",
+        "Importar fecha o modal, mostra o toast \"N áreas criadas a partir do protocolo\" e as áreas entram na coluna Áreas, com o protocolo e o acerto na descrição.",
+      ],
+    },
+    {
+      id: "pic.batch-locked",
+      title: "Áreas em lote › Especialidade do login",
+      route: PIC_PATH,
+      fixture: "pic.batch",
+      persona: "specialist",
+      intent: "Fora da coordenação, a área criada fica na especialidade do profissional logado.",
+      expected: ["A coluna Especialidade mostra Psicologia com um cadeado, em todas as linhas, no lugar do select."],
+    },
+    {
+      id: "pic.batch-empty",
+      title: "Áreas em lote › Sem protocolos",
+      route: PIC_PATH,
+      fixture: "pic.batch-empty",
+      persona: "admin",
+      intent: "Paciente sem protocolo aplicado: não há de onde criar áreas.",
+      expected: ["\"Nenhum protocolo aplicado.\" na coluna da esquerda e, no painel, o pedido para aplicar um protocolo ao paciente. Importar fica desabilitado."],
+    },
+    {
       id: "pic.read-only",
       title: "PIC › Sem permissão de editar",
       route: PIC_PATH,
@@ -66,7 +105,7 @@ export const feature: Feature = {
       path: PIC_PATH,
       screen: BehaviorInterventionPlan,
       name: "PIC do paciente",
-      description: "A aba PIC da ficha do paciente redesenhada (vigências, especialidades), com o novo Exportar PDF: a pré-visualização do PIC em uma página e o Baixar PDF.",
+      description: "A aba PIC da ficha do paciente redesenhada (vigências, especialidades), com o novo Exportar PDF (a pré-visualização do PIC em uma página e o Baixar PDF) e as Áreas em lote (várias áreas criadas de uma vez a partir de um protocolo).",
     },
   ],
 };

@@ -76,9 +76,30 @@ export type PicFixture = {
   patient: PatientHeader;
   plans: Plan[];
   goals: Goal[];
+  /** Protocolos aplicados ao paciente, de onde saem as Áreas em lote. */
+  protocols?: PatientProtocol[];
   /** Abre a tela com o modal Exportar PIC aberto. */
   exportOpen?: boolean;
+  /** Abre a tela com o modal Áreas em lote aberto. */
+  batchOpen?: boolean;
 };
+
+/** Uma aplicação do protocolo (Av 1…Av N). */
+export type ProtocolApplication = { id: string; label: string; date: string; status: "finished" | "running" };
+
+/**
+ * Novo — não existe no Phoenix: o resumo do protocolo que as Áreas em lote
+ * leem. Cada habilidade sai com o acerto da aplicação escolhida.
+ */
+export type PatientProtocol = {
+  name: string;
+  editedAt: string;
+  applications: ProtocolApplication[];
+  /** Habilidades por nível. */
+  skills: Record<number, string[]>;
+};
+
+export type SkillScore = { id: string; level: number; skill: string; hits: number; total: number; pct: number };
 
 const DISCRETE = "Treinamento Habilidades / Tentativas discretas";
 const FREQUENCY = "Treinamento Habilidades / Frequência";
@@ -325,12 +346,91 @@ const EXTRA_GOALS: Goal[] = [
   },
 ];
 
+/** Os protocolos aplicados ao Lucas. A VB-MAPP tem a Av 5 em andamento. */
+export const PROTOCOLS: PatientProtocol[] = [
+  {
+    name: "VB-MAPP",
+    editedAt: "28/05/2026",
+    applications: [
+      { id: "av1", label: "Av 1", date: "12/03/2025", status: "finished" },
+      { id: "av2", label: "Av 2", date: "18/07/2025", status: "finished" },
+      { id: "av3", label: "Av 3", date: "05/12/2025", status: "finished" },
+      { id: "av4", label: "Av 4", date: "20/04/2026", status: "finished" },
+      { id: "av5", label: "Av 5", date: "28/05/2026", status: "running" },
+    ],
+    skills: {
+      1: ["Mando", "Tato", "Ouvinte", "VP/MTS", "Brincar", "Social", "Imitação", "Ecoico", "Vocal"],
+      2: ["LRFFC", "Intraverbal", "Rotinas em grupo", "Estrutura linguística"],
+      3: ["Leitura", "Escrita", "Matemática"],
+    },
+  },
+  {
+    name: "ABLLS-R",
+    editedAt: "20/05/2026",
+    applications: [
+      { id: "av1", label: "Av 1", date: "05/02/2025", status: "finished" },
+      { id: "av2", label: "Av 2", date: "14/09/2025", status: "finished" },
+      { id: "av3", label: "Av 3", date: "20/05/2026", status: "finished" },
+    ],
+    skills: {
+      1: ["Cooperação e reforçadores", "Desempenho visual", "Linguagem receptiva", "Imitação motora", "Pedidos (mandos)"],
+      2: ["Rotulação (tatos)", "Intraverbais", "Sintaxe e gramática", "Brincar e lazer", "Interação social"],
+      3: ["Habilidades de sala de aula", "Generalização"],
+    },
+  },
+  {
+    name: "AFLS",
+    editedAt: "18/04/2026",
+    applications: [
+      { id: "av1", label: "Av 1", date: "10/01/2026", status: "finished" },
+      { id: "av2", label: "Av 2", date: "18/04/2026", status: "finished" },
+    ],
+    skills: {
+      1: ["Habilidades básicas de vida", "Autocuidado", "Segurança pessoal"],
+      2: ["Habilidades domésticas", "Cozinha e alimentação"],
+      3: ["Habilidades comunitárias", "Transporte e mobilidade"],
+    },
+  },
+];
+
+/** Pseudoaleatório estável: o mesmo texto devolve sempre o mesmo número. */
+function hash(text: string) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) / 4294967295;
+}
+
+/** O acerto de cada habilidade numa aplicação: sobe a cada nova aplicação. */
+export function skillScores(protocol: PatientProtocol, applicationId: string): SkillScore[] {
+  const index = Math.max(0, protocol.applications.findIndex((a) => a.id === applicationId));
+  return Object.entries(protocol.skills).flatMap(([level, skills]) =>
+    skills.map((skill) => {
+      const seed = hash(`${protocol.name}|${skill}|${level}`);
+      const total = 5 + Math.round(seed * 15);
+      const drift = hash(`${protocol.name}|${skill}|${applicationId}`) * 0.12 - 0.06;
+      const ratio = Math.max(0, Math.min(1, 0.25 + seed * 0.5 + index * (0.06 + seed * 0.07) + drift));
+      const hits = Math.round(ratio * total);
+      return {
+        id: `${protocol.name}-${level}-${skill}`.replace(/\s+/g, "-").toLowerCase(),
+        level: Number(level),
+        skill,
+        hits,
+        total,
+        pct: Math.round((hits / total) * 100),
+      };
+    }),
+  );
+}
+
 export const PIC_FIXTURES: Fixture<PicFixture>[] = [
   {
     id: "pic.plan",
     label: "PIC em vigência",
     description: "Cinco áreas, uma delas adquirida.",
-    data: { patient: PATIENT, plans: PLANS, goals: GOALS },
+    data: { patient: PATIENT, plans: PLANS, goals: GOALS, protocols: PROTOCOLS },
   },
   {
     id: "pic.export",
@@ -343,5 +443,17 @@ export const PIC_FIXTURES: Fixture<PicFixture>[] = [
     label: "Exportar PIC com muitas áreas",
     description: "Nove áreas: o texto é reduzido para caber numa página.",
     data: { patient: PATIENT, plans: PLANS, goals: [...GOALS, ...EXTRA_GOALS], exportOpen: true },
+  },
+  {
+    id: "pic.batch",
+    label: "Áreas em lote aberto",
+    description: "O PIC com a área Imitação, já criada da VB-MAPP, e o modal Áreas em lote aberto.",
+    data: { patient: PATIENT, plans: PLANS, goals: [...GOALS, EXTRA_GOALS[0]!], protocols: PROTOCOLS, batchOpen: true },
+  },
+  {
+    id: "pic.batch-empty",
+    label: "Áreas em lote sem protocolos",
+    description: "O paciente ainda não tem protocolo aplicado.",
+    data: { patient: PATIENT, plans: PLANS, goals: GOALS, protocols: [], batchOpen: true },
   },
 ];

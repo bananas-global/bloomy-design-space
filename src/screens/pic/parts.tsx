@@ -279,7 +279,7 @@ function Column({ icon, title, actions, children }: { icon: string; title: strin
 }
 
 /** `GridLayout.render/1`: Áreas → Objetivos → Programas, dentro do card do plano. */
-export function GridLayout({ goals, canEdit, canDiscard }: { goals: Goal[]; canEdit: boolean; canDiscard: boolean }) {
+export function GridLayout({ goals, canEdit, canDiscard, onBatchAreas }: { goals: Goal[]; canEdit: boolean; canDiscard: boolean; onBatchAreas?: () => void }) {
   const [goalId, setGoalId] = useState<string | null>(null);
   const [objectiveId, setObjectiveId] = useState<string | null>(null);
   const goal = goals.find((g) => g.id === goalId) ?? null;
@@ -294,7 +294,7 @@ export function GridLayout({ goals, canEdit, canDiscard }: { goals: Goal[]; canE
         actions={
           canEdit && (
             <>
-              <Button type="button" size="medium" variant="tint" rightIcon="fa-layer-group" onClick={() => notInPrototype("Áreas em lote")}>
+              <Button type="button" size="medium" variant="tint" rightIcon="fa-layer-group" onClick={onBatchAreas ?? (() => notInPrototype("Áreas em lote"))}>
                 Áreas em lote
               </Button>
               <Button type="button" size="medium" rightIcon="fa-plus" onClick={() => notInPrototype("Nova área")}>
