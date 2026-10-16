@@ -12,9 +12,9 @@ import type { LayoutContext } from "./BackofficeLayout.js";
 /**
  * `backoffice/live/patient_live/show.ex` (as `lazy_tabs/1` do paciente) com
  * `PatientLive.Components.CardHeader` no slot `header`. Adaptação: `md:`/`lg:`
- * viram `md:`/`lg:`. Os modais de observação, chat, inativação e o
- * drawer de acompanhamento periódico não foram portados: os botões ficam, sem
- * efeito.
+ * viram `md:`/`lg:`. Os modais de observação, chat e inativação não foram
+ * portados: os botões ficam, sem efeito. O drawer de acompanhamento periódico
+ * fica com a tela que o usa (`onPeriodicMonitoring`).
  */
 
 export type PatientTabId =
@@ -71,7 +71,21 @@ function PatientStatusFields({ canEdit, patient, canChat }: { canEdit: boolean; 
 }
 
 /** `CardHeader.render/1`. */
-export function PatientCardHeader({ patient, canEdit, canChat }: { patient: PatientHeader; canEdit: boolean; canChat: boolean }) {
+export function PatientCardHeader({
+  patient,
+  canEdit,
+  canChat,
+  onPeriodicMonitoring,
+  extraTags,
+}: {
+  patient: PatientHeader;
+  canEdit: boolean;
+  canChat: boolean;
+  /** `show_drawer("periodic_monitoring_drawer")`. */
+  onPeriodicMonitoring?: () => void;
+  /** Novo, ainda não está no Phoenix: tags que a tela acrescenta depois das do paciente. */
+  extraTags?: ReactNode;
+}) {
   const [options, setOptions] = useState(false);
   const active = patient.status === "Ativo";
 
@@ -90,7 +104,7 @@ export function PatientCardHeader({ patient, canEdit, canChat }: { patient: Pati
       </Button>,
     );
   menu.push(
-    <Button type="button" variant="ghost" leftIcon="fa-list-check" title="Acompanhamento periódico">
+    <Button type="button" variant="ghost" leftIcon="fa-list-check" title="Acompanhamento periódico" onClick={onPeriodicMonitoring}>
       Acompanhamento
     </Button>,
   );
@@ -113,6 +127,7 @@ export function PatientCardHeader({ patient, canEdit, canChat }: { patient: Pati
               <Tag item={`TEA Nível ${patient.supportLevel ?? "-"}`} className="rounded-full" icon="fa-solid fa-brain" />
               {patient.restrictions && <Tag item="Restrições" className="rounded-full" variant="light-purple" icon="fa-solid fa-triangle-exclamation" />}
               {patient.isInjunction && <Tag item="Liminar" className="rounded-full" variant="orange" icon="fa-solid fa-scale-balanced" />}
+              {extraTags}
             </div>
             <div className="flex gap-5 mt-3 flex-wrap">
               <p>
@@ -162,6 +177,8 @@ export function PatientLayout({
   patient,
   activeTab = "personal_info",
   renderTab,
+  onPeriodicMonitoring,
+  extraTags,
 }: {
   context?: Pick<LayoutContext, "can">;
   patient: PatientHeader;
@@ -169,6 +186,10 @@ export function PatientLayout({
   activeTab?: PatientTabId;
   /** O conteúdo de cada aba (o `component` de cada uma no original). */
   renderTab?: (tab: PatientTabId) => ReactNode;
+  /** O item Acompanhamento do menu do card. */
+  onPeriodicMonitoring?: () => void;
+  /** Novo, ainda não está no Phoenix: tags que a tela acrescenta no card. */
+  extraTags?: ReactNode;
 }) {
   const can = context ? context.can : (permission: string) => (permissionsByRole.admin as readonly string[]).includes(permission);
   const tab = (id: PatientTabId, title: string, opts?: LazyTab["opts"]): LazyTab => ({ id, title, opts, component: () => renderTab?.(id) ?? null });
@@ -240,7 +261,15 @@ export function PatientLayout({
         id="patient_tabs"
         tabs={tabs}
         activeTab={activeTab}
-        header={<PatientCardHeader patient={patient} canEdit={can("patients.edit")} canChat={can("chat.show")} />}
+        header={
+          <PatientCardHeader
+            patient={patient}
+            canEdit={can("patients.edit")}
+            canChat={can("chat.show")}
+            onPeriodicMonitoring={onPeriodicMonitoring}
+            extraTags={extraTags}
+          />
+        }
       />
     </div>
   );
