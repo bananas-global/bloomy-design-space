@@ -199,6 +199,40 @@ export type Report = {
 
 export type Auth = { sentAt: string; protocol: string; returnAt: string; result: string; note: string; authorized: Record<number, string> };
 
+/**
+ * Um horário da semana padrão, em horas cheias (como o Padrão de Agenda):
+ * `weekday` 1 = segunda … 6 = sábado. Sem `professional` na agenda anterior.
+ */
+export type WeekBlock = { id: string; weekday: number; hour: number; spec: string; professional?: string };
+
+/** A agenda que a criança faz hoje em outra clínica. */
+export type CurrentWeek = {
+  blocks: WeekBlock[];
+  /** Quem registrou: a equipe ou a família, pelo link. */
+  src: "equipe" | "familia";
+  by?: string;
+  at: string;
+  /** A agenda vinda da família, depois de revisada pela equipe. */
+  reviewed?: boolean;
+};
+
+/** Um envio por WhatsApp de um link para o responsável. */
+export type WaSend = { to: string; phone: string; link: string; message: string; sentAt: string; sends: number };
+
+/** A resposta da família à proposta de grade. */
+export type GradeWa = WaSend & { status: "enviado" | "aceita" | "ajustes"; reply: string; repliedAt: string; hours: number };
+
+/** A grade semanal possível na Bloomy, com profissional, para alinhar com a família. */
+export type Grade = { unit: string; blocks: WeekBlock[]; updatedAt: string; wa: GradeWa | null };
+
+/** O pedido para a família preencher partes do cadastro pelo link. */
+export type FamRequest = WaSend & {
+  sections: string[];
+  status: "enviado" | "respondida" | "revisada";
+  answers: Record<string, unknown>;
+  answeredAt: string;
+};
+
 export type Lead = {
   id: string;
   status: StageId;
@@ -239,6 +273,10 @@ export type Lead = {
   reinforcers: string[];
   report: Report;
   auth: Auth;
+  currentWeek: CurrentWeek | null;
+  currentWeekReq: WaSend | null;
+  grade: Grade | null;
+  famReq: FamRequest | null;
 };
 
 export const blankAddress = (): Address => ({ cep: "", street: "", number: "", comp: "", district: "", city: "", uf: "SP" });
@@ -256,6 +294,7 @@ export function blankLead(id = `ld-${Date.now()}`): Lead {
     behaviors: {}, comm: {}, mobility: {}, sensory: {}, locomotion: "", mobilityAids: [], mobilityNotes: "", reinforcers: [],
     report: { happened: "", who: [], presented: [], objections: [], outcome: "", noteForSales: "", sentAt: "" },
     auth: { sentAt: "", protocol: "", returnAt: "", result: "", note: "", authorized: {} },
+    currentWeek: null, currentWeekReq: null, grade: null, famReq: null,
   };
 }
 
@@ -366,6 +405,7 @@ export const CHECKLIST: ChecklistItem[] = [
   { id: "realizada", role: "coordenacao", label: "Visita realizada", test: (l) => l.report.happened === "sim" },
   { id: "relatorio", role: "coordenacao", label: "Relatório da visita", test: reportOk },
   { id: "anamnese", role: "coordenacao", label: "Pré-anamnese", test: (l) => l.cidMain.length > 0 && !!l.support },
+  { id: "grade", role: "coordenacao", label: "Proposta de grade alinhada com a família", test: (l) => !!l.grade?.blocks.length },
   { id: "interesse", role: "coordenacao", label: "Família confirmou que quer seguir", test: (l) => l.report.outcome === "decidida" },
   { id: "enviado", role: "coordenacao", label: "Enviado para autorização", test: (l) => !!l.report.sentAt },
   { id: "docs", role: "orcamento", label: "Documentos exigidos", test: (l) => requiredDocs(l).every((d) => d.ok) },
@@ -385,7 +425,7 @@ export const STAGES: Stage[] = [
   { id: "novo", label: "Novo Lead", role: "comercial", sla: 1, needs: ["resp"] },
   { id: "contato", label: "Em Contato", role: "comercial", sla: 2, needs: ["contato"] },
   { id: "avaliacao", label: "Qualificação", role: "comercial", sla: 5, needs: ["crianca", "plano", "carga", "disp", "laudo", "endereco", "agenda"] },
-  { id: "agendada", label: "Agendamento de Visita", role: "coordenacao", sla: 7, needs: ["realizada", "relatorio", "anamnese", "interesse", "enviado"] },
+  { id: "agendada", label: "Agendamento de Visita", role: "coordenacao", sla: 7, needs: ["realizada", "relatorio", "anamnese", "grade", "interesse", "enviado"] },
   { id: "proposta", label: "Validação Técnica", role: "orcamento", sla: 10, needs: ["docs", "solicitacao", "retorno", "autorizada"] },
   { id: "aguardando", label: "Aceite", role: "orcamento", sla: 3, needs: [] },
 ];
@@ -397,7 +437,7 @@ export const pendingOf = (l: Lead) => (stageOf(l.status)?.needs ?? []).filter((i
 /** Onde cada item do checklist se preenche (o `data-anchor` do card). */
 export const ANCHORS: Record<string, string> = {
   resp: "resp", contato: "contato", crianca: "crianca", plano: "crianca", carga: "carga", disp: "carga", laudo: "laudo", endereco: "endereco", agenda: "agenda",
-  realizada: "relatorio", relatorio: "relatorio", interesse: "relatorio", enviado: "relatorio", anamnese: "anamnese",
+  realizada: "relatorio", relatorio: "relatorio", interesse: "relatorio", enviado: "relatorio", anamnese: "anamnese", grade: "grade",
   docs: "docs", solicitacao: "solicitacao", retorno: "solicitacao", autorizada: "autorizada",
 };
 

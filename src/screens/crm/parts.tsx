@@ -28,6 +28,13 @@ export const DISABLED = "disabled:cursor-not-allowed disabled:opacity-40";
 
 export const opts = (list: readonly string[]) => list.map((o) => [o, o] as const);
 
+/**
+ * Os drawers do CRM sem o canto arredondado (`rounded-l-2xl` do
+ * `drawer_modal`). Ajuste da tela, não do componente: o `class` substitui o
+ * `relative z-50` da raiz, por isso ele vem junto.
+ */
+export const SQUARE_DRAWER = "relative z-50 [&_[id$=-container]]:rounded-none";
+
 /* ---------- filtros (como em `profissionais/parts.tsx`) ---------- */
 
 export function SearchFilter({ id, label, placeholder, value, onChange }: { id: string; label: string; placeholder: string; value: string; onChange: (v: string) => void }) {
@@ -192,23 +199,30 @@ export function DealTabs({ lead, value, onChange }: { lead: Lead; value: TabId; 
 /* ---------- cartões de seção ---------- */
 
 export function Section({
-  title, desc, tag, tagVariant = "dark-purple", anchor, children, className,
+  title, desc, tag, tagVariant = "dark-purple", anchor, fam = false, children, className,
 }: {
   title?: string;
   desc?: string;
   tag?: string | null;
   tagVariant?: "dark-purple" | "green";
   anchor?: string;
+  /** Preenchido pela família, pelo link do WhatsApp. */
+  fam?: boolean;
   children: ReactNode;
   className?: string;
 }) {
   return (
     <div data-anchor={anchor} className="scroll-mt-24 rounded-2xl transition-shadow duration-300">
       <Card className={cx("space-y-4", className)}>
-        {(title || tag) && (
+        {(title || tag || fam) && (
           <header className="flex items-start justify-between gap-3">
             <div>
-              {title && <h3 className="text-lg font-bold text-brand-purple-dark">{title}</h3>}
+              {(title || fam) && (
+                <h3 className="flex flex-wrap items-center gap-2 text-lg font-bold text-brand-purple-dark">
+                  {title}
+                  {fam && <Tag item="Família" title="Preenchido pela família pelo link" variant="green" leftIcon="fa-user-pen" pill />}
+                </h3>
+              )}
               {desc && <p className="text-sm text-brand-purple-dark/60">{desc}</p>}
             </div>
             {tag && <Tag item={tag} variant={tagVariant} pill />}

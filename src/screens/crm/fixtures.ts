@@ -4,7 +4,12 @@
  * sempre coerente (follow-up atrasado, para hoje, SLA estourado…).
  */
 import type { Fixture } from "@brucesantos/design-space";
-import { autoRoute, blankLead, dOff, type Lead, type StageId } from "./model.js";
+import { applyAnswers, simulatedAnswers } from "./family.js";
+import { autoRoute, blankLead, dOff, type Lead, type StageId, type WeekBlock } from "./model.js";
+
+/** Horários seguidos: `wk(2, 8, 10, "Psicologia")` é terça das 8h às 10h. */
+const wk = (weekday: number, from: number, to: number, spec: string, professional?: string): WeekBlock[] =>
+  Array.from({ length: to - from }, (_, i) => ({ id: `w${weekday}${from + i}`, weekday, hour: from + i, spec, ...(professional !== undefined ? { professional } : {}) }));
 
 /** Efetivados no mês, para a coluna Efetivado e o toast. */
 export const CONVERTED_THIS_MONTH = 4;
@@ -49,6 +54,12 @@ const BASE: Seed[] = [
     visits: [{ id: "v31", date: dOff(-12), time: "09:00", unit: "Santana", coord: "Renata Alves", scheduledBy: "Ana Beatriz" }],
     report: { happened: "sim", who: ["Mãe", "A criança"], presented: ["Metodologia e plano de terapia", "Equipe e especialidades", "Espaço e rotina da unidade"], objections: ["Carga horária alta"], outcome: "decidida", noteForSales: "Mãe consegue acompanhar dois dias por semana.", sentAt: dOff(-11) },
     auth: { sentAt: dOff(-9), protocol: "PS-2026-448192", returnAt: "", result: "", note: "", authorized: {} },
+    currentWeek: { blocks: [...wk(1, 14, 16, "Psicologia"), ...wk(3, 14, 16, "Psicologia"), ...wk(5, 14, 16, "Psicologia")], src: "equipe", at: dOff(-13) },
+    grade: {
+      unit: "Santana", updatedAt: dOff(-12),
+      blocks: [...wk(1, 8, 12, "Psicologia", "Vanessa Duarte"), ...wk(2, 8, 12, "Psicologia", "Vanessa Duarte"), ...wk(3, 8, 12, "Psicologia", "Vanessa Duarte"), ...wk(4, 14, 18, "Psicologia", "Vanessa Duarte")],
+      wa: { to: "Patrícia Lima", phone: "(11) 98123-5567", link: "bloomy.app/grade/ld3a8k2", message: "", sentAt: dOff(-12), sends: 1, status: "aceita", reply: "", repliedAt: dOff(-11), hours: 16 },
+    },
     timeline: [{ id: "s3a", kind: "contact", channel: "email", label: "E-mail", text: "Proposta de 16h semanais enviada.", at: dOff(-9), by: "Ana Beatriz" }],
   },
   {
@@ -61,6 +72,11 @@ const BASE: Seed[] = [
     visits: [{ id: "v41", date: dOff(-25), time: "15:00", unit: "Unidade Teste", coord: "Gustavo Pires", scheduledBy: "Rodrigo Alves" }],
     report: { happened: "sim", who: ["Pai"], presented: ["Metodologia e plano de terapia", "Cobertura do convênio"], objections: [], outcome: "decidida", noteForSales: "", sentAt: dOff(-24) },
     auth: { sentAt: dOff(-20), protocol: "CP-88120-2", returnAt: dOff(-2), result: "integral", note: "Guia 55120", authorized: { 0: "10" } },
+    grade: {
+      unit: "Unidade Teste", updatedAt: dOff(-24),
+      blocks: [...wk(1, 13, 16, "Terapia Ocupacional", "Bruna Oliveira Lima"), ...wk(3, 13, 16, "Terapia Ocupacional", "Bruna Oliveira Lima"), ...wk(4, 15, 18, "Terapia Ocupacional", "Bruna Oliveira Lima"), ...wk(2, 14, 15, "Terapia Ocupacional", "")],
+      wa: { to: "Eduardo Faria", phone: "(11) 97444-1212", link: "bloomy.app/grade/ld4p1x9", message: "", sentAt: dOff(-24), sends: 1, status: "aceita", reply: "", repliedAt: dOff(-23), hours: 10 },
+    },
     timeline: [{ id: "s4a", kind: "contact", channel: "ligacao", label: "Ligação", text: "Plano pediu relatório complementar; prazo de 10 dias.", at: dOff(-5), by: "Rodrigo Alves" }],
   },
   {
@@ -71,6 +87,7 @@ const BASE: Seed[] = [
     operator: "Bradesco", cardNumber: "7788 1200 4431", cardFile: "carteirinha-miguel.jpg", prefUnit: "Zona Leste",
     medicalDocs: [{ id: "lm9", specialty: "Neuropediatra", doctor: "Dra. Renata Salgado", crm: "CRM-SP 118.402", issuedAt: dOff(-30), expiresAt: dOff(150), mandatory: true, hoursMode: "weekly", hours: "20", file: "laudo-miguel.pdf" }],
     availability: [{ day: "Terça-Feira", from: "08:00", to: "12:00" }, { day: "Quinta-Feira", from: "08:00", to: "12:00" }],
+    currentWeek: { blocks: [...wk(2, 8, 10, "Análise do Comportamento"), ...wk(2, 10, 11, "Psicologia"), ...wk(4, 8, 10, "Análise do Comportamento"), ...wk(6, 9, 10, "Fonoaudiologia")], src: "equipe", at: dOff(-3) },
     visits: [
       { id: "v51", date: dOff(-4), time: "14:00", unit: "Zona Leste", coord: "Camila Duarte", scheduledBy: "Carla Nunes" },
       { id: "v52", date: dOff(1), time: "10:00", unit: "Zona Leste", coord: "Camila Duarte", scheduledBy: "Carla Nunes" },
@@ -90,6 +107,10 @@ const BASE: Seed[] = [
     id: "ld7", child: "Enzo Souza", age: 3, guardian: "Marina Souza", phone: "(11) 98855-3300", status: "contato", origin: "WhatsApp", support: "Nível 2",
     owner: "Carla Nunes", nextFollowUp: dOff(-1), stageSince: dOff(-2), updatedAt: dOff(-2), notes: "Primeiro contato realizado.", specialties: [{ spec: "Fonoaudiologia", hours: 8 }],
     timeline: [{ id: "s7a", kind: "contact", channel: "whatsapp", label: "WhatsApp", text: "Primeiro contato; aguardando retorno para agendar visita.", at: dOff(-2), by: "Carla Nunes" }],
+    famReq: {
+      to: "Marina Souza", phone: "(11) 98855-3300", link: "bloomy.app/cadastro/ld7q2m4", message: "", sentAt: dOff(-1), sends: 1,
+      sections: ["crianca", "plano", "carga", "disp", "agenda", "laudo", "endereco"], status: "enviado", answers: {}, answeredAt: "",
+    },
   },
 ];
 
@@ -123,7 +144,25 @@ const EXTRA_SEEDS: Seed[] = EXTRA.map(([id, child, age, guardian, status, origin
   };
 });
 
-export const LEADS: Lead[] = [...BASE, ...EXTRA_SEEDS].map(lead);
+/**
+ * Helena Prado: a família já respondeu o pedido (cadastro, plano, carga,
+ * horários, agenda anterior, laudo e endereço); falta a equipe revisar.
+ */
+function answered(l: Lead): Lead {
+  const ids = ["resp", "crianca", "plano", "carga", "disp", "agenda", "laudo", "endereco"];
+  const sim = simulatedAnswers(l);
+  const meta = { by: l.guardians[0]?.name ?? "Responsável", at: dOff(-1) };
+  return {
+    ...l,
+    ...applyAnswers(l, sim, ids, meta),
+    famReq: {
+      to: meta.by, phone: l.guardians[0]?.phone ?? "", link: "bloomy.app/cadastro/ld9h7c3", message: "", sentAt: dOff(-2), sends: 1,
+      sections: ids, status: "respondida", answers: Object.fromEntries(ids.map((id) => [id, sim[id as keyof typeof sim]])), answeredAt: dOff(-1),
+    },
+  };
+}
+
+export const LEADS: Lead[] = [...BASE, ...EXTRA_SEEDS].map(lead).map((l) => (l.id === "ld9" ? answered(l) : l));
 
 export type LeadsFixture = { leads: Lead[] };
 

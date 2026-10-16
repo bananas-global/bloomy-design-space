@@ -24,6 +24,7 @@ export const LEAD_OPTIONS = [
   { value: "closed", label: "Fechado (funil ou tabela)" },
   { value: "new", label: "Novo Lead" },
   { value: "ld2", label: "Novo Lead · Sofia Mendes" },
+  { value: "ld9", label: "Novo Lead · Helena Prado (família respondeu)" },
   { value: "ld7", label: "Em Contato · Enzo Souza" },
   { value: "ld17", label: "Qualificação · Lívia Barros" },
   { value: "ld5", label: "Agendamento de Visita · Miguel Costa" },

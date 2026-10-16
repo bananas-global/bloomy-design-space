@@ -3,8 +3,8 @@
  * Novo — não existe no Phoenix.
  *
  * O relatório da visita em seis blocos (só o último é texto livre), a
- * pré-anamnese e o envio para autorização, que move o negócio para Validação
- * Técnica.
+ * pré-anamnese (que pode ir para a família preencher), a proposta de grade e o
+ * envio para autorização, que move o negócio para Validação Técnica.
  */
 import type { ChangeEvent } from "react";
 import { Button } from "../../components/Button.js";
@@ -16,7 +16,9 @@ import {
   REPORT_OUTCOMES, REPORT_PRESENTED, REPORT_WHO, SENSORY, SUPPORT_LEVELS, checkItem, currentVisit, fmtBR, guardianOf, operatorName,
   type Lead, type Report, type StageId, type ToggleOption,
 } from "./model.js";
+import { FamilyRequest, byFamily } from "./FamilyRequest.js";
 import { Banner, Checklist, DISABLED, Facts, Note, Section, fld, opts } from "./parts.js";
+import { PropostaGrade } from "./PropostaGrade.js";
 import type { Up } from "./NegocioTab.js";
 
 const toOptions = (list: readonly string[]) => list.map((o) => ({ label: o, value: o }));
@@ -33,7 +35,7 @@ export function VisitaTab({ lead, up, move }: { lead: Lead; up: Up; move: (to: S
     const val = e.target.value;
     upReport({ [k]: e.target.checked ? [...r[k], val] : r[k].filter((x) => x !== val) });
   };
-  const ready = ["realizada", "relatorio", "anamnese", "interesse"].every((id) => checkItem(id).test(lead));
+  const ready = ["realizada", "relatorio", "anamnese", "grade", "interesse"].every((id) => checkItem(id).test(lead));
 
   function send() {
     const report = { ...r, sentAt: TODAY };
@@ -59,7 +61,14 @@ export function VisitaTab({ lead, up, move }: { lead: Lead; up: Up; move: (to: S
           </div>
         </Section>
 
-        <Section anchor="anamnese" title="Pré-anamnese"><Anamnesis lead={lead} up={up} /></Section>
+        <Section anchor="anamnese" title="Pré-anamnese" fam={byFamily(lead, "anamnese")}>
+          <FamilyRequest lead={lead} up={up} compact />
+          <Anamnesis lead={lead} up={up} />
+        </Section>
+
+        <Section anchor="grade" title="Proposta de grade" desc="Grade semanal possível na Bloomy, com profissional, para alinhar com a família. Pode partir da agenda anterior." tag={lead.grade?.blocks.length ? `${lead.grade.blocks.length}h semanais` : null}>
+          <PropostaGrade lead={lead} up={up} />
+        </Section>
 
         {r.sentAt ? (
           <Banner tone="green" icon="fa-circle-check" action={<Button type="button" variant="tint" className="flex-none" onClick={() => upReport({ sentAt: "" })}>Desfazer envio</Button>}>
@@ -67,7 +76,7 @@ export function VisitaTab({ lead, up, move }: { lead: Lead; up: Up; move: (to: S
           </Banner>
         ) : (
           <Banner action={<Button type="button" rightIcon="fa-paper-plane" disabled={!ready} className={`flex-none ${DISABLED}`} onClick={send}>Enviar para autorização</Button>}>
-            {ready ? "Tudo pronto. Ao enviar, o negócio segue para o orçamentista solicitar a autorização." : "Para enviar: visita realizada, relatório, pré-anamnese e família decidida."}
+            {ready ? "Tudo pronto. Ao enviar, o negócio segue para o orçamentista solicitar a autorização." : "Para enviar: visita realizada, relatório, pré-anamnese, proposta de grade e família decidida."}
           </Banner>
         )}
       </div>

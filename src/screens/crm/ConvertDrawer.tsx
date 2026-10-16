@@ -11,7 +11,7 @@ import { Input, type SelectItem } from "../../components/Input.js";
 import { DrawerModal } from "../../components/Overlay.js";
 import { TODAY } from "../../components/today.js";
 import { OPERATOR_OPTIONS, UNITS, guardianOf, operatorName, type Lead } from "./model.js";
-import { Initials, opts } from "./parts.js";
+import { SQUARE_DRAWER, Initials, opts } from "./parts.js";
 
 const OPERATOR_ITEMS: SelectItem[] = OPERATOR_OPTIONS.map((g) => ({
   group: g.label,
@@ -20,7 +20,7 @@ const OPERATOR_ITEMS: SelectItem[] = OPERATOR_OPTIONS.map((g) => ({
 
 export function ConvertDrawer({ lead, onClose, onConfirm }: { lead: Lead | null; onClose: () => void; onConfirm: (l: Lead) => void }) {
   return (
-    <DrawerModal id="convert_patient_drawer" show={!!lead} title="Efetivar Lead como Paciente" variant="medium" onCancel={onClose} contentClass="flex flex-col">
+    <DrawerModal id="convert_patient_drawer" className={SQUARE_DRAWER} show={!!lead} title="Efetivar Lead como Paciente" variant="medium" onCancel={onClose} contentClass="flex flex-col">
       {lead && <ConvertForm key={lead.id} lead={lead} onClose={onClose} onConfirm={() => onConfirm(lead)} />}
     </DrawerModal>
   );
@@ -68,7 +68,8 @@ function ConvertForm({ lead, onClose, onConfirm }: { lead: Lead; onClose: () => 
         <Input id="convert-unit" name="unit_id" type="select" label="Unidade" prompt="Selecionar" options={opts(UNITS)} value={unit} onChange={(v) => setUnit(v ?? "")} />
       </div>
 
-      <div className="sticky -bottom-6 -mx-6 -mb-6 mt-8 flex items-center justify-between gap-3 border-t border-neutral-100 bg-white px-6 py-4">
+      <div className="min-h-8 flex-1" />
+      <div className="sticky -bottom-6 -mx-6 -mb-6 flex items-center justify-between gap-3 border-t border-neutral-100 bg-white px-6 py-4">
         <Button type="button" variant="tint" rightIcon="fa-xmark" onClick={onClose}>Cancelar</Button>
         <Button type="button" rightIcon="fa-user-check" onClick={onConfirm}>Efetivar Paciente</Button>
       </div>

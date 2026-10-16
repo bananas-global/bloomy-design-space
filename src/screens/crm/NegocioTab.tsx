@@ -3,14 +3,16 @@
  *
  * Os campos do modal de Leads do Phoenix (abas Responsável, Criança,
  * Especialidade e Visitas) em cartões numa página só, mais o que é novo:
- * vários responsáveis, contatos, follow-up, plano e carteirinha, laudos e
- * endereço.
+ * vários responsáveis, contatos, follow-up, plano e carteirinha, laudos,
+ * endereço, o pedido para a família preencher e a agenda anterior.
  */
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { FileItem, FileUploader } from "../../components/FileUploader.js";
 import { Input, Label, type SelectItem } from "../../components/Input.js";
 import { TODAY } from "../../components/today.js";
+import { AgendaAnterior } from "./AgendaAnterior.js";
+import { FamilyRequest, byFamily } from "./FamilyRequest.js";
 import { MedicalDocs } from "./MedicalDocs.js";
 import {
   CHANNELS, COORDINATORS, OPERATOR_OPTIONS, OPERATOR_OTHER, ORIGINS, RELATIONS, SCHOOL_SHIFTS, SPECIALTIES, UFS, UNITS, WEEKDAYS,
@@ -31,7 +33,8 @@ export function NegocioTab({ lead, up, goTab }: { lead: Lead; up: Up; goTab: (t:
       </aside>
 
       <div className="min-w-0 space-y-4 lg:col-start-2 xl:col-start-auto">
-        <Section anchor="resp" title="Responsáveis"><Guardians lead={lead} up={up} /></Section>
+        <Section anchor="familia" title="Preenchimento pela família"><FamilyRequest lead={lead} up={up} /></Section>
+        <Section anchor="resp" title="Responsáveis" fam={byFamily(lead, "resp")}><Guardians lead={lead} up={up} /></Section>
         <Section title="Contato e follow-up">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Input type="select" id="deal-origin" name="source" label="Origem" clear={false} options={opts(ORIGINS)} value={lead.origin} onChange={(v) => up({ origin: v ?? lead.origin })} />
@@ -39,12 +42,21 @@ export function NegocioTab({ lead, up, goTab }: { lead: Lead; up: Up; goTab: (t:
           </div>
           <Input id="deal-notes" name="notes" type="textarea" rows={3} label="Recado para a coordenação" placeholder="O que a coordenação precisa saber antes da visita" value={lead.notes} onChange={(e) => up({ notes: e.target.value })} />
         </Section>
-        <Section anchor="crianca" title="Criança e plano de saúde"><Child lead={lead} up={up} /></Section>
-        <Section anchor="carga" title="Carga horária e disponibilidade" desc="Solicitação inicial da família. A coordenação e o orçamento partem daqui." tag={`${hoursOf(lead)}h semanais`}>
+        <Section anchor="crianca" title="Criança e plano de saúde" fam={byFamily(lead, "crianca", "plano")}><Child lead={lead} up={up} /></Section>
+        <Section anchor="carga" title="Carga horária e disponibilidade" desc="Solicitação inicial da família. A coordenação e o orçamento partem daqui." tag={`${hoursOf(lead)}h semanais`} fam={byFamily(lead, "carga", "disp")}>
           <Workload lead={lead} up={up} />
         </Section>
-        <Section anchor="laudo"><MedicalDocs docs={lead.medicalDocs} onChange={(medicalDocs) => up({ medicalDocs })} /></Section>
-        <Section anchor="endereco" title="Unidade e endereço"><AddressFields lead={lead} up={up} /></Section>
+        <Section
+          anchor="agenda-anterior"
+          title="Agenda anterior"
+          desc="O que a criança já faz hoje em outra clínica: dia, horário e especialidade. Serve de base para a carga horária e para a proposta de grade."
+          tag={lead.currentWeek?.blocks.length ? `${lead.currentWeek.blocks.length}h semanais` : null}
+          fam={byFamily(lead, "agenda")}
+        >
+          <AgendaAnterior lead={lead} up={up} />
+        </Section>
+        <Section anchor="laudo" fam={byFamily(lead, "laudo")}><MedicalDocs docs={lead.medicalDocs} onChange={(medicalDocs) => up({ medicalDocs })} /></Section>
+        <Section anchor="endereco" title="Unidade e endereço" fam={byFamily(lead, "endereco")}><AddressFields lead={lead} up={up} /></Section>
         <Section anchor="agenda" title="Agendamento da visita" desc="Quando a visita é marcada, o negócio passa para a coordenação da unidade.">
           <Schedule lead={lead} up={up} />
         </Section>
