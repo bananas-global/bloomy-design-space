@@ -48,15 +48,7 @@ export function NegocioTab({ lead, up, goTab }: { lead: Lead; up: Up; goTab: (t:
           <Workload lead={lead} up={up} />
         </Section>
         <Disponibilidade lead={lead} up={up} />
-        <Section
-          anchor="agenda-anterior"
-          title="Agenda anterior"
-          desc="O que a criança já faz hoje em outra clínica: dia, horário e especialidade. Serve de base para a carga horária e para a proposta de grade."
-          tag={lead.currentWeek?.blocks.length ? `${lead.currentWeek.blocks.length}h semanais` : null}
-          fam={byFamily(lead, "agenda")}
-        >
-          <AgendaAnterior lead={lead} up={up} />
-        </Section>
+        <AgendaAnterior lead={lead} up={up} />
         <Section anchor="laudo" fam={byFamily(lead, "laudo")}><MedicalDocs docs={lead.medicalDocs} onChange={(medicalDocs) => up({ medicalDocs })} /></Section>
         <Section anchor="endereco" title="Unidade e endereço" fam={byFamily(lead, "endereco")}><AddressFields lead={lead} up={up} /></Section>
         <Section anchor="agenda" title="Agendamento da visita" desc="Quando a visita é marcada, o negócio passa para a coordenação da unidade.">

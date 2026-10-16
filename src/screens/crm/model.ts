@@ -274,7 +274,6 @@ export type Lead = {
   report: Report;
   auth: Auth;
   currentWeek: CurrentWeek | null;
-  currentWeekReq: WaSend | null;
   grade: Grade | null;
   famReq: FamRequest | null;
 };
@@ -294,7 +293,7 @@ export function blankLead(id = `ld-${Date.now()}`): Lead {
     behaviors: {}, comm: {}, mobility: {}, sensory: {}, locomotion: "", mobilityAids: [], mobilityNotes: "", reinforcers: [],
     report: { happened: "", who: [], presented: [], objections: [], outcome: "", noteForSales: "", sentAt: "" },
     auth: { sentAt: "", protocol: "", returnAt: "", result: "", note: "", authorized: {} },
-    currentWeek: null, currentWeekReq: null, grade: null, famReq: null,
+    currentWeek: null, grade: null, famReq: null,
   };
 }
 

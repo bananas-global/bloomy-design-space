@@ -4,68 +4,45 @@
  *
  * A semana de terapias que a criança faz hoje em outra clínica (dia, hora e
  * especialidade, sem profissional). Serve de base para a carga horária e para
- * a Proposta de grade. A equipe registra na grade ou manda o link para o
- * responsável preencher pelo WhatsApp.
+ * a Proposta de grade. A equipe registra na grade; a família preenche pelo
+ * pedido do cartão Preenchimento pela família.
  */
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { DrawerModal } from "../../components/Overlay.js";
 import { SwitchCard } from "../../components/Input.js";
 import { TODAY } from "../../components/today.js";
-import { fmtBR, guardianOf, type CurrentWeek, type Lead, type WeekBlock } from "./model.js";
+import { fmtBR, type CurrentWeek, type Lead, type WeekBlock } from "./model.js";
 import type { Up } from "./NegocioTab.js";
-import { SQUARE_DRAWER, Banner, fld } from "./parts.js";
-import { Entry, SendStatus, SimButton, WhatsDrawer, fakeLink } from "./Send.js";
-import { first, toSpecialties, tone, totals } from "./week.js";
+import { byFamily } from "./FamilyRequest.js";
+import { SQUARE_DRAWER, Banner, Note, Section, fld } from "./parts.js";
+import { toSpecialties, tone, totals } from "./week.js";
 import { BlockEditor, HoursSummary, SpecPills, WeekGrid, WeekLayout, useWeekEditor } from "./WeekGrid.js";
-
-/** Protótipo: a resposta do responsável pelo link. */
-const simulated = (l: Lead): CurrentWeek => ({
-  blocks: [
-    ...[1, 3, 5].flatMap((wd) => [14, 15].map((h) => ({ id: `f${wd}${h}`, weekday: wd, hour: h, spec: "Análise do Comportamento" }))),
-    { id: "f215", weekday: 2, hour: 15, spec: "Fonoaudiologia" },
-    { id: "f415", weekday: 4, hour: 15, spec: "Terapia Ocupacional" },
-  ],
-  src: "familia", by: guardianOf(l).name || "Responsável", at: TODAY, reviewed: false,
-});
 
 export function AgendaAnterior({ lead, up }: { lead: Lead; up: Up }) {
   const [open, setOpen] = useState(false);
-  const [wa, setWa] = useState(false);
   const cw = lead.currentWeek;
   const blocks = cw?.blocks ?? [];
-  const req = lead.currentWeekReq;
   const fromFam = cw?.src === "familia";
-  const g = guardianOf(lead);
-  const child = first(lead.child) || "a criança";
 
   return (
-    <div className="space-y-3">
-      <Entry
-        icon="fa-calendar-week"
-        title={blocks.length ? `${blocks.length} horário${blocks.length > 1 ? "s" : ""} por semana · ${blocks.length}h` : "Nenhuma agenda registrada"}
-        desc={
-          blocks.length
-            ? fromFam ? `Preenchida por ${cw!.by} em ${fmtBR(cw!.at)}${cw!.reviewed ? " · revisada pela equipe" : " · aguardando revisão da equipe"}` : `Registrada pela equipe em ${fmtBR(cw!.at)}`
-            : "Registre você mesmo ou envie o link para o responsável preencher pelo WhatsApp."
-        }
-        actions={
-          <>
-            <Button type="button" variant="tint" color="green" rightIcon="fa-brands fa-whatsapp" onClick={() => setWa(true)}>{req ? "Reenviar" : "Enviar"} por WhatsApp</Button>
-            <Button type="button" variant={blocks.length ? "tint" : "default"} rightIcon="fa-pen" onClick={() => setOpen(true)}>
-              {blocks.length ? (fromFam && !cw!.reviewed ? "Revisar agenda" : "Editar agenda") : "Registrar agenda"}
-            </Button>
-          </>
-        }
-      />
-      {req && (
-        <SendStatus
-          send={req}
-          label="Link enviado para"
-          status={[fromFam ? (cw!.reviewed ? ["Revisada", "green"] : ["Respondida · revisar", "orange"]) : ["Aguardando resposta", "yellow"]]}
-          actions={!fromFam && <SimButton onClick={() => up({ currentWeek: simulated(lead) })}>Simular resposta da família</SimButton>}
-        />
-      )}
+    <Section
+      anchor="agenda-anterior"
+      title="Agenda anterior"
+      desc="O que a criança já faz hoje em outra clínica: dia, horário e especialidade. Serve de base para a carga horária e para a proposta de grade."
+      tag={blocks.length ? `${blocks.length}h semanais` : null}
+      fam={byFamily(lead, "agenda")}
+      action={
+        <Button type="button" variant={blocks.length ? "tint" : "default"} rightIcon="fa-pen" onClick={() => setOpen(true)}>
+          {blocks.length ? (fromFam && !cw!.reviewed ? "Revisar agenda" : "Editar agenda") : "Registrar agenda"}
+        </Button>
+      }
+    >
+      <Note>
+        {!cw || !blocks.length
+          ? "Nenhuma agenda registrada."
+          : fromFam ? `Preenchida por ${cw.by} em ${fmtBR(cw.at)}${cw.reviewed ? " · revisada pela equipe" : " · aguardando revisão da equipe"}.` : `Registrada pela equipe em ${fmtBR(cw.at)}.`}
+      </Note>
       {blocks.length > 0 && (
         <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-1 p-0">
           {totals(blocks).map((t) => (
@@ -75,25 +52,8 @@ export function AgendaAnterior({ lead, up }: { lead: Lead; up: Up }) {
           ))}
         </ul>
       )}
-
       {open && <AgendaDrawer lead={lead} onClose={() => setOpen(false)} onSave={(patch) => { up(patch); setOpen(false); }} />}
-      {wa && (
-        <WhatsDrawer
-          id="current_week_whatsapp"
-          show
-          title={req ? "Reenviar por WhatsApp" : "Enviar por WhatsApp"}
-          subtitle="O responsável preenche a agenda na clínica atual pelo link, sem precisar do app."
-          guardian={g.name}
-          phone={g.phone}
-          message={`Olá${g.name ? `, ${first(g.name)}` : ""}! Aqui é da Bloomy. Para montarmos a grade de ${child}, conte pra gente como é a agenda semanal de terapias que ${child} faz hoje: dia, horário e especialidade. É rápido e não precisa de cadastro.`}
-          link={req?.link ?? fakeLink("agenda", lead.id)}
-          note="O link fica válido por 7 dias. Quando o responsável enviar, a agenda aparece aqui marcada como preenchida por ele, e a equipe revisa antes de usar."
-          prev={req}
-          onClose={() => setWa(false)}
-          onSend={(w) => { up({ currentWeekReq: w }); setWa(false); }}
-        />
-      )}
-    </div>
+    </Section>
   );
 }
 
