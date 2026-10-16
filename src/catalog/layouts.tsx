@@ -172,6 +172,7 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     group: "Layouts",
     description: "Menu lateral filtrado por permissão, breadcrumbs, unidade, perfil, pessoa e notificações.",
     source: "layouts/backoffice.html.heex",
+    implementation: BackofficeLayout,
     preview: Backoffice,
   },
   {
@@ -180,6 +181,7 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     group: "Layouts",
     description: "Cabeçalho do paciente (CardHeader) e as abas agrupadas de lazy_tabs, dentro do backoffice.",
     source: "patient_live/show.ex",
+    implementation: PatientLayout,
     preview: Paciente,
   },
   {
@@ -188,6 +190,7 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     group: "Layouts",
     description: "O mesmo menu lateral, com os quatro itens da operadora.",
     source: "layouts/health_care.html.heex",
+    implementation: HealthCareLayout,
     preview: Operadora,
   },
   {
@@ -196,6 +199,7 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     group: "Layouts",
     description: "Página aberta por link ou QR Code (check-in, anamnese), sem o menu da clínica.",
     source: "layouts/public.html.heex",
+    implementation: PublicLayout,
     preview: Publico,
   },
   {
@@ -204,6 +208,7 @@ export const LAYOUT_PREVIEWS: ComponentPreview[] = [
     group: "Layouts",
     description: "Login da equipe, da família e da operadora, com a ilustração à direita.",
     source: "layouts/auth.html.heex",
+    implementation: AuthLayout,
     preview: Login,
   },
 ];
