@@ -1,9 +1,9 @@
-# Atualização do motor por PR, sem merge automático (E13).
+# Atualização das dependências por PR do Dependabot, uma vez por semana.
 #
-# O documento de arquitetura é explícito: mudança estrutural exige comando
-# explícito e revisável, nunca merge silencioso. Por isso não há auto-merge aqui
-# nem para patch — um patch do motor ainda pode mudar comportamento de tela, e o
-# custo de revisar é um build de dois minutos.
+# O merge é automático só para o Dependabot: `.github/workflows/automerge.yml`
+# mescla os PRs dele na main como brucesantos. PR de pessoa do time é handoff
+# e fica aberto. O motor fica num grupo próprio para que o PR dele seja
+# separado e fácil de achar no histórico quando uma tela mudar.
 version: 2
 updates:
   - package-ecosystem: npm
