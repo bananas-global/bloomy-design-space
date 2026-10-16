@@ -78,6 +78,21 @@ export const specialtyOf = (id: SpecialtyId): Specialty => SPECIALTIES.find((s) 
 /** As áreas de uma especialidade; `all` devolve todas. */
 export const goalsOf = (goals: Goal[], spec: SpecialtyId | "all") => (spec === "all" ? goals : goals.filter((g) => g.specialties.includes(spec)));
 
+export function countsOf(goals: Goal[]) {
+  let objectives = 0;
+  let programs = 0;
+  let acquired = 0;
+  for (const goal of goals)
+    for (const objective of goal.objectives) {
+      objectives += 1;
+      for (const program of objective.programs) {
+        programs += 1;
+        if (program.status === "acquired") acquired += 1;
+      }
+    }
+  return { areas: goals.length, objectives, programs, acquired };
+}
+
 const TONE_TAG: Record<SpecialtyTone, TagVariant> = {
   blue: "dark-blue",
   purple: "light-purple",

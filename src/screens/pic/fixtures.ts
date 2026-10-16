@@ -76,6 +76,8 @@ export type PicFixture = {
   patient: PatientHeader;
   plans: Plan[];
   goals: Goal[];
+  /** Abre a tela com o modal Exportar PIC aberto. */
+  exportOpen?: boolean;
   /** Abre a tela com o modal Pré-visualizar aberto. */
   previewOpen?: boolean;
 };
@@ -224,12 +226,125 @@ export const GOALS: Goal[] = [
   },
 ];
 
+/** Mais áreas e programas: o texto precisa encolher para caber numa folha. */
+const EXTRA_GOALS: Goal[] = [
+  {
+    id: "g6",
+    name: "Imitação",
+    protocol: "VB-MAPP",
+    description: "Imitar ações motoras e com objetos a partir de modelo do terapeuta.",
+    status: "active",
+    specialties: ["fono", "aba"],
+    endDate: "15/12/2026",
+    objectives: [
+      {
+        id: "o8",
+        name: "Imitação motora grossa",
+        description: "Reproduzir movimentos amplos logo após o modelo.",
+        programs: [
+          { id: "p10", name: "Imitação de movimentos com o corpo", pattern: DISCRETE, status: "active", phases: { intervention: 4, generalization: 2 } },
+          { id: "p11", name: "Imitação com objetos", pattern: DISCRETE, status: "active", phases: { baseline: 3 } },
+        ],
+      },
+      {
+        id: "o9",
+        name: "Imitação vocal",
+        description: "Ecoar sílabas e palavras simples.",
+        programs: [{ id: "p12", name: "Ecoico de sílabas", pattern: FREQUENCY, status: "active", phases: { intervention: 3 } }],
+      },
+    ],
+  },
+  {
+    id: "g7",
+    name: "Comportamento de Ouvinte",
+    protocol: "VB-MAPP",
+    description: "Seguir instruções e identificar itens nomeados pelo interlocutor.",
+    status: "active",
+    specialties: ["fono"],
+    endDate: "30/11/2026",
+    objectives: [
+      {
+        id: "o10",
+        name: "Seguir instruções de um passo",
+        description: "Executar comandos simples no contexto da sessão e em casa.",
+        programs: [
+          { id: "p13", name: "Instruções com gesto", pattern: DISCRETE, status: "acquired", phases: { acquired: 4 } },
+          { id: "p14", name: "Instruções sem gesto", pattern: DISCRETE, status: "active", phases: { intervention: 3, maintenance: 1 } },
+        ],
+      },
+      {
+        id: "o11",
+        name: "Identificar figuras",
+        description: "Apontar a figura nomeada entre três opções.",
+        programs: [{ id: "p15", name: "Identificação de animais", pattern: DISCRETE, status: "active", phases: { generalization: 2 } }],
+      },
+    ],
+  },
+  {
+    id: "g8",
+    name: "Brincar",
+    description: "Ampliar o repertório de brincadeiras funcionais e simbólicas, sozinho e com pares.",
+    status: "active",
+    specialties: ["psico", "to"],
+    endDate: "18/12/2026",
+    objectives: [
+      {
+        id: "o12",
+        name: "Brincar funcional",
+        description: "Usar brinquedos conforme a função, por pelo menos dois minutos.",
+        programs: [
+          { id: "p16", name: "Encaixe e empilhamento", pattern: DURATION, status: "active", phases: { maintenance: 2 } },
+          { id: "p17", name: "Brincadeira de faz de conta", pattern: DURATION, status: "active", phases: { baseline: 2 } },
+        ],
+      },
+      {
+        id: "o13",
+        name: "Brincar com pares",
+        description: "Compartilhar materiais e seguir regras simples de jogo.",
+        programs: [{ id: "p18", name: "Jogo de turnos com bola", pattern: FREQUENCY, status: "active", phases: { intervention: 2 } }],
+      },
+    ],
+  },
+  {
+    id: "g9",
+    name: "Alimentação",
+    protocol: "AFLS",
+    description: "Aceitação de novos alimentos e autonomia nas refeições.",
+    status: "active",
+    specialties: ["to"],
+    endDate: "20/12/2026",
+    objectives: [
+      {
+        id: "o14",
+        name: "Ampliar seletividade alimentar",
+        description: "Tocar, cheirar e provar alimentos novos de forma gradual.",
+        programs: [
+          { id: "p19", name: "Dessensibilização com frutas", pattern: FREQUENCY, status: "active", phases: { intervention: 3 } },
+          { id: "p20", name: "Uso de talheres", pattern: DISCRETE, status: "interrupted", phases: { baseline: 2 } },
+        ],
+      },
+    ],
+  },
+];
+
 export const PIC_FIXTURES: Fixture<PicFixture>[] = [
   {
     id: "pic.plan",
     label: "PIC em vigência",
     description: "Cinco áreas, uma delas adquirida.",
     data: { patient: PATIENT, plans: PLANS, goals: GOALS },
+  },
+  {
+    id: "pic.export",
+    label: "Exportar PIC aberto",
+    description: "O mesmo PIC, com o modal de exportação aberto.",
+    data: { patient: PATIENT, plans: PLANS, goals: GOALS, exportOpen: true },
+  },
+  {
+    id: "pic.export-dense",
+    label: "Exportar PIC com muitas áreas",
+    description: "Nove áreas: o texto é reduzido para caber numa página.",
+    data: { patient: PATIENT, plans: PLANS, goals: [...GOALS, ...EXTRA_GOALS], exportOpen: true },
   },
   {
     id: "pic.preview",
