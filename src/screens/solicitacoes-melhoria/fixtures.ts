@@ -1,12 +1,14 @@
 /**
  * Solicitações de melhoria — dados sintéticos. Nomes, e-mails e arquivos são
- * fictícios. As treze SMs do protótipo, uma ou mais por etapa do fluxo, com as
- * datas relativas ao TODAY do ambiente (o "hoje" do protótipo era 29/09/2026).
+ * fictícios. As treze SMs do protótipo, mais três para as reuniões de aprovação
+ * (uma aguardando a priorização do backlog, uma com o cenário em aprovação e
+ * uma descontinuada), com as datas relativas ao TODAY do ambiente (o "hoje" do
+ * protótipo era 29/09/2026).
  */
 import type { Fixture } from "@brucesantos/design-space";
 import {
-  ORDER, blankSm, dateBR, dateISO, daysFromToday, fmt, lastMonths, prioOf, PRIO, routeText, scoreOf,
-  type Affected, type HistoryEntry, type Role, type Sm, type SmFile, type SmRequired,
+  APPROVAL, ORDER, blankSm, dateBR, dateISO, daysFromToday, decisionLabel, fmt, isOverdue, isoToBR, lastMonths, prioOf, PRIO, roleOfName, routeText, scoreOf,
+  type Affected, type Approval, type ApprovalStage, type HistoryEntry, type Role, type Sm, type SmAction, type SmFile, type SmRequired,
 } from "./model.js";
 
 export type SmNotification = { id: string; at: string; forRole: Role; smId: string; title: string; text: string; read: boolean };
@@ -193,30 +195,70 @@ const BASE: Seed[] = [
     status: "encerramento", rootCause: "Ausência de processo e material padronizado de integração.", macro: "Gestão de Pessoas (RH)", type: "Melhoria de processo", effort: "Baixo", triage: "Resolver por processo", analyst: PMO,
     scores: { impact: 3, risk: 3, urgency: 3, reach: 4, alignment: 4 }, meetingDate: dateISO(-13), participants: ["Solicitante", "Áreas de interface"], rules: "RN-01 — Integração em 5 dias com checklist assinado.", routes: ["processo"], procFlow: true, procPop: true, procTraining: true, subpath: "sem", affected: crowd("SM-013", 7),
   },
+  {
+    id: "SM-014", createdAt: at(-23, "08:50"), requester: "Renata Vieira", area: "Assistencial / Clínico", unit: "Itu", title: "Evoluções de sessão pendentes sem aviso ao aplicador",
+    need: "Saber, no fim do dia, quais sessões ainda estão sem evolução registrada.", asIs: "A supervisão só descobre a evolução faltando no fechamento da semana.", workaround: "Planilha de conferência preenchida pela supervisora toda sexta-feira.", expected: "Nenhuma sessão fechada sem evolução no mesmo dia.",
+    audience: "Múltiplas unidades", frequency: "Diariamente", impactType: "Risco assistencial / paciente", consequence: "Prontuário incompleto e glosa por falta de evolução.",
+    status: "aprovacao", rootCause: "A agenda não cruza a sessão realizada com a evolução registrada.", macro: "Assistencial / Clínico", type: "Nova funcionalidade", effort: "Médio", triage: "Aprovada para backlog", analyst: PMO,
+    scores: { impact: 4, risk: 4, urgency: 3, reach: 4, alignment: 3 }, affected: crowd("SM-014", 8),
+  },
+  {
+    id: "SM-015", createdAt: at(-22, "13:40"), requester: "Sérgio Antunes", area: "Faturamento", unit: "Tatuapé", title: "Conferência de carteirinha vencida no check-in",
+    need: "Ser avisado no check-in quando a carteirinha do convênio está vencida.", asIs: "A recepção não confere a validade e o faturamento recebe a glosa semanas depois.", workaround: "Faturamento liga para a recepção pedindo a carteirinha nova depois do atendimento.", expected: "Carteirinha atualizada antes do atendimento.",
+    audience: "Múltiplas unidades", frequency: "Diariamente", impactType: "Impacto financeiro / glosa", consequence: "Glosas por carteirinha vencida.",
+    status: "validacao", rootCause: "O check-in não mostra a validade da carteirinha cadastrada.", macro: "Faturamento / Contas Médicas", type: "Alteração de funcionalidade", effort: "Baixo", triage: "Aprovada para backlog", analyst: PMO,
+    scores: { impact: 4, risk: 3, urgency: 3, reach: 4, alignment: 3 }, meetingDate: dateISO(-2), participants: ["Solicitante", "Áreas de interface", "Tech"], interfaceAreas: ["Recepção"],
+    rules: "RN-01 — Carteirinha vencida exibe alerta no check-in.\nRN-02 — A recepção registra a nova validade antes de confirmar.", reqs: "RF-01 — Validade da carteirinha no check-in.\nRF-02 — Relatório diário de carteirinhas a vencer.", affected: crowd("SM-015", 6),
+  },
+  {
+    id: "SM-016", createdAt: at(-26, "10:30"), requester: "Daniela Freire", area: "Marketing", unit: "Corporativo", title: "Pesquisa de satisfação impressa na recepção",
+    need: "Coletar a satisfação das famílias sem formulário de papel.", asIs: "A pesquisa é impressa, preenchida na recepção e digitada no fim do mês.", workaround: "Digitação manual das respostas numa planilha.", expected: "Respostas consolidadas sem digitação.",
+    audience: "Pacientes / Clientes externos", frequency: "Semanalmente", impactType: "Falta de informação / indicador", consequence: "Indicador de satisfação atrasado.",
+    status: "descontinuada", rootCause: "A pesquisa não tem canal digital.", macro: "Atendimento / Recepção", type: "Nova funcionalidade", effort: "Médio", triage: "Aprovada para backlog", analyst: PMO,
+    scores: { impact: 2, risk: 1, urgency: 1, reach: 3, alignment: 2 }, closedAt: dateBR(-6), affected: crowd("SM-016", 2),
+  },
 ];
 
 /** O histórico que a SM teria acumulado até a etapa em que está, como o `seed()` do protótipo. */
 /** Dias típicos que uma SM passa em cada etapa, para espaçar o histórico sintético. */
-const STAGE_TYPICAL = { triagem: 3, priorizacao: 4, backlog: 9, cenarios: 2, modelagem: 8, execucao: 12, homologacao: 3, encerramento: 2 };
+const STAGE_TYPICAL = { triagem: 3, priorizacao: 4, aprovacao: 5, backlog: 9, validacao: 3, cenarios: 2, modelagem: 8, execucao: 12, homologacao: 3, encerramento: 2 };
+
+/** Onde cada SM descontinuada parou. */
+const STOPPED: Record<string, ApprovalStage> = { "SM-016": "aprovacao" };
+
+/**
+ * Decisões das reuniões que não seguiram adiante: rodadas de "não priorizada" ou
+ * "não aprovado" e as descontinuações. `days` é quando a reunião aconteceu.
+ */
+const DECISIONS: Record<string, { stage: ApprovalStage; days: number; decision: Approval["decision"]; participants: string[]; note: string }[]> = {
+  "SM-014": [{ stage: "aprovacao", days: -9, decision: "volta", participants: ["PMO", "Tech", "Sócios"], note: "Capacidade da Tech comprometida com a SM-003 (P0) neste ciclo. Volta à pauta da próxima reunião." }],
+  "SM-016": [{ stage: "aprovacao", days: -6, decision: "descontinuada", participants: ["PMO", "Tech", "Sócios"], note: "Os sócios decidiram adotar a pesquisa de satisfação da operadora a partir do próximo trimestre." }],
+};
+
+const BOARD = { aprovacao: ["PMO", "Tech", "Sócios"], validacao: ["PMO", "Tech", "Solicitante", "Sócios"] };
 
 function historyOf(s: Sm): HistoryEntry[] {
   const h: HistoryEntry[] = [{ at: s.createdAt, who: s.requester, kind: "recebida", text: "Solicitação registrada na base de SMs. PMO notificado." }];
   const add = (kind: HistoryEntry["kind"], who: string, text: string) => h.push({ at: "", who, kind, text });
-  const i = ORDER.indexOf(s.status as (typeof ORDER)[number]);
+  const stopped = STOPPED[s.id];
+  const i = ORDER.indexOf((stopped ?? s.status) as (typeof ORDER)[number]);
+  const past = (stage: (typeof ORDER)[number]) => i >= ORDER.indexOf(stage);
   if (s.status === "rejeitada") add("rejeitada", PMO, `Triagem: ${s.triage}. Solicitante notificado com a justificativa.`);
   else {
-    if (i >= 1) add("priorizacao", PMO, `Triagem concluída: ${s.triage}. Segue para a matriz de priorização.`);
-    if (i >= 2) add("backlog", PMO, `Aprovada para o backlog com ${PRIO[prioOf(s)!].full} (${fmt(scoreOf(s))} pts). KPIs recalculados.`);
-    if (i >= 3) add("cenarios", PMO, `Reunião de desenho de cenários realizada com ${s.participants.join(", ")}.`);
-    if (i >= 4) add(s.routes.includes("processo") ? "modelagem" : "execucao", PMO, `Demanda direcionada: ${routeText(s.routes)}.`);
-    if (i >= 5 && s.routes.includes("processo"))
+    if (past("priorizacao")) add("priorizacao", PMO, `Triagem concluída: ${s.triage}. Segue para a matriz de priorização.`);
+    if (past("aprovacao")) add("aprovacao", PMO, `Salva na base de backlog com ${PRIO[prioOf(s)!].full} (${fmt(scoreOf(s))} pts). Aguarda a reunião de priorização do backlog. KPIs recalculados.`);
+    if (past("backlog")) add("backlog", PMO, `${APPROVAL.aprovacao.meeting} com ${BOARD.aprovacao.join(", ")}: SM priorizada.`);
+    if (past("validacao")) add("validacao", PMO, `Reunião de desenho de cenários realizada com ${s.participants.join(", ")}. Segue para a aprovação de cenário.`);
+    if (past("cenarios")) add("cenarios", PMO, `${APPROVAL.validacao.meeting} com ${BOARD.validacao.join(", ")}: Cenário aprovado.`);
+    if (past("modelagem")) add(s.routes.includes("processo") ? "modelagem" : "execucao", PMO, `Demanda direcionada: ${routeText(s.routes)}.`);
+    if (past("execucao") && s.routes.includes("processo"))
       add(s.subpath === "sem" ? "encerramento" : "execucao", PMO, s.subpath === "sem" ? "Processo implementado sem desenvolvimento." : "Processo implementado com desenvolvimento. Encaminhado à Tech.");
-    if (i >= 6 && s.subpath !== "sem") add("homologacao", TECH, "Funcionalidade implementada em homologação.");
-    if (i >= 7 && s.subpath !== "sem") {
+    if (past("homologacao") && s.subpath !== "sem") add("homologacao", TECH, "Funcionalidade implementada em homologação.");
+    if (past("encerramento") && s.subpath !== "sem") {
       add("homologacao", TECH, "Entrega validada pela Tech em produção.");
       add("encerramento", s.requester, "Aceite do solicitante registrado. Entrega homologada.");
     }
-    if (i >= 8) add("concluida", PMO, "Status atualizado e ganhos registrados. Ciclo de SM encerrado.");
+    if (past("concluida")) add("concluida", PMO, "Status atualizado e ganhos registrados. Ciclo de SM encerrado.");
   }
   // Cada evento chega depois do tempo típico da etapa anterior (STAGE_TYPICAL), e
   // o conjunto é comprimido quando não cabe entre a abertura e a véspera de hoje
@@ -236,6 +278,66 @@ function historyOf(s: Sm): HistoryEntry[] {
   return h;
 }
 
+/**
+ * As decisões das reuniões: as que seguiram vêm do histórico sintético; as que
+ * voltaram ou encerraram, de `DECISIONS`, entram no histórico como registro
+ * auditável.
+ */
+function withDecisions(s: Sm): Sm {
+  const passed: Approval[] = s.history
+    .filter((h) => (h.kind === "backlog" && h.text.startsWith(APPROVAL.aprovacao.meeting)) || (h.kind === "cenarios" && h.text.startsWith(APPROVAL.validacao.meeting)))
+    .map((h) => {
+      const stage: ApprovalStage = h.kind === "backlog" ? "aprovacao" : "validacao";
+      return { stage, at: h.at, who: PMO, date: dateISO(daysFromToday(h.at)), participants: BOARD[stage], decision: "segue", note: "" };
+    });
+  const other: Approval[] = (DECISIONS[s.id] ?? []).map((d) => ({ stage: d.stage, at: at(d.days, "17:10"), who: PMO, date: dateISO(d.days), participants: d.participants, decision: d.decision, note: d.note }));
+  const entries: HistoryEntry[] = other.map((a) => ({
+    at: a.at, who: PMO, kind: a.decision === "descontinuada" ? "descontinuada" : a.stage, audit: true,
+    text: `${APPROVAL[a.stage].meeting} de ${isoToBR(a.date)} com ${a.participants.join(", ")}: ${decisionLabel(a)}. Justificativa: ${a.note}`,
+  }));
+  return { ...s, approvals: [...passed, ...other], history: [...s.history, ...entries] };
+}
+
+/** Plano de ação (RN-011): o que cada um ainda deve, com algumas ações vencidas para o destaque. */
+const ACTIONS: Record<string, (Omit<SmAction, "id" | "createdAt" | "createdBy" | "due"> & { due: number; created: number })[]> = {
+  "SM-008": [
+    { text: "Enviar a planilha de bloqueios de sala de outubro", owner: "Beatriz Nogueira", due: -2, created: -7, status: "Pendente" },
+    { text: "Levantar se o bloqueio de sala já guarda os agendamentos afetados", owner: TECH, due: 3, created: -6, status: "Em andamento" },
+  ],
+  "SM-011": [
+    { text: "Validar o modelo de declaração com o faturamento", owner: "Carla Mendes", due: -1, created: -5, status: "Em andamento" },
+    { text: "Reunir as declarações devolvidas pelas operadoras no último mês", owner: "Carla Mendes", due: -3, created: -5, status: "Concluída", doneAt: at(-3, "16:20") },
+    { text: "Colher a assinatura da coordenação no modelo final", owner: "Carla Mendes", due: 4, created: -4, status: "Pendente" },
+    { text: "Revisar o POP de emissão da declaração", owner: PMO, due: 6, created: -4, status: "Pendente" },
+  ],
+  "SM-003": [{ text: "Confirmar com o credenciamento a lista de laudos exigidos por operadora", owner: "Juliana Prado", due: 2, created: -8, status: "Pendente" }],
+  "SM-006": [{ text: "Testar o lembrete com cinco famílias de Santana", owner: "Carla Mendes", due: 1, created: -2, status: "Em andamento" }],
+  "SM-014": [{ text: "Estimar o esforço com a Tech para a próxima reunião de priorização", owner: TECH, due: -3, created: -9, status: "Pendente" }],
+};
+
+function withActions(s: Sm): Sm {
+  const list = (ACTIONS[s.id] ?? []).map(({ due, created, ...a }, i) => ({ ...a, id: `seed-${s.id}-${i}`, due: dateISO(due), createdAt: at(created, "11:00"), createdBy: PMO }));
+  const entries: HistoryEntry[] = list.map((a) => ({ at: a.createdAt, who: PMO, kind: s.status, text: `Ação incluída no plano: ${a.text} · ${a.owner} · prazo ${isoToBR(a.due)}.` }));
+  return { ...s, actions: list, history: [...s.history, ...entries] };
+}
+
+/**
+ * RN-012: ação vencida avisa o responsável e o PMO. Na fixture, o aviso chega
+ * no dia seguinte ao prazo; o sino só mostra os papéis que a tela tem.
+ */
+function overdueNotifications(sms: Sm[]): SmNotification[] {
+  return sms.flatMap((s) =>
+    s.actions.filter(isOverdue).flatMap((a) => {
+      const day = daysFromToday(`${isoToBR(a.due)} 08:00`) + 1;
+      const text = `${a.text} · venceu em ${isoToBR(a.due)}`;
+      const owner = roleOfName(a.owner);
+      const out: SmNotification[] = [{ id: `venc-pmo-${a.id}`, at: at(day, "08:00"), forRole: "pmo", smId: s.id, title: `Ação vencida · ${a.owner}`, text, read: false }];
+      if (owner && owner !== "pmo") out.push({ id: `venc-${owner}-${a.id}`, at: at(day, "08:00"), forRole: owner, smId: s.id, title: "Sua ação venceu", text, read: false });
+      return out;
+    }),
+  );
+}
+
 /** Evidências anexadas na etapa de modelagem. */
 const EVIDENCE: Record<string, HistoryEntry> = {
   "SM-013": { at: at(-9, "15:10"), who: PMO, kind: "modelagem", text: "Anexou evidência da etapa Modelar processo, POP e treinamento.", files: [file("POP-integracao-aplicadores-v1.pdf", 210000), file("fluxo-onboarding-aris.png", 350000)] },
@@ -249,7 +351,7 @@ export const SMS: Sm[] = BASE.map((seed) => {
   const s0 = sm(seed);
   const s = { ...s0, views: viewsOf(s0) };
   const extra = EVIDENCE[s.id];
-  return { ...s, history: extra ? [...historyOf(s), extra] : historyOf(s) };
+  return withActions(withDecisions({ ...s, history: extra ? [...historyOf(s), extra] : historyOf(s) }));
 });
 
 export const NOTIFICATIONS: SmNotification[] = [
@@ -259,6 +361,9 @@ export const NOTIFICATIONS: SmNotification[] = [
   { id: "n4", at: at(-5, "10:16"), forRole: "solicitante", smId: "SM-009", title: "PMO pediu esclarecimento", text: "Responda nos comentários da SM-009.", read: true },
   { id: "n6", at: at(-1, "11:20"), forRole: "solicitante", smId: "SM-009", title: "Mais pessoas afetadas", text: "Mais 3 colegas também são afetados pela sua solicitação.", read: false },
   { id: "n5", at: at(-4, "14:00"), forRole: "tech", smId: "SM-003", title: "Demanda P0 na fila de desenvolvimento", text: "Alerta de vencimento de laudo exigido pelas operadoras", read: false },
+  { id: "n7", at: at(-2, "18:00"), forRole: "pmo", smId: "SM-015", title: "Cenário pronto para aprovação", text: "Conferência de carteirinha vencida no check-in · marcar a reunião de aprovação de cenário", read: false },
+  { id: "n8", at: at(-5, "11:01"), forRole: "solicitante", smId: "SM-011", title: "Nova ação para você", text: "Validar o modelo de declaração com o faturamento", read: true },
+  ...overdueNotifications(SMS),
 ];
 
 /** Peso de cada unidade no volume: Santana e Tatuapé são as maiores. */
@@ -289,8 +394,8 @@ export const MONTHLY: MonthAgg[] = lastMonths(12)
 export const SM_FIXTURES: Fixture[] = [
   {
     id: "sm.base",
-    label: "Treze SMs em todas as etapas",
-    description: "Uma ou mais SMs por etapa do fluxo, uma recusada na triagem e uma P0 por exigência contratual; notificações para PMO, solicitante e Tech.",
+    label: "Dezesseis SMs em todas as etapas",
+    description: "Uma ou mais SMs por etapa do fluxo, uma recusada na triagem, uma descontinuada na reunião de priorização e uma P0 por exigência contratual; planos de ação com ações vencidas; notificações para PMO, solicitante e Tech.",
     data: (): SmFixture => ({ sms: SMS, notifications: NOTIFICATIONS, monthly: MONTHLY }),
   },
   {

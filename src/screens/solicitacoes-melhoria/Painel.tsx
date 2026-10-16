@@ -8,6 +8,9 @@
  * 4. Onde dói — unidades × macroprocessos pelo número de pessoas afetadas.
  * 5. Fila do backlog — com a espera e o esforço, e a carga da Tech.
  *
+ * Entre 1 e 2, o plano de ação: as ações abertas, as vencidas primeiro (o PMO vê
+ * todas; a Tech, as dela).
+ *
  * O período é fixo: os últimos 3 meses (o gráfico de entradas e saídas mostra 6),
  * todas as unidades. As SMs da base cobrem o mês corrente; os meses anteriores
  * vêm do consolidado mensal (`MonthAgg`).
@@ -25,10 +28,11 @@ import { SimpleTable, Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
 import type { MonthAgg } from "./fixtures.js";
 import {
-  L, SLA_DAYS, STATUS, USERS, daysFromToday, daysInStage, isClosed, lastMonths, monthLabel, monthOf, plural, prioRank, scoreOf, stageTimes,
+  L, SLA_DAYS, STATUS, USERS, daysFromToday, daysInStage, isClosed, lastMonths, monthLabel, monthOf, openActions, overdueActions, plural, prioRank, scoreOf, stageTimes,
   type Role, type Sm, type StageId,
 } from "./model.js";
 import { reachText } from "./Afetados.js";
+import { ActionList } from "./Plano.js";
 import { PrioTag, StageTag, cx } from "./parts.js";
 
 type Period = "30" | "90" | "365";
@@ -56,6 +60,8 @@ export function Painel({ sms: all, monthly, role, onOpen }: { sms: Sm[]; monthly
     <div className="space-y-6">
 
       <Attention sms={sms} role={role} onOpen={onOpen} />
+
+      <Plan sms={sms} role={role} onOpen={onOpen} />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <StageTimes sms={sms} />
@@ -112,6 +118,9 @@ function reasonsOf(s: Sm, role: Role): Reason[] {
   if (mine && sla && days > sla) {
     out.push({ text: `${STATUS[s.status].label} há ${days} dias · prazo ${sla}`, tone: "red", icon: "fa-hourglass-end", weight: 300 + days - sla });
   }
+  // Plano de ação: vencidas de qualquer um para o PMO; para a Tech, só as dela.
+  const late = overdueActions(s).filter((a) => role !== "tech" || a.owner === USERS.tech.name).length;
+  if (late) out.push({ text: plural(late, "ação vencida", "ações vencidas"), tone: "red", icon: "fa-clock", weight: 350 + late });
   if (s.p0 && (role !== "tech" || s.status === "execucao")) {
     out.push({ text: `P0 · ${STATUS[s.status].label}`, tone: "red", icon: "fa-triangle-exclamation", weight: 400 });
   }
@@ -175,6 +184,34 @@ function Attention({ sms, role, onOpen }: { sms: Sm[]; role: Role; onOpen: (s: S
           ))}
         </ul>
       )}
+    </Card>
+  );
+}
+
+/* ============================================================
+   Plano de ação
+   ============================================================ */
+
+function Plan({ sms, role, onOpen }: { sms: Sm[]; role: Role; onOpen: (s: Sm) => void }) {
+  const tech = role === "tech";
+  const owner = tech ? USERS.tech.name : undefined;
+  const open = sms.flatMap((s) => openActions(s).filter((a) => !owner || a.owner === owner));
+  const late = sms.flatMap((s) => overdueActions(s).filter((a) => !owner || a.owner === owner)).length;
+  return (
+    <Card className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <Header variant="small">{tech ? "Ações da Tech" : "Plano de ação"}</Header>
+          <p className="text-sm text-brand-purple-dark/60">
+            {tech ? "O que o PMO combinou com a Tech nas SMs, e até quando." : "O que cada responsável ainda deve às SMs, das vencidas para as de prazo mais longe."}
+          </p>
+        </div>
+        <span className="flex gap-2">
+          <Tag item={plural(open.length, "aberta", "abertas")} variant="light-blue" />
+          {late > 0 && <Tag item={plural(late, "vencida", "vencidas")} variant="red" leftIcon="fa-clock" />}
+        </span>
+      </div>
+      <ActionList sms={sms} owner={owner} onOpen={onOpen} empty="Nenhuma ação aberta." />
     </Card>
   );
 }
@@ -447,7 +484,7 @@ function WherePain({ sms, onOpen }: { sms: Sm[]; onOpen: (s: Sm) => void }) {
 
 function Queue({ sms, onOpen }: { sms: Sm[]; onOpen: (s: Sm) => void }) {
   const queue = sms
-    .filter((s) => ["backlog", "cenarios", "modelagem", "execucao"].includes(s.status))
+    .filter((s) => ["aprovacao", "backlog", "validacao", "cenarios", "modelagem", "execucao"].includes(s.status))
     .sort((a, b) => prioRank(a) - prioRank(b) || (scoreOf(b) ?? -1) - (scoreOf(a) ?? -1));
   const techLoad = sms.filter((s) => s.status === "execucao" || (s.status === "homologacao" && !s.homologTech));
   const heavy = techLoad.filter((s) => ["Alto", "Muito alto"].includes(s.effort)).length;

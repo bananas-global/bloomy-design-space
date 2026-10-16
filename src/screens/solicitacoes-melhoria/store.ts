@@ -14,8 +14,8 @@ import type { ScenarioContext } from "@brucesantos/design-space";
 import { showToast, type ToastType } from "../../components/Action.js";
 import { MONTHLY, SMS, NOTIFICATIONS, type MonthAgg, type SmFixture, type SmNotification } from "./fixtures.js";
 import {
-  CUR_LABEL, PRIO, USERS, blankSm, fmt, hasWorkaround, nowStamp, prioOf, routeText, scoreOf, triageOf, TODAY_BR,
-  type HistoryEntry, type Role, type Sm, type SmFile, type SmForm,
+  APPROVAL, CUR_LABEL, PRIO, USERS, blankSm, decisionLabel, fmt, hasWorkaround, isoToBR, nowStamp, prioOf, roleOfName, routeText, scoreOf, triageOf, TODAY_BR,
+  type ActionStatus, type Approval, type ApprovalStage, type HistoryEntry, type Role, type Sm, type SmAction, type SmFile, type SmForm,
 } from "./model.js";
 
 type Data = { key: string; sms: Sm[]; notifications: SmNotification[]; monthly: MonthAgg[] };
@@ -78,7 +78,7 @@ export const sm = {
   patch: (id: string, patch: Partial<Sm>) => update(id, (s) => ({ ...s, ...patch })),
 
   /** Liga ou desliga um valor de uma lista (participantes, áreas de interface, caminhos). */
-  toggle: (id: string, field: "participants" | "interfaceAreas" | "routes", value: string) =>
+  toggle: (id: string, field: "participants" | "interfaceAreas" | "routes" | "apParticipants", value: string) =>
     update(id, (s) => {
       const list = s[field] as string[];
       return { ...s, [field]: list.includes(value) ? list.filter((v) => v !== value) : [...list, value] };
@@ -157,15 +157,82 @@ export const sm = {
     const p = PRIO[prioOf(s0)!];
     const pts = fmt(scoreOf(s0));
     update(id, (s) =>
-      log({ ...s, status: "backlog" }, role, "backlog", `Aprovada para o backlog com ${p.full} (${pts} pts). KPIs recalculados.${s.p0 ? ` Exceção mandatória: ${s.p0Reason}.` : ""}`),
+      log({ ...s, status: "aprovacao" }, role, "aprovacao", `Salva na base de backlog com ${p.full} (${pts} pts). Aguarda a reunião de priorização do backlog. KPIs recalculados.${s.p0 ? ` Exceção mandatória: ${s.p0Reason}.` : ""}`),
     );
-    notify("solicitante", id, "Aprovada para o backlog", `${p.full} · ${pts} pts. Você será convidado à reunião de cenários.`);
-    toast("Aprovada para o backlog", `${id} · ${p.full}. KPIs executivos recalculados.`);
+    notify("solicitante", id, "Salva no backlog", `${p.full} · ${pts} pts. Aguarda a reunião de priorização do backlog.`);
+    toast("Salva na base de backlog", `${id} · ${p.full}. Aguarda a reunião de priorização.`);
   },
 
   finishScenarios: (id: string, role: Role) => {
-    update(id, (s) => log({ ...s, status: "cenarios" }, role, "cenarios", `Reunião de desenho de cenários realizada com ${s.participants.join(", ")}.`));
-    toast("Cenários mapeados", "Pronto para direcionar a demanda.");
+    update(id, (s) => log({ ...s, status: "validacao" }, role, "validacao", `Reunião de desenho de cenários realizada com ${s.participants.join(", ")}. Segue para a aprovação de cenário.`));
+    notify("solicitante", id, "Cenário pronto para aprovação", "Você participa da reunião de aprovação de cenário.");
+    toast("Cenários mapeados", "Segue para a reunião de aprovação de cenário.");
+  },
+
+  /**
+   * Registra a decisão de uma das duas reuniões de aprovação. Seguir avança; não
+   * priorizar mantém no backlog (priorização) ou volta ao desenho (cenário);
+   * descontinuar encerra. Volta e descontinuada exigem justificativa e ficam
+   * como registro auditável.
+   */
+  decide: (id: string, role: Role) => {
+    const s0 = get(id);
+    const stage = s0.status as ApprovalStage;
+    const decision = s0.apDecision;
+    if (!decision) return;
+    const meeting = APPROVAL[stage].meeting;
+    const approval: Approval = { stage, at: nowStamp(), who: USERS[role].name, date: s0.apDate, participants: s0.apParticipants, decision, note: s0.apNote.trim() };
+    const label = decisionLabel(approval);
+    const next: Sm["status"] = decision === "descontinuada" ? "descontinuada" : decision === "segue" ? (stage === "aprovacao" ? "backlog" : "cenarios") : stage === "aprovacao" ? "aprovacao" : "backlog";
+    const text = `${meeting}${approval.date ? ` de ${isoToBR(approval.date)}` : ""} com ${approval.participants.join(", ")}: ${label}.${approval.note ? ` ${decision === "segue" ? "Observação" : "Justificativa"}: ${approval.note}` : ""}`;
+    update(id, (s) =>
+      log(
+        { ...s, status: next, approvals: [...s.approvals, approval], apDate: "", apParticipants: [], apDecision: "", apNote: "", ...(next === "descontinuada" ? { closedAt: TODAY_BR } : {}) },
+        role, next, text, undefined, decision !== "segue",
+      ),
+    );
+    const notice = {
+      segue: stage === "aprovacao" ? "Você será convidado à reunião de desenho de cenários." : "O PMO direciona a demanda a seguir.",
+      volta: stage === "aprovacao" ? `Continua no backlog e volta à próxima reunião. ${approval.note}` : `Volta para o desenho de cenários. ${approval.note}`,
+      descontinuada: approval.note,
+    }[decision];
+    notify("solicitante", id, label, notice);
+    if (decision === "segue" && stage === "aprovacao") notify("tech", id, "SM priorizada", `Participe da reunião de desenho de cenários · ${s0.title}`);
+    toast(label, decision === "descontinuada" ? "Ciclo encerrado. Solicitante notificado com a justificativa." : decision === "volta" ? "Registrado no histórico com a justificativa." : notice, decision === "segue" ? "success" : "info");
+  },
+
+  /* Plano de ação (RN-011, RN-012). Não trava nenhuma etapa. */
+
+  /** O PMO inclui uma ação; o responsável recebe a notificação no sino. */
+  addAction: (id: string, role: Role, a: Pick<SmAction, "text" | "owner" | "due">) => {
+    const action: SmAction = { ...a, id: `a-${++seq}`, status: "Pendente", createdAt: nowStamp(), createdBy: USERS[role].name };
+    update(id, (s) => log({ ...s, actions: [...s.actions, action] }, role, s.status, `Ação incluída no plano: ${a.text} · ${a.owner} · prazo ${isoToBR(a.due)}.`));
+    const ownerRole = roleOfName(a.owner);
+    if (ownerRole && ownerRole !== role) notify(ownerRole, id, "Nova ação para você", `${a.text} · prazo ${isoToBR(a.due)}`);
+    toast("Ação incluída", `${a.owner} foi notificado no sino.`);
+  },
+
+  /** O PMO edita a ação. Trocar o responsável avisa o novo. */
+  editAction: (id: string, role: Role, actionId: string, patch: Pick<SmAction, "text" | "owner" | "due" | "status">) => {
+    const before = get(id).actions.find((a) => a.id === actionId)!;
+    update(id, (s) => {
+      const actions = s.actions.map((a) => (a.id === actionId ? { ...a, ...patch, doneAt: patch.status === "Concluída" ? a.doneAt ?? nowStamp() : undefined } : a));
+      const changed = before.status !== patch.status ? ` Status: ${patch.status}.` : "";
+      return log({ ...s, actions }, role, s.status, `Ação atualizada no plano: ${patch.text} · ${patch.owner} · prazo ${isoToBR(patch.due)}.${changed}`);
+    });
+    const ownerRole = roleOfName(patch.owner);
+    if (patch.owner !== before.owner && ownerRole && ownerRole !== role) notify(ownerRole, id, "Nova ação para você", `${patch.text} · prazo ${isoToBR(patch.due)}`);
+    toast("Ação atualizada", patch.owner !== before.owner ? `${patch.owner} foi notificado no sino.` : "Plano de ação salvo.");
+  },
+
+  /** O próprio responsável marca a ação dele como em andamento ou concluída; o PMO é avisado. */
+  setActionStatus: (id: string, role: Role, actionId: string, status: ActionStatus) => {
+    const a0 = get(id).actions.find((a) => a.id === actionId)!;
+    update(id, (s) =>
+      log({ ...s, actions: s.actions.map((a) => (a.id === actionId ? { ...a, status, doneAt: status === "Concluída" ? nowStamp() : undefined } : a)) }, role, s.status, `Ação ${status === "Concluída" ? "concluída" : "em andamento"}: ${a0.text}.`),
+    );
+    if (role !== "pmo") notify("pmo", id, status === "Concluída" ? "Ação concluída" : "Ação em andamento", `${USERS[role].name} · ${a0.text}`);
+    toast(status === "Concluída" ? "Ação concluída" : "Ação em andamento", role !== "pmo" ? "O PMO foi avisado." : "Plano de ação salvo.");
   },
 
   confirmRouting: (id: string, role: Role) => {

@@ -40,6 +40,15 @@ export const L = {
   /** Esforço estimado (preliminar), da planilha do PMO. */
   efforts: ["Muito baixo", "Baixo", "Médio", "Alto", "Muito alto", "A estimar", "Não aplicável"],
   participants: ["Solicitante", "Áreas de interface", "Tech"],
+  /** Quem decide na reunião de priorização do backlog (R no EPC). */
+  backlogBoard: ["PMO", "Tech", "Sócios"],
+  /** Quem decide na reunião de aprovação de cenário (R no EPC). */
+  scenarioBoard: ["PMO", "Tech", "Solicitante", "Sócios"],
+  /**
+   * Usuários do admin que podem ser responsáveis por uma ação do plano. Fictícios:
+   * o PMO, a Tech, a solicitante dos cenários e quem pediu as SMs da fixture.
+   */
+  staff: ["Manoel Alberto", "Diego Martins", "Carla Mendes", "Aline Dias", "Beatriz Nogueira", "Daniela Freire", "Fernanda Rocha", "Juliana Prado", "Luana Freitas", "Marcos Lima", "Paula Siqueira", "Rafael Tavares", "Renata Vieira", "Sérgio Antunes", "Tiago Nunes"],
 };
 
 /** Tuplas `{label, value}` para o `input/1` de `type="select"`. */
@@ -70,12 +79,12 @@ export const triageOf = (value: string) => TRIAGE.find((t) => t.value === value)
    Etapas
    ============================================================ */
 
-export type StageId = "triagem" | "priorizacao" | "backlog" | "cenarios" | "modelagem" | "execucao" | "homologacao" | "encerramento" | "concluida";
-export type StatusId = StageId | "rejeitada" | "cancelada" | "excluida";
+export type StageId = "triagem" | "priorizacao" | "aprovacao" | "backlog" | "validacao" | "cenarios" | "modelagem" | "execucao" | "homologacao" | "encerramento" | "concluida";
+export type StatusId = StageId | "rejeitada" | "cancelada" | "excluida" | "descontinuada";
 export type Tone = "blue" | "purple" | "yellow" | "orange" | "green" | "red" | "navy";
 
 /** As colunas do kanban, na ordem do fluxo. */
-export const ORDER: StageId[] = ["triagem", "priorizacao", "backlog", "cenarios", "modelagem", "execucao", "homologacao", "encerramento", "concluida"];
+export const ORDER: StageId[] = ["triagem", "priorizacao", "aprovacao", "backlog", "validacao", "cenarios", "modelagem", "execucao", "homologacao", "encerramento", "concluida"];
 
 export const STATUS: Record<StatusId | "recebida", { label: string; tone: Tone; icon: string; owner: string }> = {
   recebida: { label: "Registrada", tone: "blue", icon: "fa-inbox", owner: "" },
@@ -83,14 +92,17 @@ export const STATUS: Record<StatusId | "recebida", { label: string; tone: Tone; 
   excluida: { label: "Excluída", tone: "navy", icon: "fa-trash-can", owner: "" },
   triagem: { label: "Em triagem", tone: "purple", icon: "fa-magnifying-glass", owner: "PMO · C Solicitante" },
   priorizacao: { label: "Em priorização", tone: "purple", icon: "fa-ranking-star", owner: "PMO · C Solicitante, Tech" },
+  aprovacao: { label: "Aguardando priorização", tone: "yellow", icon: "fa-gavel", owner: "Reunião de priorização do backlog" },
   backlog: { label: "Backlog ativo", tone: "yellow", icon: "fa-layer-group", owner: "Reunião de cenários" },
-  cenarios: { label: "Cenários mapeados", tone: "yellow", icon: "fa-diagram-project", owner: "PMO · direcionar" },
+  validacao: { label: "Cenário em aprovação", tone: "yellow", icon: "fa-stamp", owner: "Reunião de aprovação de cenário" },
+  cenarios: { label: "Cenário aprovado", tone: "yellow", icon: "fa-diagram-project", owner: "PMO · direcionar" },
   modelagem: { label: "Modelagem de processos", tone: "purple", icon: "fa-sitemap", owner: "PMO + Solicitante" },
   execucao: { label: "Em execução (Tech)", tone: "orange", icon: "fa-code", owner: "Tech" },
   homologacao: { label: "Em homologação", tone: "blue", icon: "fa-clipboard-check", owner: "Tech + Solicitante" },
   encerramento: { label: "Registro de ganhos", tone: "green", icon: "fa-chart-line", owner: "PMO · atualizar status" },
   concluida: { label: "Concluída", tone: "green", icon: "fa-flag-checkered", owner: "Ciclo encerrado" },
   rejeitada: { label: "Rejeitada", tone: "red", icon: "fa-ban", owner: "" },
+  descontinuada: { label: "Descontinuada", tone: "navy", icon: "fa-circle-stop", owner: "" },
 };
 
 /** A cor de cada tom na variante de `tag/1` que existe no sistema. */
@@ -119,7 +131,9 @@ export const TONE_CLASS: Record<Tone, string> = {
 export const CUR_LABEL: Partial<Record<StatusId, string>> = {
   triagem: "Triagem e classificação interna",
   priorizacao: "Matriz de priorização",
+  aprovacao: "Reunião de priorização do backlog",
   backlog: "Reunião de desenho de cenários",
+  validacao: "Reunião de aprovação de cenário",
   cenarios: "Direcionar demanda conforme tipo",
   modelagem: "Modelar processo, POP e treinamento",
   execucao: "Parametrizar e desenvolver sistema",
@@ -135,7 +149,9 @@ export const CUR_LABEL: Partial<Record<StatusId, string>> = {
 export const RACI: Partial<Record<StatusId, [string, string][]>> = {
   triagem: [["R", "PMO"], ["C", "Solicitante"]],
   priorizacao: [["R", "PMO"], ["C", "Solicitante"], ["C", "Tech"]],
+  aprovacao: [["R", "PMO"], ["R", "Tech"], ["R", "Sócios"]],
   backlog: [["R", "PMO"], ["C", "Solicitante"], ["C", "Áreas de interface"], ["C", "Tech"]],
+  validacao: [["R", "PMO"], ["R", "Tech"], ["R", "Solicitante"], ["R", "Sócios"]],
   cenarios: [["R", "PMO"]],
   modelagem: [["R", "PMO"], ["R", "Solicitante"], ["C", "Áreas de interface"]],
   execucao: [["R", "Tech"]],
@@ -146,9 +162,10 @@ export const RACI: Partial<Record<StatusId, [string, string][]>> = {
 /**
  * Quem executa a etapa: os R do RACI. Modelagem é do PMO com o solicitante;
  * homologação, da Tech com o solicitante. "Solicitante" é sempre quem pediu.
+ * Nas duas reuniões de aprovação quem decide é o grupo; o PMO registra a decisão.
  */
 export const OWNER: Partial<Record<StatusId, Role[]>> = {
-  triagem: ["pmo"], priorizacao: ["pmo"], backlog: ["pmo"], cenarios: ["pmo"], modelagem: ["pmo", "solicitante"],
+  triagem: ["pmo"], priorizacao: ["pmo"], aprovacao: ["pmo"], backlog: ["pmo"], validacao: ["pmo"], cenarios: ["pmo"], modelagem: ["pmo", "solicitante"],
   execucao: ["tech"], homologacao: ["tech", "solicitante"], encerramento: ["pmo"],
 };
 
@@ -190,6 +207,52 @@ export type SmComment = { at: string; who: string; text: string; files?: SmFile[
 /** Alguém que também é afetado pela SM: de onde é e, se quis, como isso aparece na rotina. */
 export type Affected = { at: string; who: string; unit: string; area: string; text: string };
 export type Route = "processo" | "dev";
+
+/**
+ * As duas reuniões de aprovação do EPC: a de priorização do backlog (depois da
+ * matriz) e a de aprovação de cenário (depois do desenho de cenários).
+ */
+export type ApprovalStage = "aprovacao" | "validacao";
+/** `segue`: priorizada ou cenário aprovado; `volta`: não priorizada ou não aprovado; `descontinuada`: encerra. */
+export type ApprovalDecision = "segue" | "volta" | "descontinuada";
+export type Approval = { stage: ApprovalStage; at: string; who: string; date: string; participants: string[]; decision: ApprovalDecision; note: string };
+
+export const APPROVAL: Record<ApprovalStage, { meeting: string; board: string[]; options: { v: ApprovalDecision; label: string; hint: string }[] }> = {
+  aprovacao: {
+    meeting: "Reunião de priorização do backlog",
+    board: L.backlogBoard,
+    options: [
+      { v: "segue", label: "SM priorizada", hint: "Segue para a reunião de desenho de cenários e avisa o solicitante." },
+      { v: "volta", label: "SM não priorizada", hint: "Continua no backlog e volta à pauta da próxima reunião de priorização." },
+      { v: "descontinuada", label: "SM descontinuada", hint: "Atualiza o status e encerra o ciclo, com a justificativa enviada ao solicitante." },
+    ],
+  },
+  validacao: {
+    meeting: "Reunião de aprovação de cenário",
+    board: L.scenarioBoard,
+    options: [
+      { v: "segue", label: "Cenário aprovado", hint: "Segue para o direcionamento: processo, desenvolvimento ou os dois." },
+      { v: "volta", label: "Cenário não aprovado", hint: "Volta para a reunião de desenho de cenários, com o que precisa mudar." },
+      { v: "descontinuada", label: "SM descontinuada", hint: "Atualiza o status e encerra o ciclo, com a justificativa enviada ao solicitante." },
+    ],
+  },
+};
+
+export const decisionLabel = (a: Pick<Approval, "stage" | "decision">) => APPROVAL[a.stage].options.find((o) => o.v === a.decision)!.label;
+
+/* ============================================================
+   Plano de ação
+   ============================================================ */
+
+export type ActionStatus = "Pendente" | "Em andamento" | "Concluída";
+export const ACTION_STATUS: { v: ActionStatus; tag: TagVariant; icon: string }[] = [
+  { v: "Pendente", tag: "dark-purple", icon: "fa-circle" },
+  { v: "Em andamento", tag: "light-blue", icon: "fa-spinner" },
+  { v: "Concluída", tag: "green", icon: "fa-circle-check" },
+];
+
+/** Uma ação do plano: o que alguém ainda deve à SM, e até quando (`due`, `aaaa-mm-dd`). */
+export type SmAction = { id: string; text: string; owner: string; due: string; status: ActionStatus; createdAt: string; createdBy: string; doneAt?: string };
 
 /** As 16 perguntas do formulário de abertura. */
 export type SmForm = {
@@ -258,6 +321,14 @@ export type Sm = Omit<SmForm, "lgpd"> & {
   gainHours: string;
   gainDesc: string;
   closedAt: string;
+  // Reuniões de aprovação: o rascunho da reunião em curso e as decisões já tomadas.
+  apDate: string;
+  apParticipants: string[];
+  apDecision: "" | ApprovalDecision;
+  apNote: string;
+  approvals: Approval[];
+  /** Plano de ação (RN-011): o que cada um ainda deve à SM. */
+  actions: SmAction[];
   affected: Affected[];
   /** Quantas vezes o detalhe foi aberto. */
   views: number;
@@ -279,6 +350,7 @@ export const blankSm = (): Omit<Sm, SmRequired> => ({
   scores: null, p0: false, p0Reason: "", p0Just: "", meetingDate: "", participants: [], interfaceAreas: [], rules: "", reqs: "",
   routes: [], procFlow: false, procPop: false, procTraining: false, subpath: "",
   homologTech: false, homologReq: false, homologTechBy: "", homologTechAt: "", homologReqBy: "", homologReqAt: "", gainType: "", gainHours: "", gainDesc: "", closedAt: "",
+  apDate: "", apParticipants: [], apDecision: "", apNote: "", approvals: [], actions: [],
   affected: [], views: 0, comments: [], history: [],
 });
 
@@ -300,7 +372,16 @@ export function homologOf(s: Pick<Sm, "homologTechBy" | "homologTechAt" | "homol
    ============================================================ */
 
 /** Encerrada: não recebe mais "Também me afeta", mas segue visível para evitar pedido repetido. */
-export const isClosed = (s: Pick<Sm, "status">) => ["concluida", "rejeitada", "cancelada", "excluida"].includes(s.status);
+export const isClosed = (s: Pick<Sm, "status">) => ["concluida", "rejeitada", "cancelada", "excluida", "descontinuada"].includes(s.status);
+
+/** O papel de um usuário do admin, quando ele é um dos três que a tela mostra. */
+export const roleOfName = (name: string) => (Object.keys(USERS) as Role[]).find((r) => USERS[r].name === name);
+
+/** Vencida: o prazo passou e a ação não foi concluída. Não é um status escolhido. */
+export const isOverdue = (a: Pick<SmAction, "status" | "due">) => a.status !== "Concluída" && !!a.due && a.due < TODAY;
+
+export const openActions = (s: Pick<Sm, "actions">) => s.actions.filter((a) => a.status !== "Concluída");
+export const overdueActions = (s: Pick<Sm, "actions">) => s.actions.filter(isOverdue);
 
 export const isMine = (s: Pick<Sm, "requester">, role: Role) => s.requester === USERS[role].name;
 
@@ -389,8 +470,12 @@ export const hasWorkaround = (s: Pick<Sm, "workaround">) => s.workaround.trim().
 /** Nota mínima de um critério: com contorno relatado, Impacto e Risco começam em 3. */
 export const minScore = (s: Pick<Sm, "workaround">, key: CritKey) => (hasWorkaround(s) && (key === "impact" || key === "risk") ? 3 : 0);
 
-/** Posição no fluxo: recusada, cancelada e excluída param na triagem. */
-export const stageIndex = (s: Pick<Sm, "status">) => (["rejeitada", "cancelada", "excluida"].includes(s.status) ? 0 : ORDER.indexOf(s.status as StageId));
+/** A reunião em que a SM foi descontinuada. */
+export const stoppedAt = (s: Pick<Sm, "approvals">) => s.approvals.filter((a) => a.decision === "descontinuada").at(-1)?.stage ?? "aprovacao";
+
+/** Posição no fluxo: recusada, cancelada e excluída param na triagem; descontinuada, na reunião que a encerrou. */
+export const stageIndex = (s: Pick<Sm, "status" | "approvals">) =>
+  s.status === "descontinuada" ? ORDER.indexOf(stoppedAt(s)) : ["rejeitada", "cancelada", "excluida"].includes(s.status) ? 0 : ORDER.indexOf(s.status as StageId);
 
 /** Para ordenar por prioridade e score: sem prioridade vai para o fim. */
 export const prioRank = (s: Pick<Sm, "scores" | "p0">) => {
@@ -477,7 +562,7 @@ export function daysFromToday(at: string): number {
  * valores sugeridos para o painel apontar o que está parado, a validar com o PMO.
  */
 export const SLA_DAYS: Record<Exclude<StageId, "concluida">, number> = {
-  triagem: 5, priorizacao: 5, backlog: 10, cenarios: 3, modelagem: 15, execucao: 20, homologacao: 7, encerramento: 5,
+  triagem: 5, priorizacao: 5, aprovacao: 7, backlog: 10, validacao: 5, cenarios: 3, modelagem: 15, execucao: 20, homologacao: 7, encerramento: 5,
 };
 
 /**
@@ -486,7 +571,7 @@ export const SLA_DAYS: Record<Exclude<StageId, "concluida">, number> = {
  */
 export function stageTimes(s: Pick<Sm, "createdAt" | "status" | "history">) {
   const moves = s.history
-    .filter((h) => h.kind !== "recebida" && (ORDER as string[]).concat(["rejeitada", "excluida", "cancelada"]).includes(h.kind))
+    .filter((h) => h.kind !== "recebida" && (ORDER as string[]).concat(["rejeitada", "excluida", "cancelada", "descontinuada"]).includes(h.kind))
     .map((h, i) => ({ kind: h.kind, key: sortKey(h.at, i), day: daysFromToday(h.at) }))
     .sort((a, b) => a.key - b.key);
   const done: Partial<Record<StageId, number>> = {};

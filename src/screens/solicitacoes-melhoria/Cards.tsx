@@ -80,5 +80,6 @@ export function Outcome({ s }: { s: Sm }) {
   const nowrap = "whitespace-nowrap";
   if (s.status === "concluida") return <Tag item={s.gainHours ? `Entregue · +${s.gainHours} h/mês` : "Entregue"} variant="green" leftIcon="fa-flag-checkered" className={nowrap} />;
   if (s.status === "rejeitada") return <Tag item="Rejeitada na triagem" variant="red" leftIcon="fa-ban" className={nowrap} />;
+  if (s.status === "descontinuada") return <Tag item="Descontinuada" variant="dark-purple" leftIcon="fa-circle-stop" className={nowrap} />;
   return <Tag item={s.status === "excluida" ? "Excluída" : "Cancelada"} variant="dark-purple" leftIcon="fa-circle-xmark" className={nowrap} />;
 }

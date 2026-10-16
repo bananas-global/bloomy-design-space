@@ -15,7 +15,7 @@ import { Input } from "../../components/Input.js";
 import { Header } from "../../components/Layout.js";
 import { Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
-import { L, ORDER, PRIO, SLA_DAYS, STATUS, TAG_OF, affectsMe, daysInStage, fmt, isClosed, isMine, opts, prioOf, prioRank, scoreOf, type Role, type Sm, type StatusId, type Tone } from "./model.js";
+import { L, ORDER, PRIO, SLA_DAYS, STATUS, TAG_OF, affectsMe, daysInStage, fmt, isClosed, isMine, opts, overdueActions, prioOf, prioRank, scoreOf, type Role, type Sm, type StatusId, type Tone } from "./model.js";
 import { AffectButton, canAffect } from "./Afetados.js";
 import { Cards, Outcome } from "./Cards.js";
 import { PrioTag, StageTag, cx } from "./parts.js";
@@ -32,7 +32,7 @@ const VIEW_OPTIONS: Record<View, { icon: string; title: string }> = {
   kanban: { icon: "fa-table-columns", title: "Kanban" },
 };
 
-const STATUS_OPTIONS = ([...ORDER, "rejeitada", "cancelada", "excluida"] as StatusId[]).map((id) => [STATUS[id].label, id] as const);
+const STATUS_OPTIONS = ([...ORDER, "rejeitada", "cancelada", "descontinuada", "excluida"] as StatusId[]).map((id) => [STATUS[id].label, id] as const);
 const PRIO_OPTIONS = (Object.keys(PRIO) as (keyof typeof PRIO)[]).map((id) => [PRIO[id].full, id] as const);
 
 const createdKey = (s: Sm) => s.createdAt.slice(6, 10) + s.createdAt.slice(3, 5) + s.createdAt.slice(0, 2) + s.createdAt.slice(11);
@@ -250,6 +250,8 @@ function SmCard({ sm: s, role, onClick }: { sm: Sm; role: Role; onClick: () => v
   const days = daysInStage(s);
   const sla = SLA_DAYS[s.status as keyof typeof SLA_DAYS];
   const late = sla != null && days > sla;
+  // Ações vencidas aparecem para a gestão; o colaborador vê as dele na página.
+  const lateActions = role === "solicitante" ? 0 : overdueActions(s).length;
   return (
     <article onClick={onClick} className="cursor-pointer space-y-2.5 rounded-xl bg-white p-3 shadow-main transition-all hover:-translate-y-0.5">
       <div className="flex items-start justify-between gap-2">
@@ -265,6 +267,7 @@ function SmCard({ sm: s, role, onClick }: { sm: Sm; role: Role; onClick: () => v
         ) : (
           <Tag item={s.area} variant="dark-purple" leftIcon="fa-building" className="text-xs" />
         )}
+        {lateActions > 0 && <Tag item={lateActions === 1 ? "1 ação vencida" : `${lateActions} ações vencidas`} variant="red" leftIcon="fa-clock" className="text-xs" />}
       </div>
       <div className="flex items-center justify-between border-t border-brand-purple-dark/10 pt-2 text-xs font-bold">
         <span className="flex items-center gap-3 text-brand-purple-dark/60">

@@ -5,7 +5,9 @@
  *
  * Triagem e priorização são do PMO; reunião de cenários, direcionamento,
  * modelagem e encerramento também; desenvolvimento é da Tech; a homologação
- * fecha com a validação da Tech e o aceite do solicitante.
+ * fecha com a validação da Tech e o aceite do solicitante. As duas reuniões de
+ * aprovação (priorização do backlog e aprovação de cenário) são decididas pelo
+ * grupo do RACI; o PMO registra a decisão.
  */
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
@@ -17,9 +19,9 @@ import { Input, SwitchCard } from "../../components/Input.js";
 import { Header } from "../../components/Layout.js";
 import { Tag } from "../../components/Tag.js";
 import {
-  CRITS, CUR_LABEL, L, OWNER, PRIO, RACI, TAG_OF, TRIAGE, USERS, canAct, homologOf, isMine,
+  APPROVAL, CRITS, CUR_LABEL, L, OWNER, PRIO, RACI, TAG_OF, TRIAGE, USERS, canAct, decisionLabel, homologOf, isMine, isoToBR,
   fmt, hasWorkaround, minScore, opts, prioOf, roleLabel, routeText, scoreOf, triageOf,
-  type PrioId, type Role, type Route, type Sm,
+  type ApprovalStage, type PrioId, type Role, type Route, type Sm,
 } from "./model.js";
 import { reachText } from "./Afetados.js";
 import { Fact, Pending, StageFooter, cx } from "./parts.js";
@@ -49,7 +51,9 @@ export function Etapa({ s, role }: Props) {
 
       {s.status === "triagem" && <Triagem s={s} role={role} />}
       {s.status === "priorizacao" && <Priorizacao s={s} role={role} />}
+      {s.status === "aprovacao" && <Aprovacao s={s} role={role} stage="aprovacao" />}
       {s.status === "backlog" && <Cenarios s={s} role={role} />}
+      {s.status === "validacao" && <Aprovacao s={s} role={role} stage="validacao" />}
       {s.status === "cenarios" && <Direcionar s={s} role={role} />}
       {s.status === "modelagem" && <Modelagem s={s} role={role} />}
       {s.status === "execucao" && <Execucao s={s} role={role} />}
@@ -207,7 +211,7 @@ function Priorizacao({ s, role }: Props) {
       <Classificacao current={p} />
 
       <StageFooter>
-        <Pending missing={missing} ready="Score e prioridade gerados." />
+        <Pending missing={missing} ready="Score e prioridade gerados. Depois de salva, a SM aguarda a reunião de priorização do backlog." />
         {pmo && (
           <Button type="button" leftIcon="fa-floppy-disk" disabled={missing.length > 0} onClick={() => actions.saveBacklog(s.id, role)}>
             Salvar na base de backlog
@@ -309,10 +313,18 @@ function Cenarios({ s, role }: Props) {
   const pmo = role === "pmo";
   const set = patch(s);
   const missing = [!s.participants.length && "participantes", !s.rules.trim() && !s.reqs.trim() && "regras de negócio ou requisitos funcionais"].filter(Boolean) as string[];
+  // Voltou da aprovação de cenário: o que o grupo pediu para mudar.
+  const back = s.approvals.at(-1)?.stage === "validacao" && s.approvals.at(-1)?.decision === "volta" ? s.approvals.at(-1) : undefined;
 
   return (
     <div className="space-y-8">
-      <p className="text-sm text-brand-purple-dark/70">Demanda formalizada no backlog ativo. A reunião de desenho de cenários gera regras de negócio e/ou requisitos funcionais.</p>
+      <p className="text-sm text-brand-purple-dark/70">SM priorizada no backlog ativo. A reunião de desenho de cenários gera regras de negócio e/ou requisitos funcionais, que seguem para a aprovação de cenário.</p>
+      {back && (
+        <p className="flex gap-2.5 rounded-xl bg-orange-light p-3.5 text-sm text-brand-purple-dark">
+          <Icon name="fa-rotate-left" type="solid" className="mt-0.5 text-orange-dark" />
+          <span><b>Cenário não aprovado em {back.date ? isoToBR(back.date) : back.at.slice(0, 10)}.</b> {back.note}</span>
+        </p>
+      )}
       <Input type="date" id="sm_meeting_date" label="Data da reunião" value={s.meetingDate} disabled={!pmo} className="md:max-w-xs" onChange={(e) => set({ meetingDate: e.target.value })} />
       <CheckboxGroup
         label="Participantes consultados *"
@@ -331,10 +343,112 @@ function Cenarios({ s, role }: Props) {
       <Input type="textarea" id="sm_rules" rows={4} label="Regras de negócio mapeadas" placeholder="RN-01 — ..." value={s.rules} disabled={!pmo} onChange={(e) => set({ rules: e.target.value })} />
       <Input type="textarea" id="sm_reqs" rows={4} label="Requisitos funcionais mapeados" placeholder="RF-01 — ..." value={s.reqs} disabled={!pmo} onChange={(e) => set({ reqs: e.target.value })} />
       <StageFooter>
-        <Pending missing={missing} ready="Pronto para direcionamento." joiner=" e " />
+        <Pending missing={missing} ready="Pronto para a aprovação de cenário." joiner=" e " />
         {pmo && (
           <Button type="button" leftIcon="fa-diagram-project" disabled={missing.length > 0} onClick={() => actions.finishScenarios(s.id, role)}>
-            Concluir reunião de cenários
+            Concluir reunião · enviar para aprovação
+          </Button>
+        )}
+      </StageFooter>
+    </div>
+  );
+}
+
+/**
+ * As duas reuniões de aprovação do EPC. O grupo decide (PMO, Tech, Sócios e, no
+ * cenário, o solicitante); o PMO registra data, participantes, decisão e
+ * justificativa. "Sócios" não é papel com tela: entra como participante.
+ */
+function Aprovacao({ s, role, stage }: Props & { stage: ApprovalStage }) {
+  const pmo = role === "pmo";
+  const set = patch(s);
+  const cfg = APPROVAL[stage];
+  const option = cfg.options.find((o) => o.v === s.apDecision);
+  const needsNote = s.apDecision === "volta" || s.apDecision === "descontinuada";
+  const past = s.approvals.filter((a) => a.stage === stage);
+  const p = prioOf(s);
+  const missing = [
+    !s.apDate && "data da reunião",
+    !s.apParticipants.length && "participantes",
+    !s.apDecision && "decisão",
+    needsNote && !s.apNote.trim() && "justificativa",
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="space-y-8">
+      <p className="text-sm text-brand-purple-dark/70">
+        {stage === "aprovacao"
+          ? "A SM está na base de backlog e só segue depois de aprovada na reunião de priorização do backlog. Não priorizada, continua aqui e volta à pauta da próxima reunião."
+          : "O cenário desenhado só segue para o direcionamento depois de aprovado. Não aprovado, volta para a reunião de desenho de cenários."}{" "}
+        O PMO registra a decisão do grupo.
+      </p>
+
+      {stage === "aprovacao" ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-brand-purple-dark/5 p-3.5">
+          {p && <Tag item={`${PRIO[p].full} · ${fmt(scoreOf(s))} pts`} variant={TAG_OF[PRIO[p].tone]} />}
+          {s.effort && <Tag item={`Esforço ${s.effort.toLowerCase()}`} variant="light-purple" />}
+          <p className="min-w-48 flex-1 text-sm text-brand-purple-dark/70">{p ? PRIO[p].treatment : ""}</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Fact label="Regras de negócio mapeadas"><span className="whitespace-pre-line font-normal">{s.rules || "—"}</span></Fact>
+          <Fact label="Requisitos funcionais mapeados"><span className="whitespace-pre-line font-normal">{s.reqs || "—"}</span></Fact>
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-black text-brand-purple-dark/60">Reuniões anteriores</p>
+          {past.map((a) => (
+            <p key={a.at} className="flex gap-2.5 rounded-xl bg-orange-light p-3 text-sm text-brand-purple-dark">
+              <Icon name="fa-rotate-left" type="solid" className="mt-0.5 text-orange-dark" />
+              <span><b>{decisionLabel(a)} em {a.date ? isoToBR(a.date) : a.at.slice(0, 10)}</b> · {a.participants.join(", ")}. {a.note}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      <Input type="date" id={`sm_${stage}_date`} label="Data da reunião *" value={s.apDate} disabled={!pmo} className="md:max-w-xs" onChange={(e) => set({ apDate: e.target.value })} />
+      <CheckboxGroup
+        label="Quem decidiu *"
+        field={{ id: `sm_${stage}_participants`, name: "apParticipants", value: s.apParticipants }}
+        checkbox={cfg.board.map((v) => ({ value: v, label: v === "Solicitante" ? `Solicitante (${s.requester})` : v, disable: !pmo }))}
+        wrapperClass="flex flex-wrap gap-2 space-x-0!"
+        onChange={(e) => actions.toggle(s.id, "apParticipants", e.target.value)}
+      />
+      <div className="space-y-2">
+        <RadioGroup
+          label="Decisão *"
+          field={{ id: `sm_${stage}_decision`, name: "apDecision", value: s.apDecision }}
+          radio={cfg.options.map((o) => ({ value: o.v, label: o.label, disabled: !pmo }))}
+          onChange={(e) => set({ apDecision: e.target.value as Sm["apDecision"] })}
+        />
+        {option && <p className="text-sm text-brand-purple-dark/60">{option.hint}</p>}
+      </div>
+      {(pmo || s.apNote) && (
+        <Input
+          type="textarea"
+          id={`sm_${stage}_note`}
+          rows={3}
+          label={needsNote ? "Justificativa *" : "Observação"}
+          placeholder={needsNote ? "Será enviada ao solicitante e fica no histórico." : "Opcional."}
+          value={s.apNote}
+          disabled={!pmo}
+          onChange={(e) => set({ apNote: e.target.value })}
+        />
+      )}
+
+      <StageFooter>
+        <Pending missing={missing} ready="Decisão pronta para registrar." joiner=", " />
+        {pmo && (
+          <Button
+            type="button"
+            color={s.apDecision === "descontinuada" ? "red" : undefined}
+            leftIcon={s.apDecision === "descontinuada" ? "fa-circle-stop" : s.apDecision === "volta" ? "fa-rotate-left" : "fa-gavel"}
+            disabled={missing.length > 0}
+            onClick={() => actions.decide(s.id, role)}
+          >
+            {s.apDecision === "descontinuada" ? "Descontinuar e notificar solicitante" : "Registrar decisão"}
           </Button>
         )}
       </StageFooter>
@@ -360,7 +474,7 @@ function Direcionar({ s, role }: Props) {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-brand-purple-dark/70">Direcione conforme o tipo de solicitação. É possível seguir pelos dois caminhos ao mesmo tempo.</p>
+      <p className="text-sm text-brand-purple-dark/70">Cenário aprovado. Direcione conforme o tipo de solicitação. É possível seguir pelos dois caminhos ao mesmo tempo.</p>
       {pmo ? (
         <div className="grid gap-3">
           {ROUTES.map((r) => (

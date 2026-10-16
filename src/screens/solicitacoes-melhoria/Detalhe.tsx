@@ -20,9 +20,10 @@ import { Tag } from "../../components/Tag.js";
 import { AffectedCard } from "./Afetados.js";
 import { Etapa } from "./Etapa.js";
 import {
-  CRITS, L, ORDER, STATUS, USERS, fmt, homologOf, isClosed, isColleague, opts, isoToBR, prioOf, routeText, sortKey, stageIndex,
+  APPROVAL, CRITS, L, ORDER, STATUS, USERS, decisionLabel, fmt, homologOf, isClosed, isColleague, opts, isoToBR, prioOf, routeText, sortKey, stageIndex, stoppedAt,
   type Role, type Sm, type SmFile,
 } from "./model.js";
+import { PlanoAcao } from "./Plano.js";
 import { Answer, Fact, FileList, FooterSlot, PrioTag, SmUploader, StageTag, cx } from "./parts.js";
 import { sm as actions } from "./store.js";
 
@@ -69,6 +70,7 @@ export function Detalhe({ s, role, sent = false, onDismissSent }: {
           <div className="min-w-0 space-y-6 lg:col-span-2">
             {colleague ? <ColleagueNote s={s} /> : <Etapa s={s} role={role} />}
             <Desfecho s={s} />
+            {!colleague && <PlanoAcao s={s} role={role} />}
             {(idx >= 2 || s.status === "rejeitada") && <Governanca s={s} />}
             {!colleague && <Historico s={s} role={role} />}
           </div>
@@ -176,7 +178,8 @@ function Desfecho({ s }: { s: Sm }) {
       : { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-circle-xmark", title: `Cancelada pelo solicitante em ${s.closedAt}`, text: "A solicitação foi retirada do fluxo antes da aprovação para o backlog." },
     rejeitada: { cls: "bg-red-light text-red-dark", icon: "fa-ban", title: `Rejeitada na triagem · ${s.triage}`, text: s.rejection },
     excluida: { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-trash-can", title: `Excluída pelo PMO em ${s.closedAt}`, text: s.history.filter((h) => h.kind === "excluida").at(-1)?.text ?? "" },
-  }[s.status as "concluida" | "cancelada" | "rejeitada" | "excluida"];
+    descontinuada: { cls: "bg-brand-purple-dark/6 text-brand-purple-dark", icon: "fa-circle-stop", title: `Descontinuada na ${APPROVAL[stoppedAt(s)].meeting.toLowerCase()} em ${s.closedAt}`, text: s.approvals.at(-1)?.note ?? "" },
+  }[s.status as "concluida" | "cancelada" | "rejeitada" | "excluida" | "descontinuada"];
   if (!banner) return null;
   return (
     <div className={`flex items-start gap-4 rounded-2xl px-6 py-5 ${banner.cls}`}>
@@ -226,7 +229,22 @@ function Governanca({ s }: { s: Sm }) {
           ))}
         </div>
       )}
-      {idx >= 3 && (
+      {s.approvals.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-black text-brand-purple-dark/60">Reuniões de aprovação</p>
+          <ul className="divide-y divide-brand-purple-dark/10 rounded-xl border border-brand-purple-dark/10">
+            {s.approvals.map((a) => (
+              <li key={a.at} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm">
+                <Tag item={decisionLabel(a)} variant={a.decision === "segue" ? "green" : a.decision === "volta" ? "orange" : "dark-purple"} className="whitespace-nowrap" />
+                <span className="font-bold text-brand-purple-dark">{APPROVAL[a.stage].meeting}</span>
+                <span className="text-brand-purple-dark/60">{a.date ? isoToBR(a.date) : a.at.slice(0, 10)} · {a.participants.join(", ")}</span>
+                {a.note && <span className="basis-full text-brand-purple-dark/70">{a.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {idx >= ORDER.indexOf("validacao") && (
         <div className="grid gap-4 md:grid-cols-2">
           <Answer label="Regras de negócio">{s.rules || "—"}</Answer>
           <Answer label="Requisitos funcionais">{s.reqs || "—"}</Answer>
@@ -288,25 +306,29 @@ const FLOW = [
   { key: "f3", at: 0, label: "Triagem e classificação interna", raci: "R PMO · C Solicitante", event: "Análise de triagem preliminar concluída", icon: "fa-magnifying-glass" },
   { key: "rej", at: 0, label: "Registrar recusa com justificativa", raci: "R PMO · Não realizar", event: "Solicitante notificado com motivo de recusa", icon: "fa-ban" },
   { key: "f4", at: 1, label: "Atribuir notas na matriz de priorização", raci: "R PMO · C Solicitante · C Tech", event: "Score 0–100 e prioridade P0–P4 gerados", icon: "fa-ranking-star" },
-  { key: "f5", at: 1.5, label: "Aprovar para o backlog", raci: "R PMO", event: "Backlog ativo · KPIs recalculados", icon: "fa-floppy-disk" },
-  { key: "f6", at: 2, label: "Realizar reunião de desenho de cenários", raci: "R PMO · C Solicitante · C Áreas de interface · C Tech", event: "Regras e/ou requisitos mapeados", icon: "fa-diagram-project" },
-  { key: "f7", at: 3, label: "Direcionar demanda conforme tipo", raci: "R PMO", event: "", icon: "fa-signs-post" },
-  { key: "f8", at: 4, label: "Modelar processo, POP e treinamento", raci: "R PMO · R Solicitante · C Áreas de interface", event: "", icon: "fa-sitemap" },
-  { key: "f9", at: 5, label: "Parametrizar e desenvolver sistema", raci: "R Tech", event: "Funcionalidade implementada em homologação", icon: "fa-code" },
-  { key: "f10", at: 6, label: "Homologar resultado prático em produção", raci: "R Tech · Aceite do Solicitante", event: "Entrega homologada em produção", icon: "fa-clipboard-check" },
-  { key: "f11", at: 7, label: "Atualizar status da SM e registrar ganhos", raci: "R PMO", event: "Ciclo encerrado · valor capturado no KPI", icon: "fa-chart-line" },
+  { key: "f5", at: 1.5, label: "Salvar na base de backlog", raci: "R PMO", event: "Demanda formalizada no backlog · KPIs recalculados", icon: "fa-floppy-disk" },
+  { key: "ap1", at: 2, label: "Realizar reunião de priorização do backlog", raci: "R PMO · R Tech · R Sócios", event: "SM priorizada", icon: "fa-gavel" },
+  { key: "f6", at: 3, label: "Realizar reunião de desenho de cenários", raci: "R PMO · C Solicitante · C Áreas de interface · C Tech", event: "Regras e/ou requisitos mapeados", icon: "fa-diagram-project" },
+  { key: "ap2", at: 4, label: "Realizar reunião de aprovação de cenário", raci: "R PMO · R Tech · R Solicitante · R Sócios", event: "Cenário aprovado", icon: "fa-stamp" },
+  { key: "f7", at: 5, label: "Direcionar demanda conforme tipo", raci: "R PMO", event: "", icon: "fa-signs-post" },
+  { key: "f8", at: 6, label: "Modelar processo, POP e treinamento", raci: "R PMO · R Solicitante · C Áreas de interface", event: "", icon: "fa-sitemap" },
+  { key: "f9", at: 7, label: "Parametrizar e desenvolver sistema", raci: "R Tech", event: "Funcionalidade implementada em homologação", icon: "fa-code" },
+  { key: "f10", at: 8, label: "Homologar resultado prático em produção", raci: "R Tech · Aceite do Solicitante", event: "Entrega homologada em produção", icon: "fa-clipboard-check" },
+  { key: "f11", at: 9, label: "Atualizar status da SM e registrar ganhos", raci: "R PMO", event: "Ciclo encerrado · valor capturado no KPI", icon: "fa-chart-line" },
 ];
 
 /**
  * Os passos com o estado de cada um: feito (verde, com o evento que gerou),
  * atual (azul), por fazer e "não se aplica neste caminho" (riscado).
  */
-type StepState = "done" | "cur" | "todo" | "rej";
+type StepState = "done" | "cur" | "todo" | "rej" | "stop";
 type FlowStep = (typeof FLOW)[number] & { state: StepState; skip: boolean; event: string };
 
 /** Os passos do fluxo oficial com o estado de cada um no caminho desta SM. */
 function flowSteps(s: Sm): FlowStep[] {
   const rej = s.status === "rejeitada";
+  // Descontinuada: o fluxo para na reunião que a encerrou; o que vem depois não se aplica.
+  const stop = s.status === "descontinuada";
   const idx = stageIndex(s);
   const decided = idx > ORDER.indexOf("cenarios");
   const proc = s.routes.includes("processo");
@@ -324,9 +346,10 @@ function flowSteps(s: Sm): FlowStep[] {
     if (f.key === "f5") state = idx > 1 ? "done" : "todo";
     if (f.key === "rej") state = "rej";
     if (rej && f.key === "f3") state = "done";
-    const skip = (decided && f.key === "f8" && !proc) || ((f.key === "f9" || f.key === "f10") && noDev);
+    if (stop && f.at === idx) state = "stop";
+    const skip = (stop && f.at > idx) || (decided && f.key === "f8" && !proc) || ((f.key === "f9" || f.key === "f10") && noDev);
     if (s.status === "concluida" && !skip) state = "done";
-    return { ...f, state, skip, event: events[f.key] || f.event };
+    return { ...f, state, skip, event: state === "stop" ? "SM descontinuada" : events[f.key] || f.event };
   });
 }
 
@@ -335,6 +358,7 @@ const STEP_TAG: Record<StepState, { item: string; variant: "green" | "light-blue
   cur: { item: "Em andamento", variant: "light-blue" },
   todo: { item: "Pendente", variant: "dark-purple" },
   rej: { item: "Recusada", variant: "red" },
+  stop: { item: "Descontinuada", variant: "dark-purple" },
 };
 
 /**
@@ -348,12 +372,12 @@ const STEP_TAG: Record<StepState, { item: string; variant: "green" | "light-blue
 function FlowStepper({ s }: { s: Sm }) {
   const steps = flowSteps(s);
   const live = steps.map((st, i) => ({ st, i })).filter(({ st }) => !st.skip);
-  const curPos = live.findIndex(({ st }) => st.state === "cur" || st.state === "rej");
+  const curPos = live.findIndex(({ st }) => st.state === "cur" || st.state === "rej" || st.state === "stop");
   // Sem etapa atual (concluída): as duas últimas feitas.
   const shown = new Set(
     (curPos >= 0 ? live.slice(Math.max(0, curPos - 1), curPos + 2) : live.slice(-2)).map(({ i }) => i),
   );
-  const reached = Math.max(...steps.map((st, i) => (st.state === "done" || st.state === "cur" || st.state === "rej" ? i : -1)));
+  const reached = Math.max(...steps.map((st, i) => (st.state === "done" || st.state === "cur" || st.state === "rej" || st.state === "stop" ? i : -1)));
 
   return (
     // O respiro (p-1) deixa o anel da etapa atual inteiro: a rolagem horizontal corta o que sai da caixa.
@@ -390,6 +414,7 @@ function StepNode({ n, state, skip }: { n: number; state: StepState; skip: boole
   if (skip) return <span className={cx(base, "border border-dashed border-brand-purple-dark/20 text-brand-purple-dark/30")}><Icon name="fa-minus" /></span>;
   if (state === "done") return <span className={cx(base, "bg-green text-white")}><Icon name="fa-check" type="solid" /></span>;
   if (state === "rej") return <span className={cx(base, "bg-red text-white")}><Icon name="fa-xmark" type="solid" /></span>;
+  if (state === "stop") return <span className={cx(base, "bg-brand-purple-dark text-white")}><Icon name="fa-stop" type="solid" /></span>;
   if (state === "cur") return <span className={cx(base, "bg-brand-blue text-white ring-2 ring-brand-blue ring-offset-2")}>{n}</span>;
   return <span className={cx(base, "bg-brand-purple-dark/10")}><span className="h-2 w-2 rounded-full border-2 border-brand-purple-dark/50" /></span>;
 }

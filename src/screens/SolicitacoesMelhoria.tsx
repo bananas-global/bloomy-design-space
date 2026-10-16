@@ -31,6 +31,7 @@ import {
 } from "./solicitacoes-melhoria/flow.js";
 import { PRIO, STATUS, TODAY_BR, USERS, daysFromToday, fmt, isMine, prioOf, reachOf, routeText, scoreOf, type Role, type Sm } from "./solicitacoes-melhoria/model.js";
 import { NovaSolicitacao } from "./solicitacoes-melhoria/NovaSolicitacao.js";
+import { MyActions } from "./solicitacoes-melhoria/Plano.js";
 import { Painel } from "./solicitacoes-melhoria/Painel.js";
 import { EMPTY_FILTERS, Solicitacoes, ViewSelector, type Filters, type View } from "./solicitacoes-melhoria/Solicitacoes.js";
 import { sm as actions, useSmData } from "./solicitacoes-melhoria/store.js";
@@ -256,10 +257,13 @@ function HubScreen({ context, area }: { context: ScenarioContext; area: Area }) 
   if (area === "mine") {
     return (
       <SmLayout context={context} role={role} breadcrumbs={crumbs} notifications={data.notifications}>
-        <Card className="space-y-6">
-          {header}
-          {list}
-        </Card>
+        <div className="space-y-6">
+          <MyActions sms={visible} role={role} onOpen={open} />
+          <Card className="space-y-6">
+            {header}
+            {list}
+          </Card>
+        </div>
       </SmLayout>
     );
   }
