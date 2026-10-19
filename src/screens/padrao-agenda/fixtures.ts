@@ -26,12 +26,13 @@ const it = (id: string, weekday: number, hour: number, slug: SpecSlug, professio
 
 /**
  * Três horários com atendimentos simultâneos: segunda 08:00 (Paciente +
- * Responsável), quarta 08:00 (Paciente + AT) e quinta 13:00 (Paciente +
- * Responsável, na Unidade Girassol). A quinta inteira é na Girassol.
+ * Responsável + AT, um de cada tipo), quarta 08:00 (Paciente + AT) e quinta
+ * 13:00 (Paciente + Responsável, na Unidade Girassol). A quinta inteira é na Girassol.
  */
 const ITEMS: AgendaItem[] = [
   it("a1", 1, 8, "psychology", "Helena Martins Costa", "Sala Verde - 02"),
   it("a1r", 1, 8, "psychology", "Rafael Tavares", "Sala Azul - 01", "guardian", "Orientação Parental", JARDIM, "Renata Andrade"),
+  it("a1t", 1, 8, "psychology", "Carina Ferreira", "Sala Verde - 02", "at"),
   it("a2", 1, 10, "phonoaudiology", "Fábio Stoll Pereira", "Sala Azul - 01"),
   it("a3", 1, 14, "psychology", "Carina Ferreira", "Sala Lúdica - 03", "at"),
   it("a4", 2, 9, "occupational_therapy", "Mariana Palmeira", "Sala Sensorial - 04"),

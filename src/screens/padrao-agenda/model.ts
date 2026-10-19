@@ -106,24 +106,25 @@ export type AgendaItem = {
 /** Um responsável do paciente, de "Dados dos Responsáveis". */
 export type Guardian = { name: string; relation: string };
 
-/** As duplas que podem dividir um horário; as outras ainda estão em validação. */
-const PAIRS = ["guardian|patient", "at|patient"];
-export const MAX_PER_SLOT = 2;
+/** Um horário tem no máximo um atendimento de cada tipo: Paciente, Responsável e AT. */
+export const MAX_PER_SLOT = TYPES.length;
 
 /**
  * As regras de um horário com mais de um atendimento. `error` impede salvar;
- * `warn` avisa de uma combinação que ainda não foi validada.
+ * `warn` avisa de uma combinação que ainda não foi validada (sem atendimento
+ * ao paciente, como Responsável + AT).
  */
 export function slotRules(f: Pick<AgendaItem, "type" | "professional" | "unit">, others: AgendaItem[]): { error?: string; warn?: string } {
   if (!others.length) return {};
-  if (others.length >= MAX_PER_SLOT) return { error: `No máximo ${MAX_PER_SLOT} atendimentos no mesmo horário.` };
-  if (f.type === "patient" && others.some((o) => o.type === "patient")) return { error: "Já existe um atendimento ao paciente neste horário." };
+  if (others.length >= MAX_PER_SLOT) return { error: `No máximo ${MAX_PER_SLOT} atendimentos no mesmo horário, um de cada tipo.` };
+  if (others.some((o) => o.type === f.type))
+    return { error: f.type === "patient" ? "Já existe um atendimento ao paciente neste horário." : `Já existe um atendimento de ${TYPE[f.type].label} neste horário.` };
   const same = others.find((o) => o.professional === f.professional);
   if (same) return { error: `${first(f.professional)} já tem um atendimento neste horário.` };
   const unit = others.find((o) => o.unit !== f.unit);
   if (unit) return { error: `Atendimentos no mesmo horário precisam ser na mesma unidade (${unit.unit}).` };
-  const pair = [f.type, others[0]!.type].sort().join("|");
-  if (!PAIRS.includes(pair)) return { warn: `${TYPE[f.type].label} + ${TYPE[others[0]!.type].label} no mesmo horário ainda está em validação.` };
+  if (f.type !== "patient" && !others.some((o) => o.type === "patient"))
+    return { warn: `${[f, ...others].map((o) => TYPE[o.type].label).join(" + ")} sem atendimento ao paciente ainda está em validação.` };
   return {};
 }
 

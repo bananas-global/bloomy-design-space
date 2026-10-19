@@ -184,7 +184,8 @@ function Agenda({ data, context }: { data: AgendaFixture; context: ScenarioConte
     // Horário ocupado: o novo entra como simultâneo, na unidade de quem já está lá.
     if (taken.length >= MAX_PER_SLOT) return;
     const slug = lens !== "none" ? lens : state.lastSlug;
-    const type: ItemType = taken.some((x) => x.type === "patient") ? "guardian" : "patient";
+    // O tipo sugerido é o primeiro que o horário ainda não tem: Paciente, depois Responsável, depois AT.
+    const type = TYPES.find((t) => !taken.some((x) => x.type === t.value))!.value;
     const unit = taken[0]?.unit ?? homeUnit(data);
     set({ sel: { weekday: wd, hour: h }, err: "", f: { type, slug, slots: [{ weekday: wd, hour: h }], service: "", professional: "", location: "", unit, room: "none", weekday: wd, hour: h } });
   };
@@ -590,7 +591,8 @@ function TypeBadge({ type }: { type: ItemType }) {
  * nome e sobrenome do profissional e, encostadas à direita, a unidade e a badge
  * do tipo. O serviço por extenso e a sala ficam no título; na densidade confortável, a sala
  * ganha uma segunda linha.
- * Altura fixa (`CARD_H`): num horário com dois atendimentos, os cartões se empilham, cada um com a sua cor.
+ * Altura fixa (`CARD_H`): num horário com mais de um atendimento (até três, um de
+ * cada tipo), os cartões se empilham, cada um com a sua cor.
  */
 function ItemCard({ it, compact, active, dim, onClick }: { it: AgendaItem; compact: boolean; active: boolean; dim: boolean; onClick: (e: MouseEvent) => void }) {
   const c = tone(it.slug);
@@ -726,9 +728,9 @@ function Editor({ f, guardians, items, others, editingId, multi, err, isPref, up
         radio={TYPES.map((t) => ({
           value: t.value,
           label: t.label,
-          // Dois atendimentos diretos ao paciente no mesmo horário não podem.
-          disabled: t.value === "patient" && others.some((o) => o.type === "patient"),
-          title: t.value === "patient" && others.some((o) => o.type === "patient") ? "Já existe um atendimento ao paciente neste horário" : undefined,
+          // Um atendimento de cada tipo por horário: o tipo que já está lá fica desabilitado.
+          disabled: others.some((o) => o.type === t.value),
+          title: others.some((o) => o.type === t.value) ? `Já existe um atendimento de ${t.label} neste horário` : undefined,
         }))}
         onChange={(e) => up({ type: e.target.value as ItemType })}
       />
