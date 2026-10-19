@@ -1,0 +1,26 @@
+/* Proposta de grade: "Baixar PDF" imprime só uma cópia da folha, em A4 e sem margem. */
+.pg-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body.pg-printing > :not(.pg-print-root) {
+    display: none !important;
+  }
+
+  body.pg-printing .pg-print-root {
+    display: block;
+  }
+
+  body.pg-printing .pg-print-root .pg-doc {
+    zoom: 1 !important;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
