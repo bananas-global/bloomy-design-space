@@ -3,20 +3,19 @@
  * Novo — não existe no Phoenix.
  *
  * A semana de terapias que a criança faz hoje em outra clínica (dia, hora e
- * especialidade, sem profissional). Serve de base para a carga horária e para
- * a Proposta de grade. A equipe registra na grade; a família preenche pelo
+ * especialidade, sem profissional). Serve de referência para a Proposta de
+ * grade. A equipe registra na grade; a família preenche pelo
  * pedido do cartão Preenchimento pela família.
  */
 import { useState } from "react";
 import { Button } from "../../components/Button.js";
 import { DrawerModal } from "../../components/Overlay.js";
-import { SwitchCard } from "../../components/Input.js";
 import { TODAY } from "../../components/today.js";
 import { fmtBR, type CurrentWeek, type Lead, type WeekBlock } from "./model.js";
 import type { Up } from "./NegocioTab.js";
 import { byFamily } from "./FamilyRequest.js";
-import { SQUARE_DRAWER, Banner, Note, Section, fld } from "./parts.js";
-import { toSpecialties, tone, totals } from "./week.js";
+import { SQUARE_DRAWER, Banner, Note, Section } from "./parts.js";
+import { tone, totals } from "./week.js";
 import { BlockEditor, HoursSummary, SpecPills, WeekGrid, WeekLayout, useWeekEditor } from "./WeekGrid.js";
 
 export function AgendaAnterior({ lead, up }: { lead: Lead; up: Up }) {
@@ -29,7 +28,7 @@ export function AgendaAnterior({ lead, up }: { lead: Lead; up: Up }) {
     <Section
       anchor="agenda-anterior"
       title="Agenda anterior"
-      desc="O que a criança já faz hoje em outra clínica: dia, horário e especialidade. Serve de base para a carga horária e para a proposta de grade."
+      desc="O que a criança já faz hoje em outra clínica: dia, horário e especialidade. Serve de referência para a proposta de grade."
       tag={blocks.length ? `${blocks.length}h semanais` : null}
       fam={byFamily(lead, "agenda")}
       action={
@@ -60,7 +59,6 @@ export function AgendaAnterior({ lead, up }: { lead: Lead; up: Up }) {
 function AgendaDrawer({ lead, onClose, onSave }: { lead: Lead; onClose: () => void; onSave: (patch: Partial<Lead>) => void }) {
   const init = lead.currentWeek;
   const [blocks, setBlocks] = useState<WeekBlock[]>(() => (init?.blocks ?? []).map((b) => ({ ...b })));
-  const [useHours, setUseHours] = useState(false);
   const editor = useWeekEditor({ blocks, setBlocks, defaultSpec: lead.specialties[0]?.spec ?? "Análise do Comportamento" });
   const fromFam = init?.src === "familia";
 
@@ -68,10 +66,7 @@ function AgendaDrawer({ lead, onClose, onSave }: { lead: Lead; onClose: () => vo
     const currentWeek: CurrentWeek | null = blocks.length
       ? fromFam ? { ...init!, blocks, reviewed: true } : { blocks, src: "equipe", at: TODAY }
       : null;
-    onSave({
-      currentWeek,
-      ...(useHours && blocks.length ? { specialties: toSpecialties(blocks) } : {}),
-    });
+    onSave({ currentWeek });
   }
 
   return (
@@ -88,10 +83,6 @@ function AgendaDrawer({ lead, onClose, onSave }: { lead: Lead; onClose: () => vo
             <>
               <BlockEditor editor={editor} blocks={blocks} availability={lead.availability} />
               <HoursSummary title="Resumo da semana" rows={totals(blocks).map((t) => ({ spec: t.spec, got: t.hours }))} />
-              <div className="flex flex-col gap-2">
-                <p className="m-0 text-xs font-bold uppercase tracking-widest text-brand-purple-dark/60">Replicar na Bloomy</p>
-                <SwitchCard field={fld("current_week_use_hours", useHours)} title="Usar como carga horária" description="Horas por especialidade no lead" onChange={(e) => setUseHours(e.target.checked)} />
-              </div>
             </>
           }
         >

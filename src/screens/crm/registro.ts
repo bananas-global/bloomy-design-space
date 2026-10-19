@@ -104,9 +104,10 @@ export const feature: Feature = {
       controls: { view: "board", lead: "ld5", tab: "negocio", convert: "closed" },
       intent: "Miguel Costa faz 6h por semana em outra clínica; a equipe registrou a agenda.",
       expected: [
-        "O card Agenda anterior: \"6 horários por semana · 6h\", as horas por especialidade e Enviar por WhatsApp.",
+        "O card Agenda anterior mostra \"6h semanais\", as horas por especialidade, a data do registro pela equipe e o botão Editar agenda no cabeçalho.",
+        "A família preenche a agenda anterior pelo pedido de Preenchimento pela família; o card Agenda anterior não tem envio próprio por WhatsApp.",
         "Editar agenda abre a grade de segunda a sábado, das 07:00 às 20:00, no desenho do Padrão de Agenda: estrela na disponibilidade da família, Shift + clique para vários horários e o painel de edição ao lado.",
-        "Ao salvar, \"Usar como carga horária\" troca a carga do lead pelas horas da grade; \"Usar como disponibilidade\" troca a disponibilidade da família.",
+        "Salvar semana atualiza somente a agenda anterior, sem alterar a carga horária solicitada nem a disponibilidade da família. A agenda preenchida pela família fica marcada como revisada pela equipe.",
       ],
     }),
     scenario({
