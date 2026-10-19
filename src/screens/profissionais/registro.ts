@@ -10,10 +10,9 @@ export const feature: Feature = {
       route: PROFESSIONALS_PATH,
       fixture: "professionals.list",
       persona: "admin",
-      intent: "A lista de profissionais abre em Cadastro, com o seletor das três visões e o contador de pendências na Documentação.",
+      intent: "A lista de profissionais abre em Cadastro, com as três visões no button_tabs.",
       expected: [
-        "Título Profissionais; à direita o seletor Cadastro / Documentação / Controle de horas e Novo profissional.",
-        "Documentação mostra o contador vermelho 4: profissionais com documento vencido ou padrão pendente.",
+        "Título Profissionais; à direita o button_tabs Cadastro / Documentação / Controle de horas e Novo profissional.",
         "Filtros Nome/Conselho, Especialidade, Contato, Perfil e Status, com os prompts \"Selecione …\"; Status abre em Ativo, como no sistema.",
         "Colunas Nome, Especialidade, Conselho, Tipo e Formação em Saúde; embaixo, \"Mostrando 1 até 9 de 9 registros\" e a paginação.",
         "Em inativação primeiro: Tânia (sai 12/08/2026 · 7 dias) e Luciana (sai 31/08/2026 · 26 dias), com ponto laranja e fundo laranja na linha. Logo depois, Lívia (TBD).",

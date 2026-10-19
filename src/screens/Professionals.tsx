@@ -3,14 +3,14 @@
  *
  * No monólito, `ProfessionalLive.Index` é a lista (Cadastro) e o Controle de
  * horas é outra página (`ProfessionalLive.HoursControl`), aberta por um
- * `link_button`. Aqui as duas ficam atrás de um seletor, com uma terceira
+ * `link_button`. Aqui as duas ficam num `button_tabs`, com uma terceira
  * visão nova, Documentação: a matriz de documentos da equipe (cadastro,
  * internos, ocupacionais) e o credenciamento em cada operadora.
  *
- * Novo — não existe no Phoenix: o seletor de visão (com ícone e contador),
+ * Novo — não existe no Phoenix: o `button_tabs` com as três visões,
  * a visão Documentação e os seus drawers.
  */
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ScenarioContext, ScreenProps } from "@brucesantos/design-space";
 import { LinkButton, showToast } from "../components/Action.js";
 import { Button } from "../components/Button.js";
@@ -20,6 +20,7 @@ import { Input } from "../components/Input.js";
 import { Header, MetaInfo } from "../components/Layout.js";
 import { Pagination } from "../components/Pagination.js";
 import { SimpleTable } from "../components/Table.js";
+import { ButtonTabs, titleToSlug, useTrackedTab } from "../components/Tabs.js";
 import { Tag, TagList } from "../components/Tag.js";
 import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { DocDrawer, OpDrawer } from "./profissionais/drawers.js";
@@ -40,7 +41,7 @@ import {
   type ProfDoc,
   type Professional,
 } from "./profissionais/model.js";
-import { CellBox, Completeness, NameCell, Rollup, SearchFilter, SelectFilter, ViewToggle } from "./profissionais/parts.js";
+import { CellBox, Completeness, NameCell, Rollup, SearchFilter, SelectFilter } from "./profissionais/parts.js";
 import { DocsProvider, useDocs } from "./profissionais/store.js";
 
 export const PROFESSIONALS_PATH = "/backoffice/profissionais";
@@ -479,26 +480,38 @@ function HoursView({ professionals, initialProcessed }: { professionals: Profess
 /* Tela                                                                */
 /* ------------------------------------------------------------------ */
 
+/** O `id` e o `tracker_id` do `button_tabs` das visões. */
+const VIEW_TABS_ID = "professionals-view";
+const VIEW_TRACKER = "view";
+const VIEW_TITLES: Record<ProfessionalsView, string> = { list: "Cadastro", docs: "Documentação", hours: "Controle de horas" };
+const VIEWS = Object.keys(VIEW_TITLES) as ProfessionalsView[];
+
+/**
+ * Abre o `button_tabs` na visão do cenário: grava a aba na query antes de ele
+ * montar, como o `tracker_id` faz no Phoenix. Sobrescreve a de outro cenário.
+ */
+function openView(view: ProfessionalsView) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  params.set(VIEW_TRACKER, `${VIEW_TABS_ID}|${titleToSlug(VIEW_TITLES[view])}`);
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
+}
+
 function ProfessionalsCard({ fixture, canCreate }: { fixture: ProfessionalsFixture; canCreate: boolean }) {
-  const { rows } = useDocs();
-  const [view, setView] = useState<ProfessionalsView>(fixture.view);
-  // Quantos profissionais têm documento vencido ou padrão pendente.
-  const pending = useMemo(() => rows.filter((r) => r.expired.length || r.missing.length).length, [rows]);
+  // Roda antes do `ButtonTabs` montar e ler a query.
+  useState(() => openView(fixture.view));
+  const slug = useTrackedTab(VIEW_TRACKER, VIEW_TABS_ID);
+  const view = VIEWS.find((v) => titleToSlug(VIEW_TITLES[v]) === slug) ?? "list";
 
   return (
     <Card>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <Header variant="large">Profissionais</Header>
-        <div className="flex items-center gap-3">
-          <ViewToggle
-            value={view}
-            onChange={setView}
-            options={[
-              { id: "list", label: "Cadastro", icon: "fa-users" },
-              { id: "docs", label: "Documentação", icon: "fa-folder-open", badge: pending },
-              { id: "hours", label: "Controle de horas", icon: "fa-clock" },
-            ]}
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Só as abas, ao lado de Novo profissional: a visão aberta é desenhada embaixo, pelo `tracker_id`. */}
+          <div className="[&_.content]:hidden">
+            <ButtonTabs id={VIEW_TABS_ID} trackerId={VIEW_TRACKER} tab={VIEWS.map((v) => ({ title: VIEW_TITLES[v], content: null }))} />
+          </div>
           {canCreate && (
             <LinkButton navigate="/backoffice/profissionais/novo" rightIcon="fa-plus" className="max-w-fit" onClick={(e) => e.preventDefault()}>
               Novo profissional

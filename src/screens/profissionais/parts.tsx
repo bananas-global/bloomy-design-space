@@ -7,49 +7,11 @@ import type { ReactNode } from "react";
 import { Tooltip } from "../../components/Choice.js";
 import { Icon } from "../../components/Icon.js";
 import { Input } from "../../components/Input.js";
-import { StatusTag, Tag } from "../../components/Tag.js";
+import { StatusTag, Tag, type TagVariant } from "../../components/Tag.js";
 import { DOC_STATES, isoToBr, PROF_STATUS, STATE_ORDER, daysBetween, type DocState, type Professional, type ProfStatus, type StateCounts } from "./model.js";
 
 function cx(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(" ");
-}
-
-/* ---------- seletor de visão ---------- */
-
-export type ViewOption<V extends string> = { id: V; label: string; icon: string; badge?: number };
-
-/**
- * Cadastro / Documentação / Controle de horas. É o desenho do `button_tabs`
- * com ícone e contador, que o componente não tem: por isso é da tela.
- */
-export function ViewToggle<V extends string>({ options, value, onChange }: { options: ViewOption<V>[]; value: V; onChange: (v: V) => void }) {
-  return (
-    <div role="group" aria-label="Visão de profissionais" className="inline-flex gap-0.5 rounded-[10px] bg-brand-purple-dark/6 p-[3px]">
-      {options.map((o) => {
-        const on = o.id === value;
-        return (
-          <button
-            key={o.id}
-            type="button"
-            aria-pressed={on}
-            onClick={() => onChange(o.id)}
-            className={cx(
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1.5 text-[12.5px] font-bold transition-all duration-200 ease-in-out",
-              on ? "bg-white text-brand-purple-dark shadow-main" : "text-brand-purple-dark/60 hover:text-brand-purple-dark",
-            )}
-          >
-            <Icon name={o.icon} type="solid" className="text-[11px]" />
-            {o.label}
-            {o.badge != null && o.badge > 0 && (
-              <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red px-1.5 text-[10.5px] font-extrabold text-white">
-                {o.badge}
-              </span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
 }
 
 /* ---------- filtros ---------- */
@@ -110,42 +72,50 @@ export function NameCell({ prof, status, today }: { prof: Professional; status: 
 
 /* ---------- matriz de documentação ---------- */
 
-/** As cores de cada estado, em tokens do monólito. */
-export const STATE_TONE: Record<DocState, string> = {
-  ok: "bg-brand-green/18 text-brand-green-dark",
-  expiring: "bg-brand-orange/24 text-orange-dark",
-  expired: "bg-brand-red/16 text-brand-red-dark",
-  missing: "bg-brand-purple-dark/7 text-brand-purple-dark/40",
-  waived: "bg-neutral-600/14 text-neutral-600",
+/** Altura fixa das `tag` da matriz: só ícone, ícone e texto ou só texto ficam iguais. */
+const TAG_H = "h-6";
+
+/** A variante da `tag` de cada estado. A `tag` não tem cinza neutro: Dispensado usa `brand`. */
+export const STATE_TAG: Record<DocState, TagVariant> = {
+  ok: "green",
+  expiring: "orange",
+  expired: "red",
+  missing: "dark-purple",
+  waived: "brand",
 };
 
-const PIP = "inline-flex min-w-[22px] items-center justify-center gap-[3px] whitespace-nowrap rounded px-2 py-0.5 text-sm font-semibold tabular-nums";
-
-/** Uma célula da matriz: o ícone do estado e, às vezes, um rótulo (horas, faltas). */
+/**
+ * Uma célula da matriz: a `tag` só com o ícone do estado (o nome fica no
+ * `title`) e, às vezes, um rótulo (horas, faltas).
+ */
 export function CellBox({ state, label, title, onClick }: { state: DocState; label?: string | null; title: string; onClick: () => void }) {
   const st = DOC_STATES[state];
   return (
-    <button type="button" title={title} onClick={onClick} className={cx(PIP, STATE_TONE[state], "cursor-pointer transition-transform duration-150 ease-in-out hover:scale-110")}>
-      {!(label && state === "missing") && <Icon name={st.icon} type="solid" className="text-[11px]" />}
-      {label && <span className="text-[10px]">{label}</span>}
+    <button type="button" title={title} aria-label={title} onClick={onClick} className="cursor-pointer transition-transform duration-150 ease-in-out hover:scale-110">
+      <Tag
+        item={label ?? ""}
+        variant={STATE_TAG[state]}
+        leftIcon={label && state === "missing" ? undefined : `fa-solid ${st.icon}`}
+        className={cx(TAG_H, "min-w-[26px] justify-center whitespace-nowrap tabular-nums")}
+      />
     </button>
   );
 }
 
-/** Resumo de uma categoria na visão geral: quantos em cada estado, ou "em dia". */
+/** Resumo de uma categoria na visão geral: uma `tag` com quantos em cada estado, ou "em dia". */
 export function Rollup({ id, counts, total, onClick }: { id: string; counts: StateCounts; total: number; onClick: () => void }) {
   const present = STATE_ORDER.filter((k) => counts[k]);
   const clean = !counts.expired && !counts.missing && !counts.expiring;
   const allWaived = counts.waived === total;
   const breakdown = present.map((k) => `${counts[k]} ${DOC_STATES[k].label.toLowerCase()}`).join(" · ");
 
-  const pip = (key: string, tone: string, tip: string, children: ReactNode) => (
+  const pip = (key: string, tag: ReactNode, tip: string) => (
     <Tooltip
       key={key}
       id={`${id}-${key}`}
       placement="top"
       tooltipClass="rounded-lg bg-brand-purple-dark px-2.5 py-1.5 text-[11.5px] font-bold whitespace-nowrap text-white shadow-main"
-      tooltipTrigger={<span className={cx(PIP, tone)}>{children}</span>}
+      tooltipTrigger={tag}
       tooltipContent={tip}
     />
   );
@@ -155,14 +125,17 @@ export function Rollup({ id, counts, total, onClick }: { id: string; counts: Sta
       {clean
         ? pip(
             "clean",
-            allWaived ? STATE_TONE.waived : STATE_TONE.ok,
+            <Tag
+              item={allWaived ? "dispensada" : "em dia"}
+              variant={allWaived ? STATE_TAG.waived : STATE_TAG.ok}
+              leftIcon={allWaived ? "fa-solid fa-ban" : "fa-solid fa-check"}
+              className={cx(TAG_H, "whitespace-nowrap")}
+            />,
             breakdown,
-            <>
-              <Icon name={allWaived ? "fa-ban" : "fa-check"} type="solid" />
-              {allWaived ? "dispensada" : "em dia"}
-            </>,
           )
-        : present.map((k) => pip(k, STATE_TONE[k], `${DOC_STATES[k].label} — ${counts[k]} de ${total}`, counts[k]))}
+        : present.map((k) =>
+            pip(k, <Tag item={String(counts[k])} variant={STATE_TAG[k]} className={cx(TAG_H, "min-w-[26px] justify-center tabular-nums")} />, `${DOC_STATES[k].label} — ${counts[k]} de ${total}`),
+          )}
     </button>
   );
 }

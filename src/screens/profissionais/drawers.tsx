@@ -20,16 +20,19 @@ export function DocDrawer({ prof, cell, onClose }: { prof: Professional; cell: D
   const live = cell ? docCell(state, prof.id, cell.type, TODAY) : null;
 
   return (
-    <DrawerModal
-      id="professional-doc-drawer"
-      show={live != null}
-      onCancel={onClose}
-      headerClass="items-start"
-      contentClass="flex flex-col gap-4"
-      customTitle={{ children: live && <DrawerTitle crumb={`${prof.name} · ${prof.specialty}`} title={live.type.name} /> }}
-    >
-      {live && <DocDrawerBody prof={prof} cell={live} attach={attach} setWaived={setWaived} />}
-    </DrawerModal>
+    // Novo — diverge do Phoenix: o `drawer_modal` tem `rounded-l-2xl`; aqui o painel fica sem canto arredondado.
+    <div className="[&_#professional-doc-drawer-container]:rounded-none">
+      <DrawerModal
+        id="professional-doc-drawer"
+        show={live != null}
+        onCancel={onClose}
+        headerClass="items-start"
+        contentClass="flex flex-col gap-4"
+        customTitle={{ children: live && <DrawerTitle crumb={`${prof.name} · ${prof.specialty}`} title={live.type.name} /> }}
+      >
+        {live && <DocDrawerBody prof={prof} cell={live} attach={attach} setWaived={setWaived} />}
+      </DrawerModal>
+    </div>
   );
 }
 
@@ -142,49 +145,52 @@ export function OpDrawer({ prof, cell, onClose }: { prof: Professional; cell: Op
   }
 
   return (
-    <DrawerModal
-      id="professional-op-drawer"
-      show={live != null}
-      onCancel={onClose}
-      headerClass="items-start"
-      contentClass="flex flex-col gap-4"
-      customTitle={{ children: live && <DrawerTitle crumb={`${prof.name} · ${prof.specialty}`} title={`Credenciamento · ${live.op.name}`} /> }}
-    >
-      {live && (
-        <>
-          <StateBanner state={live.state} icon={DOC_STATES[live.state].icon} title={live.label}>
-            {live.missing.length
-              ? `${live.missing.length} documento(s) exigido(s) ainda não compartilhado(s) ou vencido(s).`
-              : "Todos os documentos exigidos estão compartilhados e válidos."}
-          </StateBanner>
+    // Novo — diverge do Phoenix: o `drawer_modal` tem `rounded-l-2xl`; aqui o painel fica sem canto arredondado.
+    <div className="[&_#professional-op-drawer-container]:rounded-none">
+      <DrawerModal
+        id="professional-op-drawer"
+        show={live != null}
+        onCancel={onClose}
+        headerClass="items-start"
+        contentClass="flex flex-col gap-4"
+        customTitle={{ children: live && <DrawerTitle crumb={`${prof.name} · ${prof.specialty}`} title={`Credenciamento · ${live.op.name}`} /> }}
+      >
+        {live && (
+          <>
+            <StateBanner state={live.state} icon={DOC_STATES[live.state].icon} title={live.label}>
+              {live.missing.length
+                ? `${live.missing.length} documento(s) exigido(s) ainda não compartilhado(s) ou vencido(s).`
+                : "Todos os documentos exigidos estão compartilhados e válidos."}
+            </StateBanner>
 
-          <h4 className="text-[13px] font-extrabold tracking-[.02em] text-brand-purple-dark/50 uppercase">Documentos exigidos ({live.op.required.length})</h4>
-          <div className="flex flex-col gap-1.5">
-            {live.op.required.length === 0 && <Note>Esta operadora não exige documentos para credenciar.</Note>}
-            {live.op.required.map((typeId) => {
-              const missing = live.missing.includes(typeId);
-              const has = docs.some((d) => d.typeId === typeId);
-              return (
-                <div key={typeId} className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 rounded-[10px] border border-brand-purple-dark/10 px-3 py-2.5 text-[13px] text-brand-purple-dark">
-                  <Icon name={missing ? "fa-circle-exclamation" : "fa-circle-check"} type="solid" className={missing ? "text-brand-red-dark" : "text-brand-green-dark"} />
-                  <span>{docTypeName(typeId)}</span>
-                  {missing ? (
-                    has ? (
-                      <Button type="button" size="small" onClick={() => onShare(typeId)}>
-                        Compartilhar
-                      </Button>
+            <h4 className="text-[13px] font-extrabold tracking-[.02em] text-brand-purple-dark/50 uppercase">Documentos exigidos ({live.op.required.length})</h4>
+            <div className="flex flex-col gap-1.5">
+              {live.op.required.length === 0 && <Note>Esta operadora não exige documentos para credenciar.</Note>}
+              {live.op.required.map((typeId) => {
+                const missing = live.missing.includes(typeId);
+                const has = docs.some((d) => d.typeId === typeId);
+                return (
+                  <div key={typeId} className="grid grid-cols-[auto_1fr_auto] items-center gap-2.5 rounded-[10px] border border-brand-purple-dark/10 px-3 py-2.5 text-[13px] text-brand-purple-dark">
+                    <Icon name={missing ? "fa-circle-exclamation" : "fa-circle-check"} type="solid" className={missing ? "text-brand-red-dark" : "text-brand-green-dark"} />
+                    <span>{docTypeName(typeId)}</span>
+                    {missing ? (
+                      has ? (
+                        <Button type="button" size="small" onClick={() => onShare(typeId)}>
+                          Compartilhar
+                        </Button>
+                      ) : (
+                        <em className="text-xs not-italic text-brand-purple-dark/45">sem arquivo no cadastro</em>
+                      )
                     ) : (
-                      <em className="text-xs not-italic text-brand-purple-dark/45">sem arquivo no cadastro</em>
-                    )
-                  ) : (
-                    <em className="text-xs not-italic text-brand-purple-dark/50">compartilhado</em>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </DrawerModal>
+                      <em className="text-xs not-italic text-brand-purple-dark/50">compartilhado</em>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </DrawerModal>
+    </div>
   );
 }

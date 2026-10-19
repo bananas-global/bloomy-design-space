@@ -2,7 +2,7 @@
  * Profissionais — estado da documentação durante a sessão.
  *
  * Os drawers anexam e dispensam documentos internos e compartilham documentos
- * com operadoras; a matriz, o contador do seletor e os drawers abertos leem
+ * com operadoras; a matriz e os drawers abertos leem
  * daqui. Cada mudança passa por `reconcile`, que recalcula o credenciamento.
  */
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
