@@ -29,7 +29,7 @@ export const SPEC = Object.fromEntries(SPECS.map((s) => [s.slug, s])) as Record<
 export const SHORT: Record<SpecSlug, string> = { psychology: "PSI", phonoaudiology: "FON", occupational_therapy: "TO", physiotherapy: "FIS", music_therapy: "MUS" };
 
 export const SERVICES: Record<SpecSlug, string[]> = {
-  psychology: ["Sessão de Psicologia ABA"],
+  psychology: ["Sessão de Psicologia ABA", "Orientação Parental"],
   phonoaudiology: ["Fonoaudiologia", "Fono - Linguagem"],
   occupational_therapy: ["Terapia Ocupacional", "Integração Sensorial"],
   physiotherapy: ["Fisioterapia Motora"],
@@ -43,6 +43,21 @@ export const PROFS: Record<SpecSlug, string[]> = {
   physiotherapy: ["Raiane Almeida"],
   music_therapy: ["Camila Vasques"],
 };
+
+/** As unidades da rede e as salas de cada uma. */
+export const UNITS: Record<string, { short: string; rooms: string[] }> = {
+  "Unidade Jardim": { short: "Jardim", rooms: ["Sala Azul - 01", "Sala Verde - 02", "Sala Lúdica - 03", "Sala Sensorial - 04"] },
+  "Unidade Girassol": { short: "Girassol", rooms: ["Sala Amarela - 01", "Sala Lúdica - 02", "Sala Sensorial - 05"] },
+};
+
+/** Com quem é o atendimento: a criança, os responsáveis ou o acompanhamento terapêutico. */
+export type ItemType = "patient" | "guardian" | "at";
+export const TYPES: { value: ItemType; label: string; badge: string }[] = [
+  { value: "patient", label: "Paciente", badge: "PAC" },
+  { value: "guardian", label: "Responsável", badge: "RESP" },
+  { value: "at", label: "AT", badge: "AT" },
+];
+export const TYPE = Object.fromEntries(TYPES.map((t) => [t.value, t])) as Record<ItemType, (typeof TYPES)[number]>;
 
 export const LOCATIONS: [string, string][] = [["Na Clínica", "in_clinic"], ["Escola", "school"], ["Domiciliar", "home"]];
 export const DAYS_FULL = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
@@ -64,11 +79,38 @@ export type AgendaItem = {
   slug: SpecSlug;
   service: string;
   professional: string;
+  /** A unidade do atendimento: na semana pode haver mais de uma, no mesmo horário não. */
+  unit: string;
   room?: string;
   location: string;
-  /** Atendimento ao paciente ou de Acompanhante Terapêutico. */
-  type: "patient" | "at";
+  type: ItemType;
+  /** No atendimento ao Responsável: com qual responsável do paciente. */
+  guardian?: string;
 };
+
+/** Um responsável do paciente, de "Dados dos Responsáveis". */
+export type Guardian = { name: string; relation: string };
+
+/** As duplas que podem dividir um horário; as outras ainda estão em validação. */
+const PAIRS = ["guardian|patient", "at|patient"];
+export const MAX_PER_SLOT = 2;
+
+/**
+ * As regras de um horário com mais de um atendimento. `error` impede salvar;
+ * `warn` avisa de uma combinação que ainda não foi validada.
+ */
+export function slotRules(f: Pick<AgendaItem, "type" | "professional" | "unit">, others: AgendaItem[]): { error?: string; warn?: string } {
+  if (!others.length) return {};
+  if (others.length >= MAX_PER_SLOT) return { error: `No máximo ${MAX_PER_SLOT} atendimentos no mesmo horário.` };
+  if (f.type === "patient" && others.some((o) => o.type === "patient")) return { error: "Já existe um atendimento ao paciente neste horário." };
+  const same = others.find((o) => o.professional === f.professional);
+  if (same) return { error: `${first(f.professional)} já tem um atendimento neste horário.` };
+  const unit = others.find((o) => o.unit !== f.unit);
+  if (unit) return { error: `Atendimentos no mesmo horário precisam ser na mesma unidade (${unit.unit}).` };
+  const pair = [f.type, others[0]!.type].sort().join("|");
+  if (!PAIRS.includes(pair)) return { warn: `${TYPE[f.type].label} + ${TYPE[others[0]!.type].label} no mesmo horário ainda está em validação.` };
+  return {};
+}
 
 /** Uma vigência do padrão de agenda (datas ISO). */
 export type Vigencia = { id: string; start: string; end: string; autoRenew?: boolean };

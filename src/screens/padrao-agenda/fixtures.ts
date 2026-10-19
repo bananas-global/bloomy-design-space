@@ -1,10 +1,10 @@
 /**
  * Padrão de Agenda — dados sintéticos. Paciente, profissionais e salas são
- * fictícios. As três vigências e os treze atendimentos do protótipo.
+ * fictícios. As três vigências e os atendimentos do protótipo, com horários simultâneos.
  */
 import type { Fixture } from "@brucesantos/design-space";
 import type { PatientHeader } from "../../layouts/PatientLayout.js";
-import { SERVICES, type AgendaItem, type SpecSlug, type Vigencia } from "./model.js";
+import { SERVICES, type AgendaItem, type Guardian, type SpecSlug, type Vigencia } from "./model.js";
 
 export type AgendaFixture = {
   patient: PatientHeader;
@@ -15,22 +15,35 @@ export type AgendaFixture = {
   items: Record<string, AgendaItem[]>;
   /** Horários preferenciais da família, por dia da semana (1 = segunda). */
   pref: Record<number, number[]>;
+  /** Os responsáveis do paciente, para o atendimento ao Responsável. */
+  guardians: Guardian[];
 };
 
-const it = (id: string, weekday: number, hour: number, slug: SpecSlug, professional: string, room: string, type: AgendaItem["type"] = "patient", service?: string): AgendaItem =>
-  ({ id, weekday, hour, slug, service: service ?? SERVICES[slug][0]!, professional, room, location: "in_clinic", type });
+const JARDIM = "Unidade Jardim", GIRASSOL = "Unidade Girassol";
+const GUARDIANS: Guardian[] = [{ name: "Renata Andrade", relation: "Mãe" }, { name: "Paulo Ferreira", relation: "Pai" }];
+const it = (id: string, weekday: number, hour: number, slug: SpecSlug, professional: string, room: string, type: AgendaItem["type"] = "patient", service?: string, unit = JARDIM, guardian?: string): AgendaItem =>
+  ({ id, weekday, hour, slug, service: service ?? SERVICES[slug][0]!, professional, unit, room, location: "in_clinic", type, ...(guardian && { guardian }) });
 
+/**
+ * Três horários com atendimentos simultâneos: segunda 08:00 (Paciente +
+ * Responsável), quarta 08:00 (Paciente + AT) e quinta 13:00 (Paciente +
+ * Responsável, na Unidade Girassol). A quinta inteira é na Girassol.
+ */
 const ITEMS: AgendaItem[] = [
   it("a1", 1, 8, "psychology", "Helena Martins Costa", "Sala Verde - 02"),
+  it("a1r", 1, 8, "psychology", "Rafael Tavares", "Sala Azul - 01", "guardian", "Orientação Parental", JARDIM, "Renata Andrade"),
   it("a2", 1, 10, "phonoaudiology", "Fábio Stoll Pereira", "Sala Azul - 01"),
   it("a3", 1, 14, "psychology", "Carina Ferreira", "Sala Lúdica - 03", "at"),
   it("a4", 2, 9, "occupational_therapy", "Mariana Palmeira", "Sala Sensorial - 04"),
   it("a5", 2, 11, "psychology", "Helena Martins Costa", "Sala Verde - 02"),
+  it("a5r", 2, 16, "psychology", "Larissa Wippich", "Sala Azul - 01", "guardian", "Orientação Parental", JARDIM, "Paulo Ferreira"),
   it("a6", 3, 8, "psychology", "Larissa Wippich", "Sala Verde - 02"),
+  it("a6t", 3, 8, "psychology", "Carina Ferreira", "Sala Verde - 02", "at"),
   it("a7", 3, 10, "physiotherapy", "Raiane Almeida", "Sala Sensorial - 04"),
   it("a8", 3, 15, "psychology", "Rafael Tavares", "Sala Lúdica - 03", "at"),
-  it("a9", 4, 9, "phonoaudiology", "Fábio Stoll Pereira", "Sala Azul - 01", "patient", "Fono - Linguagem"),
-  it("a10", 4, 13, "occupational_therapy", "Tiago Alves", "Sala Sensorial - 04", "patient", "Integração Sensorial"),
+  it("a9", 4, 9, "phonoaudiology", "Fábio Stoll Pereira", "Sala Amarela - 01", "patient", "Fono - Linguagem", GIRASSOL),
+  it("a10", 4, 13, "occupational_therapy", "Tiago Alves", "Sala Sensorial - 05", "patient", "Integração Sensorial", GIRASSOL),
+  it("a10r", 4, 13, "psychology", "Helena Martins Costa", "Sala Lúdica - 02", "guardian", "Orientação Parental", GIRASSOL, "Renata Andrade"),
   it("a11", 5, 8, "psychology", "Helena Martins Costa", "Sala Verde - 02"),
   it("a12", 5, 9, "music_therapy", "Camila Vasques", "Sala Lúdica - 03"),
   it("a13", 5, 11, "psychology", "Carina Ferreira", "Sala Lúdica - 03", "at"),
@@ -58,13 +71,14 @@ export const AGENDA_FIXTURES: Fixture<AgendaFixture>[] = [
   {
     id: "agenda.base",
     label: "Padrão com atendimentos",
-    description: "Lucas, 13h semanais em cinco especialidades, com três vigências: encerrada, em vigência e futura.",
+    description: "Lucas, em cinco especialidades e duas unidades, com atendimentos simultâneos (Paciente + Responsável, Paciente + AT) e três vigências: encerrada, em vigência e futura.",
     data: {
       patient: PATIENT,
       vigencias: VIGENCIAS,
       current: "v1",
       items: { v0: ITEMS, v1: ITEMS, v2: ITEMS },
       pref: PREF,
+      guardians: GUARDIANS,
     },
   },
   {
@@ -77,6 +91,7 @@ export const AGENDA_FIXTURES: Fixture<AgendaFixture>[] = [
       current: "v1",
       items: { v1: [] },
       pref: PREF,
+      guardians: GUARDIANS,
     },
   },
 ];
