@@ -1,0 +1,26 @@
+/* Plano Terapêutico: "Baixar PDF" imprime só uma cópia da folha, em A4 e sem margem. */
+.pt-print-root {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  body.pt-printing > :not(.pt-print-root) {
+    display: none !important;
+  }
+
+  body.pt-printing .pt-print-root {
+    display: block;
+  }
+
+  body.pt-printing .pt-print-root .pt-doc {
+    zoom: 1 !important;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

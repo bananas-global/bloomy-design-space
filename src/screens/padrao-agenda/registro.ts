@@ -43,6 +43,7 @@ const CONTROLS: ControlGroup[] = [
           { value: "alterado", label: "Alterações pendentes" },
           { value: "propagar", label: "Vigência do novo padrão" },
           { value: "nova-vigencia", label: "Nova vigência" },
+          { value: "plano", label: "Plano Terapêutico" },
         ],
       },
     ],
@@ -182,6 +183,19 @@ export const feature: Feature = {
       controls: { vigencia: "v0" },
       intent: "Consultar o padrão de uma vigência que já terminou.",
       expected: ["Selo \"Vigência encerrada · somente leitura\" ao lado do título.", "O seletor mostra o selo Encerrada."],
+    }),
+    scenario({
+      id: "agenda.plano",
+      title: "Plano Terapêutico",
+      controls: { estado: "plano" },
+      intent: "O botão Plano Terapêutico abre o resumo da semana padrão numa folha A4, para envio à operadora, no formato do Exportar PIC.",
+      expected: [
+        "Modal em tela cheia com a folha à esquerda, com zoom, e as opções à direita (Exibir profissionais, Exibir salas, Observações para a operadora).",
+        "Folha: paciente, operadora, unidade, vigência e data de emissão; sessões, carga horária, especialidades e dias com atendimento.",
+        "Carga por especialidade com serviços, profissionais, sessões e horas por semana, e a rotina semanal dia a dia.",
+        "Desligar profissionais tira a coluna e os nomes; ligar salas mostra a sala em cada sessão; as observações entram na folha.",
+        "Baixar PDF imprime só a folha, em uma página A4. Componente novo: não existe no Phoenix.",
+      ],
     }),
     scenario({
       id: "agenda.vazio",

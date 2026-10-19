@@ -28,6 +28,7 @@ import {
   addDays, br, first, hh, profState, range, slotRules, vigStatus,
   splitPlan, TODAY, type AgendaItem, type Guardian, type ItemType, type ProfState, type SplitPiece, type SpecSlug, type Vigencia,
 } from "./padrao-agenda/model.js";
+import { PlanoTerapeutico } from "./padrao-agenda/PlanoTerapeutico.js";
 
 export const PATH = "/backoffice/pacientes/:id/padrao-de-agenda";
 
@@ -52,6 +53,7 @@ type State = {
   split: { start: string; end: string } | null;
   splitErr: string;
   dirty: boolean;
+  plan: boolean;
 };
 
 const tone = (slug: SpecSlug) => `var(--color-${SPEC[slug].tone})`;
@@ -81,7 +83,7 @@ function initialState(data: AgendaFixture, controls: Record<string, string>): St
   const base: State = {
     items, sel: null, f: null, err: "", lens, kind, lastSlug: "psychology",
     vigs: data.vigencias, vigId, byVig: { ...data.items },
-    vigModal: null, vigErr: "", split: null, splitErr: "", dirty: false,
+    vigModal: null, vigErr: "", split: null, splitErr: "", dirty: false, plan: false,
   };
   const home = homeUnit(data);
   const blank = (slots: Slot[], over: Partial<Form> = {}): Form => ({
@@ -112,6 +114,8 @@ function initialState(data: AgendaFixture, controls: Record<string, string>): St
     case "propagar": {
       return { ...base, items: [...items, added], dirty: true, split: { start: addDays(TODAY, 1), end: cur.end } };
     }
+    case "plano":
+      return { ...base, plan: true };
     case "nova-vigencia": {
       const last = data.vigencias.reduce((m, v) => (v.end > m ? v.end : m), "");
       const start = last ? addDays(last, 1) : TODAY;
@@ -351,7 +355,7 @@ function Agenda({ data, context }: { data: AgendaFixture; context: ScenarioConte
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <VigenciaPicker vigs={vigs} cur={cur} onPick={pickVig} onNew={novaVig} />
-          <Button type="button" variant="tint" color="blue" rightIcon="fa-file-pdf">Plano Terapêutico</Button>
+          <Button type="button" variant="tint" color="blue" rightIcon="fa-file-pdf" onClick={() => set({ plan: true })}>Plano Terapêutico</Button>
           <Button type="button" variant="tint" color="blue" rightIcon="fa-file-pdf">Agendamentos</Button>
         </div>
       </div>
@@ -545,6 +549,7 @@ function Agenda({ data, context }: { data: AgendaFixture; context: ScenarioConte
         </div>
       </Modal>
 
+      <PlanoTerapeutico show={state.plan} onClose={() => set({ plan: false })} patientName={data.patient.name} unitName={data.patient.unitName} operatorName={data.operator} vigencia={cur} items={items} />
     </>
   );
 }

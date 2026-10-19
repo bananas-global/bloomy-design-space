@@ -8,6 +8,8 @@ import { SERVICES, type AgendaItem, type Guardian, type SpecSlug, type Vigencia 
 
 export type AgendaFixture = {
   patient: PatientHeader;
+  /** A operadora do paciente, que recebe o Plano Terapêutico. */
+  operator?: string;
   vigencias: Vigencia[];
   /** A vigência que a tela abre. */
   current: string;
@@ -74,6 +76,7 @@ export const AGENDA_FIXTURES: Fixture<AgendaFixture>[] = [
     description: "Lucas, em cinco especialidades e duas unidades, com atendimentos simultâneos (Paciente + Responsável, Paciente + AT) e três vigências: encerrada, em vigência e futura.",
     data: {
       patient: PATIENT,
+      operator: "Unimed",
       vigencias: VIGENCIAS,
       current: "v1",
       items: { v0: ITEMS, v1: ITEMS, v2: ITEMS },
