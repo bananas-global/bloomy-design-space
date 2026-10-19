@@ -24,8 +24,8 @@ import { BackofficeLayout } from "../layouts/BackofficeLayout.js";
 import { PatientLayout } from "../layouts/PatientLayout.js";
 import type { AgendaFixture } from "./padrao-agenda/fixtures.js";
 import {
-  DAYS_FULL, DAY_ABBR, HOURS, LOCATIONS, MAX_PER_SLOT, PROFS, SERVICES, SHORT, SPEC, SPECS, STATE_ORDER, TYPE, TYPES, UNITS, WEEKDAYS,
-  addDays, br, first, hh, profState, range, slotRules, vigStatus,
+  DAYS_FULL, DAY_ABBR, HOURS, LOCATIONS, MAX_PER_SLOT, PROFS, SERVICES, SPEC, SPECS, STATE_ORDER, TYPE, TYPES, UNITS, WEEKDAYS,
+  addDays, br, first, hh, profState, range, serviceShort, slotRules, vigStatus,
   splitPlan, TODAY, type AgendaItem, type Guardian, type ItemType, type ProfState, type SplitPiece, type SpecSlug, type Vigencia,
 } from "./padrao-agenda/model.js";
 
@@ -573,21 +573,23 @@ function FreeSlot({ color, free, compact }: { color: string; free: string[]; com
 }
 
 /**
- * O tipo do atendimento numa badge compacta: PAC, RESP ou AT. Uma cor só para
+ * O tipo do atendimento numa badge compacta: PAC, RESP ou AT, todas da mesma
+ * largura (a de RESP), para alinharem entre os cards. Uma cor só para
  * os três, neutra, para não competir com a cor da especialidade: o texto diz o tipo.
  */
 function TypeBadge({ type }: { type: ItemType }) {
   return (
-    <em title={TYPE[type].label} className="flex-none not-italic px-1 py-px rounded bg-white/85 text-neutral-600 text-[9.5px] font-extrabold tracking-[.03em] leading-[1.35]">
+    <em title={TYPE[type].label} className="flex-none w-[34px] text-center not-italic py-px rounded bg-white/85 text-neutral-600 text-[9.5px] font-extrabold tracking-[.03em] leading-[1.35]">
       {TYPE[type].badge}
     </em>
   );
 }
 
 /**
- * Um atendimento na grade, como no protótipo: a sigla da especialidade, o
- * nome e sobrenome do profissional e, encostada à direita, a badge do tipo. Serviço, unidade e sala ficam
- * no título; na densidade confortável, unidade e sala ganham uma segunda linha.
+ * Um atendimento na grade: a sigla do serviço na cor da especialidade, o
+ * nome e sobrenome do profissional e, encostadas à direita, a unidade e a badge
+ * do tipo. O serviço por extenso e a sala ficam no título; na densidade confortável, a sala
+ * ganha uma segunda linha.
  * Altura fixa (`CARD_H`): num horário com dois atendimentos, os cartões se empilham, cada um com a sua cor.
  */
 function ItemCard({ it, compact, active, dim, onClick }: { it: AgendaItem; compact: boolean; active: boolean; dim: boolean; onClick: (e: MouseEvent) => void }) {
@@ -604,11 +606,12 @@ function ItemCard({ it, compact, active, dim, onClick }: { it: AgendaItem; compa
       style={{ height: compact ? CARD_H.compact : CARD_H.comfortable, background: mix(c, 16), boxShadow: active ? "inset 0 0 0 2px var(--color-brand-blue)" : "none", opacity: dim ? 0.8 : 1 }}
     >
       <span className="flex items-center gap-1.5 w-full min-w-0">
-        <b className="flex-none text-[11.5px] font-black" style={{ color: strongOf(c) }}>{SHORT[it.slug]}</b>
+        <b className="flex-none text-[11.5px] font-black" style={{ color: strongOf(c) }}>{serviceShort(it.service)}</b>
         <span className="flex-1 min-w-0 text-[11.5px] font-bold text-brand-purple-dark whitespace-nowrap overflow-hidden text-ellipsis">{two(it.professional)}</span>
+        <span className="flex-none text-[10.5px] font-semibold text-neutral-500">{unit}</span>
         <TypeBadge type={it.type} />
       </span>
-      {!compact && <span className="w-full truncate text-[10.5px] font-semibold leading-[1.3] text-neutral-500">{unit}{where && ` · ${where}`}</span>}
+      {!compact && where && <span className="w-full truncate text-[10.5px] font-semibold leading-[1.3] text-neutral-500">{where}</span>}
     </button>
   );
 }

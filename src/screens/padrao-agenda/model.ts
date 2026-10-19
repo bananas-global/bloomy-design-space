@@ -26,7 +26,6 @@ export const SPECS: Spec[] = [
   { slug: "music_therapy", name: "Musicoterapia", icon: "fa-music", tone: "pink", iconClass: "text-pink" },
 ];
 export const SPEC = Object.fromEntries(SPECS.map((s) => [s.slug, s])) as Record<SpecSlug, Spec>;
-export const SHORT: Record<SpecSlug, string> = { psychology: "PSI", phonoaudiology: "FON", occupational_therapy: "TO", physiotherapy: "FIS", music_therapy: "MUS" };
 
 export const SERVICES: Record<SpecSlug, string[]> = {
   psychology: ["Sessão de Psicologia ABA", "Orientação Parental"],
@@ -35,6 +34,22 @@ export const SERVICES: Record<SpecSlug, string[]> = {
   physiotherapy: ["Fisioterapia Motora"],
   music_therapy: ["Musicoterapia"],
 };
+
+/** A sigla de cada serviço, que o card da grade mostra no lugar do nome. */
+const SERVICE_SHORT: Record<string, string> = {
+  "Sessão de Psicologia ABA": "ABA",
+  "Orientação Parental": "OP",
+  "Fonoaudiologia": "FONO",
+  "Fono - Linguagem": "LING",
+  "Terapia Ocupacional": "TO",
+  "Integração Sensorial": "IS",
+  "Fisioterapia Motora": "FIS",
+  "Musicoterapia": "MUS",
+};
+/** A sigla do serviço; sem uma definida, as iniciais das palavras (até 4). */
+export const serviceShort = (service: string) =>
+  SERVICE_SHORT[service] ??
+  service.split(/[\s-]+/).filter((w) => w.length > 2).map((w) => w[0]!.toUpperCase()).join("").slice(0, 4);
 
 export const PROFS: Record<SpecSlug, string[]> = {
   psychology: ["Helena Martins Costa", "Larissa Wippich", "Carina Ferreira", "Rafael Tavares"],
