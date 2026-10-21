@@ -1,15 +1,15 @@
 /**
  * Documentos da Operadora — o estado da tela e as ações que o alteram.
- * Cada ação devolve um estado já reconciliado (status dos vínculos recalculado).
  */
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { TODAY_BR, isShared, linkKey, missingFor, reconcile, type DocsState, type LinkStatus } from "./model.js";
+import { TODAY_BR, isShared, linkKey, profDocState, type DocsState, type LinkStatus } from "./model.js";
 
 export type Store = {
   state: DocsState;
-  /** Liga ou desliga o compartilhamento de um documento do profissional; o primeiro abre o credenciamento. */
+  /** Liga ou desliga o compartilhamento de um documento do profissional. */
   setShare: (profId: string, docId: string, on: boolean) => void;
-  setLinkStatus: (profId: string, status: LinkStatus) => void;
+  /** Credencia ou descredencia; ao descredenciar, guarda o motivo e pode descompartilhar os documentos. */
+  setLinkStatus: (profId: string, status: LinkStatus, opts?: { reason?: string; unshare?: boolean }) => void;
   setUnitShare: (unitId: string, docId: string, on: boolean) => void;
 };
 
@@ -31,15 +31,16 @@ export function DocsProvider({ initial, children }: { initial: DocsState; childr
               return { ...d, shared: on ? [...d.shared, { opId, at: TODAY_BR }] : d.shared.filter((x) => x.opId !== opId) };
             }),
           };
-          const key = linkKey(profId, opId);
-          const links = on && !s.links[key] ? { ...s.links, [key]: { profId, opId, status: "pending" as const, since: TODAY_BR } } : s.links;
-          return reconcile({ ...s, docs, links });
+          return { ...s, docs };
         }),
-      setLinkStatus: (profId, status) =>
+      setLinkStatus: (profId, status, opts = {}) =>
         setState((s) => {
           const key = linkKey(profId, opId);
-          const prev = s.links[key] ?? { profId, opId, since: TODAY_BR };
-          return reconcile({ ...s, links: { ...s.links, [key]: { ...prev, status, manual: status === "inactive" } } });
+          const link = { profId, opId, status, since: TODAY_BR, ...(opts.reason ? { reason: opts.reason } : {}) };
+          const docs = opts.unshare
+            ? { ...s.docs, [profId]: (s.docs[profId] ?? []).map((d) => ({ ...d, shared: d.shared.filter((x) => x.opId !== opId) })) }
+            : s.docs;
+          return { ...s, docs, links: { ...s.links, [key]: link } };
         }),
       setUnitShare: (unitId, docId, on) =>
         setState((s) => ({
@@ -69,13 +70,20 @@ export function useDocs(): Store {
 
 export type ProfRow = ReturnType<typeof profRows>[number];
 
-/** Uma linha por profissional: vínculo, documentos compartilhados e o que falta. */
+const GROUP = { active: 0, none: 1, inactive: 2 } as const;
+
+/**
+ * Uma linha por profissional: vínculo, documentos compartilhados e os vencidos.
+ * Credenciados primeiro, depois os não credenciados e, no fim, os descredenciados; por nome em cada grupo.
+ */
 export function profRows(s: DocsState) {
   const opId = s.operator.id;
-  return s.professionals.map((prof) => {
-    const link = s.links[linkKey(prof.id, opId)] ?? null;
-    const shared = link ? (s.docs[prof.id] ?? []).filter((d) => isShared(d, opId)) : [];
-    const missing = link ? missingFor(s, prof.id, opId) : s.required;
-    return { prof, link, shared, missing };
-  });
+  return s.professionals
+    .map((prof) => {
+      const link = s.links[linkKey(prof.id, opId)] ?? null;
+      const shared = link ? (s.docs[prof.id] ?? []).filter((d) => isShared(d, opId)) : [];
+      const expired = shared.filter((d) => profDocState(d).key === "expired");
+      return { prof, link, shared, expired };
+    })
+    .sort((a, b) => GROUP[a.link?.status ?? "none"] - GROUP[b.link?.status ?? "none"] || a.prof.name.localeCompare(b.prof.name, "pt-BR"));
 }

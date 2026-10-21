@@ -274,8 +274,6 @@ export function DrawerModal({
             className={cx(
               "relative h-full w-full bg-white shadow-main overflow-hidden",
               "flex flex-col",
-              placement === "right" && "rounded-l-2xl",
-              placement === "left" && "rounded-r-2xl",
               variant === "extra_small" && "max-w-md",
               variant === "small" && "max-w-xl",
               variant === "medium" && "max-w-3xl",

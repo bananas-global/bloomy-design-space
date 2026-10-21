@@ -78,6 +78,22 @@ export function FilterCount({ shown, total, noun }: { shown: number; total: numb
   );
 }
 
+/** O profissional: nome, a situação no Bloomy com o ponto colorido e as unidades. */
+export function BloomyWho({ name, status, detail }: { name: string; status: { label: string; dot: string; text: string }; detail: string }) {
+  return (
+    <div>
+      <p className="whitespace-nowrap font-bold text-brand-purple-dark">{name}</p>
+      <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-brand-purple-dark/60">
+        <span className={["inline-flex items-center gap-1.5 font-bold", status.text].join(" ")}>
+          <span className={["h-1.5 w-1.5 rounded-full", status.dot].join(" ")} />
+          {status.label}
+        </span>
+        {detail}
+      </p>
+    </div>
+  );
+}
+
 /** Nome em destaque com uma linha de apoio. */
 export function Who({ name, detail }: { name: string; detail?: string }) {
   return (
@@ -103,12 +119,25 @@ export function None({ children = "—" }: { children?: string }) {
   return <span className="text-sm text-brand-purple-dark/45">{children}</span>;
 }
 
-/** Quantos documentos foram compartilhados e quantos exigidos faltam. */
-export function DocCount({ shared, missing }: { shared: number; missing: number }) {
+/** Quantos documentos foram compartilhados e quantos deles venceram. */
+export function DocCount({ shared, expired }: { shared: number; expired: number }) {
   return (
     <span className="whitespace-nowrap">
       <b className="font-bold text-brand-purple-dark">{shared}</b>
-      {missing > 0 && <Missing count={missing} className="ml-2" />}
+      {expired > 0 && (
+        <span className="ml-2 inline-flex items-center gap-1 text-xs font-bold text-red">
+          <Icon name="fa-triangle-exclamation" type="solid" /> {expired} {expired === 1 ? "vencido" : "vencidos"}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** "revisar": credenciado na operadora, mas inativo ou em desligamento no Bloomy. */
+export function ReviewFlag() {
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-orange-dark">
+      <Icon name="fa-triangle-exclamation" type="solid" /> revisar
     </span>
   );
 }
@@ -121,7 +150,7 @@ export function Missing({ count, className }: { count: number; className?: strin
   );
 }
 
-export type MenuAction = { label: string; icon: string; onClick: () => void; disabled?: boolean; separated?: boolean };
+export type MenuAction = { label: string; icon: string; onClick: () => void; disabled?: boolean; separated?: boolean; danger?: boolean };
 
 /** O menu Ações da linha: `dropdown` com um `button` ghost por ação. */
 export function RowActions({ id, actions }: { id: string; actions: MenuAction[] }) {
@@ -140,7 +169,7 @@ export function RowActions({ id, actions }: { id: string; actions: MenuAction[] 
                 leftIcon={a.icon}
                 disabled={a.disabled}
                 onClick={a.onClick}
-                className="w-full justify-start! text-brand-purple-dark disabled:opacity-40"
+                className={["w-full justify-start! disabled:opacity-40", a.danger ? "text-red" : "text-brand-purple-dark"].join(" ")}
               >
                 {a.label}
               </Button>
@@ -180,7 +209,7 @@ export function SectionLabel({ children }: { children: string }) {
   return <p className="mt-6 mb-2 text-xs font-black uppercase tracking-wide text-brand-purple-dark/45">{children}</p>;
 }
 
-/** Um documento no drawer: compartilhar ou não com a operadora (`input type="checkbox"`), e a validade. */
+/** Um documento no drawer: compartilhar ou não com a operadora (`input type="switch"`), e a validade. */
 export function DocCheck({
   id,
   name,
@@ -197,36 +226,45 @@ export function DocCheck({
   badge?: ReactNode;
   checked: boolean;
   disabled?: boolean;
-  state: { label: string; variant: TagVariant };
+  state?: { label: string; variant: TagVariant };
   onChange: (on: boolean) => void;
 }) {
+  // O cartão do `switch_card` (o cartão inteiro liga a chave), com a validade e o selo ao lado do nome.
   return (
-    <div
-      className={[
-        "flex items-center gap-3 rounded-xl border pr-4 transition-colors",
-        checked ? "border-brand-blue" : "border-brand-purple-dark/10",
-      ].join(" ")}
-    >
-      <div className="min-w-0 flex-1">
-        {/* O `input type="checkbox"` como é: o realce de marcado é o do próprio label. */}
-        <Input type="checkbox" id={id} name={id} label={name} checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
-        <p className="flex flex-wrap items-center gap-2 pb-3 pl-[46px] text-xs text-brand-purple-dark/60">
-          {detail}
-          {badge}
-        </p>
+    <label htmlFor={id} className={["inline-block w-full", disabled ? "cursor-default" : "cursor-pointer"].join(" ")}>
+      <div
+        className={[
+          "flex items-center gap-3 rounded-xl border py-1 pl-4 pr-3 transition-colors delay-100",
+          checked ? "bg-brand-blue/10 border-brand-blue/40" : "bg-brand-purple-dark/5 border-transparent",
+        ].join(" ")}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="font-extrabold text-brand-purple-dark">{name}</p>
+          <p className="flex flex-wrap items-center gap-2 text-xs text-brand-purple-dark/60">
+            {detail}
+            {badge}
+          </p>
+        </div>
+        {state && <Tag item={state.label} variant={state.variant} className="shrink-0 whitespace-nowrap" />}
+        <Input type="switch" id={id} name={id} value={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
       </div>
-      <Tag item={state.label} variant={state.variant} className="shrink-0 whitespace-nowrap" />
-    </div>
+    </label>
   );
 }
 
-/** Aviso no drawer: o que o compartilhamento sozinho não resolve. */
-export function MissingDocsNote({ children }: { children: ReactNode }) {
+/** Aviso acima dos filtros: quem precisa de revisão, com o atalho para filtrar só esses. */
+export function ReviewNotice({ title, detail, action, onAction }: { title: string; detail: string; action: string; onAction: () => void }) {
   return (
-    <p className="mt-4 flex items-start gap-2 rounded-xl bg-brand-orange/20 px-4 py-3 text-sm text-orange-dark">
-      <Icon name="fa-triangle-exclamation" type="solid" className="mt-0.5" />
-      <span>{children}</span>
-    </p>
+    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-orange bg-brand-orange/20 px-4 py-3">
+      <Icon name="fa-triangle-exclamation" type="solid" className="text-orange-dark" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-brand-purple-dark">{title}</p>
+        <p className="text-xs text-brand-purple-dark/60">{detail}</p>
+      </div>
+      <Button type="button" variant="tint" size="small" onClick={onAction}>
+        {action}
+      </Button>
+    </div>
   );
 }
 

@@ -6,7 +6,7 @@
  * obrigatórios. Hoje é `TODAY` (05/08/2026). Nomes são fictícios.
  */
 import type { Fixture } from "@brucesantos/design-space";
-import { docTypeName, linkKey, parseBR, reconcile, type DocsState, type Link, type LinkStatus, type Operator, type ProfDoc, type Professional, type Unit } from "./model.js";
+import { docTypeName, linkKey, parseBR, type DocsState, type Link, type LinkStatus, type Operator, type ProfDoc, type Professional, type Unit } from "./model.js";
 
 export const OPERATOR: Operator = {
   id: "op1",
@@ -18,20 +18,17 @@ export const OPERATOR: Operator = {
   observation: "Enviar a documentação de credenciamento até o dia 10 de cada mês.",
 };
 
-/** O que a Unimed exige para credenciar um profissional. */
-export const REQUIRED = ["diploma", "council", "id", "cv"];
-
 export const PROFESSIONALS: Professional[] = [
-  { id: "p1", name: "Helena Martins Costa", active: true, specialty: "Psicologia", council: "06900101", units: ["Unidade Teste"], graduation: "12/2013", abaHours: 320, badges: ["Integração Sensorial", "PECS", "Denver"] },
-  { id: "p2", name: "Tânia Abreu Pinho", active: true, specialty: "Psicologia", council: "06900102", units: ["Santana"], graduation: "07/2009", abaHours: 480, badges: ["Supervisão BCaBA", "PECS"] },
-  { id: "p3", name: "Mariana Palmeira Stein", active: true, specialty: "Terapia Ocupacional", council: "25044", units: ["Unidade Teste", "Santana"], graduation: "12/2016", abaHours: 180, badges: ["Integração Sensorial"] },
-  { id: "p4", name: "Tiago Alves da Rocha", active: true, specialty: "Terapia Ocupacional", council: "25067", units: ["Santana"], graduation: "06/2019", abaHours: 120, badges: [] },
-  { id: "p5", name: "Lívia Cardoso da Mata", active: true, specialty: "Psicopedagogia", council: "90106", units: ["Unidade Teste"], graduation: "12/2011", abaHours: 240, badges: ["Psicopedagogia clínica"] },
-  { id: "p6", name: "Larissa Moura Faria", active: true, specialty: "Psicologia", council: "06900103", units: ["Santana"], graduation: "12/2017", abaHours: 400, badges: ["Integração Sensorial", "ABLLS-R"] },
-  { id: "p7", name: "Raiane Almeida Longo", active: true, specialty: "Fisioterapia", council: "448485", units: ["Unidade Teste", "Santana"], graduation: "07/2021", abaHours: 80, badges: [] },
-  { id: "p8", name: "Luciana Rodrigues Lima", active: true, specialty: "Fisioterapia", council: "239861", units: ["Santana"], graduation: "12/2012", abaHours: 200, badges: ["Bobath"] },
-  { id: "p9", name: "Fábio Teixeira Pereira", active: true, specialty: "Fonoaudiologia", council: "90104", units: ["Unidade Teste"], graduation: "12/2008", abaHours: 520, badges: ["Integração Sensorial", "PROMPT", "Supervisão BCBA"] },
-  { id: "p10", name: "Carina Ferreira de Araújo", active: false, specialty: "Aplicador Psicologia", council: "06900105", units: ["Unidade Teste"], graduation: "06/2022", abaHours: 60, badges: [] },
+  { id: "p1", name: "Helena Martins Costa", bloomy: { key: "active" }, specialty: "Psicologia", council: "06900101", units: ["Unidade Teste"], graduation: "12/2013", abaHours: 320, badges: ["Integração Sensorial", "PECS", "Denver"] },
+  { id: "p2", name: "Tânia Abreu Pinho", bloomy: { key: "leaving", on: "12/08" }, specialty: "Psicologia", council: "06900102", units: ["Santana"], graduation: "07/2009", abaHours: 480, badges: ["Supervisão BCaBA", "PECS"] },
+  { id: "p3", name: "Mariana Palmeira Stein", bloomy: { key: "active" }, specialty: "Terapia Ocupacional", council: "25044", units: ["Unidade Teste", "Santana"], graduation: "12/2016", abaHours: 180, badges: ["Integração Sensorial"] },
+  { id: "p4", name: "Tiago Alves da Rocha", bloomy: { key: "active" }, specialty: "Terapia Ocupacional", council: "25067", units: ["Santana"], graduation: "06/2019", abaHours: 120, badges: [] },
+  { id: "p5", name: "Lívia Cardoso da Mata", bloomy: { key: "active" }, specialty: "Psicopedagogia", council: "90106", units: ["Unidade Teste"], graduation: "12/2011", abaHours: 240, badges: ["Psicopedagogia clínica"] },
+  { id: "p6", name: "Larissa Moura Faria", bloomy: { key: "active" }, specialty: "Psicologia", council: "06900103", units: ["Santana"], graduation: "12/2017", abaHours: 400, badges: ["Integração Sensorial", "ABLLS-R"] },
+  { id: "p7", name: "Raiane Almeida Longo", bloomy: { key: "active" }, specialty: "Fisioterapia", council: "448485", units: ["Unidade Teste", "Santana"], graduation: "07/2021", abaHours: 80, badges: [] },
+  { id: "p8", name: "Luciana Rodrigues Lima", bloomy: { key: "leaving", on: "31/08" }, specialty: "Fisioterapia", council: "239861", units: ["Santana"], graduation: "12/2012", abaHours: 200, badges: ["Bobath"] },
+  { id: "p9", name: "Fábio Teixeira Pereira", bloomy: { key: "active" }, specialty: "Fonoaudiologia", council: "90104", units: ["Unidade Teste"], graduation: "12/2008", abaHours: 520, badges: ["Integração Sensorial", "PROMPT", "Supervisão BCBA"] },
+  { id: "p10", name: "Carina Ferreira de Araújo", bloomy: { key: "inactive" }, specialty: "Aplicador Psicologia", council: "06900105", units: ["Unidade Teste"], graduation: "06/2022", abaHours: 60, badges: [] },
 ];
 
 /** Formações especiais reconhecidas: o nome do documento sai daqui. */
@@ -70,16 +67,18 @@ const SEED_SHARE: Record<string, string[]> = {
   p5: ["diploma", "council"],
   p6: ["diploma", "council", "id", "cv"],
   p9: ["diploma", "council", "id", "cv"],
+  p10: ["diploma", "council", "id"],
 };
 
-/** Vínculos com a Unimed: status inicial e desde quando (o status é recalculado pela documentação). */
+/** Vínculos com a Unimed: status e desde quando. */
 const SEED_LINKS: Record<string, [LinkStatus, string]> = {
   p1: ["active", "12/02/2024"],
   p2: ["active", "10/03/2024"],
   p3: ["active", "25/04/2024"],
-  p5: ["pending", "20/06/2026"],
+  p5: ["active", "20/06/2026"],
   p6: ["active", "02/07/2024"],
   p9: ["active", "05/11/2024"],
+  p10: ["active", "10/01/2025"],
 };
 
 const trainingFor = (badge: string) =>
@@ -90,10 +89,11 @@ const trainingFor = (badge: string) =>
 const later = (a: string, b: string) => (parseBR(a)! >= parseBR(b)! ? a : b);
 
 /** Os documentos de um profissional: os do cadastro, um por formação especial e o certificado do curso de ABA. */
-function docsOf(prof: Professional): ProfDoc[] {
+function docsOf(prof: Professional, seedLinks: Record<string, [LinkStatus, string]>): ProfDoc[] {
   const seed = SEED_DOCS[prof.id] ?? [];
-  // Compartilhar só existe depois do vínculo: o documento mais antigo entra na data do vínculo.
-  const since = SEED_LINKS[prof.id]?.[1];
+  // Compartilhar só existe com o vínculo ativo: o documento mais antigo entra na data do vínculo.
+  const link = seedLinks[prof.id];
+  const since = link?.[0] === "active" ? link[1] : undefined;
   const docs: ProfDoc[] = seed.map(([typeId, updatedAt, validUntil], i) => ({
     id: `${prof.id}_d${i + 1}`,
     typeId,
@@ -147,28 +147,53 @@ export const UNITS: Unit[] = [
 
 export type OperatorDocsFixture = DocsState;
 
-function build(): OperatorDocsFixture {
+/** Os descredenciados da revisão: motivo e data. */
+const REVIEWED: Record<string, [string, string]> = {
+  p10: ["Desligado ou em desligamento da Bloomy", "01/08/2026"],
+  p2: ["Desligado ou em desligamento da Bloomy", "04/08/2026"],
+};
+
+function build(variant: "review" | "first" | "reviewed"): OperatorDocsFixture {
+  const seedLinks: Record<string, [LinkStatus, string]> =
+    variant === "first"
+      ? {}
+      : variant === "reviewed"
+        ? { ...SEED_LINKS, ...Object.fromEntries(Object.entries(REVIEWED).map(([id, [, at]]) => [id, ["inactive", at] as [LinkStatus, string]])) }
+        : SEED_LINKS;
   const links: Record<string, Link> = {};
-  for (const [profId, [status, since]] of Object.entries(SEED_LINKS)) {
-    links[linkKey(profId, OPERATOR.id)] = { profId, opId: OPERATOR.id, status, since };
+  for (const [profId, [status, since]] of Object.entries(seedLinks)) {
+    const reason = status === "inactive" ? REVIEWED[profId]?.[0] : undefined;
+    links[linkKey(profId, OPERATOR.id)] = { profId, opId: OPERATOR.id, status, since, ...(reason ? { reason } : {}) };
   }
-  return reconcile({
+  return {
     operator: OPERATOR,
     professionals: PROFESSIONALS,
-    required: REQUIRED,
-    docs: Object.fromEntries(PROFESSIONALS.map((p) => [p.id, docsOf(p)])),
+    docs: Object.fromEntries(PROFESSIONALS.map((p) => [p.id, docsOf(p, seedLinks)])),
     links,
     units: UNITS,
-  });
+  };
 }
 
-/** Uma fixture só: Profissionais e Unidades são abas da mesma tela, e a aba vai na URL. */
+/** Um estado por fixture; Profissionais e Unidades são abas da mesma tela, e a aba vai na URL. */
 export const OPERATOR_DOCS_FIXTURES: Fixture<OperatorDocsFixture>[] = [
   {
     id: "operator-docs.unimed",
-    label: "Unimed · Documentos",
+    label: "Unimed · profissionais a revisar",
     description:
-      "Dez profissionais: seis com vínculo na Unimed (três ativos, três em credenciamento por documento faltando ou vencido) e quatro não credenciados. Duas unidades: Unidade Teste credenciada, Santana sem documento compartilhado.",
-    data: () => build(),
+      "Dez profissionais: sete credenciados na Unimed (dois deles pedem revisão: Carina inativa e Tânia em desligamento no Bloomy; Carina e Mariana com o conselho vencido) e três não credenciados. Duas unidades: Unidade Teste credenciada, Santana sem documento compartilhado.",
+    data: () => build("review"),
+  },
+  {
+    id: "operator-docs.first",
+    label: "Unimed · nenhum profissional credenciado",
+    description: "Os mesmos dez profissionais, nenhum credenciado na Unimed e nenhum documento compartilhado: o começo do credenciamento.",
+    data: () => build("first"),
+  },
+  {
+    id: "operator-docs.reviewed",
+    label: "Unimed · revisão concluída",
+    description:
+      "Carina (inativa) e Tânia (em desligamento) já descredenciadas, com o motivo e os documentos descompartilhados: sem aviso de revisão, cinco credenciados.",
+    data: () => build("reviewed"),
   },
 ];

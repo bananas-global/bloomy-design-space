@@ -107,8 +107,12 @@ function CardHeader({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-/** A aba Documentos: o título com os totais e as duas listas em `button_tabs`. */
-function DocumentsTab({ canEdit }: { canEdit: boolean }) {
+/**
+ * A aba Documentos: o título com os totais e as duas listas em `button_tabs`.
+ * No design, os totais ficam dentro de cada botão; o `button_tabs` do Phoenix
+ * só aceita o título em texto, então eles seguem no subtítulo.
+ */
+function DocumentsTab({ canEdit, drawer }: { canEdit: boolean; drawer: DocsDrawer }) {
   const { state } = useDocs();
   const opId = state.operator.id;
   const links = Object.values(state.links).filter((l) => l.opId === opId);
@@ -126,8 +130,8 @@ function DocumentsTab({ canEdit }: { canEdit: boolean }) {
         </Header>
       }
       tab={[
-        { title: "Profissionais", content: <ProfessionalsTab canEdit={canEdit} /> },
-        { title: "Unidades", content: <UnitsTab canEdit={canEdit} /> },
+        { title: "Profissionais", content: <ProfessionalsTab canEdit={canEdit} drawer={drawer} /> },
+        { title: "Unidades", content: <UnitsTab canEdit={canEdit} drawer={drawer} /> },
       ]}
     />
   );
@@ -138,7 +142,7 @@ function OtherTab({ title }: { title: string }) {
   return <p className="text-brand-purple-dark/60">{title}: aba existente no sistema, fora deste fluxo.</p>;
 }
 
-function OperatorDocumentsScreen({ context }: { context: ScenarioContext }) {
+function OperatorDocumentsScreen({ context, drawer }: { context: ScenarioContext; drawer: DocsDrawer }) {
   const fixture = fixtureOf(context);
   // `HealthCarePolicy.can?(role, :edit)`: admin e operation.
   const canEdit = context.can("health_cares.edit");
@@ -162,7 +166,7 @@ function OperatorDocumentsScreen({ context }: { context: ScenarioContext }) {
             other("address", "Endereço"),
             other("plans", "Tipos de Planos"),
             other("contracts", "Contratos", { card: false }),
-            { id: "documents", title: "Documentos", component: <DocumentsTab canEdit={canEdit} /> },
+            { id: "documents", title: "Documentos", component: <DocumentsTab canEdit={canEdit} drawer={drawer} /> },
             { title: "Financeiro", tabs: [other("authorizations", "Autorizações"), other("invoices", "Faturamento")] },
             canEdit && other("audit", "Auditoria"),
             canEdit && other("users", "Usuários"),
@@ -173,8 +177,46 @@ function OperatorDocumentsScreen({ context }: { context: ScenarioContext }) {
   );
 }
 
+/** Os controles da tela: em que aba de Documentos ela abre e qual drawer já vem aberto. */
+export const TAB_OPTIONS = [
+  { value: "profissionais", label: "Profissionais" },
+  { value: "unidades", label: "Unidades" },
+];
+
+export const DRAWER_OPTIONS = [
+  { value: "nenhum", label: "Nenhum" },
+  { value: "compartilhar", label: "Compartilhar com operadora (Mariana)" },
+  { value: "descredenciar", label: "Descredenciar (Carina)" },
+  { value: "unidade", label: "Documentos da unidade (Santana)" },
+];
+
+export type DocsDrawer = "nenhum" | "compartilhar" | "descredenciar" | "unidade";
+
+let lastTab: string | undefined;
+
+/**
+ * Leva o controle Aba para o `documents_tab` da URL, que o `button_tabs` lê ao
+ * montar. Só quando o controle muda: dentro dele, vale a aba que a pessoa
+ * clicou, e ao recarregar a página a URL manda.
+ */
+function openControlTab(tab: string) {
+  if (typeof window === "undefined" || tab === lastTab) return;
+  const first = lastTab === undefined;
+  lastTab = tab;
+  const params = new URLSearchParams(window.location.search);
+  if (first && params.has(DOCUMENTS_TRACKER)) return;
+  if (tab === "profissionais") params.delete(DOCUMENTS_TRACKER);
+  else params.set(DOCUMENTS_TRACKER, `${DOCUMENTS_TABS_ID}|${tab}`);
+  const query = params.toString();
+  window.history.replaceState(window.history.state, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+}
+
 export function OperatorDocuments({ context }: ScreenProps) {
   if (context.isLoading) return null;
+  // Drawer de unidade só existe na aba Unidades.
+  const drawer = (context.controls.drawer ?? "nenhum") as DocsDrawer;
+  const tab = drawer === "unidade" ? "unidades" : (context.controls.aba ?? "profissionais");
+  openControlTab(tab);
   // A chave remonta a tela quando o cenário troca: a aba de Documentos é lida da URL ao montar.
-  return <OperatorDocumentsScreen key={`${context.scenario?.id ?? "-"}:${context.fixture?.id ?? "default"}`} context={context} />;
+  return <OperatorDocumentsScreen key={`${context.scenario?.id ?? "-"}:${context.fixture?.id ?? "default"}:${tab}:${drawer}`} context={context} drawer={drawer} />;
 }

@@ -9,17 +9,21 @@ import { Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
 import { UNIT_STATUS, unitDocState, unitRows, unitStatus } from "./model.js";
 import { DocCheck, DrawerFooter, FilterBar, FilterCount, Missing, None, RowActions, SearchFilter, SectionLabel, SelectFilter, Subject, SummaryTags, Who } from "./parts.js";
+import type { DocsDrawer } from "../OperatorDocuments.js";
 import { useDocs } from "./store.js";
 
 const uniq = (list: string[]) => [...new Set(list)];
 
-export function UnitsTab({ canEdit }: { canEdit: boolean }) {
+/** A unidade que o drawer do controle abre: Santana, sem nada compartilhado. */
+const DRAWER_UNIT = "u2";
+
+export function UnitsTab({ canEdit, drawer: initialDrawer = "nenhum" }: { canEdit: boolean; drawer?: DocsDrawer }) {
   const { state } = useDocs();
   const op = state.operator;
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
   const [cred, setCred] = useState("");
-  const [drawer, setDrawer] = useState<{ unitId: string; open: boolean } | null>(null);
+  const [drawer, setDrawer] = useState<{ unitId: string; open: boolean } | null>(initialDrawer === "unidade" ? { unitId: DRAWER_UNIT, open: true } : null);
 
   const all = state.units.map((unit) => ({ unit, ...unitStatus(unit, op.id) }));
   const q = query.trim().toLowerCase();

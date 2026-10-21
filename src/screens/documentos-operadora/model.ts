@@ -3,9 +3,9 @@
  * Novo — não existe no Phoenix.
  *
  * Profissionais: cada um tem os próprios documentos e escolhe quais
- * compartilhar com a operadora. O credenciamento é derivado: falta documento
- * exigido (ausente ou vencido) → "Em credenciamento"; completo → "Ativo".
- * Descredenciar é manual e nunca é revertido pela regra.
+ * compartilhar com a operadora. Credenciar e descredenciar são manuais: os
+ * documentos não mudam o status, só sinalizam o que venceu. Quem segue
+ * credenciado mas está inativo ou em desligamento no Bloomy pede revisão.
  *
  * Unidades: os documentos obrigatórios da unidade (alvará, AVCB, CNES…). Com
  * todos compartilhados, a unidade fica "Credenciada" na operadora.
@@ -35,11 +35,13 @@ export type Operator = {
   observation: string | null;
 };
 
+/** A situação do profissional no Bloomy; em desligamento traz a data de saída (dd/mm). */
+export type BloomyStatus = { key: "active" } | { key: "inactive" } | { key: "leaving"; on: string };
+
 export type Professional = {
   id: string;
   name: string;
-  /** Ativo na clínica. */
-  active: boolean;
+  bloomy: BloomyStatus;
   specialty: string;
   council: string;
   /** Unidades em que atua. */
@@ -63,10 +65,10 @@ export type ProfDoc = {
   shared: { opId: string; at: string }[];
 };
 
-export type LinkStatus = "active" | "pending" | "inactive";
+export type LinkStatus = "active" | "inactive";
 
-/** O vínculo do profissional com a operadora (o credenciamento). */
-export type Link = { profId: string; opId: string; status: LinkStatus; since: string; manual?: boolean };
+/** O vínculo do profissional com a operadora (o credenciamento); `reason` é o motivo do descredenciamento. */
+export type Link = { profId: string; opId: string; status: LinkStatus; since: string; reason?: string };
 
 export type UnitDoc = {
   id: string;
@@ -83,8 +85,6 @@ export type Unit = { id: string; name: string; city: string; documents: UnitDoc[
 export type DocsState = {
   operator: Operator;
   professionals: Professional[];
-  /** Documentos exigidos pela operadora para credenciar um profissional. */
-  required: string[];
   docs: Record<string, ProfDoc[]>;
   /** Por `profId:opId`. */
   links: Record<string, Link>;
@@ -160,39 +160,37 @@ export function profDocState(doc: ProfDoc): DocState {
 export const linkKey = (profId: string, opId: string) => `${profId}:${opId}`;
 
 export const LINK_STATUS: Record<LinkStatus, { label: string; variant: TagVariant }> = {
-  active: { label: "Ativo", variant: "green" },
-  pending: { label: "Em credenciamento", variant: "light-blue" },
+  active: { label: "Credenciado", variant: "green" },
   inactive: { label: "Descredenciado", variant: "red" },
 };
 
 export const NOT_LINKED = "Não credenciado";
 
-/** Cor de "não credenciado" nos totais: a mesma neutra de "Não compartilhado" das unidades. */
-export const NOT_LINKED_VARIANT: TagVariant = "dark-purple";
+/** Cor de "não credenciado" nos totais. */
+export const NOT_LINKED_VARIANT: TagVariant = "light-blue";
 
 export const isShared = (doc: ProfDoc, opId: string) => doc.shared.some((s) => s.opId === opId);
 
-/** Os documentos exigidos que faltam: não compartilhados com a operadora, ou vencidos. */
-export function missingFor(s: Pick<DocsState, "docs" | "required">, profId: string, opId: string): string[] {
-  const docs = s.docs[profId] ?? [];
-  return s.required.filter((typeId) => {
-    const d = docs.find((x) => x.typeId === typeId && isShared(x, opId));
-    return !d || profDocState(d).key === "expired";
-  });
+/** A situação no Bloomy: rótulo e cor do ponto ao lado. */
+export function bloomyLabel(b: BloomyStatus): { label: string; dot: string; text: string } {
+  if (b.key === "inactive") return { label: "Bloomy: Inativo", dot: "bg-red", text: "text-red" };
+  if (b.key === "leaving") return { label: `Bloomy: Desligamento em ${b.on}`, dot: "bg-orange", text: "text-orange-dark" };
+  return { label: "Bloomy: Ativo", dot: "bg-green", text: "text-green-dark" };
 }
 
-/** Recalcula o status de cada vínculo pela documentação; o descredenciamento manual fica. */
-export function reconcile(s: DocsState): DocsState {
-  const links: Record<string, Link> = {};
-  for (const [key, l] of Object.entries(s.links)) {
-    links[key] = l.manual || l.status === "inactive" ? l : { ...l, status: missingFor(s, l.profId, l.opId).length ? "pending" : "active" };
-  }
-  return { ...s, links };
-}
+export const BLOOMY_FILTERS = ["Ativo", "Inativo", "Em desligamento"] as const;
 
-export type DocSituation = "Completo" | "Pendente" | "Não iniciado";
+export const bloomyFilter = (b: BloomyStatus) => (b.key === "inactive" ? "Inativo" : b.key === "leaving" ? "Em desligamento" : "Ativo");
 
-export const DOC_SITUATIONS: DocSituation[] = ["Completo", "Pendente", "Não iniciado"];
+/** Credenciado na operadora, mas inativo ou em desligamento no Bloomy: pede revisão. */
+export const needsReview = (link: Link | null, prof: Professional) => link?.status === "active" && prof.bloomy.key !== "active";
+
+export type DocSituation = "Em dia" | "Com vencido" | "Sem documentos";
+
+export const DOC_SITUATIONS: DocSituation[] = ["Em dia", "Com vencido", "Sem documentos"];
+
+/** Motivos do descredenciamento. */
+export const UNLINK_REASONS = ["Desligado ou em desligamento da Bloomy", "Documentação vencida", "Solicitação da operadora", "Outro motivo"];
 
 /* ============================================================
    Unidades
