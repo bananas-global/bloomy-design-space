@@ -8,7 +8,7 @@ import { DrawerModal } from "../../components/Overlay.js";
 import { Table } from "../../components/Table.js";
 import { Tag } from "../../components/Tag.js";
 import { UNIT_STATUS, unitDocState, unitRows, unitStatus } from "./model.js";
-import { DocCheck, DrawerFooter, FilterBar, FilterCount, Missing, None, RowActions, SearchFilter, SectionLabel, SelectFilter, Subject, SummaryTags, Who } from "./parts.js";
+import { DRAWER_CONTENT, DocCheck, DrawerFooter, FilterBar, FilterCount, Missing, None, RowActions, SearchFilter, SectionLabel, SelectFilter, Subject, SummaryTags, Who } from "./parts.js";
 import type { DocsDrawer } from "../OperatorDocuments.js";
 import { useDocs } from "./store.js";
 
@@ -96,7 +96,7 @@ function UnitDocsDrawer({ unitId, show, canEdit, onClose }: { unitId: string; sh
   }
 
   return (
-    <DrawerModal id="share_unit_docs" show={show} title="Documentos da unidade" onCancel={onClose}>
+    <DrawerModal id="share_unit_docs" show={show} title="Documentos da unidade" contentClass={DRAWER_CONTENT} onCancel={onClose}>
       <Subject name={unit.name} meta={`${unit.city} · ${op.name}`} icon="fa-hospital" />
       <SectionLabel>Documentos</SectionLabel>
       <div className="flex flex-col gap-2">

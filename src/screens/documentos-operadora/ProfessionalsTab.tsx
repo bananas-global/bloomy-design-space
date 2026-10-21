@@ -29,6 +29,7 @@ import {
   BloomyWho,
   DocCheck,
   DocCount,
+  DRAWER_CONTENT,
   DrawerFooter,
   FilterBar,
   FilterCount,
@@ -238,7 +239,7 @@ function ShareDrawer({ profId, show, canEdit, onClose }: { profId: string; show:
   }
 
   return (
-    <DrawerModal id="share_professional_docs" show={show} title="Compartilhar com operadora" onCancel={onClose}>
+    <DrawerModal id="share_professional_docs" show={show} title="Compartilhar com operadora" contentClass={DRAWER_CONTENT} onCancel={onClose}>
       <Subject name={prof.name} meta={`${prof.specialty}${prof.council ? ` · conselho ${prof.council}` : ""}`} />
       <SectionLabel>Documentos do profissional</SectionLabel>
       <div className="flex flex-col gap-2">
@@ -283,7 +284,7 @@ function UnlinkModal({ profId, show, onClose }: { profId: string; show: boolean;
   }
 
   return (
-    <DrawerModal id="unlink_professional" show={show} title={`Descredenciar da ${op.name}`} onCancel={onClose}>
+    <DrawerModal id="unlink_professional" show={show} title={`Descredenciar da ${op.name}`} contentClass={DRAWER_CONTENT} onCancel={onClose}>
       <div className="rounded-xl bg-brand-purple-dark/5 px-4 py-3">
         <p className="font-extrabold text-brand-purple-dark">{prof.name}</p>
         <p className="text-sm text-brand-purple-dark/60">{prof.specialty}</p>
@@ -318,14 +319,14 @@ function UnlinkModal({ profId, show, onClose }: { profId: string; show: boolean;
           />
         </div>
       )}
-      <div className="mt-6 flex justify-end gap-3">
+      <DrawerFooter>
         <Button type="button" variant="tint" onClick={onClose}>
           Cancelar
         </Button>
         <Button type="button" color="red" leftIcon="fa-user-xmark" disabled={!reason} onClick={confirm}>
           Descredenciar
         </Button>
-      </div>
+      </DrawerFooter>
     </DrawerModal>
   );
 }

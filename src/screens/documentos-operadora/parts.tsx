@@ -268,13 +268,30 @@ export function ReviewNotice({ title, detail, action, onAction }: { title: strin
   );
 }
 
-/** O rodapé do drawer. */
-export function DrawerFooter({ onDone }: { onDone: () => void }) {
+/**
+ * O conteúdo do drawer em coluna, para o rodapé encostar embaixo mesmo com
+ * pouco conteúdo, e sem o padding de baixo, que o `sticky` do rodapé não
+ * atravessa. Vai no `contentClass` (`content_class` do `drawer_modal`).
+ */
+export const DRAWER_CONTENT = "flex flex-col pb-0!";
+
+/**
+ * O rodapé do drawer, sempre fixo embaixo: o `drawer_modal` não tem slot de
+ * rodapé, então ele fica no fim do conteúdo, preso com `sticky` e sangrando o
+ * padding lateral. O espaçador antes dele empurra para baixo e garante 24px
+ * depois do último item. Sem `children`, mostra Concluir.
+ */
+export function DrawerFooter({ onDone, children }: { onDone?: () => void; children?: ReactNode }) {
   return (
-    <div className="mt-6 flex justify-end">
-      <Button type="button" rightIcon="fa-check" onClick={onDone}>
-        Concluir
-      </Button>
-    </div>
+    <>
+      <div className="min-h-6 flex-1" />
+      <div className="sticky bottom-0 -mx-6 flex justify-end gap-3 border-t border-neutral-100 bg-white px-6 py-4">
+        {children ?? (
+          <Button type="button" rightIcon="fa-check" onClick={onDone}>
+            Concluir
+          </Button>
+        )}
+      </div>
+    </>
   );
 }
