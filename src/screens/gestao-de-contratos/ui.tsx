@@ -18,7 +18,7 @@ import { Tag, type TagVariant } from "../../components/Tag.js";
 import type { BreadcrumbItem } from "../../components/BackofficeComponents.js";
 import { BackofficeLayout } from "../../layouts/BackofficeLayout.js";
 import { CONTRATOS_FIXTURES } from "./fixtures.js";
-import { MASCARA, PAPEIS, brl, type ContratosData, type Papel } from "./model.js";
+import { MASCARA, PAPEIS, TODAY, brl, type ContratosData, type Papel } from "./model.js";
 
 const CARTEIRA_EXEMPLO = CONTRATOS_FIXTURES[0]!.data as ContratosData;
 
@@ -39,10 +39,11 @@ export const ROTAS = {
   cobranca: `${BASE}/cobranca`,
   partes: `${BASE}/partes`,
   tabelas: `${BASE}/tabelas`,
+  manual: `${BASE}/manual`,
 } as const;
 export const fichaDe = (id: string) => ROTAS.ficha.replace(":id", id);
 
-export type Secao = "torre" | "carteira" | "minutas" | "diff" | "vigencia" | "dossie" | "cobranca" | "partes" | "tabelas" | "novo" | "ficha";
+export type Secao = "torre" | "carteira" | "minutas" | "diff" | "vigencia" | "dossie" | "cobranca" | "partes" | "tabelas" | "manual" | "novo" | "ficha";
 
 const NAV: { id: Secao; label: string; icon: string; to: string }[] = [
   { id: "torre", label: "Torre de Controle", icon: "fa-tower-observation", to: ROTAS.torre },
@@ -54,6 +55,7 @@ const NAV: { id: Secao; label: string; icon: string; to: string }[] = [
   { id: "cobranca", label: "Cobrança & ERP", icon: "fa-file-invoice-dollar", to: ROTAS.cobranca },
   { id: "partes", label: "Partes", icon: "fa-handshake", to: ROTAS.partes },
   { id: "tabelas", label: "Tabelas de Apoio", icon: "fa-table-list", to: ROTAS.tabelas },
+  { id: "manual", label: "Manual", icon: "fa-book-open", to: ROTAS.manual },
 ];
 
 /** Rótulo e rota de uma tela do módulo, para o breadcrumb de quem abre a Ficha. */
@@ -63,10 +65,10 @@ export const ORIGENS = NAV.filter((n) => ["torre", "carteira", "diff", "vigencia
 
 /**
  * Abre a Ficha do contrato lembrando de onde veio: o breadcrumb da Ficha volta
- * para essa tela (ex.: Cobrança & ERP › CT-2026-003).
+ * para essa tela (ex.: Cobrança & ERP › CTR-2026-0003).
  */
 export function irFicha(context: ScenarioContext, id: string, origem: Secao) {
-  context.navigate(fichaDe(id), { controls: { origem, ...(context.controls.papel ? { papel: context.controls.papel } : {}) } });
+  context.navigate(fichaDe(id), { controls: { origem } });
 }
 
 /* ------------------------------------------------------------------ */
@@ -91,7 +93,7 @@ const MENU_MODULO = [{ to: ROTAS.torre, title: "Gestão de Contratos", icon: "fa
 
 const CURRENT_USER = { name: "Marina Alves", units: ["Unidade Jardim", "Unidade Girassol", "Unidade Centro"], roles: ["Admin"], professional: false };
 const NOTIFICATIONS = [
-  { id: "n1", title: "Contrato aguardando aprovação", content: "CT-2026-007 · Instituto Raízes de Educação foi submetido para aprovação.", insertedAt: "há 2 horas" },
+  { id: "n1", title: "Contrato aguardando aprovação", content: "CTR-2026-0007 · Instituto Raízes de Educação foi submetido para aprovação.", insertedAt: "há 2 horas" },
   { id: "n2", title: "Erro de envio ao ERP", content: "A NF-e 000.451.902 da Nuvem Clínica não foi sincronizada com o Omie.", insertedAt: "há 1 dia" },
 ];
 
@@ -147,7 +149,7 @@ export function ContratosShell({
         {/* A barra ocupa a largura toda: desfaz o padding do `main` do layout. */}
         <div className="sticky top-0 z-40 -mx-4 -mt-4 mb-6 lg:-mx-8 lg:-mt-8 bg-white shadow-main px-4 lg:px-8 py-4">
           <div className="mx-auto max-w-6xl flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Button variant="ghost" leftIcon="fa-arrow-left" onClick={() => context.navigate(foco.voltar, { controls: context.controls.papel ? { papel: context.controls.papel } : {} })}>
+            <Button variant="ghost" leftIcon="fa-arrow-left" onClick={() => context.navigate(foco.voltar, { controls: {} })}>
               {foco.rotuloVoltar}
             </Button>
             <span className="hidden h-8 w-px bg-brand-purple-dark/10 sm:block" aria-hidden="true" />
@@ -206,7 +208,7 @@ function ModuloNav({ context, secao }: { context: ScenarioContext; secao: Secao 
             href={n.to}
             onClick={(e) => {
               e.preventDefault();
-              context.navigate(n.to, { controls: context.controls.papel ? { papel: context.controls.papel } : {} });
+              context.navigate(n.to, { controls: {} });
             }}
             data-active={ativo ? "true" : "false"}
             aria-current={ativo ? "page" : undefined}
@@ -510,18 +512,22 @@ export function TagMinuta({ tag }: { tag: string }) {
 
 /** Texto de cláusula com as tags `{{x}}` em roxo. */
 export function TextoComTags({ texto }: { texto: string }) {
-  const partes = texto.split(/(\{\{[a-z_.]+\}\})/g);
+  const partes = texto.split(/(\{\{[A-Z_]+\}\})/g);
   return (
     <>
       {partes.map((p, i) => {
-        const m = /^\{\{([a-z_.]+)\}\}$/.exec(p);
+        const m = /^\{\{([A-Z_]+)\}\}$/.exec(p);
         return m ? <TagMinuta key={i} tag={m[1]!} /> : <span key={i}>{p}</span>;
       })}
     </>
   );
 }
 
-/** Exporta as linhas visíveis para CSV (planilha), respeitando os filtros. */
+/**
+ * Exporta as linhas visíveis para planilha (FR-103): separador ";", BOM para a
+ * acentuação no Excel e nome "<nome>_<AAAA-MM-DD>". Quem chama já passa só as
+ * linhas filtradas e sem a coluna de ações.
+ */
 export function exportarPlanilha(nome: string, cabecalho: string[], linhas: (string | number)[][]) {
   const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
   const csv = [cabecalho, ...linhas].map((l) => l.map(esc).join(";")).join("\n");
@@ -529,7 +535,7 @@ export function exportarPlanilha(nome: string, cabecalho: string[], linhas: (str
     const url = URL.createObjectURL(new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${nome}.csv`;
+    a.download = `${nome}_${TODAY}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   } catch {

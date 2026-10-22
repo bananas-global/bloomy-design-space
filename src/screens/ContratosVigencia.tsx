@@ -1,18 +1,21 @@
 /**
- * Gestão de Contratos — Vigência & Aditivos.
+ * Gestão de Contratos — Vigência & Aditivos (FR-052 a FR-058).
  *
  * Três abas sobre os contratos Vigentes: Radar (por data de fim), Reajustes
  * (data-base, janela, índice e valor sugerido) e Aditivos (o livro). Abre
- * filtrada por um contrato quando vem da Ficha (`controls.contrato`).
+ * filtrada por um contrato quando vem da Ficha (`controls.contrato`); o filtro
+ * vale para as três abas.
  *
- * Regra de desenho decidida aqui: a janela de reajuste fica ABERTA quando a
- * próxima data-base está a até 90 dias ou já passou — a mesma régua do
- * "Alerta 31–90d", para o Financeiro preparar o reajuste com a antecedência
- * que o aviso de vigência já dá.
+ * Regras do `model.ts`: data-base é o aniversário do início (29/02 vira 28/02)
+ * e a janela abre a {@link JANELA_REAJUSTE_DIAS} dias dela (RN-040); taxas fixas
+ * por índice, com índice não reconhecido a 3,80% e sinalizado (RN-041). O
+ * reajuste gera um termo aditivo "Reajuste Financeiro" Aprovado e Assinado,
+ * sem mexer na vigência (RN-042); todo aditivo sobe a versão (minor) e registra
+ * "Aditamento: Vigente → Vigente Repactuado" (RN-039).
  *
- * Feito na tela (componente novo): as pílulas de filtro e a etiqueta do
- * contrato. O resto é `lazy_tabs`, `table`, `modal`, `input`, `tag`, `button`
- * e `empty_state_card`; o formulário de aditivo é o mesmo da Ficha.
+ * Feito na tela (componente novo): a etiqueta do contrato. O resto é
+ * `lazy_tabs`, `table`, `modal`, `input`, `tag`, `button` e
+ * `empty_state_card`; o formulário de aditivo é o mesmo da Ficha.
  */
 import { useMemo, useState, type ReactNode } from "react";
 import type { ScenarioContext, ScreenProps } from "@brucesantos/design-space";
@@ -27,31 +30,58 @@ import { ButtonTabs, titleToSlug } from "../components/Tabs.js";
 import { Tag } from "../components/Tag.js";
 import { ModalAditivo } from "./gestao-de-contratos/FormAditivo.js";
 import {
-  APROVACAO, ASSINATURA, FAIXA, TODAY, br, brl, diasAte, diasLabel, faixa, parteDe,
-  type Aditivo, type Contrato, type ContratosData, type Faixa, type Indice, type Papel,
+  APROVACAO, ASSINATURA, FAIXA, JANELA_REAJUSTE_DIAS, PAPEL_WORKFLOW, TAXA_PADRAO, TODAY, br, brl, dataBase, diasAte, diasLabel, emExperiencia, faixa,
+  indiceDe, janelaAberta, parteDe, proximaVersao, proximoAditivo, rotuloAditivo, valorReajustado,
+  type Aditivo, type Contrato, type ContratosData, type Faixa, type Papel,
 } from "./gestao-de-contratos/model.js";
 import { ACOES_COMPACTAS, Aviso, Bloco, Dados, ContratosShell, Etiquetas, Selo, Valor, exportarPlanilha, papelDe, SeloLeitura, irFicha, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 
 type Aba = "radar" | "reajustes" | "aditivos";
 const ABAS: Aba[] = ["radar", "reajustes", "aditivos"];
 
-/** Dias de antecedência em que a janela de reajuste abre (ver comentário do topo). */
-export const JANELA_DIAS = 90;
+/** Reajuste é do Financeiro / Controladoria; aditivo, do Jurídico e do operador. Diretoria só lê. */
+const podeReajustar = (p: Papel) => p === "financeiro" || p === "administrador";
+const podeAditar = (p: Papel) => p === "juridico" || p === "operador" || p === "administrador";
 
-/** Reajuste é do Financeiro; aditivo, do Jurídico e do operador. Diretoria só lê. */
-const podeReajustar = (p: Papel) => p === "financeiro";
-const podeAditar = (p: Papel) => p === "juridico" || p === "operador";
-
+const USUARIO = "Marina Alves";
 const pctBr = (t: number) => `${t.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 const numBr = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const parseBr = (s: string) => Number(s.trim().replace(/\./g, "").replace(",", "."));
-const umAnoDepois = (iso: string) => `${Number(iso.slice(0, 4)) + 1}${iso.slice(4)}`;
 const cents = (v: number) => Math.round(v * 100);
+const agora = () => `${TODAY}T${new Date().toTimeString().slice(0, 5)}`;
 
-const janelaAberta = (c: Contrato) => c.dataBase != null && diasAte(c.dataBase) <= JANELA_DIAS;
-const indiceDe = (data: ContratosData, c: Contrato): Indice | undefined => data.indices.find((i) => i.codigo === c.indice);
-const sugerido = (c: Contrato, i?: Indice) => (c.valor != null && i ? Math.round(c.valor * (1 + i.taxa / 100) * 100) / 100 : undefined);
-const emExperiencia = (c: Contrato) => c.experienciaAte != null && c.experienciaAte >= TODAY;
+/** Data-base só para contrato com início válido (FR-054). */
+const inicioValido = (c: Contrato) => /^\d{4}-\d{2}-\d{2}$/.test(c.inicio);
+const dataBaseDe = (c: Contrato) => (inicioValido(c) ? dataBase(c.inicio) : undefined);
+const aberta = (c: Contrato) => inicioValido(c) && janelaAberta(c.inicio);
+/** Último aditivo de reajuste do contrato (coluna "Último Reajuste", FR-054). */
+const ultimoReajuste = (aditivos: Aditivo[], id: string) =>
+  aditivos.filter((a) => a.contratoId === id && a.origem === "reajuste").sort((a, b) => b.data.localeCompare(a.data))[0];
+
+/**
+ * Efeito de um termo aditivo no contrato (RN-039, RN-042): vigência e valor
+ * quando o aditivo os traz, versão minor, registro "Vigente → Vigente
+ * Repactuado", auditoria e evento no histórico.
+ */
+function repactuar(c: Contrato, a: Aditivo, taxa?: number): Contrato {
+  const versao = proximaVersao(c.versao, "minor");
+  const reajuste = a.origem === "reajuste";
+  return {
+    ...c,
+    versao,
+    fim: a.novaVigencia ?? c.fim,
+    valor: a.novoValor != null && a.novoValor > 0 ? a.novoValor : c.valor,
+    ...(reajuste && { ultimoReajuste: { data: a.data, taxa: taxa ?? 0, valorAnterior: a.valorAnterior ?? 0, ...(a.ajusteManual && { manual: true }) } }),
+    versoes: [...c.versoes, { versao, data: a.data, fase: "Aditivos & Reajuste", motivo: a.tipo, resumo: a.impacto, revisor: USUARIO, ...(c.clausulas && { clausulas: c.clausulas }) }],
+    workflow: [...c.workflow, { id: `wf_${Date.now()}`, data: agora(), workflow: "ciclo", de: "Vigente", para: "Vigente Repactuado", parecer: `${a.codigo} registrado. Vigência: ${br(a.novaVigencia ?? c.fim)}. Impacto: ${a.impacto}`, usuario: USUARIO, papel: PAPEL_WORKFLOW.aditivo }],
+    auditoria: [...c.auditoria, { id: `au_${Date.now()}`, data: agora(), usuario: USUARIO, perfil: reajuste ? "Controladoria" : "Jurídico", acao: reajuste ? "REAJUSTE_APLICAR" : "ADITIVO_REGISTRAR", detalhes: `${a.codigo}: ${a.impacto}` }],
+    eventos: [
+      ...c.eventos,
+      { id: `ev_${Date.now()}`, data: agora(), tipo: "aditivo", titulo: `${rotuloAditivo(a)} · ${a.codigo}${a.ajusteManual ? " (ajuste manual)" : ""}`, autor: USUARIO, detalhe: a.impacto },
+      { id: `ev_${Date.now()}_v`, data: agora(), tipo: "versao", titulo: `Versão ${versao} registrada · ${a.tipo}`, autor: USUARIO, detalhe: "Aditamento: Vigente → Vigente Repactuado" },
+    ],
+  };
+}
 
 export function ContratosVigencia({ context }: ScreenProps) {
   return (
@@ -67,7 +97,7 @@ export function ContratosVigencia({ context }: ScreenProps) {
 }
 
 function Vigencia({ data, context }: { data: ContratosData; context: ScenarioContext }) {
-  const papel = papelDe(context, "financeiro");
+  const papel = papelDe(context, "administrador");
   const ctl = context.controls;
   const [contratos, setContratos] = useState(data.contratos);
   const [aditivos, setAditivos] = useState(data.aditivos);
@@ -88,39 +118,59 @@ function Vigencia({ data, context }: { data: ContratosData; context: ScenarioCon
   const vs = contratoId ? vigentesTodos.filter((c) => c.id === contratoId) : vigentesTodos;
 
   // Modal de reajuste: abre no contrato filtrado ou no primeiro com a janela aberta.
-  const alvoInicial = ctl.modal === "aplicar-reajuste" ? (vs.find((c) => janelaAberta(c) && c.indice) ?? vs[0])?.id : undefined;
+  const alvoInicial = ctl.modal === "aplicar-reajuste" ? (vs.find((c) => aberta(c) && c.valor != null) ?? vs[0])?.id : undefined;
   const [reajuste, setReajuste] = useState<string | undefined>(alvoInicial);
   const [novoAditivo, setNovoAditivo] = useState(ctl.modal === "aditivo");
 
-  const aplicar = (id: string, novoValor: number, justificativa: string, manual: boolean) => {
+  /** Registra o aditivo no livro e aplica o efeito no contrato. */
+  const registrar = (a: Aditivo, taxa?: number) => {
+    setAditivos((as) => [a, ...as]);
+    setContratos((cs) => cs.map((x) => (x.id === a.contratoId ? repactuar(x, a, taxa) : x)));
+  };
+
+  /** Aplicar reajuste (RN-042): termo "Reajuste Financeiro" que nasce Aprovado e Assinado, sem alterar a vigência. */
+  const aplicar = (id: string, novoValor: number, justificativa: string) => {
     const c = contratos.find((x) => x.id === id)!;
-    const i = indiceDe(data, c)!;
-    setContratos((cs) =>
-      cs.map((x) =>
-        x.id === id
-          ? {
-              ...x,
-              valor: novoValor,
-              ultimoReajuste: { data: TODAY, taxa: i.taxa, valorAnterior: x.valor ?? 0, ...(manual && { manual: true }) },
-              dataBase: x.dataBase ? umAnoDepois(x.dataBase) : x.dataBase,
-              eventos: [...x.eventos, { id: `e_${Date.now()}`, data: TODAY, tipo: "versao", titulo: manual ? "Reajuste aplicado (ajuste manual)" : "Reajuste aplicado", autor: "Marina Alves", detalhe: justificativa || undefined }],
-            }
-          : x,
-      ),
-    );
+    const { indice, taxa } = indiceDe(data, c.indice);
+    const antigo = c.valor ?? 0;
+    const calculado = valorReajustado(antigo, taxa);
+    const manual = cents(novoValor) !== cents(calculado);
+    const { numero, codigo } = proximoAditivo(aditivos, id);
+    const a: Aditivo = {
+      id: `a_${Date.now()}`,
+      contratoId: id,
+      numero,
+      codigo,
+      origem: "reajuste",
+      tipo: "Reajuste Financeiro",
+      data: TODAY,
+      novoValor,
+      valorAnterior: antigo,
+      motivo: [
+        `Aplicação de ${pctBr(taxa)} com base no ${indice?.nome ?? c.indice ?? "índice padrão"}.`,
+        manual && `Ajuste manual: calculado R$ ${numBr(calculado)}, aplicado R$ ${numBr(novoValor)}.`,
+        justificativa,
+      ].filter(Boolean).join(" "),
+      impacto: `Valor base ajustado de R$ ${numBr(antigo)} para R$ ${numBr(novoValor)} (+${pctBr(taxa)})`,
+      aprovacao: "aprovado",
+      assinatura: "assinado",
+      ...(manual && { ajusteManual: { calculado, justificativa } }),
+    };
+    registrar(a, taxa);
     setReajuste(undefined);
     showToast({
       type: "success",
       title: manual ? "Reajuste aplicado com ajuste manual" : "Reajuste aplicado",
-      content: `${id}: ${i.codigo} ${pctBr(i.taxa)}. Próxima data-base ${br(c.dataBase ? umAnoDepois(c.dataBase) : undefined)}.`,
+      content: `${codigo} · ${rotuloAditivo(a)}: ${a.impacto}. Versão ${proximaVersao(c.versao, "minor")}.`,
       closeTime: 5000,
     });
   };
 
   const salvarAditivo = (a: Aditivo) => {
-    setAditivos((as) => [a, ...as]);
+    const c = contratos.find((x) => x.id === a.contratoId);
+    registrar(a);
     setNovoAditivo(false);
-    showToast({ type: "success", title: "Aditivo registrado", content: `${a.codigo} · ${a.tipo}, Em Elaboração. Vai para aprovação antes da assinatura.`, closeTime: 5000 });
+    showToast({ type: "success", title: "Aditivo registrado", content: `${a.codigo} · ${a.tipo}, Aprovado e Assinado. ${a.contratoId} passa à versão ${proximaVersao(c?.versao, "minor")}.`, closeTime: 5000 });
   };
 
   const naoVigente = filtrado && filtrado.status !== "vigente";
@@ -159,7 +209,8 @@ function Vigencia({ data, context }: { data: ContratosData; context: ScenarioCon
   return (
     <>
       <Bloco>
-        {header}
+        {/* Sem contrato filtrado o cabeçalho fica vazio e não pode ocupar o espaço do topo. */}
+        {filtrado && header}
         <ButtonTabs
           id="vigencia-abas"
           trackerId="vigenciaTab"
@@ -201,52 +252,60 @@ function Leitura({ children }: { children: string }) {
 /* ------------------------------------------------------------------ */
 
 type FiltroRadar = "critico" | "alerta" | "regular" | "experiencia";
-const FILTROS_RADAR: { id: FiltroRadar; label: string; icon: string }[] = [
-  { id: "critico", label: "Crítico", icon: "fa-siren-on" },
-  { id: "alerta", label: "Atenção", icon: "fa-triangle-exclamation" },
-  { id: "regular", label: "Regular", icon: "fa-circle-check" },
-  { id: "experiencia", label: "CLT em experiência", icon: "fa-user-clock" },
+/** Filtros do radar (FR-053): Todos (sem filtro), Crítico, Atenção, Regular e CLT em experiência (RN-022). */
+const FILTROS_RADAR: { id: FiltroRadar; label: string }[] = [
+  { id: "critico", label: "Crítico" },
+  { id: "alerta", label: "Atenção" },
+  { id: "regular", label: "Regular" },
+  { id: "experiencia", label: "CLT em experiência" },
 ];
 
-/** Crítico inclui os vencidos (como o "Críticos ≤30d" da Torre). Faixas somam entre si; experiência restringe. */
-function passaRadar(c: Contrato, f: Set<FiltroRadar>) {
-  const faixas = [...f].filter((x) => x !== "experiencia");
+/** Crítico inclui os vencidos (faixa "Crítico (≤ 30d)", RN-014). */
+function passaRadar(c: Contrato, f: FiltroRadar | "") {
+  if (!f) return true;
+  if (f === "experiencia") return emExperiencia(c);
   const fx: Faixa = faixa(c.fim);
-  const okFaixa = !faixas.length || faixas.some((x) => (x === "critico" ? fx === "critico" || fx === "vencido" : fx === x));
-  return okFaixa && (!f.has("experiencia") || emExperiencia(c));
+  return f === "critico" ? fx === "critico" || fx === "vencido" : fx === f;
 }
 
 function Radar({ data, vs, faixaInicial, abrir }: { data: ContratosData; vs: Contrato[]; faixaInicial?: string; abrir: (id: string) => void }) {
-  const [filtros, setFiltros] = useState(new Set<FiltroRadar>(FILTROS_RADAR.some((f) => f.id === faixaInicial) ? [faixaInicial as FiltroRadar] : []));
-  const toggle = (id: FiltroRadar) => setFiltros((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const lista = useMemo(() => vs.filter((c) => passaRadar(c, filtros)).sort((a, b) => a.fim.localeCompare(b.fim)), [vs, filtros]);
-  const contagem = (id: FiltroRadar) => vs.filter((c) => passaRadar(c, new Set([id]))).length;
-  const faixaSelecionada = [...filtros].find((f) => f !== "experiencia") ?? "";
+  const [filtro, setFiltro] = useState<FiltroRadar | "">(FILTROS_RADAR.some((f) => f.id === faixaInicial) ? (faixaInicial as FiltroRadar) : "");
+  const lista = useMemo(() => vs.filter((c) => passaRadar(c, filtro)).sort((a, b) => a.fim.localeCompare(b.fim)), [vs, filtro]);
+  const contagem = (id: FiltroRadar) => vs.filter((c) => passaRadar(c, id)).length;
+  const rotulo = FILTROS_RADAR.find((f) => f.id === filtro)?.label;
 
   const exportar = () =>
     exportarPlanilha(
       "radar-de-vigencia",
-      ["Contrato", "Parte", "Categoria", "Término", "Dias restantes", "Faixa", "Experiência até"],
-      lista.map((c) => [c.id, parteDe(data, c)?.nome ?? "", c.categoria, br(c.fim), diasLabel(c.fim), FAIXA[faixa(c.fim)].label, c.experienciaAte ? br(c.experienciaAte) : ""]),
+      ["Contrato", "Parte", "Categoria", "Término", "Dias restantes", "Faixa", "CLT em experiência", "Regra de renovação / reajuste"],
+      lista.map((c) => [c.id, parteDe(data, c)?.nome ?? "", c.categoria, br(c.fim), diasLabel(c.fim), FAIXA[faixa(c.fim)].longo, emExperiencia(c) ? `Até ${br(c.experienciaAte ?? c.fim)}` : "", c.regraReajusteEspecifica ?? ""]),
     );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <Input type="select" id="radar-faixa" label="Faixa" prompt="Todas as faixas" value={faixaSelecionada} options={FILTROS_RADAR.filter((f) => f.id !== "experiencia").map((f) => ({ label: `${f.label} (${contagem(f.id)})`, value: f.id }))} onChange={(v) => setFiltros((atuais) => { const proximos = new Set<FiltroRadar>([...atuais].filter((f) => f === "experiencia")); if (v) proximos.add(v as FiltroRadar); return proximos; })} className="w-full sm:w-56" />
-        <Input type="select" id="radar-experiencia" label="Experiência" prompt="Todos os contratos" value={filtros.has("experiencia") ? "experiencia" : ""} options={[{ label: `CLT em experiência (${contagem("experiencia")})`, value: "experiencia" }]} onChange={(v) => setFiltros((atuais) => { const proximos = new Set(atuais); if (v) proximos.add("experiencia"); else proximos.delete("experiencia"); return proximos; })} className="w-full sm:w-56" />
+        <Input
+          type="select"
+          id="radar-filtro"
+          label="Filtro"
+          prompt={`Todos (${vs.length})`}
+          value={filtro}
+          options={FILTROS_RADAR.map((f) => ({ label: `${f.label} (${contagem(f.id)})`, value: f.id }))}
+          onChange={(v) => setFiltro((v as FiltroRadar | undefined) ?? "")}
+          className="w-full sm:w-64"
+        />
         <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar} className="ml-auto">
           Exportar planilha
         </Button>
       </div>
-      <Etiquetas itens={[...filtros].map((f) => ({ id: f, label: FILTROS_RADAR.find((x) => x.id === f)!.label, onRemove: () => toggle(f) }))} onLimpar={() => setFiltros(new Set())} />
+      <Etiquetas itens={rotulo ? [{ id: filtro, label: rotulo, onRemove: () => setFiltro("") }] : []} onLimpar={() => setFiltro("")} />
       {vs.length === 0 ? (
         <Vazio icon="fa-calendar-clock" texto="Nenhum contrato Vigente no radar">
           <p>O radar acompanha o fim da vigência a partir da assinatura do contrato.</p>
         </Vazio>
       ) : lista.length === 0 ? (
-        <Vazio icon="fa-filter-circle-xmark" texto="Nenhum contrato com esses filtros">
-          <p>Remova uma etiqueta ou limpe os filtros.</p>
+        <Vazio icon="fa-filter-circle-xmark" texto="Nenhum contrato com esse filtro">
+          <p>Remova a etiqueta para ver todos os Vigentes.</p>
         </Vazio>
       ) : (
         <Table
@@ -270,25 +329,29 @@ function Radar({ data, vs, faixaInicial, abrir }: { data: ContratosData; vs: Con
             { label: "Término", render: (c) => <span className="whitespace-nowrap">{br(c.fim)}</span> },
             {
               label: "Faixa e dias restantes",
-              render: (c) => (
-                <div className="flex flex-col items-start gap-1">
-                  <Selo s={FAIXA[faixa(c.fim)]} />
-                  <span className="text-sm font-bold tabular-nums whitespace-nowrap">{diasLabel(c.fim)}</span>
-                </div>
-              ),
+              render: (c) => {
+                const fx = FAIXA[faixa(c.fim)];
+                return (
+                  <div className="flex flex-col items-start gap-1">
+                    <Selo s={{ label: fx.longo, variant: fx.variant }} />
+                    <span className="text-sm font-bold tabular-nums whitespace-nowrap">{diasLabel(c.fim)}</span>
+                  </div>
+                );
+              },
             },
             {
               label: "Experiência CLT",
               render: (c) =>
-                c.experienciaAte ? (
-                  emExperiencia(c) ? (
-                    <Tag item={`Até ${br(c.experienciaAte)} · ${diasLabel(c.experienciaAte)}`} variant={diasAte(c.experienciaAte) <= 30 ? "red" : "yellow"} leftIcon="fa-user-clock" className="whitespace-nowrap" />
-                  ) : (
-                    <span className="text-sm">Encerrada em {br(c.experienciaAte)}</span>
-                  )
+                emExperiencia(c) ? (
+                  <Tag item={`Até ${br(c.experienciaAte ?? c.fim)} · ${diasLabel(c.experienciaAte ?? c.fim)}`} variant={diasAte(c.experienciaAte ?? c.fim) <= 30 ? "red" : "yellow"} leftIcon="fa-user-clock" className="whitespace-nowrap" />
                 ) : (
                   <span className="text-brand-purple-dark/40">—</span>
                 ),
+            },
+            {
+              label: "Regra de renovação / reajuste",
+              className: "min-w-48",
+              render: (c) => (c.regraReajusteEspecifica ? <span className="text-sm">{c.regraReajusteEspecifica}</span> : <span className="text-brand-purple-dark/40">—</span>),
             },
           ]}
           action={[
@@ -310,35 +373,28 @@ function Radar({ data, vs, faixaInicial, abrir }: { data: ContratosData; vs: Con
 /* Reajustes                                                           */
 /* ------------------------------------------------------------------ */
 
-type FiltroReajuste = "janela" | "IPCA" | "IGP-M" | "CCT";
-const FILTROS_REAJUSTE: { id: FiltroReajuste; label: string; icon?: string }[] = [
-  { id: "janela", label: "Janela Aberta", icon: "fa-door-open" },
-  { id: "IPCA", label: "IPCA" },
-  { id: "IGP-M", label: "IGP-M" },
-  { id: "CCT", label: "CCT" },
-];
+const JANELA_ABERTA = "Janela Aberta (< 60d)";
+const AGUARDANDO = "Aguardando Data-Base";
 
-function passaReajuste(c: Contrato, f: Set<FiltroReajuste>) {
-  const indices: FiltroReajuste[] = [...f].filter((x) => x !== "janela");
-  return (!f.has("janela") || janelaAberta(c)) && (!indices.length || indices.includes(c.indice as FiltroReajuste));
-}
+type FiltroIndice = "IPCA" | "IGP-M" | "CCT";
+const INDICES_FILTRO: FiltroIndice[] = ["IPCA", "IGP-M", "CCT"];
 
 function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Contrato[]; papel: Papel; onAplicar: (id: string) => void }) {
-  const [filtros, setFiltros] = useState(new Set<FiltroReajuste>());
-  const lista = useMemo(
-    () => vs.filter((c) => passaReajuste(c, filtros)).sort((a, b) => (a.dataBase ?? "9999").localeCompare(b.dataBase ?? "9999")),
-    [vs, filtros],
-  );
+  const [soAberta, setSoAberta] = useState(false);
+  const [indice, setIndice] = useState<FiltroIndice | "">("");
+  const passa = (c: Contrato, janela: boolean, ind: FiltroIndice | "") => (!janela || aberta(c)) && (!ind || indiceDe(data, c.indice).indice?.codigo === ind);
+  const lista = vs.filter((c) => passa(c, soAberta, indice)).sort((a, b) => (dataBaseDe(a) ?? "9999").localeCompare(dataBaseDe(b) ?? "9999"));
   const pode = podeReajustar(papel);
+  const naoReconhecidos = vs.filter((c) => !indiceDe(data, c.indice).reconhecido);
 
   const exportar = () =>
     exportarPlanilha(
       "reajustes",
-      ["Contrato", "Parte", "Índice", "Taxa", "Próxima data-base", "Janela", "Último reajuste", "Valor atual", "Novo valor sugerido"],
+      ["Contrato", "Parte", "Índice", "Taxa", "Último reajuste", "Próxima data-base", "Janela", "Valor atual", "Novo valor sugerido"],
       lista.map((c) => {
-        const i = indiceDe(data, c);
-        const s = sugerido(c, i);
-        return [c.id, parteDe(data, c)?.nome ?? "", c.indice ?? "Sem índice", i ? pctBr(i.taxa) : "Índice desconhecido", br(c.dataBase), janelaAberta(c) ? "Aberta" : "Fechada", c.ultimoReajuste ? `${br(c.ultimoReajuste.data)} ${pctBr(c.ultimoReajuste.taxa)}${c.ultimoReajuste.manual ? " (ajuste manual)" : ""}` : "", c.valor != null ? brl(c.valor) : "", s != null ? brl(s) : ""];
+        const t = indiceDe(data, c.indice);
+        const ult = ultimoReajuste(data.aditivos, c.id);
+        return [c.id, parteDe(data, c)?.nome ?? "", c.indice ?? "Não informado", `${pctBr(t.taxa)}${t.reconhecido ? "" : " (índice não reconhecido)"}`, ult ? br(ult.data) : "—", br(dataBaseDe(c)), inicioValido(c) ? (aberta(c) ? JANELA_ABERTA : AGUARDANDO) : "", c.valor != null ? brl(c.valor) : "", c.valor != null ? brl(valorReajustado(c.valor, t.taxa)) : ""];
       }),
     );
 
@@ -350,9 +406,9 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
           id="reajuste-janela"
           label="Janela"
           prompt="Todas as janelas"
-          value={filtros.has("janela") ? "janela" : ""}
-          options={[{ label: `Janela Aberta (${vs.filter((c) => passaReajuste(c, new Set(["janela"]))).length})`, value: "janela" }]}
-          onChange={(v) => setFiltros((s) => { const n = new Set<FiltroReajuste>([...s].filter((x) => x !== "janela")); if (v) n.add("janela"); return n; })}
+          value={soAberta ? "aberta" : ""}
+          options={[{ label: `Janela Aberta (${vs.filter((c) => passa(c, true, "")).length})`, value: "aberta" }]}
+          onChange={(v) => setSoAberta(!!v)}
           className="w-full sm:w-56"
         />
         <Input
@@ -360,18 +416,30 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
           id="reajuste-indice"
           label="Índice"
           prompt="Todos os índices"
-          value={[...filtros].find((x) => x !== "janela") ?? ""}
-          options={FILTROS_REAJUSTE.filter((f) => f.id !== "janela").map((f) => ({ label: `${f.label} (${vs.filter((c) => passaReajuste(c, new Set([f.id]))).length})`, value: f.id }))}
-          onChange={(v) => setFiltros((s) => { const n = new Set<FiltroReajuste>([...s].filter((x) => x === "janela")); if (v) n.add(v as FiltroReajuste); return n; })}
+          value={indice}
+          options={INDICES_FILTRO.map((f) => ({ label: `${f} (${vs.filter((c) => passa(c, false, f)).length})`, value: f }))}
+          onChange={(v) => setIndice((v as FiltroIndice | undefined) ?? "")}
           className="w-full sm:w-56"
         />
         <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar} className="ml-auto">
           Exportar planilha
         </Button>
       </div>
+      <Etiquetas
+        itens={[
+          ...(soAberta ? [{ id: "janela", label: "Janela Aberta", onRemove: () => setSoAberta(false) }] : []),
+          ...(indice ? [{ id: "indice", label: `Índice: ${indice}`, onRemove: () => setIndice("") }] : []),
+        ]}
+        onLimpar={() => { setSoAberta(false); setIndice(""); }}
+      />
       <p className="text-sm text-brand-purple-dark/60">
-        A janela abre {JANELA_DIAS} dias antes da data-base e fica aberta até o reajuste ser aplicado. Taxas: {data.indices.map((i) => `${i.codigo} ${pctBr(i.taxa)} (${i.referencia})`).join(" · ")}.
+        A data-base é o aniversário do início do contrato; a janela abre {JANELA_REAJUSTE_DIAS} dias antes dela. Taxas: {data.indices.map((i) => `${i.codigo} ${pctBr(i.taxa)}`).join(" · ")} · outro índice {pctBr(TAXA_PADRAO)}.
       </p>
+      {naoReconhecidos.length > 0 && (
+        <Aviso tom="atencao" titulo="Índice não reconhecido">
+          {naoReconhecidos.map((c) => `${c.id} (${c.indice ?? "sem índice"})`).join(", ")}: sem taxa própria no módulo, o reajuste usa a taxa padrão de {pctBr(TAXA_PADRAO)}. Confira o índice na ficha antes de aplicar.
+        </Aviso>
+      )}
       {!pode && <Leitura>Aplicar reajuste é do Financeiro / Controladoria.</Leitura>}
       {vs.length === 0 ? (
         <Vazio icon="fa-percent" texto="Nenhum contrato Vigente para reajustar">
@@ -383,7 +451,7 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
         </Vazio>
       ) : (
         <Table
-            className={ACOES_COMPACTAS}
+          className={ACOES_COMPACTAS}
           id="reajustes"
           rows={lista}
           rowId={(c) => c.id}
@@ -401,26 +469,41 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
             {
               label: "Índice",
               render: (c) => {
-                const i = indiceDe(data, c);
-                if (!c.indice) return <Tag item="Sem índice" variant="red" leftIcon="fa-triangle-exclamation" className="whitespace-nowrap" title="O contrato não informa índice de reajuste. Corrija na ficha por revisão." />;
-                if (!i) return <Tag item={`${c.indice}: índice desconhecido`} variant="red" leftIcon="fa-triangle-exclamation" className="whitespace-nowrap" title="Sem taxa cadastrada para este índice. Cadastre a taxa ou corrija o índice do contrato." />;
+                const t = indiceDe(data, c.indice);
+                if (!t.reconhecido)
+                  return <Tag item={`${c.indice ?? "Sem índice"} · ${pctBr(t.taxa)}`} variant="yellow" leftIcon="fa-triangle-exclamation" className="whitespace-nowrap" title={`Índice não reconhecido: usa a taxa padrão de ${pctBr(TAXA_PADRAO)}.`} />;
                 return (
                   <div className="whitespace-nowrap">
-                    <p className="font-bold text-brand-purple-dark">{i.codigo}</p>
-                    <p className="text-sm tabular-nums">{pctBr(i.taxa)}</p>
+                    <p className="font-bold text-brand-purple-dark">{t.indice!.codigo}</p>
+                    <p className="text-sm tabular-nums">{pctBr(t.taxa)}</p>
                   </div>
+                );
+              },
+            },
+            {
+              label: "Último Reajuste",
+              render: (c) => {
+                const ult = ultimoReajuste(data.aditivos, c.id);
+                return ult ? (
+                  <div className="flex flex-col items-start gap-1 whitespace-nowrap">
+                    <span>{br(ult.data)}</span>
+                    {ult.ajusteManual && <Tag item="Ajuste manual" variant="yellow" leftIcon="fa-pen" />}
+                  </div>
+                ) : (
+                  <span className="text-brand-purple-dark/40">—</span>
                 );
               },
             },
             {
               label: "Próxima data-base",
               render: (c) => {
-                if (!c.dataBase) return "—";
-                const d = diasAte(c.dataBase);
+                const db = dataBaseDe(c);
+                if (!db) return <span className="text-brand-purple-dark/40">—</span>;
+                const d = diasAte(db);
                 return (
                   <div className="whitespace-nowrap">
-                    <p>{br(c.dataBase)}</p>
-                    <p className="text-sm">{d < 0 ? `há ${-d} dia(s)` : d === 0 ? "hoje" : `em ${d} dia(s)`}</p>
+                    <p>{br(db)}</p>
+                    <p className="text-sm">{d === 0 ? "hoje" : `em ${d} dia(s)`}</p>
                   </div>
                 );
               },
@@ -428,41 +511,24 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
             {
               label: "Janela",
               render: (c) =>
-                janelaAberta(c) ? (
-                  <Tag item="Aberta" variant="yellow" leftIcon="fa-door-open" />
+                !inicioValido(c) ? (
+                  <span className="text-brand-purple-dark/40">—</span>
+                ) : aberta(c) ? (
+                  <Tag item={JANELA_ABERTA} variant="yellow" leftIcon="fa-door-open" className="whitespace-nowrap" />
                 ) : (
-                  <span className="text-sm whitespace-nowrap">Abre em {c.dataBase ? br(addDiasLocal(c.dataBase, -JANELA_DIAS)) : "—"}</span>
-                ),
-            },
-            {
-              label: "Último reajuste",
-              render: (c) =>
-                c.ultimoReajuste ? (
-                  <div className="flex flex-col items-start gap-1 whitespace-nowrap">
-                    <span>{br(c.ultimoReajuste.data)} · {pctBr(c.ultimoReajuste.taxa)}</span>
-                    {c.ultimoReajuste.manual && <Tag item="Ajuste manual" variant="yellow" leftIcon="fa-pen" />}
-                  </div>
-                ) : (
-                  <span className="text-sm text-brand-purple-dark/50">Nenhum ainda</span>
+                  <span className="text-sm whitespace-nowrap">{AGUARDANDO}</span>
                 ),
             },
             { label: "Valor atual", render: (c) => <Valor valor={c.valor} /> },
             {
               label: "Novo valor sugerido",
-              render: (c) => {
-                const s = sugerido(c, indiceDe(data, c));
-                return s != null ? <Valor valor={s} className="font-bold text-brand-purple-dark" /> : <span className="text-sm text-brand-purple-dark/50">Sem sugestão</span>;
-              },
+              render: (c) =>
+                c.valor != null ? <Valor valor={valorReajustado(c.valor, indiceDe(data, c.indice).taxa)} className="font-bold text-brand-purple-dark" /> : <span className="text-sm text-brand-purple-dark/50">Sem sugestão</span>,
             },
           ]}
           action={[
             (c) =>
-              pode && janelaAberta(c) && diasAte(c.fim) <= 0 ? (
-                <span className="pr-3 text-sm whitespace-nowrap text-red" title="Contrato vencido: prorrogue por termo aditivo antes de reajustar.">
-                  <Icon name="fa-lock" className="mr-1" />
-                  Vencido: prorrogue antes
-                </span>
-              ) : pode && janelaAberta(c) && indiceDe(data, c) && c.valor != null ? (
+              pode && c.status === "vigente" && aberta(c) && c.valor != null ? (
                 <span className="inline-flex pr-3">
                   <Button size="small" variant="tint" leftIcon="fa-percent" onClick={() => onAplicar(c.id)} className="whitespace-nowrap">
                     Aplicar reajuste
@@ -476,58 +542,60 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
   );
 }
 
-function addDiasLocal(iso: string, n: number) {
-  return new Date(new Date(`${iso}T12:00:00Z`).getTime() + n * 86_400_000).toISOString().slice(0, 10);
-}
-
-function ModalReajuste({ data, contrato, onCancel, onAplicar }: { data: ContratosData; contrato: Contrato; onCancel: () => void; onAplicar: (id: string, valor: number, justificativa: string, manual: boolean) => void }) {
-  const i = indiceDe(data, contrato);
-  const calc = sugerido(contrato, i);
+function ModalReajuste({ data, contrato, onCancel, onAplicar }: { data: ContratosData; contrato: Contrato; onCancel: () => void; onAplicar: (id: string, valor: number, justificativa: string) => void }) {
+  const t = indiceDe(data, contrato.indice);
+  const calc = contrato.valor != null ? valorReajustado(contrato.valor, t.taxa) : undefined;
   const [valor, setValor] = useState(calc != null ? numBr(calc) : "");
   const [justificativa, setJustificativa] = useState("");
   const [erros, setErros] = useState<{ valor?: string; justificativa?: string }>({});
   const n = parseBr(valor);
   const manual = calc != null && Number.isFinite(n) && n > 0 && cents(n) !== cents(calc);
-  const vencido = diasAte(contrato.fim) <= 0;
+  const db = dataBaseDe(contrato);
+  const bloqueio =
+    contrato.status !== "vigente"
+      ? "Só contratos Vigentes podem ser reajustados."
+      : !aberta(contrato)
+        ? `A janela de reajuste ainda não abriu: ${AGUARDANDO}${db ? ` (data-base ${br(db)}; a janela abre ${JANELA_REAJUSTE_DIAS} dias antes)` : ""}.`
+        : calc == null
+          ? "O contrato não tem valor base informado; não há o que reajustar."
+          : undefined;
 
   const confirmar = () => {
     const e: typeof erros = {};
-    if (!valor.trim() || !Number.isFinite(n) || n <= 0) e.valor = "Informe o novo valor mensal, maior que zero (ex.: 14.749,54).";
-    if (manual && !justificativa.trim()) e.justificativa = "O valor é diferente do calculado pelo índice: explique o motivo para a auditoria.";
+    if (!valor.trim() || !Number.isFinite(n) || n <= 0) e.valor = "Informe o novo valor mensal, maior que zero (ex.: 19.277,00).";
+    if (manual && !justificativa.trim()) e.justificativa = "O valor é diferente do calculado: a justificativa do ajuste manual é obrigatória.";
     if (Object.keys(e).length) return setErros(e);
-    onAplicar(contrato.id, Math.round(n * 100) / 100, justificativa.trim(), manual);
+    onAplicar(contrato.id, Math.round(n * 100) / 100, justificativa.trim());
   };
 
   return (
     <DrawerModal id="modal-reajuste" show title={`Aplicar reajuste · ${contrato.id}`} onCancel={onCancel} variant="medium" contentClass={CONTEUDO_DRAWER}>
-      {vencido ? (
+      {bloqueio || calc == null ? (
         <div className="space-y-6">
-          <Aviso tom="risco" titulo="Contrato vencido: reajuste bloqueado">
-            A vigência terminou em {br(contrato.fim)}. Prorrogue por termo aditivo (aba Aditivos) e depois aplique o reajuste sobre o contrato renovado.
-          </Aviso>
-          <div className={RODAPE_DRAWER}><Button variant="ghost" onClick={onCancel}>Fechar</Button></div>
-        </div>
-      ) : !i || calc == null ? (
-        <div className="space-y-6">
-          <Aviso tom="risco" titulo="Sem taxa para calcular o reajuste">
-            O índice {contrato.indice ?? "do contrato"} não tem taxa cadastrada. Cadastre a taxa nas Tabelas de Apoio ou corrija o índice na ficha.
+          <Aviso tom="neutro" titulo="Reajuste indisponível">
+            {bloqueio}
           </Aviso>
           <div className={RODAPE_DRAWER}><Button variant="ghost" onClick={onCancel}>Fechar</Button></div>
         </div>
       ) : (
         <div className="space-y-6">
           <p className="text-brand-purple-dark/80">
-            {parteDe(data, contrato)?.nome} · {contrato.categoria}
+            {parteDe(data, contrato)?.nome} · {contrato.categoria} · {contrato.versao}
           </p>
+          {!t.reconhecido && (
+            <Aviso tom="atencao" titulo="Índice não reconhecido">
+              O índice {contrato.indice ?? "do contrato"} não tem taxa própria no módulo: o cálculo usa a taxa padrão de {pctBr(TAXA_PADRAO)}.
+            </Aviso>
+          )}
           <Dados
             colunas={3}
             itens={[
               ["Valor atual", <span className="tabular-nums">{brl(contrato.valor!)}</span>],
-              [`Taxa ${i.codigo}`, <span className="tabular-nums" title={i.referencia}>{pctBr(i.taxa)}</span>],
+              [`Taxa ${t.indice?.codigo ?? "padrão"}`, <span className="tabular-nums">{pctBr(t.taxa)}</span>],
               ["Valor calculado", <strong className="tabular-nums text-brand-purple-dark">{brl(calc)}</strong>],
-              ["Data-base", br(contrato.dataBase)],
-              ["Próxima data-base", br(contrato.dataBase ? umAnoDepois(contrato.dataBase) : undefined)],
-              ["Referência do índice", i.referencia],
+              ["Índice", contrato.indice ?? "Não informado"],
+              ["Data-base", br(db)],
+              ["Vigência", `até ${br(contrato.fim)} (não muda)`],
             ]}
           />
           <Input
@@ -541,18 +609,21 @@ function ModalReajuste({ data, contrato, onCancel, onAplicar }: { data: Contrato
           />
           {manual && (
             <Aviso tom="atencao" titulo="Ajuste manual">
-              O valor difere do calculado ({brl(calc)}). O reajuste fica marcado como ajuste manual e a justificativa é obrigatória.
+              O valor difere do calculado ({brl(calc)}). O termo registra "ajuste manual" com os dois valores e a justificativa é obrigatória.
             </Aviso>
           )}
           <Input
             type="textarea"
             id="reajuste-justificativa"
             label={manual ? "Justificativa (obrigatória)" : "Justificativa (opcional)"}
-            placeholder="Ex.: negociação com a parte, arredondamento acordado, índice substituto previsto em contrato…"
+            placeholder="Ex.: negociação com a parte, arredondamento acordado…"
             value={justificativa}
             onChange={(e) => { setJustificativa(e.target.value); setErros({}); }}
             errors={erros.justificativa ? [erros.justificativa] : []}
           />
+          <Aviso tom="info">
+            Gera o {proximoAditivo(data.aditivos, contrato.id).numero}º Termo Aditivo (Reajuste Financeiro), código {proximoAditivo(data.aditivos, contrato.id).codigo}, já Aprovado e Assinado, e sobe o contrato para a versão {proximaVersao(contrato.versao, "minor")}.
+          </Aviso>
           <div className={RODAPE_DRAWER}>
             <Button variant="ghost" onClick={onCancel}>Cancelar</Button>
             <Button leftIcon="fa-check" onClick={confirmar}>Aplicar reajuste</Button>
@@ -579,9 +650,9 @@ function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; co
       .filter((a) => {
         if (!q) return true;
         const c = data.contratos.find((x) => x.id === a.contratoId);
-        return [a.codigo, a.contratoId, a.tipo, a.impacto, a.motivo, c ? parteDe(data, c)?.nome ?? "" : ""].some((s) => s.toLowerCase().includes(q));
+        return [a.codigo, rotuloAditivo(a), a.contratoId, a.tipo, a.impacto, a.motivo, c ? parteDe(data, c)?.nome ?? "" : ""].some((s) => s.toLowerCase().includes(q));
       })
-      .sort((a, b) => b.data.localeCompare(a.data));
+      .sort((a, b) => b.data.localeCompare(a.data) || b.numero - a.numero);
   }, [base, tipo, busca, data]);
   const pode = podeAditar(papel);
 
@@ -593,10 +664,10 @@ function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; co
   const exportar = () =>
     exportarPlanilha(
       "livro-de-aditivos",
-      ["Código", "Contrato", "Parte", "Tipo", "Data", "Nova vigência", "Novo valor", "Impacto", "Aprovação", "Assinatura"],
+      ["Código", "Termo", "Contrato", "Parte", "Tipo", "Data de celebração", "Nova vigência", "Novo valor", "Impacto", "Ajuste manual", "Aprovação", "Assinatura"],
       lista.map((a) => {
         const c = data.contratos.find((x) => x.id === a.contratoId);
-        return [a.codigo, a.contratoId, c ? parteDe(data, c)?.nome ?? "" : "", a.tipo, br(a.data), a.novaVigencia ? br(a.novaVigencia) : "", a.novoValor != null ? brl(a.novoValor) : "", a.impacto, APROVACAO[a.aprovacao].label, ASSINATURA[a.assinatura].label];
+        return [a.codigo, rotuloAditivo(a), a.contratoId, c ? parteDe(data, c)?.nome ?? "" : "", a.tipo, br(a.data), a.novaVigencia ? br(a.novaVigencia) : "", a.novoValor != null ? brl(a.novoValor) : "", a.impacto, a.ajusteManual ? `Calculado ${brl(a.ajusteManual.calculado)}; aplicado ${a.novoValor != null ? brl(a.novoValor) : ""}. ${a.ajusteManual.justificativa}` : "", APROVACAO[a.aprovacao].label, ASSINATURA[a.assinatura].label];
       }),
     );
 
@@ -628,7 +699,15 @@ function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; co
           rows={lista}
           rowId={(a) => a.id}
           col={[
-            { label: "Código", render: (a) => <span className="font-bold text-brand-purple-dark whitespace-nowrap">{a.codigo}</span> },
+            {
+              label: "Código",
+              render: (a) => (
+                <div>
+                  <p className="font-bold text-brand-purple-dark whitespace-nowrap">{a.codigo}</p>
+                  <p className="text-sm">{rotuloAditivo(a)}</p>
+                </div>
+              ),
+            },
             {
               label: "Contrato",
               render: (a) => {
@@ -642,7 +721,7 @@ function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; co
               },
             },
             { label: "Tipo", render: (a) => <span className="whitespace-nowrap">{a.tipo}</span> },
-            { label: "Data", render: (a) => <span className="whitespace-nowrap">{br(a.data)}</span> },
+            { label: "Celebração", render: (a) => <span className="whitespace-nowrap">{br(a.data)}</span> },
             {
               label: "Nova vigência / novo valor",
               render: (a) =>
@@ -655,7 +734,15 @@ function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; co
                   <span className="text-brand-purple-dark/40">—</span>
                 ),
             },
-            { label: "Impacto", render: (a) => <span className="text-sm">{a.impacto}</span> },
+            {
+              label: "Impacto",
+              render: (a) => (
+                <div className="flex flex-col items-start gap-1">
+                  <span className="text-sm">{a.impacto}</span>
+                  {a.ajusteManual && <Tag item="Ajuste manual" variant="yellow" leftIcon="fa-pen" title={`Calculado ${brl(a.ajusteManual.calculado)}. ${a.ajusteManual.justificativa}`} />}
+                </div>
+              ),
+            },
             { label: "Aprovação", render: (a) => <Selo s={APROVACAO[a.aprovacao]} /> },
             { label: "Assinatura", render: (a) => <Selo s={ASSINATURA[a.assinatura]} /> },
           ]}

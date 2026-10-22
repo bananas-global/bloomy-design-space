@@ -3,11 +3,14 @@ import { ContratosDossie } from "../../ContratosDossie.js";
 import { ROTAS, papelControl } from "../ui.js";
 import { FLOW, cenario } from "./comum.js";
 
-const COMPONENTS = ["core.table", "core.input", "core.drawer-modal", "core.file-uploader", "core.empty-state-card", "core.toast-wrapper"];
+const COMPONENTS = ["core.table", "core.input", "core.drawer-modal", "core.file-uploader", "core.button-tabs", "core.empty-state-card", "core.toast-wrapper"];
 const c = cenario(COMPONENTS);
 
-/** Contratos que têm itens de dossiê na fixture `contratos.base`. */
-const CONTRATOS = ["CT-2026-001", "CT-2026-002", "CT-2026-003", "CT-2026-004", "CT-2026-005", "CT-2026-006", "CT-2026-007", "CT-2026-010", "CT-2025-018", "CT-2025-040"];
+/** Contratos que têm itens de dossiê na fixture `contratos.base` (todos: o checklist inicial nasce com o contrato, RN-031). */
+const CONTRATOS = [
+  "CTR-2026-0001", "CTR-2026-0002", "CTR-2026-0003", "CTR-2026-0004", "CTR-2026-0005", "CTR-2026-0006", "CTR-2026-0007",
+  "CTR-2026-0008", "CTR-2026-0009", "CTR-2026-0010", "CTR-2025-0018", "CTR-2025-0031", "CTR-2025-0040",
+];
 
 export const dossie: Feature = {
   routes: [
@@ -16,7 +19,7 @@ export const dossie: Feature = {
       screen: ContratosDossie,
       name: "Conformidade — Dossiê",
       group: FLOW,
-      description: "Os documentos exigidos de todos os contratos, o resumo 100% Conforme por contrato e o protocolo de documento.",
+      description: "Aba Dossiê da central de Conformidade: o checklist e os documentos de todos os contratos, a situação 100% Conforme ou Pendente de Documentos e o protocolo de documento (FR-070 a FR-073, RN-050).",
       components: COMPONENTS,
       controls: [
         {
@@ -42,10 +45,11 @@ export const dossie: Feature = {
         papelControl("juridico"),
       ],
       expected: [
-        "Resumo por contrato com o selo 100% Conforme ou N pendente(s); clicar filtra a lista.",
-        "Lista com contrato, parte, natureza, documento, arquivo ou Pendente de Anexo, validade (vencida em vermelho, até 30 dias em âmbar), conformidade e auditor.",
-        "Busca à esquerda dos selects de status e natureza, sem etiquetas removíveis; Exportar planilha.",
-        "Protocolar documento: se já existe item pendente igual, o protocolo preenche esse item em vez de criar outro.",
+        "Resumo por contrato com o selo 100% Conforme ou Pendente de Documentos (N); clicar filtra a lista.",
+        "Lista com código DOS-{contrato}-NN, contrato, parte, natureza, documento, arquivo ou Pendente de Anexo, validade (vazia: Indeterminada), conformidade e auditor.",
+        "Filtros Todos, Conformes e Pendentes; ASO/Saúde (documentos com ASO ou de saúde) e Certidões (CND e certidões); busca e Exportar planilha.",
+        "Protocolar documento: status só Conforme / Aprovado ou Pendente Regularização; item pendente com a mesma natureza e o mesmo documento é preenchido; fora do checklist cria DOS-{contrato}-NN.",
+        "Padrões do protocolo: validade Indeterminada, observação \"Documento homologado\", auditor Compliance / Jurídico. Anexo PDF, DOC, DOCX, PNG, JPG, JPEG ou XML até 25 MB.",
       ],
     },
   ],
@@ -54,12 +58,13 @@ export const dossie: Feature = {
       id: "contratos.dossie",
       title: "Dossiê de todos os contratos",
       route: ROTAS.dossie,
-      intent: "O Jurídico confere o dossiê da carteira e vê o que falta para cada contrato ficar 100% Conforme.",
+      intent: "O Compliance confere o dossiê da carteira e vê o que falta para cada contrato ficar 100% Conforme.",
       expected: [
-        "Resumo com 10 contratos: CT-2026-001, 003, 004, 007, 010 e CT-2025-018 com 100% Conforme; CT-2026-002 e CT-2026-005 com 1 pendente; CT-2026-006 com 2 pendentes; CT-2025-040 com 1 pendente (laudo não conforme).",
-        "Lista com 17 itens; os sem arquivo mostram Pendente de Anexo (SOC 2 do CT-2026-002, ASO admissional do CT-2026-005, CND Federal e Registro no CRFa do CT-2026-006).",
-        "Laudo de vigilância sanitária do CT-2025-040 com validade 30/06/2026 em vermelho (vencida) e Não conforme.",
-        "Selects Conformes (12) e Pendentes (5), ASO/Saúde e Certidões; busca; Exportar planilha exporta só as linhas listadas.",
+        "Resumo com 13 contratos: CTR-2026-0001, 0003, 0004, 0009, CTR-2025-0018 e CTR-2025-0031 com 100% Conforme; CTR-2026-0006 Pendente de Documentos (3), CTR-2026-0008 (2), CTR-2026-0002, 0005, 0007, 0010 e CTR-2025-0040 (1).",
+        "Lista com 46 itens: o checklist inicial de cada contrato (Contrato Social Consolidado & Cartão CNPJ, Certidão Conjunta RFB/PGFN (CND Federal), Certidão de Regularidade Profissional / ASO Admissional e, no CTR-2026-0010, a Cópia da Decisão Judicial Liminar) e os documentos fora do checklist (CRF FGTS, SOC 2, Matrícula, AVCB, Registro no CRP, Laudo de vigilância sanitária).",
+        "Os pendentes sem arquivo mostram Pendente de Anexo; validade vazia mostra Indeterminada.",
+        "Laudo de vigilância sanitária (DOS-CTR-2025-0040-04) com validade 30/06/2026 em vermelho e Não conforme.",
+        "Status: Conformes (36) e Pendentes (10); Tipo de documento: ASO/Saúde (13) e Certidões (26). Exportar planilha exporta só as linhas listadas.",
         "Botão Protocolar documento (some para quem só consulta: Diretoria, Financeiro).",
       ],
     }),
@@ -67,13 +72,25 @@ export const dossie: Feature = {
       id: "contratos.dossie-protocolar",
       title: "Protocolar o ASO pendente",
       route: ROTAS.dossie,
-      controls: { contrato: "CT-2026-005", modal: "protocolar" },
-      intent: "Protocolar o ASO admissional da Camila Rocha Duarte (CT-2026-005), que preenche o item pendente em vez de criar outro.",
+      controls: { contrato: "CTR-2026-0005", modal: "protocolar" },
+      intent: "Protocolar o ASO admissional da Camila Rocha Duarte (CTR-2026-0005), que preenche o item pendente do checklist em vez de criar outro.",
       expected: [
-        "Etiqueta \"Contrato: CT-2026-005\" na lista, com 2 itens (ASO admissional pendente e Registro no CRP conforme).",
-        "Drawer Protocolar documento com contrato CT-2026-005, natureza ASO/Saúde e documento ASO admissional já preenchidos (é o único pendente do contrato).",
-        "Aviso: \"Já existe um item pendente para este documento: o protocolo vai preencher esse item\".",
-        "Salvar sem arquivo e como Conforme mostra o erro no campo Arquivo; com o arquivo, o item d9 é preenchido (nada é criado), o drawer fecha e o toast diz \"CT-2026-005 agora está 100% Conforme\".",
+        "Lista filtrada no CTR-2026-0005 com 4 itens; só o DOS-CTR-2026-0005-03 (Certidão de Regularidade Profissional / ASO Admissional) pendente.",
+        "Drawer com contrato CTR-2026-0005, natureza Regulatória / Técnica e documento já preenchidos (é o único pendente) e status Conforme / Aprovado.",
+        "Aviso \"O protocolo vai preencher o item DOS-CTR-2026-0005-03\". Anexo acima de 25 MB mostra \"Arquivo excede o limite máximo permitido de 25 MB.\".",
+        "Protocolar preenche o item (arquivo, validade Indeterminada, observação Documento homologado, auditor Compliance / Jurídico), fecha o drawer e o toast diz \"Dossiê do CTR-2026-0005: 100% Conforme\".",
+      ],
+    }),
+    c({
+      id: "contratos.dossie-fora-do-checklist",
+      title: "Documento fora do checklist",
+      route: ROTAS.dossie,
+      controls: { contrato: "CTR-2026-0001", modal: "protocolar" },
+      intent: "Protocolar um alvará sanitário no CTR-2026-0001, que não está no checklist.",
+      expected: [
+        "Drawer com o CTR-2026-0001 e sem item pendente (contrato 100% Conforme).",
+        "Natureza Regulatória / Técnica e documento \"Alvará sanitário\": aviso \"Documento fora do checklist: cria o item DOS-CTR-2026-0001-05\".",
+        "Com status Pendente Regularização, o item novo entra na lista e o toast diz \"Dossiê do CTR-2026-0001: Pendente de Documentos\".",
       ],
     }),
     c({
@@ -82,7 +99,7 @@ export const dossie: Feature = {
       route: ROTAS.dossie,
       fixture: "contratos.vazio",
       intent: "Implantação nova: ainda não há contrato, então não há documento no dossiê.",
-      expected: ["Estado vazio \"Nenhum documento no dossiê\", explicando que os itens nascem com o contrato (checklist da categoria)."],
+      expected: ["Estado vazio \"Nenhum documento no dossiê\", explicando que os itens nascem com o contrato (checklist inicial)."],
     }),
   ],
 };

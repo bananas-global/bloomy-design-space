@@ -11,6 +11,7 @@ import { novoContrato } from "./telas/novo.js";
 import { partes } from "./telas/partes.js";
 import { tabelas } from "./telas/tabelas.js";
 import { torre } from "./telas/torre.js";
+import { manual } from "./telas/manual.js";
 
 /**
  * Gestão de Contratos: do cadastro da parte ao encerramento, passando por
@@ -18,7 +19,7 @@ import { torre } from "./telas/torre.js";
  * rotas e os cenários dela em `telas/<tela>.ts`; aqui só se juntam, na ordem
  * do caminho do contrato.
  */
-const TELAS: Feature[] = [torre, carteira, novoContrato, ficha, minutas, diff, aditivosVigencia, dossie, cobranca, partes, tabelas];
+const TELAS: Feature[] = [torre, carteira, novoContrato, ficha, minutas, diff, aditivosVigencia, dossie, cobranca, partes, tabelas, manual];
 
 export const feature: Feature = {
   routes: TELAS.flatMap((t) => t.routes ?? []),

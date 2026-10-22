@@ -3,11 +3,11 @@ import { ContratosCobranca } from "../../ContratosCobranca.js";
 import { ROTAS, papelControl } from "../ui.js";
 import { FLOW, cenario } from "./comum.js";
 
-const COMPONENTS = ["core.table", "core.input", "core.drawer-modal", "core.file-uploader", "core.tooltip", "core.empty-state-card", "core.toast-wrapper"];
+const COMPONENTS = ["core.table", "core.input", "core.drawer-modal", "core.file-uploader", "core.button-tabs", "core.tooltip", "core.empty-state-card", "core.toast-wrapper"];
 const c = cenario(COMPONENTS);
 
 /** Contratos que têm cobrança na fixture `contratos.base`. */
-const CONTRATOS = ["CT-2026-001", "CT-2026-002", "CT-2026-003", "CT-2026-004", "CT-2026-005", "CT-2025-018", "CT-2025-040"];
+const CONTRATOS = ["CTR-2026-0001", "CTR-2026-0002", "CTR-2026-0003", "CTR-2026-0004", "CTR-2026-0005", "CTR-2025-0018", "CTR-2025-0040"];
 
 export const cobranca: Feature = {
   routes: [
@@ -16,13 +16,13 @@ export const cobranca: Feature = {
       screen: ContratosCobranca,
       name: "Conformidade — Cobrança e ERP",
       group: FLOW,
-      description: "Smart Intake, protocolo manual, conferência contra o contrato e envio ao Omie com a Trava de Governança.",
+      description: "Aba Cobrança da central de Conformidade: Smart Intake (XML/PDF), protocolo DOC-{contrato}-NN, conferência contra o contrato e envio ao Omie com a Trava de Governança (FR-074 a FR-082).",
       components: COMPONENTS,
       controls: [
         {
           id: "intake",
           title: "Smart Intake · file_uploader",
-          note: "O arquivo enviado e o resultado da leitura.",
+          note: "O arquivo enviado e o resultado da leitura (simulada no protótipo; o XML enviado de verdade é lido).",
           component: "core.file-uploader",
           controls: [
             {
@@ -30,9 +30,30 @@ export const cobranca: Feature = {
               label: "Leitura",
               options: [
                 { value: "nenhum", label: "Nenhum arquivo" },
-                { value: "xml", label: "XML: NFS-e da Clínica Integrar" },
-                { value: "pdf", label: "PDF: Fatura de Locação" },
-                { value: "sem-match", label: "CNPJ sem cadastro" },
+                { value: "xml", label: "XML NFS-e: CNPJ cadastrado (passo 1)" },
+                { value: "razao", label: "XML NFS-e: razão social (passo 2)" },
+                { value: "pdf-folha", label: "PDF Folha de Pagamento (passo 3)" },
+                { value: "sem-match", label: "XML NF-e sem correspondência (passo 4)" },
+                { value: "pdf", label: "PDF Fatura de Locação" },
+                { value: "pdf-boleto", label: "PDF Boleto Bancário" },
+                { value: "falha", label: "XML inválido" },
+                { value: "grande", label: "Arquivo acima de 25 MB" },
+              ],
+            },
+          ],
+        },
+        {
+          id: "erp",
+          title: "ERP financeiro",
+          note: "Sem credenciais do Omie, o envio roda em SANDBOX / SIMULAÇÃO HOMOLOGADA e gera OMIE-{n} (RN-055).",
+          controls: [
+            {
+              id: "erp",
+              label: "Omie",
+              options: [
+                { value: "sandbox", label: "Sem credenciais (sandbox)" },
+                { value: "credenciais", label: "Credenciais configuradas" },
+                { value: "falha", label: "API com falha" },
               ],
             },
           ],
@@ -56,17 +77,18 @@ export const cobranca: Feature = {
             },
             { id: "contrato", label: "Contrato", options: [{ value: "todos", label: "Todos" }, ...CONTRATOS.map((id) => ({ value: id, label: id }))] },
             { id: "detalhe", label: "Detalhe do envio", options: [{ value: "nenhum", label: "Fechado" }, { value: "b1", label: "b1 · sincronizado" }, { value: "b3", label: "b3 · erro" }] },
-            { id: "modal", label: "Modal", options: [{ value: "nenhum", label: "Nenhum" }, { value: "protocolo", label: "Protocolo manual" }] },
+            { id: "modal", label: "Modal", options: [{ value: "nenhum", label: "Nenhum" }, { value: "protocolo", label: "Protocolar documento" }] },
           ],
         },
         papelControl("financeiro"),
       ],
       expected: [
-        "Smart Intake: XML (NF-e, NFS-e) ou PDF (Folha, Boleto, Fatura de Locação, RPA, NF); campos lidos e sugestão de contrato e parte com selo Auto-detectado e o critério.",
-        "CNPJ sem cadastro ou leitura falha: aviso com motivo e o que fazer, sem sugerir contrato.",
-        "Lista com contrato, fluxo, parte, competência, documento, vencimento, valor mascarado, conferência, conformidade, liberação e situação no ERP.",
-        "Conferir (Controladoria) libera; só então aparece Sincronizar com o ERP. Não liberado mostra a Trava de Governança no lugar do botão.",
-        "Clicar na situação ou no título abre o detalhe do envio.",
+        "Smart Intake: XML (NF-e, NFS-e ABRASF) ou PDF classificado na ordem Folha de Pagamento, Boleto Bancário, Fatura de Locação, Recibo / RPA, NF-e, NFS-e; campos lidos (número, valor, vencimento, competência, tipo, CNPJ e razão social do prestador e do tomador) com o texto original normalizado.",
+        "Sugestão de contrato nos 4 passos (CNPJ só pelos dígitos em Fornecedores e depois Clientes; razão social; folha → CLT/Pessoal; primeiro Vigente), com selo Auto-detectado e o critério; o passo 4 aparece como baixa confiança.",
+        "Protocolo: contrato, fluxo da operação, competência AAAA-MM, parte, tipo, nº, valor, vencimento, observação e arquivo; escolher o contrato preenche parte, valor (se maior que zero) e fluxo. Entra como DOC-{contrato}-NN, Pendente Conferência e não liberado.",
+        "Lista com código, contrato, fluxo, parte, competência, documento, vencimento (— sem vencimento), valor (valor não informado), conferência, conformidade, liberação e situação no ERP.",
+        "Conferir: Aprovado 100% Conforme, Liberado e registro na auditoria; só então aparece Enviar ao ERP. Não liberado mostra a Trava de Governança com a mensagem exata no tooltip.",
+        "Clicar no título abre o detalhe do envio: título, identificador, data e comprovante de transmissão.",
       ],
     },
   ],
@@ -75,29 +97,65 @@ export const cobranca: Feature = {
       id: "contratos.cobranca",
       title: "Cobranças do mês",
       route: ROTAS.cobranca,
-      intent: "O Financeiro vê as cobranças, confere as pendentes e sincroniza as liberadas com o Omie.",
+      intent: "O Financeiro vê as cobranças, confere as pendentes e envia as liberadas ao Omie.",
       expected: [
-        "Área do Smart Intake para enviar XML ou PDF.",
-        "Lista com 7 cobranças, valores mascarados (R$ ••••••••) com olho para revelar.",
-        "b2 (Fatura de Locação LOC-0826, CT-2026-003) e b6 (NFS-e 2026/0233, CT-2025-040): Pendente Conferência, Trava de Governança com \"Confira o documento contra o contrato para liberar\" e o botão Conferir.",
-        "b5 (Folha 07/2026, CT-2026-005): Aprovado 100% Conforme, Liberado, ERP Pendente e o botão Sincronizar com o ERP; sincronizar gera o título 88413.",
-        "b1, b4 e b7 Sincronizados com o título; b3 com Erro e Ver erro.",
-        "Conferir a b2 mostra o valor divergente (IPTU) e permite aprovar; conferir a b6 recusa porque o dossiê do CT-2025-040 tem o laudo sanitário não conforme, com o atalho para o Dossiê.",
-        "Busca à esquerda dos selects Pagar (5) e Receber (2), Conformes (5), Sincronizados (3) e Travados (2); Exportar planilha.",
+        "Área do Smart Intake para enviar XML ou PDF (até 25 MB) e selo \"Omie: SANDBOX / SIMULAÇÃO HOMOLOGADA\".",
+        "Lista com 8 cobranças (DOC-CTR-…-01/02), valores mascarados (R$ ••••••••) com olho para revelar.",
+        "DOC-CTR-2026-0002-02 (Recibo / RPA RPA-0612): Pendente de Anexo, vencimento — e valor não informado.",
+        "b2 (LOC-0826), b6 (NFS-e 2026/0233) e b8 (RPA-0612): Pendente Conferência, Trava de Governança e o botão Conferir.",
+        "b5 (Folha 07/2026, CTR-2026-0005): Aprovado 100% Conforme, Liberado e Enviar ao ERP; enviar gera o título OMIE-849203 em Contas a Pagar (SANDBOX / SIMULAÇÃO HOMOLOGADA).",
+        "b1, b4 e b7 Sincronizado no Omie ERP com o título clicável; b3 com Erro, Ver motivo e Tentar de novo.",
+        "Conferir a b2 mostra o valor divergente (IPTU) e aprova; conferir a b6 avisa que o dossiê do CTR-2025-0040 está Pendente de Documentos, com o atalho para o Dossiê, e também aprova.",
+        "Selects Fluxo: Pagar (6) e Receber (2); Situação: Conformes (5), Sincronizados (3) e Travados (3); Exportar planilha.",
       ],
     }),
     c({
       id: "contratos.cobranca-intake-xml",
-      title: "Leitura de NFS-e (XML)",
+      title: "Leitura de NFS-e (XML) pelo CNPJ",
       route: ROTAS.cobranca,
       controls: { intake: "xml" },
-      intent: "Enviar o XML da NFS-e da Clínica Integrar e confirmar a cobrança sugerida.",
+      intent: "Enviar o XML da NFS-e da Clínica Integrar e protocolar a cobrança sugerida.",
       expected: [
-        "Campos lidos: NFS-e 2026/0815, valor mascarado, vencimento 10/09/2026, competência 08/2026, CNPJ 12.345.678/0001-90.",
-        "Contrato CT-2026-001 e parte Clínica Integrar Terapias Ltda. (Despesa) com selo Auto-detectado.",
-        "Critério: \"CNPJ 12.345.678/0001-90 = Clínica Integrar · contrato Vigente CT-2026-001 · valor igual ao contratado\".",
-        "Confirmar cria a cobrança na lista (competência 08/2026) como Pendente Conferência, com Trava de Governança, e mostra toast.",
-        "Trocar o contrato tira o selo e mostra o aviso para conferir.",
+        "Campos lidos: NFS-e 815, valor lido como \"18500.00\", competência 08/2026 (lida como \"2026-08-01T00:00:00\"), prestador CLINICA INTEGRAR TERAPIAS LTDA (CNPJ 12345678000190) e tomador Bloomy.",
+        "Sugestão Auto-detectado: CTR-2026-0001, Clínica Integrar Terapias Ltda., Contas a Pagar (Prestador PJ), vencimento 10/08/2026 estimado pelo dia 10 do contrato.",
+        "Critério (passo 1): CNPJ = Clínica Integrar Terapias Ltda. (Fornecedores, comparado só pelos dígitos) · contrato Vigente CTR-2026-0001.",
+        "Confirmar e protocolar cria DOC-CTR-2026-0001-02 como Pendente Conferência, com a Trava de Governança e a observação do Smart Intake.",
+        "Revisar campos abre o protocolo com o selo Auto-detectado em cada campo; editar um campo tira o selo dele.",
+      ],
+    }),
+    c({
+      id: "contratos.cobranca-intake-razao",
+      title: "Sugestão pela razão social",
+      route: ROTAS.cobranca,
+      controls: { intake: "razao" },
+      intent: "NFS-e da filial Batel da Movimento Fisioterapia: o CNPJ da filial não está no cadastro.",
+      expected: [
+        "Valor lido como \"9.200,00\" e normalizado; CNPJ 77888999000272 sem cadastro.",
+        "Critério (passo 2): palavra \"movimento\" da razão social está em Movimento Fisioterapia Ltda. · contrato Vigente CTR-2025-0040.",
+      ],
+    }),
+    c({
+      id: "contratos.cobranca-intake-folha",
+      title: "Leitura de Folha de Pagamento (PDF)",
+      route: ROTAS.cobranca,
+      controls: { intake: "pdf-folha" },
+      intent: "PDF do resumo da folha de julho.",
+      expected: [
+        "Classificado como Folha de Pagamento; valor 5.518,00 (Líquido a Pagar), competência 07/2026, sem número.",
+        "Critério (passo 3): Folha de Pagamento → contrato CLT Trabalho CTR-2026-0005.",
+        "Padrões: número NFS-e 0730, fluxo Contas a Pagar (Prestador PJ), vencimento 05/08/2026 estimado pelo dia 5 do contrato.",
+      ],
+    }),
+    c({
+      id: "contratos.cobranca-intake-sem-match",
+      title: "Sem correspondência (baixa confiança)",
+      route: ROTAS.cobranca,
+      controls: { intake: "sem-match" },
+      intent: "NF-e de um CNPJ que não está no Cadastro de Partes nem casa pela razão social.",
+      expected: [
+        "Campos lidos: NF-e 112233, vencimento 20/08/2026, competência 07/2026, prestador DISTRIBUIDORA ALFA MATERIAIS LTDA (CNPJ 99888777000166).",
+        "Sugestão CTR-2025-0018 (primeiro contrato Vigente) com aviso \"Sugestão de baixa confiança\" e o critério do passo 4.",
+        "Sem o botão Confirmar e protocolar: só Revisar campos (troque o contrato) ou Descartar.",
       ],
     }),
     c({
@@ -107,21 +165,31 @@ export const cobranca: Feature = {
       controls: { intake: "pdf" },
       intent: "Enviar o PDF da fatura de locação de setembro da Unidade Girassol.",
       expected: [
-        "Campos lidos: Fatura de Locação LOC-0926, vencimento 05/09/2026, competência 09/2026, CNPJ 44.555.666/0001-77.",
-        "Sugestão CT-2026-003 · Imobiliária Horizonte Ltda. com Auto-detectado e o critério \"CNPJ 44.555.666/0001-77 = Imobiliária Horizonte · contrato Vigente CT-2026-003 · valor igual ao contratado\".",
-        "Confirmar cria a cobrança Pendente Conferência.",
+        "Classificado como Fatura de Locação; número LOC-0926 (o \"nº 455\" do endereço não é lido), valor 15.033,80 (Total da Fatura), vencimento 05/09/2026, competência 09/2026, CNPJ 44.555.666/0001-77.",
+        "Critério (passo 1): CNPJ = Imobiliária Horizonte Ltda. · contrato Vigente CTR-2026-0003.",
       ],
     }),
     c({
-      id: "contratos.cobranca-intake-sem-match",
-      title: "CNPJ sem cadastro",
+      id: "contratos.cobranca-intake-falha",
+      title: "Leitura falha ou arquivo grande",
       route: ROTAS.cobranca,
-      controls: { intake: "sem-match" },
-      intent: "Enviar uma NF-e de um CNPJ que não está no Cadastro de Partes.",
+      controls: { intake: "falha" },
+      intent: "XML corrompido: a leitura não traz nenhum campo.",
       expected: [
-        "Campos lidos: NF-e 000.112.233, CNPJ 99.888.777/0001-66.",
-        "Nenhum contrato sugerido: aviso \"O CNPJ 99.888.777/0001-66 não está no Cadastro de Partes, então não há contrato para sugerir\" e o que fazer.",
-        "Botões Cadastrar a parte (vai para Partes), Protocolo manual e Descartar. Nenhum contrato aparece pré-escolhido.",
+        "Aviso \"Não foi possível ler o arquivo\" com Enviar outro arquivo e Preencher manualmente.",
+        "Com a leitura \"Arquivo acima de 25 MB\": \"Arquivo excede o limite máximo permitido de 25 MB.\".",
+      ],
+    }),
+    c({
+      id: "contratos.cobranca-protocolo",
+      title: "Protocolo manual",
+      route: ROTAS.cobranca,
+      controls: { modal: "protocolo", contrato: "CTR-2026-0005" },
+      intent: "Protocolar a folha de agosto do CTR-2026-0005 sem o Smart Intake.",
+      expected: [
+        "Drawer com contrato CTR-2026-0005 e parte, valor 6200,00 e fluxo Contas a Pagar (Folha CLT) vindos do contrato.",
+        "Competência AAAA-MM obrigatória; valor e vencimento opcionais.",
+        "Protocolar cria DOC-CTR-2026-0005-02 como Pendente Conferência e não liberado.",
       ],
     }),
     c({
@@ -131,9 +199,9 @@ export const cobranca: Feature = {
       controls: { filtro: "travados" },
       intent: "Ver o que ainda não pode ir para o ERP e por quê.",
       expected: [
-        "Select Situação em Travados: b2 (CT-2026-003) e b6 (CT-2025-040).",
-        "Nas duas, Trava de Governança (cadeado) no lugar de Sincronizar, com \"Confira o documento contra o contrato para liberar\", e Situação no ERP \"Não enviado\".",
-        "Conferir a b2 libera e troca a trava por Sincronizar com o ERP.",
+        "Situação em Travados: b2 (CTR-2026-0003), b6 (CTR-2025-0040) e b8 (CTR-2026-0002).",
+        "Trava de Governança no lugar do botão de envio, com o tooltip \"Trava de Governança: O documento deve estar 'Aprovado 100% Conforme' e Liberado para ser enviado ao Omie.\" e Situação no ERP \"Não enviado\".",
+        "Conferir a b2 libera, registra na auditoria e troca a trava por Enviar ao ERP.",
       ],
     }),
     c({
@@ -141,11 +209,11 @@ export const cobranca: Feature = {
       title: "Detalhe de envio sincronizado",
       route: ROTAS.cobranca,
       controls: { detalhe: "b1" },
-      intent: "Abrir o envio da NFS-e 2026/0712 da Clínica Integrar.",
+      intent: "Abrir o envio da NFS-e 2026/0712 da Clínica Integrar pelo título.",
       expected: [
-        "Gaveta \"Envio ao ERP · NFS-e 2026/0712\" com Sincronizado e Aprovado 100% Conforme.",
-        "Data do envio 09/07/2026 às 15:02 e título no Omie 88412.",
-        "Resumo dos dados enviados (contas a pagar, FOR-0001, vencimento 10/08/2026, valor mascarado).",
+        "Gaveta \"Envio ao ERP · DOC-CTR-2026-0001-01\" com Sincronizado no Omie ERP e Aprovado 100% Conforme.",
+        "Título no Omie 88412, identificador DOC-CTR-2026-0001-01, data 09/07/2026 às 15:02, lançamento Contas a Pagar.",
+        "Comprovante de transmissão (\"Conta a Pagar cadastrada com sucesso\") e os dados enviados (IncluirContaPagar, observação \"Integração Módulo de Contratos: CTR-2026-0001 | … | Competência: 2026-07\").",
       ],
     }),
     c({
@@ -156,8 +224,18 @@ export const cobranca: Feature = {
       intent: "Entender por que a NF-e 000.451.902 da Nuvem Clínica não entrou no Omie.",
       expected: [
         "Gaveta com Erro, data 29/07/2026 às 10:12 e sem título.",
-        "Aviso \"O Omie recusou o envio\": fornecedor sem conta bancária cadastrada no Omie (FOR-0003); cadastre a conta no Omie e sincronize de novo.",
-        "Tentar de novo (Financeiro) sincroniza e gera o título.",
+        "Aviso \"O envio ao Omie falhou\" com o motivo (fornecedor sem conta bancária no Omie) e o documento disponível para nova tentativa.",
+        "Tentar de novo (Financeiro) envia e gera o título OMIE-849203 (sandbox).",
+      ],
+    }),
+    c({
+      id: "contratos.cobranca-erp-falha",
+      title: "Falha da API do Omie",
+      route: ROTAS.cobranca,
+      controls: { erp: "falha" },
+      intent: "Enviar a b5 com a API do Omie fora do ar.",
+      expected: [
+        "Enviar ao ERP na b5 vira Erro com \"Falha de conexão com a API Omie…\", registrado na auditoria, e o botão Tentar de novo continua disponível.",
       ],
     }),
   ],

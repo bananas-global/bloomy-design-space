@@ -1,18 +1,23 @@
 /**
  * Gestão de Contratos — Ficha do Contrato.
  *
- * O hub de ações sobre um contrato: cabeçalho com os selos, abas com a
- * qualificação, o conteúdo por modalidade, o dossiê, as versões e aditivos e a
- * Linha do Tempo Forense; ao lado, o painel de workflows com SÓ a próxima ação
- * válida (submeter, aprovar/reprovar, ressubmeter, despachar, concluir). A
- * assinatura fica travada com cadeado até a aprovação: é a regra central do
- * produto, e quem tenta despachar antes vê o "Bloqueio de Governança".
+ * O hub de ações sobre um contrato: cabeçalho com os selos, abas com a ficha
+ * consolidada (FR-040), o conteúdo por modalidade (FR-048), o dossiê, as
+ * versões com o texto de cada uma (RN-011) e os aditivos, o histórico de
+ * workflow (RN-071), a Linha do Tempo Forense (RN-067) e a trilha de auditoria
+ * do contrato (RN-068); ao lado, o painel de workflows com SÓ a próxima ação
+ * válida (FR-036: submeter, aprovar/reprovar, ressubmeter, despachar,
+ * concluir). A assinatura fica travada com cadeado até a aprovação: é a regra
+ * central do produto, e quem tenta despachar antes vê o "Bloqueio de
+ * Governança" (FR-037). Toda ação fora do estado válido é recusada com
+ * mensagem e não muda nada; toda gravação entra na auditoria (RN-066).
  *
  * Feito na tela (componente novo para o dev): o painel de workflows, o cabeçalho
- * da ficha com os selos, a lista de cláusulas com o selo "Editada" e a legenda de
- * cores da Linha do Tempo. O resto é `lazy_tabs`, `modal`, `input`,
- * `radio_selector`, `radio_cards`, `file_uploader`, `table`, `timeline_list`,
- * `tag`, `button` e `empty_state_card`.
+ * da ficha com os selos, a lista de cláusulas com o selo "Editada", os cartões
+ * de destaque do Específico e a legenda de cores da Linha do Tempo. O resto é
+ * `lazy_tabs`, `modal`, `input`, `radio_selector`, `radio_cards`,
+ * `file_uploader`, `table`, `timeline_list`, `tag`, `button` e
+ * `empty_state_card`.
  */
 import { useMemo, useState, type ReactNode } from "react";
 import type { ScreenProps } from "@brucesantos/design-space";
@@ -27,27 +32,31 @@ import { Dropdown, DrawerModal, Modal } from "../components/Overlay.js";
 import { Table } from "../components/Table.js";
 import { LazyTabs } from "../components/Tabs.js";
 import { Tag, type TagVariant } from "../components/Tag.js";
-import { ModalAditivo } from "./gestao-de-contratos/FormAditivo.js";
+import { ModalAditivo, aditarContrato } from "./gestao-de-contratos/FormAditivo.js";
+import { ModalPdfContrato } from "./gestao-de-contratos/PdfContrato.js";
 import {
-  APROVACAO, ASSINATURA, CONFORMIDADE, FAIXA, FASES, FLUXO, MODALIDADE, PLATAFORMAS, STATUS, SUBTIPO, TODAY,
-  br, diasLabel, dossieDe, dossieOk, faixa, faseLabel, kb, parteDe, proximaVersao,
+  ANEXO_MAX, ANEXO_TIPOS, APROVACAO, ASSINATURA, CONFORMIDADE, ERP, FAIXA, FASES, FLUXO, MODALIDADE, PAPEIS, PAPEL_WORKFLOW, PLATAFORMAS, STATUS, SUBTIPO, TODAY,
+  br, competencia, diasLabel, dossieDe, dossieOk, faixa, faseLabel, faseNumerada, kb, parteDe, proximaVersao, rotuloAditivo, validarAnexo,
   type Aditivo, type Arquivo, type Clausula, type Contrato, type ContratosData, type Evento, type EventoTipo, type Papel, type Plataforma,
+  type RegistroAuditoria, type RegistroWorkflow,
 } from "./gestao-de-contratos/model.js";
-import { Aviso, Bloco, ContratosShell, Dados, ROTAS, Selo, TextoComTags, Valor, exportarPdf, papelDe, secaoInfo, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
+import { Aviso, Bloco, ContratosShell, Dados, ROTAS, Selo, TextoComTags, Valor, papelDe, secaoInfo, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 
 /* ------------------------------------------------------------------ */
 /* Controles: modal e aba                                              */
 /* ------------------------------------------------------------------ */
 
-export const MODAIS = ["aprovar", "reprovar", "despachar", "bloqueio", "concluir", "revisao", "encerrar", "aditivo", "clausula"] as const;
-export type ModalId = (typeof MODAIS)[number];
+export const MODAIS = ["aprovar", "reprovar", "despachar", "bloqueio", "concluir", "revisao", "encerrar", "aditivo", "clausula", "pdf"] as const;
+export type ModalId = (typeof MODAIS)[number] | "excluir-clausula";
 
 export const ABAS = [
   { id: "resumo", label: "Resumo" },
   { id: "conteudo", label: "Conteúdo" },
   { id: "dossie", label: "Dossiê" },
   { id: "versoes", label: "Versões & Aditivos" },
+  { id: "workflow", label: "Histórico de workflow" },
   { id: "linha-do-tempo", label: "Linha do Tempo" },
+  { id: "auditoria", label: "Auditoria" },
 ] as const;
 type AbaId = (typeof ABAS)[number]["id"];
 
@@ -56,28 +65,48 @@ type AbaId = (typeof ABAS)[number]["id"];
 /* ------------------------------------------------------------------ */
 
 const ELABORA: Papel[] = ["solicitante", "operador", "juridico", "administrador"];
-const APROVA: Papel[] = ["aprovador", "diretoria"];
+const APROVA: Papel[] = ["aprovador", "diretoria", "administrador"];
 const DESPACHA: Papel[] = ["operador", "juridico", "administrador"];
 const ENCERRA: Papel[] = ["diretoria", "operador", "juridico", "administrador"];
 const ADITA: Papel[] = ["juridico", "operador", "solicitante", "administrador"];
 
-/** Cor e ícone de cada tipo de evento da Linha do Tempo Forense. */
+/**
+ * Cor e ícone de cada tipo de evento da Linha do Tempo Forense (RN-067), só
+ * com as variantes de `tag` existentes: criação azul, versão roxo, dossiê
+ * ciano, cobrança âmbar, ERP verde, distrato vermelho. Aditivo é rosa na
+ * especificação, mas o `tag` não tem rosa: usa laranja até o Phoenix ganhar
+ * a variante. Workflow varia pelo evento (`corEvento`).
+ */
 const EVENTO: Record<EventoTipo, { label: string; variant: TagVariant; icon: string }> = {
   criacao: { label: "Criação", variant: "light-blue", icon: "fa-sparkles" },
-  workflow: { label: "Workflow", variant: "brand", icon: "fa-diagram-project" },
-  versao: { label: "Versão", variant: "cyan", icon: "fa-code-branch" },
+  workflow: { label: "Workflow", variant: "yellow", icon: "fa-diagram-project" },
+  versao: { label: "Versão", variant: "light-purple", icon: "fa-code-branch" },
   aditivo: { label: "Aditivo", variant: "orange", icon: "fa-file-plus" },
-  dossie: { label: "Dossiê", variant: "light-accent", icon: "fa-folder-check" },
-  cobranca: { label: "Cobrança", variant: "green", icon: "fa-file-invoice-dollar" },
-  erp: { label: "ERP", variant: "dark-blue", icon: "fa-arrows-rotate" },
-  encerramento: { label: "Encerramento", variant: "dark-purple", icon: "fa-box-archive" },
+  dossie: { label: "Dossiê", variant: "cyan", icon: "fa-folder-check" },
+  cobranca: { label: "Cobrança", variant: "yellow", icon: "fa-file-invoice-dollar" },
+  erp: { label: "ERP", variant: "green", icon: "fa-arrows-rotate" },
+  encerramento: { label: "Distrato", variant: "red", icon: "fa-box-archive" },
 };
+/** Workflow aprovado ou assinado é verde, reprovado vermelho, os demais âmbar (RN-067). */
+function corEvento(e: Evento): TagVariant {
+  if (e.tipo !== "workflow") return EVENTO[e.tipo].variant;
+  if (/reprova/i.test(e.titulo)) return "red";
+  if (/aprovado|assinatura conclu|assinado/i.test(e.titulo)) return "green";
+  return "yellow";
+}
 
 /** Quem está usando o protótipo (o mesmo usuário do cabeçalho). */
 const USUARIO = "Marina Alves";
+const perfilDe = (p: Papel) => PAPEIS.find((x) => x.id === p)?.label ?? p;
 
 const agora = () => `${TODAY}T${new Date().toTimeString().slice(0, 5)}`;
 const dataHora = (iso: string) => (iso.length > 10 ? `${br(iso)} às ${iso.slice(11, 16)}` : br(iso));
+const uid = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+/** Mensagem exata do FR-037. */
+export const BLOQUEIO_GOVERNANCA = "Bloqueio de Governança: O contrato NÃO pode ser enviado para assinatura sem prévia aprovação!";
+/** Mensagem das cláusulas travadas (RN-069, FR-048). */
+export const CLAUSULAS_TRAVADAS = "Cláusulas de contrato assinado só podem ser alteradas por Termo Aditivo";
 
 /* ------------------------------------------------------------------ */
 /* Tela                                                                */
@@ -117,7 +146,7 @@ function MaisAcoes({ itens }: { itens: { label: string; icon: string; onClick: (
 
 export function ContratosFicha({ context, params }: ScreenProps) {
   const id = params.id ?? "";
-  const papel = papelDe(context, "operador");
+  const papel = papelDe(context, "administrador");
   // O breadcrumb volta para a tela de onde a ficha foi aberta (controle `origem`); sem origem, a Carteira.
   const origem = secaoInfo(context.controls.origem ?? "") ?? secaoInfo("carteira")!;
   return (
@@ -130,7 +159,7 @@ export function ContratosFicha({ context, params }: ScreenProps) {
               <EmptyStateCard icon="fa-file-circle-question" text="Contrato não encontrado">
                 <p>Não há contrato com o código {id} na carteira. Confira o código ou volte à carteira para buscar pela parte ou pelo objeto.</p>
                 <div className="mt-6 flex justify-center">
-                  <Button leftIcon="fa-arrow-left" onClick={() => context.navigate(ROTAS.carteira)}>Voltar à carteira</Button>
+                  <Button leftIcon="fa-arrow-left" onClick={() => context.navigate(ROTAS.carteira, { controls: {} })}>Voltar à carteira</Button>
                 </div>
               </EmptyStateCard>
             </Bloco>
@@ -154,24 +183,35 @@ export function ContratosFicha({ context, params }: ScreenProps) {
 /** O modal pedido pelo controle só abre se a ação vale para o estado e o papel. */
 function modalValido(m: string | undefined, c: Contrato, papel: Papel): ModalId | null {
   if (!m || !(MODAIS as readonly string[]).includes(m)) return null;
-  const ok: Record<ModalId, boolean> = {
+  const ok: Record<(typeof MODAIS)[number], boolean> = {
     aprovar: c.aprovacao === "em_aprovacao" && APROVA.includes(papel),
     reprovar: c.aprovacao === "em_aprovacao" && APROVA.includes(papel),
     despachar: c.assinatura === "pronto_coleta" && DESPACHA.includes(papel),
-    bloqueio: c.assinatura === "bloqueada",
+    bloqueio: c.aprovacao !== "aprovado",
     concluir: c.assinatura === "em_assinatura" && DESPACHA.includes(papel),
     revisao: revisavel(c) && ELABORA.includes(papel),
-    encerrar: c.status === "vigente" && ENCERRA.includes(papel),
+    encerrar: encerravel(c) && ENCERRA.includes(papel),
     aditivo: c.status === "vigente" && ADITA.includes(papel),
     clausula: c.modalidade === "adesao" && clausulasEditaveis(c) && ELABORA.includes(papel),
+    pdf: true,
   };
-  return ok[m as ModalId] ? (m as ModalId) : null;
+  return ok[m as (typeof MODAIS)[number]] ? (m as ModalId) : null;
 }
 
-/** Cláusulas só mudam enquanto o contrato está em elaboração (ou voltou reprovado). */
-const clausulasEditaveis = (c: Contrato) => c.aprovacao === "elaboracao" || c.aprovacao === "reprovado";
-/** Revisão formal antes da assinatura; depois de assinado, só Termo Aditivo. */
-const revisavel = (c: Contrato) => c.assinatura !== "assinado" && c.status !== "encerrado";
+/** Cláusulas mudam enquanto o contrato não está assinado nem encerrado (RN-069). */
+const clausulasEditaveis = (c: Contrato) => c.assinatura !== "assinado" && c.status !== "encerrado";
+/** Revisão formal em qualquer fase até o encerramento (FR-044). */
+const revisavel = (c: Contrato) => c.status !== "encerrado";
+/** Só Vigente ou Em Assinatura podem ser encerrados; Encerrado é final (RN-038). */
+const encerravel = (c: Contrato) => c.status === "vigente" || c.status === "em_assinatura";
+
+/** O que a ação grava além do patch: evento, histórico de workflow e auditoria (RN-066, RN-071). */
+type Registro = {
+  evento?: Omit<Evento, "id" | "data" | "autor"> & { autor?: string };
+  workflow?: Omit<RegistroWorkflow, "id" | "data">[];
+  auditoria: { acao: string; detalhes: string; usuario?: string; perfil?: string };
+  toast: { title: string; content: string };
+};
 
 function Ficha({
   data,
@@ -189,37 +229,148 @@ function Ficha({
   const [c, setC] = useState<Contrato>(inicial);
   const [aditivos, setAditivos] = useState<Aditivo[]>(() => data.aditivos.filter((a) => a.contratoId === inicial.id));
   const [modal, setModal] = useState<ModalId | null>(() => modalValido(controls.modal, inicial, papel));
-  const [clausulaEditando, setClausulaEditando] = useState<Clausula | null>(null);
+  const [clausulaAlvo, setClausulaAlvo] = useState<Clausula | null>(null);
   const aba = (ABAS.find((a) => a.id === controls.aba)?.id ?? "resumo") as AbaId;
 
   const parte = parteDe(data, c);
-  const fechar = () => { setModal(null); setClausulaEditando(null); };
-  const evento = (tipo: EventoTipo, titulo: string, detalhe?: string): Evento => ({ id: `ev_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`, data: agora(), tipo, titulo, autor: USUARIO, ...(detalhe && { detalhe }) });
-  const aplicar = (patch: Partial<Contrato>, ev: Evento, toast: { title: string; content: string }) => {
-    setC((s) => ({ ...s, ...patch, eventos: [...s.eventos, ev] }));
+  const fechar = () => { setModal(null); setClausulaAlvo(null); };
+
+  /** Grava o patch com o evento, o histórico e a auditoria, no mesmo momento. */
+  const aplicar = (patch: Partial<Contrato> | ((s: Contrato) => Partial<Contrato>), r: Registro) => {
+    const quando = agora();
+    setC((s) => {
+      const p = typeof patch === "function" ? patch(s) : patch;
+      return {
+        ...s,
+        ...p,
+        eventos: r.evento ? [...s.eventos, { id: uid("ev"), data: quando, autor: USUARIO, ...r.evento }] : s.eventos,
+        workflow: [...s.workflow, ...(r.workflow ?? []).map((w) => ({ ...w, id: uid("wf"), data: quando }))],
+        auditoria: [...s.auditoria, { id: uid("aud"), data: quando, usuario: r.auditoria.usuario ?? USUARIO, perfil: r.auditoria.perfil ?? perfilDe(papel), acao: r.auditoria.acao, detalhes: r.auditoria.detalhes }],
+      };
+    });
     fechar();
-    showToast({ type: "success", ...toast, closeTime: 4000 });
+    showToast({ type: "success", ...r.toast, closeTime: 4000 });
   };
+  /** Transição fora do estado válido: recusada com mensagem, nada muda (FR-036). */
+  const recusar = (content: string) => { fechar(); showToast({ type: "error", title: "Ação não permitida", content, closeTime: 5000 }); };
 
   const encerrado = c.status === "encerrado";
   const vigente = c.status === "vigente";
+  /** Nova versão com a cópia das cláusulas naquele momento (RN-010, RN-011). */
+  const versaoNova = (tipo: "minor" | "major", fase: string, motivo: string, resumo: string, revisor: string) => {
+    const versao = proximaVersao(c.versao, tipo);
+    return { versao, versoes: [...c.versoes, { versao, data: TODAY, fase, motivo, resumo, revisor, ...(c.clausulas && { clausulas: c.clausulas }) }] };
+  };
 
-  /* Ações diretas do painel ------------------------------------------ */
-  const submeter = () =>
+  /* Ações do painel (RN-032 a RN-037) ------------------------------------ */
+  const submeter = () => {
+    if (c.aprovacao !== "elaboracao" && c.aprovacao !== "reprovado") return recusar(`A submissão só é aceita a partir de "Em Elaboração" ou "Reprovado (Em Ajuste)". ${c.id} está ${APROVACAO[c.aprovacao].label}.`);
+    const re = c.aprovacao === "reprovado";
     aplicar(
       { status: "em_aprovacao", aprovacao: "em_aprovacao", fase: "aprovacao", reprovacao: undefined },
-      evento("workflow", c.aprovacao === "reprovado" ? "Ressubmetido para aprovação" : "Submetido para aprovação"),
-      { title: c.aprovacao === "reprovado" ? "Contrato ressubmetido" : "Contrato submetido", content: `${c.id} ${c.versao} foi para aprovação da Diretoria / Jurídico.` },
+      {
+        evento: { tipo: "workflow", titulo: re ? "Ressubmetido para aprovação" : "Submetido para aprovação" },
+        workflow: [{ workflow: "aprovacao", de: APROVACAO[c.aprovacao].label, para: "Em Aprovação", usuario: USUARIO, papel: PAPEL_WORKFLOW.submissao }],
+        auditoria: { acao: "WORKFLOW_SUBMETER", detalhes: `${APROVACAO[c.aprovacao].label} → Em Aprovação · ${faseNumerada("aprovacao")}` },
+        toast: { title: re ? "Contrato ressubmetido" : "Contrato submetido", content: `${c.id} ${c.versao} foi para aprovação da Diretoria / Jurídico.` },
+      },
     );
+  };
+  const aprovar = (nome: string, parecer: string) => {
+    if (c.aprovacao !== "em_aprovacao") return recusar(`Só é possível aprovar um contrato Em Aprovação. ${c.id} está ${APROVACAO[c.aprovacao].label}.`);
+    const v = versaoNova("minor", faseNumerada("aprovacao"), "Aprovação de Governança", parecer, nome);
+    aplicar(
+      { aprovacao: "aprovado", status: "pronto_coleta", fase: "assinatura", assinatura: "pronto_coleta", aprovador: { nome, data: TODAY, parecer }, ...v },
+      {
+        evento: { tipo: "workflow", titulo: "Aprovado com parecer", detalhe: parecer, autor: nome },
+        workflow: [
+          { workflow: "aprovacao", de: "Em Aprovação", para: "Aprovado", parecer, usuario: nome, papel: PAPEL_WORKFLOW.aprovacao },
+          { workflow: "assinatura", de: ASSINATURA.bloqueada.label, para: ASSINATURA.pronto_coleta.label, usuario: "Sistema", papel: PAPEL_WORKFLOW.liberacao },
+        ],
+        auditoria: { acao: "WORKFLOW_APROVAR", detalhes: `Aprovado (${v.versao}): ${parecer}`, usuario: nome },
+        toast: { title: "Contrato aprovado", content: `${c.id} ${v.versao} está Pronto para Coleta: a assinatura foi liberada.` },
+      },
+    );
+  };
+  const reprovar = (nome: string, motivo: string) => {
+    if (c.aprovacao !== "em_aprovacao") return recusar(`Só é possível reprovar um contrato Em Aprovação. ${c.id} está ${APROVACAO[c.aprovacao].label}.`);
+    const parecer = `Reprovado por ${nome}: ${motivo}`;
+    aplicar(
+      { aprovacao: "reprovado", status: "reprovado", fase: "elaboracao", assinatura: "bloqueada", reprovacao: { aprovador: nome, data: TODAY, motivo } },
+      {
+        evento: { tipo: "workflow", titulo: "Reprovado", detalhe: parecer, autor: nome },
+        workflow: [{ workflow: "aprovacao", de: "Em Aprovação", para: "Reprovado (Em Ajuste)", parecer, usuario: nome, papel: PAPEL_WORKFLOW.reprovacao }],
+        auditoria: { acao: "WORKFLOW_REPROVAR", detalhes: parecer, usuario: nome },
+        toast: { title: "Contrato reprovado", content: `${c.id} voltou para ${faseNumerada("elaboracao")} com o motivo registrado.` },
+      },
+    );
+  };
+  /** Despachar sem aprovação abre o Bloqueio de Governança (RN-035); Vigente não é despachado de novo (RN-036). */
+  const pedirDespacho = () => {
+    if (c.status === "vigente" || c.assinatura === "assinado") return recusar(`${c.id} já está Vigente e não pode ser despachado de novo.`);
+    if (c.aprovacao !== "aprovado") return setModal("bloqueio");
+    if (c.assinatura !== "pronto_coleta") return recusar(`O despacho só é aceito a partir de "Pronto para Coleta". ${c.id} está ${ASSINATURA[c.assinatura].label}.`);
+    setModal("despachar");
+  };
+  const despachar = (plataforma: Plataforma, envelope: string) => {
+    if (c.aprovacao !== "aprovado") return setModal("bloqueio");
+    if (c.assinatura !== "pronto_coleta") return recusar(`O despacho só é aceito a partir de "Pronto para Coleta".`);
+    aplicar(
+      { assinatura: "em_assinatura", status: "em_assinatura", envelope: { plataforma, id: envelope, data: TODAY } },
+      {
+        evento: { tipo: "workflow", titulo: `Despachado para assinatura · ${plataforma} ${envelope}` },
+        workflow: [{ workflow: "assinatura", de: "Pronto para Coleta", para: "Em Assinatura", parecer: `${plataforma} · envelope ${envelope}`, usuario: USUARIO, papel: PAPEL_WORKFLOW.despacho }],
+        auditoria: { acao: "WORKFLOW_DESPACHAR", detalhes: `${plataforma} ${envelope}` },
+        toast: { title: "Despachado para assinatura", content: `Envelope ${envelope} registrado na ${plataforma} em ${br(TODAY)}.` },
+      },
+    );
+  };
+  const concluir = () => {
+    if (c.assinatura !== "em_assinatura") return recusar(`A conclusão só é aceita a partir de "Em Assinatura". ${c.id} está ${ASSINATURA[c.assinatura].label}.`);
+    const v = versaoNova("minor", faseNumerada("assinatura"), "Conclusão da assinatura", "Contrato Vigente.", USUARIO);
+    aplicar(
+      { assinatura: "assinado", status: "vigente", fase: "vigente", assinadoDigital: true, assinaturaConcluida: TODAY, ...v },
+      {
+        evento: { tipo: "workflow", titulo: "Assinatura concluída · contrato Vigente" },
+        workflow: [{ workflow: "assinatura", de: "Em Assinatura", para: "Assinado Digitalmente", usuario: c.envelope?.plataforma ?? USUARIO, papel: PAPEL_WORKFLOW.conclusao }],
+        auditoria: { acao: "WORKFLOW_CONCLUIR", detalhes: `Assinado Digitalmente · Vigente (${v.versao})` },
+        toast: { title: "Assinatura concluída", content: `${c.id} ${v.versao} agora está Vigente. As cláusulas só mudam por Termo Aditivo.` },
+      },
+    );
+  };
+
+  /* Cláusulas (RN-069) --------------------------------------------------- */
+  const salvarClausula = (titulo: string, texto: string) => {
+    if (!clausulasEditaveis(c)) return recusar(CLAUSULAS_TRAVADAS);
+    const lista = c.clausulas ?? [];
+    if (clausulaAlvo) {
+      aplicar(
+        { clausulas: lista.map((x) => (x.id === clausulaAlvo.id ? { ...x, titulo, texto, editada: true } : x)) },
+        { auditoria: { acao: "EDICAO_CLAUSULA", detalhes: `Cláusula "${clausulaAlvo.titulo}" alterada${clausulaAlvo.titulo !== titulo ? ` para "${titulo}"` : ""}.` }, toast: { title: "Cláusula editada", content: `${titulo} ganhou o selo "Editada".` } },
+      );
+    } else {
+      aplicar(
+        { clausulas: [...lista, { id: uid("cl"), titulo, texto, editada: true, obrigatoria: false }] },
+        { auditoria: { acao: "INCLUSAO_CLAUSULA", detalhes: `Cláusula "${titulo}" incluída no fim do contrato.` }, toast: { title: "Cláusula adicionada", content: `${titulo} entrou no fim do contrato.` } },
+      );
+    }
+  };
+  const excluirClausula = (cl: Clausula) => {
+    if (!clausulasEditaveis(c)) return recusar(CLAUSULAS_TRAVADAS);
+    aplicar(
+      { clausulas: (c.clausulas ?? []).filter((x) => x.id !== cl.id) },
+      { auditoria: { acao: "EXCLUSAO_CLAUSULA", detalhes: `Cláusula removida. Título: "${cl.titulo}". Texto: "${cl.texto}"` }, toast: { title: "Cláusula excluída", content: `${cl.titulo} saiu do contrato ${c.id}.` } },
+    );
+  };
 
   return (
     <div className="space-y-6">
+      {/* FR-051: aviso do encerrado com data, motivo e distrato. */}
       {encerrado && c.encerramento && (
         <Aviso tom="neutro" icone="fa-box-archive" titulo={`Contrato encerrado em ${br(c.encerramento.data)} · ${c.encerramento.tipo}`}>
-          <p>Motivo: {c.encerramento.motivo}</p>
+          <p>Motivo: [{c.encerramento.tipo}] {c.encerramento.motivo}</p>
           <p className="mt-1">
-            Distrato:{" "}
-            <ArquivoLink arquivo={c.encerramento.distrato} />
+            Distrato: {c.encerramento.distrato ? <ArquivoLink arquivo={c.encerramento.distrato} /> : <span className="italic">não anexado</span>}
           </p>
           <p className="mt-1">Estado final: a ficha fica só para consulta. Aditivos e encerramento não se aplicam mais.</p>
         </Aviso>
@@ -236,18 +387,18 @@ function Ficha({
                 parte={parte?.nome}
                 acoes={
                   <>
-                    {vigente && ENCERRA.includes(papel) && (
+                    {encerravel(c) && ENCERRA.includes(papel) && (
                       <Button variant="tint" color="red" leftIcon="fa-box-archive" onClick={() => setModal("encerrar")}>Encerrar</Button>
                     )}
                     {vigente && ADITA.includes(papel) && (
                       <Button leftIcon="fa-plus" onClick={() => setModal("aditivo")}>Aditivo</Button>
                     )}
-                    {/* Consultas e atalhos ficam no menu ⋯; à vista, só as ações sobre o contrato. */}
+                    {/* Consultas e atalhos (FR-043, FR-049) ficam no menu ⋯; à vista, só as ações sobre o contrato. */}
                     <MaisAcoes
                       itens={[
-                        { label: "Exportar PDF", icon: "fa-file-pdf", onClick: () => exportarPdf(`${c.id}-${c.versao}`) },
-                        ...(vigente || encerrado ? [{ label: "Ver cobranças", icon: "fa-file-invoice-dollar", onClick: () => ir(ROTAS.cobranca, { contrato: c.id }) }] : []),
-                        ...(vigente ? [{ label: "Ver vigência e reajustes", icon: "fa-calendar-clock", onClick: () => ir(ROTAS.vigencia, { contrato: c.id }) }] : []),
+                        { label: "Exportar PDF", icon: "fa-file-pdf", onClick: () => setModal("pdf") },
+                        { label: "Ver cobranças", icon: "fa-file-invoice-dollar", onClick: () => ir(ROTAS.cobranca, { contrato: c.id }) },
+                        { label: "Ver vigência e aditivos", icon: "fa-calendar-clock", onClick: () => ir(ROTAS.vigencia, { contrato: c.id }) },
                       ]}
                     />
                   </>
@@ -261,19 +412,14 @@ function Ficha({
                 title: "Conteúdo",
                 component: () => (
                   <AbaConteudo
+                    data={data}
                     c={c}
                     pode={ELABORA.includes(papel)}
                     podeAditivo={vigente && ADITA.includes(papel)}
                     onAditivo={() => setModal("aditivo")}
-                    onNova={() => { setClausulaEditando(null); setModal("clausula"); }}
-                    onEditar={(cl) => { setClausulaEditando(cl); setModal("clausula"); }}
-                    onExcluir={(cl) =>
-                      aplicar(
-                        { clausulas: (c.clausulas ?? []).filter((x) => x.id !== cl.id) },
-                        evento("versao", `Cláusula excluída: ${cl.titulo}`),
-                        { title: "Cláusula excluída", content: `${cl.titulo} saiu do contrato ${c.id}.` },
-                      )
-                    }
+                    onNova={() => { setClausulaAlvo(null); setModal("clausula"); }}
+                    onEditar={(cl) => { setClausulaAlvo(cl); setModal("clausula"); }}
+                    onExcluir={(cl) => { setClausulaAlvo(cl); setModal("excluir-clausula"); }}
                   />
                 ),
               },
@@ -292,7 +438,9 @@ function Ficha({
                   />
                 ),
               },
-              { id: "linha-do-tempo", title: "Linha do Tempo", component: () => <AbaLinhaDoTempo eventos={c.eventos} /> },
+              { id: "workflow", title: "Histórico de workflow", component: () => <AbaWorkflow registros={c.workflow} /> },
+              { id: "linha-do-tempo", title: "Linha do Tempo", component: () => <AbaLinhaDoTempo eventos={linhaDoTempo(data, c, aditivos)} /> },
+              { id: "auditoria", title: "Auditoria", component: () => <AbaAuditoria c={c} /> },
             ]}
           />
         </div>
@@ -305,7 +453,7 @@ function Ficha({
             onSubmeter={submeter}
             onAprovar={() => setModal("aprovar")}
             onReprovar={() => setModal("reprovar")}
-            onDespachar={() => setModal(c.assinatura === "pronto_coleta" ? "despachar" : "bloqueio")}
+            onDespachar={pedirDespacho}
             onConcluir={() => setModal("concluir")}
             onRevisao={() => setModal("revisao")}
           />
@@ -313,76 +461,23 @@ function Ficha({
       </div>
 
       {/* Modais ----------------------------------------------------------- */}
-      <ModalAprovar
-        key={`aprovar-${modal}`}
-        show={modal === "aprovar"}
-        c={c}
-        onCancel={fechar}
-        onSave={(nome, parecer) =>
-          aplicar(
-            { aprovacao: "aprovado", status: "pronto_coleta", fase: "assinatura", assinatura: "pronto_coleta", aprovador: { nome, data: TODAY, parecer } },
-            { ...evento("workflow", "Aprovado com parecer", parecer), autor: nome },
-            { title: "Contrato aprovado", content: `${c.id} está Pronto para Coleta: a assinatura foi liberada.` },
-          )
-        }
-      />
-      <ModalReprovar
-        key={`reprovar-${modal}`}
-        show={modal === "reprovar"}
-        c={c}
-        onCancel={fechar}
-        onSave={(nome, motivo) =>
-          aplicar(
-            { aprovacao: "reprovado", status: "reprovado", fase: "elaboracao", reprovacao: { aprovador: nome, data: TODAY, motivo } },
-            { ...evento("workflow", "Reprovado", motivo), autor: nome },
-            { title: "Contrato reprovado", content: `${c.id} voltou para ajuste com o motivo registrado.` },
-          )
-        }
-      />
-      <ModalDespachar
-        key={`despachar-${modal}`}
-        show={modal === "despachar"}
-        c={c}
-        onCancel={fechar}
-        onSave={(plataforma, envelope) =>
-          aplicar(
-            { assinatura: "em_assinatura", status: "em_assinatura", envelope: { plataforma, id: envelope, data: TODAY } },
-            evento("workflow", `Despachado para assinatura · ${plataforma} ${envelope}`),
-            { title: "Despachado para assinatura", content: `Envelope ${envelope} registrado na ${plataforma}.` },
-          )
-        }
-      />
+      <ModalAprovar key={`aprovar-${modal}`} show={modal === "aprovar"} c={c} onCancel={fechar} onSave={aprovar} />
+      <ModalReprovar key={`reprovar-${modal}`} show={modal === "reprovar"} c={c} onCancel={fechar} onSave={reprovar} />
+      <ModalDespachar key={`despachar-${modal}`} show={modal === "despachar"} c={c} onCancel={fechar} onSave={despachar} />
       <ModalBloqueio key={`bloqueio-${modal}`} show={modal === "bloqueio"} c={c} papel={papel} onCancel={fechar} />
-      <ModalConcluir
-        key={`concluir-${modal}`}
-        show={modal === "concluir"}
-        c={c}
-        onCancel={fechar}
-        onSave={() =>
-          aplicar(
-            { assinatura: "assinado", status: "vigente", fase: "vigente", assinadoDigital: true },
-            evento("workflow", "Assinatura concluída · contrato Vigente"),
-            { title: "Assinatura concluída", content: `${c.id} agora está Vigente. As cláusulas só mudam por Termo Aditivo.` },
-          )
-        }
-      />
+      <ModalConcluir key={`concluir-${modal}`} show={modal === "concluir"} c={c} onCancel={fechar} onSave={concluir} />
       <ModalRevisao
         key={`revisao-${modal}`}
         show={modal === "revisao"}
         c={c}
         onCancel={fechar}
         onSave={(tipo, fase, motivo, resumo, revisor) => {
-          const nova = proximaVersao(c.versao, tipo);
-          aplicar(
-            {
-              versao: nova,
-              versoes: [...c.versoes, { versao: nova, data: TODAY, fase, motivo, resumo, revisor }],
-              // Texto aprovado mudou: a aprovação anterior deixa de valer.
-              ...(c.aprovacao === "aprovado" && { aprovacao: "elaboracao", status: "em_elaboracao", fase: "elaboracao", assinatura: "bloqueada", aprovador: undefined, envelope: undefined }),
-            },
-            { ...evento("versao", `Revisão ${tipo} ${nova}`, resumo), autor: revisor },
-            { title: `Versão ${nova} registrada`, content: c.aprovacao === "aprovado" ? `${c.id}: ${c.versao} → ${nova}. A aprovação anterior deixou de valer: submeta de novo.` : `${c.id}: ${c.versao} → ${nova}.` },
-          );
+          if (!revisavel(c)) return recusar("Contrato encerrado não recebe revisão formal.");
+          const v = versaoNova(tipo, fase, motivo, resumo, revisor);
+          aplicar(v, {
+            auditoria: { acao: "REVISAO_FORMAL", detalhes: `Revisão ${tipo} ${c.versao} → ${v.versao}: ${motivo}`, usuario: revisor },
+            toast: { title: `Versão ${v.versao} registrada`, content: `${c.id}: ${c.versao} → ${v.versao}, com a cópia das cláusulas.` },
+          });
         }}
       />
       <ModalEncerrar
@@ -391,48 +486,55 @@ function Ficha({
         c={c}
         tipos={data.tabelas.tipo_encerramento.filter((t) => t.ativo).map((t) => t.descricao)}
         onCancel={fechar}
-        onSave={(tipo, motivo, distrato) =>
+        onSave={(dataEnc, tipo, motivo, distrato) => {
+          if (!encerravel(c)) return recusar(`Só contratos Vigentes ou Em Assinatura podem ser encerrados. ${c.id} está ${STATUS[c.status].label}.`);
+          const origem = STATUS[c.status].label;
+          const registrado = `[${tipo}] ${motivo}`;
           aplicar(
-            { status: "encerrado", fase: "encerramento", encerramento: { data: TODAY, tipo, motivo, distrato } },
-            evento("encerramento", `Contrato encerrado · ${tipo}`, motivo),
-            { title: "Contrato encerrado", content: `${c.id} foi encerrado em ${br(TODAY)}. Estado final.` },
-          )
-        }
-      />
-      <ModalClausula
-        key={`clausula-${modal}-${clausulaEditando?.id ?? "nova"}`}
-        show={modal === "clausula"}
-        clausula={clausulaEditando}
-        onCancel={fechar}
-        onSave={(titulo, texto) => {
-          const lista = c.clausulas ?? [];
-          if (clausulaEditando) {
-            aplicar(
-              { clausulas: lista.map((x) => (x.id === clausulaEditando.id ? { ...x, titulo, texto, editada: true } : x)) },
-              evento("versao", `Cláusula editada: ${titulo}`),
-              { title: "Cláusula editada", content: `${titulo} ganhou o selo "Editada".` },
-            );
-          } else {
-            aplicar(
-              { clausulas: [...lista, { id: `cl_${Date.now()}`, titulo, texto, editada: true }] },
-              evento("versao", `Cláusula adicionada: ${titulo}`),
-              { title: "Cláusula adicionada", content: `${titulo} entrou no fim do contrato.` },
-            );
-          }
+            (s) => ({
+              status: "encerrado",
+              fase: "encerramento",
+              // O novo distrato substitui o anterior; sem arquivo novo, o anterior é mantido (RN-038).
+              encerramento: { data: dataEnc, tipo, motivo, origem, ...((distrato ?? s.encerramento?.distrato) && { distrato: distrato ?? s.encerramento?.distrato }) },
+              // "{versão}-ENC" entra no histórico sem mudar a versão atual (RN-010).
+              versoes: [...s.versoes, { versao: `${s.versao}-ENC`, data: dataEnc, fase: faseNumerada("encerramento"), motivo: registrado, resumo: "Contrato encerrado. Estado final.", revisor: USUARIO, ...(s.clausulas && { clausulas: s.clausulas }) }],
+            }),
+            {
+              evento: { tipo: "encerramento", titulo: "Encerramento & Distrato Formal", detalhe: registrado },
+              workflow: [{ workflow: "ciclo", de: origem, para: "Encerrado", parecer: registrado, usuario: USUARIO, papel: PAPEL_WORKFLOW.encerramento }],
+              auditoria: { acao: "ENCERRAMENTO", detalhes: `${registrado}${distrato ? ` · distrato ${distrato.nome}` : ""}` },
+              toast: { title: "Contrato encerrado", content: `${c.id} foi encerrado em ${br(dataEnc)}. Estado final.` },
+            },
+          );
         }}
       />
+      <ModalClausula key={`clausula-${modal}-${clausulaAlvo?.id ?? "nova"}`} show={modal === "clausula"} clausula={clausulaAlvo} onCancel={fechar} onSave={salvarClausula} />
+      <Modal id="modal-excluir-clausula" show={modal === "excluir-clausula" && !!clausulaAlvo} title="Excluir cláusula" onCancel={fechar} variant="extra_small">
+        <div className="space-y-6">
+          <p className="text-brand-purple-dark/80">
+            Excluir <strong>{clausulaAlvo?.titulo}</strong> do contrato {c.id}? O título e o texto removidos ficam guardados na auditoria.
+          </p>
+          <Rodape onCancel={fechar}>
+            <Button color="red" leftIcon="fa-trash" onClick={() => clausulaAlvo && excluirClausula(clausulaAlvo)}>Excluir cláusula</Button>
+          </Rodape>
+        </div>
+      </Modal>
       {modal === "aditivo" && (
         <ModalAditivo
           show
-          data={{ ...data, aditivos: [...data.aditivos.filter((a) => a.contratoId !== c.id), ...aditivos] }}
+          data={{ ...data, contratos: data.contratos.map((x) => (x.id === c.id ? c : x)), aditivos: [...data.aditivos.filter((a) => a.contratoId !== c.id), ...aditivos] }}
           contrato={c}
           onCancel={fechar}
           onSave={(a) => {
+            if (c.status !== "vigente") return recusar("Só contratos Vigentes recebem aditivo.");
             setAditivos((s) => [...s, a]);
-            aplicar({}, evento("aditivo", `Aditivo ${a.codigo} (${a.tipo}) em elaboração`, a.motivo), { title: "Aditivo criado", content: `${a.codigo} nasceu Em Elaboração e segue a mesma trava de aprovação.` });
+            setC((s) => aditarContrato(s, a, USUARIO, perfilDe(papel)));
+            fechar();
+            showToast({ type: "success", title: `${rotuloAditivo(a)} registrado`, content: `${a.codigo}: vigência até ${br(a.novaVigencia ?? c.fim)}${a.novoValor ? ", novo valor base" : ""}. Versão ${proximaVersao(c.versao, "minor")}.`, closeTime: 4000 });
           }}
         />
       )}
+      <ModalPdfContrato contrato={modal === "pdf" ? c : null} data={{ ...data, contratos: data.contratos.map((x) => (x.id === c.id ? c : x)), aditivos: [...data.aditivos.filter((a) => a.contratoId !== c.id), ...aditivos] }} onClose={fechar} />
     </div>
   );
 }
@@ -543,9 +645,9 @@ function PainelWorkflow({
 
         {c.aprovacao === "reprovado" && c.reprovacao && (
           <>
-            <Aviso tom="risco" titulo={`Reprovado por ${c.reprovacao.aprovador} em ${br(c.reprovacao.data)}`}>
-              <p>{c.reprovacao.motivo}</p>
-              <p className="mt-1">Ajuste o contrato (revisão formal ou cláusulas) e ressubmeta.</p>
+            <Aviso tom="risco" titulo={`Reprovado (Em Ajuste) em ${br(c.reprovacao.data)}`}>
+              <p>Reprovado por {c.reprovacao.aprovador}: {c.reprovacao.motivo}</p>
+              <p className="mt-1">Fase {faseNumerada("elaboracao")}. Ajuste o contrato (revisão formal ou cláusulas) e ressubmeta.</p>
             </Aviso>
             {elabora && (
               <>
@@ -586,7 +688,7 @@ function PainelWorkflow({
           <>
             <div className="flex items-start gap-3 rounded-xl bg-brand-purple-dark/5 p-4 text-sm text-brand-purple-dark/80">
               <Icon name="fa-lock" type="solid" className="mt-0.5 text-lg text-brand-purple-dark/50" />
-              <p>Nenhum contrato vai para assinatura sem aprovação. A assinatura é liberada quando o aprovador aprovar com parecer.</p>
+              <p>Aguardando Aprovação Prévia: nenhum contrato vai para assinatura sem aprovação. A assinatura é liberada quando o aprovador aprovar com parecer.</p>
             </div>
             {despacha && (
               <Button className="w-full" variant="outline" leftIcon="fa-lock" onClick={onDespachar}>Despachar para assinatura</Button>
@@ -649,17 +751,22 @@ function Secao({ titulo, icone, children }: { titulo: string; icone: string; chi
   );
 }
 
+const vazio = (t = "não informado") => <span className="italic text-brand-purple-dark/50">{t}</span>;
+const linhas = (itens: [string, ReactNode | undefined][]) => itens.map(([k, v]) => [k, v ?? vazio()] as [string, ReactNode]);
+
+/** Ficha consolidada (FR-040): qualificação, objeto, condições financeiras, vigência, execução e campos da categoria. */
 function AbaResumo({ data, c }: { data: ContratosData; c: Contrato }) {
   const p = parteDe(data, c);
   const campos = data.camposCategoria[c.categoria] ?? [];
   const valores = c.camposCategoria ?? {};
   const rotulos = [...new Set([...campos.map((f) => f.rotulo), ...Object.keys(valores)])];
+  const saldo = c.recesso ? Math.round((c.recesso.credito - c.recesso.usados) * 10) / 10 : undefined;
   return (
     <div className="space-y-8">
       <Secao titulo="Qualificação da parte" icone="fa-handshake">
         {p ? (
           <Dados
-            itens={[
+            itens={linhas([
               ["Parte", <span className="font-bold">{p.nome}</span>],
               ["Código", p.codigo],
               ["Tipo", `${p.tipo === "cliente" ? "Cliente" : "Fornecedor"} · ${SUBTIPO[p.subtipo]}`],
@@ -667,56 +774,84 @@ function AbaResumo({ data, c }: { data: ContratosData; c: Contrato }) {
               ["Contato", p.contato.nome],
               ["E-mail", p.contato.email],
               ["Telefone", p.contato.telefone],
+              ["Endereço", p.endereco],
               ...Object.entries(p.extras),
-            ]}
+            ])}
           />
         ) : (
           <Aviso tom="atencao" titulo="Parte não encontrada">O cadastro da parte não foi localizado. Confira em Partes antes de submeter.</Aviso>
         )}
       </Secao>
 
-      <Secao titulo="Objeto" icone="fa-bullseye">
+      <Secao titulo="Objeto e gestão" icone="fa-bullseye">
         <p className="text-brand-purple-dark/90">{c.objeto}</p>
+        <Dados
+          itens={linhas([
+            ["Gestor do contrato", c.gestor || undefined],
+            ["Centro de custo", c.centroCusto || undefined],
+            ["Fluxo", c.fluxoDetalhe ?? FLUXO[c.fluxo].longo],
+            ["Origem do código", c.codigoManual ? "Manual / Legado" : "Sequencial automático"],
+            ...(c.minuta ? ([["Minuta de origem", `${c.minuta.codigo} ${c.minuta.versao}`]] as [string, ReactNode][]) : []),
+            ...(c.liminar ? ([["Liminar", `Processo ${c.liminar.processo} · ${c.liminar.vara}`]] as [string, ReactNode][]) : []),
+          ])}
+        />
       </Secao>
 
       <Secao titulo="Condições financeiras" icone="fa-sack-dollar">
         <Dados
-          itens={[
-            ["Valor mensal", <Valor valor={c.valor} />],
-            ["Fluxo", FLUXO[c.fluxo].label],
-            ["Forma de pagamento", c.formaPagamento ?? "não informada"],
-            ["Condição de pagamento", c.condicaoPagamento ?? "não informada"],
-            ["Dia do vencimento", c.vencimentoDia ? `Dia ${c.vencimentoDia}` : "não informado"],
-          ]}
+          itens={linhas([
+            ["Valor base mensal", <Valor valor={c.valor} />],
+            ["Regra de remuneração", c.regraRemuneracao || undefined],
+            ["Forma de pagamento", c.formaPagamento],
+            ["Condição de pagamento", c.condicaoPagamento],
+            ["Dia do vencimento", c.vencimentoDia ? `Dia ${c.vencimentoDia}` : undefined],
+            ["Exige nota fiscal", c.exigeNf ? "Sim" : "Não"],
+            ["Dados bancários", c.dadosBancarios],
+            ["Critério de glosa", c.criterioGlosa],
+          ])}
         />
       </Secao>
 
-      <Secao titulo="Vigência e índice" icone="fa-calendar-clock">
+      <Secao titulo="Vigência e reajuste" icone="fa-calendar-clock">
         <Dados
-          itens={[
+          itens={linhas([
             ["Início", br(c.inicio)],
             ["Término", br(c.fim)],
+            ["Tipo de prazo", c.tipoPrazo],
             [
               "Dias restantes",
               c.status === "vigente" ? <Selo s={{ ...FAIXA[faixa(c.fim)], label: `${diasLabel(c.fim)} · ${FAIXA[faixa(c.fim)].label}` }} /> : <span className="text-brand-purple-dark/50">{c.status === "encerrado" ? "Encerrado" : "Conta a partir da assinatura"}</span>,
             ],
-            ["Índice de reajuste", c.indice ?? "não informado"],
-            ["Próxima data-base", br(c.dataBase)],
-            ["Último reajuste", c.ultimoReajuste ? `${br(c.ultimoReajuste.data)} · ${c.ultimoReajuste.taxa.toLocaleString("pt-BR")}%` : "nenhum"],
+            ["Índice de reajuste", c.indice],
+            ["Mês-base", c.mesBase],
+            ["Regra de reajuste específica", c.regraReajusteEspecifica],
+            ["Próxima data-base", c.dataBase ? br(c.dataBase) : undefined],
+            ["Último reajuste", c.ultimoReajuste ? `${br(c.ultimoReajuste.data)} · ${c.ultimoReajuste.taxa.toLocaleString("pt-BR")}%${c.ultimoReajuste.manual ? " (ajuste manual)" : ""}` : "nenhum"],
+            ["Aviso prévio", `${c.avisoPrevioDias} dias`],
+            ["Prazo de saneamento", `${c.prazoSaneamentoDias} dias`],
             ...(c.experienciaAte ? ([["Fim da experiência", br(c.experienciaAte)]] as [string, ReactNode][]) : []),
-          ]}
+          ])}
         />
       </Secao>
 
-      <Secao titulo="Unidades" icone="fa-building">
+      <Secao titulo="Execução" icone="fa-briefcase">
+        <Dados
+          itens={linhas([
+            ["Cláusula 7ª (indisponibilidade / recesso)", c.clausulaIndisponibilidade ? "Sim · recesso de até 24 dias por ano" : "Não"],
+            ...(c.clausulaIndisponibilidade || c.recesso
+              ? ([["Saldo de recesso", c.recesso ? `${saldo!.toLocaleString("pt-BR")} dia(s) · ${c.recesso.usados.toLocaleString("pt-BR")} de ${c.recesso.credito} usados` : undefined]] as [string, ReactNode | undefined][])
+              : []),
+            ["Equipamentos cedidos", c.equipamentosCedidos ?? "nenhum"],
+          ])}
+        />
         <div className="flex flex-wrap gap-2">
-          {c.unidades.length ? c.unidades.map((u) => <Tag key={u} item={u} variant="dark-blue" leftIcon="fa-location-dot" />) : <span className="italic text-brand-purple-dark/50">nenhuma unidade informada</span>}
+          {c.unidades.length ? c.unidades.map((u) => <Tag key={u} item={u} variant="dark-blue" leftIcon="fa-location-dot" />) : vazio("nenhuma unidade informada")}
         </div>
       </Secao>
 
       <Secao titulo={`Campos da categoria ${c.categoria}`} icone="fa-list-check">
         {rotulos.length ? (
-          <Dados itens={rotulos.map((r) => [r, valores[r] ?? <span className="italic text-brand-purple-dark/50">não informado</span>] as [string, ReactNode])} />
+          <Dados itens={rotulos.map((r) => [r, valores[r] || vazio()] as [string, ReactNode])} />
         ) : (
           <p className="text-sm text-brand-purple-dark/60">A categoria {c.categoria} não tem campos próprios.</p>
         )}
@@ -725,7 +860,15 @@ function AbaResumo({ data, c }: { data: ContratosData; c: Contrato }) {
   );
 }
 
+/** Destaques do Específico / Locação (FR-048, RN-065): IPTU, condomínio e garantia. */
+const DESTAQUES = [
+  { rotulo: "IPTU", re: /iptu/i },
+  { rotulo: "Condomínio", re: /condom/i },
+  { rotulo: "Garantia", re: /garantia|fian/i },
+];
+
 function AbaConteudo({
+  data,
   c,
   pode,
   podeAditivo,
@@ -734,6 +877,7 @@ function AbaConteudo({
   onEditar,
   onExcluir,
 }: {
+  data: ContratosData;
   c: Contrato;
   pode: boolean;
   podeAditivo: boolean;
@@ -742,34 +886,46 @@ function AbaConteudo({
   onEditar: (c: Clausula) => void;
   onExcluir: (c: Clausula) => void;
 }) {
+  const campos = c.camposCategoria ?? {};
+  const rotulos = [...new Set([...(data.camposCategoria[c.categoria] ?? []).map((f) => f.rotulo), ...Object.keys(campos)])];
+
   if (c.modalidade === "corporativo") {
     return (
-      <Secao titulo="Documento negociado" icone="fa-file-contract">
-        <p className="text-sm text-brand-purple-dark/70">Contrato Corporativo nasce do documento da contraparte (Fluxo Invertido): o texto vale como está no arquivo.</p>
-        {c.arquivo ? <ArquivoCartao arquivo={c.arquivo} /> : <Aviso tom="atencao" titulo="Arquivo não anexado">Anexe o documento negociado por revisão formal antes de submeter.</Aviso>}
-      </Secao>
+      <div className="space-y-8">
+        <Secao titulo="Documento negociado" icone="fa-file-contract">
+          <p className="text-sm text-brand-purple-dark/70">Contrato Corporativo nasce do documento da contraparte (Fluxo Invertido): o texto vale como está no arquivo.</p>
+          {c.arquivo ? <ArquivoCartao arquivo={c.arquivo} /> : <Aviso tom="atencao" titulo="Arquivo não anexado">Anexe o documento negociado antes de submeter.</Aviso>}
+        </Secao>
+        <Secao titulo="Campos específicos" icone="fa-list-check">
+          {rotulos.length ? <Dados itens={rotulos.map((r) => [r, campos[r] || vazio()] as [string, ReactNode])} /> : <p className="text-sm text-brand-purple-dark/60">Nenhum campo da categoria.</p>}
+        </Secao>
+      </div>
     );
   }
 
   if (c.modalidade === "especifico") {
-    const campos = c.camposCategoria ?? {};
-    const chave = ["IPTU", "Condomínio", "Garantia"];
-    const destaques = chave.some((k) => k in campos) ? chave.map((k) => [k, campos[k]] as const) : Object.entries(campos);
+    const destaques = DESTAQUES.map((d) => ({ ...d, chave: rotulos.find((r) => d.re.test(r)) })).filter((d) => d.chave);
+    const outros = rotulos.filter((r) => !destaques.some((d) => d.chave === r));
     return (
       <div className="space-y-8">
-        <Secao titulo="Pontos de atenção do contrato" icone="fa-star">
-          {destaques.length ? (
+        {destaques.length > 0 && (
+          <Secao titulo="Pontos de atenção da locação" icone="fa-star">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {destaques.map(([k, v]) => (
-                <div key={k} className="rounded-xl border border-brand-blue/20 bg-blue-light p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-blue-dark">{k}</p>
-                  <p className={cx("mt-1 font-bold", v ? "text-brand-purple-dark" : "italic font-normal text-brand-purple-dark/50")}>{v ?? "não informado"}</p>
-                </div>
-              ))}
+              {destaques.map((d) => {
+                const v = campos[d.chave!];
+                return (
+                  <div key={d.rotulo} className="rounded-xl border border-brand-blue/20 bg-blue-light p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-blue-dark">{d.rotulo}</p>
+                    <p className="mt-0.5 text-xs text-blue-dark/70">{d.chave}</p>
+                    <p className={cx("mt-1 font-bold", v ? "text-brand-purple-dark" : "italic font-normal text-brand-purple-dark/50")}>{v || "não informado"}</p>
+                  </div>
+                );
+              })}
             </div>
-          ) : (
-            <p className="text-sm text-brand-purple-dark/60">Nenhum campo da categoria preenchido.</p>
-          )}
+          </Secao>
+        )}
+        <Secao titulo="Campos específicos" icone="fa-list-check">
+          {outros.length ? <Dados itens={outros.map((r) => [r, campos[r] || vazio()] as [string, ReactNode])} /> : <p className="text-sm text-brand-purple-dark/60">Nenhum outro campo da categoria.</p>}
         </Secao>
         <Secao titulo="Documento" icone="fa-file-contract">
           {c.arquivo ? <ArquivoCartao arquivo={c.arquivo} /> : <p className="italic text-brand-purple-dark/50">Arquivo não anexado.</p>}
@@ -778,64 +934,66 @@ function AbaConteudo({
     );
   }
 
-  // Adesão: cláusulas da minuta
+  // Adesão: cláusulas próprias do contrato (RN-069)
   const clausulas = c.clausulas ?? [];
-  const assinado = c.assinatura === "assinado";
-  const editavel = pode && clausulasEditaveis(c);
+  const travado = !clausulasEditaveis(c);
+  const editavel = pode && !travado;
   return (
     <Secao titulo="Cláusulas" icone="fa-file-lines">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-brand-purple-dark/70">
-          {c.minuta ? <>Gerado da minuta <strong>{c.minuta.codigo} {c.minuta.versao}</strong>. </> : null}
+          {c.minuta ? <>Gerado da minuta <strong>{c.minuta.codigo} {c.minuta.versao}</strong>; editar aqui não muda a minuta. </> : null}
           {clausulas.length} cláusula{clausulas.length === 1 ? "" : "s"}
           {clausulas.some((x) => x.editada) && ` · ${clausulas.filter((x) => x.editada).length} editada(s)`}
         </p>
         {editavel && <Button variant="tint" leftIcon="fa-plus" onClick={onNova}>Adicionar cláusula</Button>}
       </div>
 
-      {assinado || c.status === "encerrado" ? (
-        <Aviso tom="neutro" titulo="Cláusulas travadas: contrato assinado" acoes={podeAditivo && <Button size="small" leftIcon="fa-plus" onClick={onAditivo}>Aditivo</Button>}>
-          Depois de assinadas, as cláusulas só podem ser alteradas por Termo Aditivo. Mudar o texto sem aditivo invalidaria o que foi assinado.
+      {travado && (
+        <Aviso tom="neutro" icone="fa-lock" titulo={CLAUSULAS_TRAVADAS} acoes={podeAditivo && <Button size="small" leftIcon="fa-plus" onClick={onAditivo}>Aditivo</Button>}>
+          {c.status === "encerrado" ? "Contrato encerrado: o texto fica só para consulta." : "Mudar o texto sem aditivo invalidaria o que foi assinado."}
         </Aviso>
-      ) : !clausulasEditaveis(c) ? (
-        <Aviso tom="info" titulo="Texto congelado para aprovação e assinatura">
-          {c.aprovacao === "em_aprovacao" ? "O aprovador está analisando este texto. Se precisar mudar, peça a reprovação com o motivo." : "O texto aprovado é o que vai para assinatura. Para mudar, registre uma revisão formal: ela volta o contrato para aprovação."}
-        </Aviso>
-      ) : null}
+      )}
 
       {clausulas.length === 0 ? (
         <EmptyStateCard icon="fa-file-lines" text="Sem cláusulas registradas">
           <p>{c.codigoManual ? "Contrato legado: o texto assinado está fora do sistema." : "Adicione as cláusulas do contrato."}</p>
         </EmptyStateCard>
       ) : (
-        <ol className="space-y-3">
-          {clausulas.map((cl) => (
-            <li key={cl.id} className={cx("rounded-xl border p-4", cl.editada ? "border-yellow/40 bg-yellow/5" : "border-brand-purple-dark/10")}>
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <p className="flex flex-wrap items-center gap-2 font-bold text-brand-purple-dark">
-                  {cl.titulo}
-                  {cl.editada && <Tag item="Editada" variant="yellow" leftIcon="fa-pen" />}
-                </p>
-                {editavel && (
-                  <span className="flex gap-1">
-                    <Button size="small" variant="ghost" title="Editar cláusula" aria-label={`Editar ${cl.titulo}`} onClick={() => onEditar(cl)}>
-                      <Icon name="fa-pen" />
-                    </Button>
-                    <Button size="small" variant="ghost" color="red" title="Excluir cláusula" aria-label={`Excluir ${cl.titulo}`} onClick={() => onExcluir(cl)}>
-                      <Icon name="fa-trash" />
-                    </Button>
-                  </span>
-                )}
-                {!editavel && (assinado || c.status === "encerrado") && <Icon name="fa-lock" className="text-brand-purple-dark/30" />}
-              </div>
-              <p className="mt-2 text-sm leading-relaxed text-brand-purple-dark/80">
-                <TextoComTags texto={cl.texto} />
-              </p>
-            </li>
-          ))}
-        </ol>
+        <ListaClausulas clausulas={clausulas} acoes={editavel ? (cl) => (
+          <span className="flex gap-1">
+            <Button size="small" variant="ghost" title="Editar cláusula" aria-label={`Editar ${cl.titulo}`} onClick={() => onEditar(cl)}>
+              <Icon name="fa-pen" />
+            </Button>
+            <Button size="small" variant="ghost" color="red" title="Excluir cláusula" aria-label={`Excluir ${cl.titulo}`} onClick={() => onExcluir(cl)}>
+              <Icon name="fa-trash" />
+            </Button>
+          </span>
+        ) : travado ? () => <Icon name="fa-lock" className="text-brand-purple-dark/30" /> : undefined} />
       )}
     </Secao>
+  );
+}
+
+/** Lista de cláusulas com o selo "Editada"; usada no conteúdo e no texto de cada versão. */
+function ListaClausulas({ clausulas, acoes }: { clausulas: Clausula[]; acoes?: (cl: Clausula) => ReactNode }) {
+  return (
+    <ol className="space-y-3">
+      {clausulas.map((cl) => (
+        <li key={cl.id} className={cx("rounded-xl border p-4", cl.editada ? "border-yellow/40 bg-yellow/5" : "border-brand-purple-dark/10")}>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <p className="flex flex-wrap items-center gap-2 font-bold text-brand-purple-dark">
+              {cl.titulo}
+              {cl.editada && <Tag item="Editada" variant="yellow" leftIcon="fa-pen" />}
+            </p>
+            {acoes?.(cl)}
+          </div>
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-brand-purple-dark/80">
+            <TextoComTags texto={cl.texto} />
+          </p>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -847,8 +1005,8 @@ function AbaDossie({ data, c, abrir }: { data: ContratosData; c: Contrato; abrir
     <Secao titulo="Dossiê do contrato" icone="fa-folder-check">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          {ok ? <Tag item="100% Conforme" variant="green" leftIcon="fa-check" /> : itens.length ? <Tag item={`${pendentes} pendente${pendentes === 1 ? "" : "s"}`} variant="yellow" leftIcon="fa-clock" /> : null}
-          <span className="text-sm text-brand-purple-dark/60">{itens.length} documento(s)</span>
+          {ok ? <Tag item="100% Conforme" variant="green" leftIcon="fa-check" /> : <Tag item="Pendente de Documentos" variant="yellow" leftIcon="fa-clock" />}
+          <span className="text-sm text-brand-purple-dark/60">{itens.length} documento(s){pendentes ? ` · ${pendentes} pendente${pendentes === 1 ? "" : "s"}` : ""}</span>
         </div>
         <Button variant="tint" leftIcon="fa-arrow-up-right-from-square" onClick={abrir}>Abrir em Conformidade</Button>
       </div>
@@ -863,10 +1021,11 @@ function AbaDossie({ data, c, abrir }: { data: ContratosData; c: Contrato; abrir
             rows={itens}
             rowId={(i) => i.id}
             col={[
+              { label: "Código", render: (i) => <span className="whitespace-nowrap font-mono text-sm">{i.codigo}</span> },
               { label: "Natureza", render: (i) => i.natureza },
               { label: "Documento", render: (i) => <span className="font-semibold text-brand-purple-dark">{i.documento}</span> },
               { label: "Arquivo", render: (i) => (i.arquivo ? <ArquivoLink arquivo={i.arquivo} /> : <span className="italic text-brand-purple-dark/50">não enviado</span>) },
-              { label: "Validade", render: (i) => br(i.validade) },
+              { label: "Validade", render: (i) => (i.validade ? br(i.validade) : "Indeterminada") },
               { label: "Conformidade", render: (i) => <Selo s={CONFORMIDADE[i.conformidade]} /> },
               { label: "Auditor", render: (i) => i.auditor ?? "—" },
               { label: "Observações", className: "min-w-48", render: (i) => <span className="text-sm">{i.observacoes ?? "—"}</span> },
@@ -894,11 +1053,12 @@ function AbaVersoes({
   onAditivo: () => void;
 }) {
   const versoes = [...c.versoes].reverse();
+  const [texto, setTexto] = useState<Contrato["versoes"][number] | null>(null);
   return (
     <div className="space-y-8">
       <Secao titulo="Versões" icone="fa-code-branch">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-brand-purple-dark/70">Versão atual <strong>{c.versao}</strong>. O número é calculado na revisão formal, nunca digitado.</p>
+          <p className="text-sm text-brand-purple-dark/70">Versão atual <strong>{c.versao}</strong>. Cada evento gera um número novo, calculado pelo sistema; cada versão guarda a cópia das cláusulas daquele momento.</p>
           {podeRevisar && <Button variant="tint" leftIcon="fa-code-branch" onClick={onRevisao}>Revisão formal</Button>}
         </div>
         <div className="overflow-x-auto">
@@ -907,12 +1067,21 @@ function AbaVersoes({
             rows={versoes}
             rowId={(v) => v.versao}
             col={[
-              { label: "Versão", render: (v) => <span className="font-bold text-brand-purple-dark">{v.versao}</span> },
+              { label: "Versão", render: (v) => <span className="whitespace-nowrap font-bold text-brand-purple-dark">{v.versao}</span> },
               { label: "Data", render: (v) => br(v.data) },
               { label: "Fase", render: (v) => v.fase },
               { label: "Motivo", render: (v) => v.motivo },
               { label: "Resumo", className: "min-w-56", render: (v) => <span className="text-sm">{v.resumo}</span> },
               { label: "Revisor", render: (v) => v.revisor },
+              {
+                label: "Texto",
+                render: (v) =>
+                  v.clausulas?.length ? (
+                    <Button size="small" variant="ghost" leftIcon="fa-file-lines" onClick={() => setTexto(v)}>Ver texto</Button>
+                  ) : (
+                    <span className="text-sm italic text-brand-purple-dark/50">{c.modalidade === "adesao" ? "sem cópia" : "arquivo externo"}</span>
+                  ),
+              },
             ]}
           />
         </div>
@@ -927,15 +1096,15 @@ function AbaVersoes({
           <div className="overflow-x-auto">
             <Table
               id="ficha-aditivos"
-              rows={[...aditivos].sort((a, b) => b.data.localeCompare(a.data))}
+              rows={[...aditivos].sort((a, b) => b.numero - a.numero)}
               rowId={(a) => a.id}
               col={[
-                { label: "Aditivo", render: (a) => <span className="font-bold text-brand-purple-dark whitespace-nowrap">{a.codigo}</span> },
+                { label: "Aditivo", render: (a) => <div className="whitespace-nowrap"><p className="font-bold text-brand-purple-dark">{a.codigo}</p><p className="text-sm text-brand-purple-dark/60">{rotuloAditivo(a)}</p></div> },
                 { label: "Tipo", render: (a) => a.tipo },
-                { label: "Data", render: (a) => br(a.data) },
+                { label: "Celebração", render: (a) => br(a.data) },
                 { label: "Nova vigência", render: (a) => (a.novaVigencia ? br(a.novaVigencia) : "—") },
                 { label: "Novo valor", render: (a) => (a.novoValor != null ? <Valor valor={a.novoValor} /> : "—") },
-                { label: "Motivo e impacto", className: "min-w-56", render: (a) => <div className="text-sm"><p>{a.motivo}</p><p className="text-brand-purple-dark/60">{a.impacto}</p></div> },
+                { label: "Justificativa e impacto", className: "min-w-56", render: (a) => <div className="text-sm"><p>{a.motivo}</p><p className="text-brand-purple-dark/60">{a.impacto}</p>{a.arquivo && <ArquivoLink arquivo={a.arquivo} />}</div> },
                 { label: "Aprovação", render: (a) => <Selo s={APROVACAO[a.aprovacao]} /> },
                 { label: "Assinatura", render: (a) => <Selo s={ASSINATURA[a.assinatura]} /> },
               ]}
@@ -943,8 +1112,83 @@ function AbaVersoes({
           </div>
         )}
       </Secao>
+
+      <Modal id="modal-texto-versao" show={!!texto} title={texto ? `Texto de ${c.id} ${texto.versao}` : ""} onCancel={() => setTexto(null)} variant="large">
+        {texto && (
+          <div className="space-y-4">
+            <p className="text-sm text-brand-purple-dark/70">Cópia integral das cláusulas em {br(texto.data)} ({texto.fase} · {texto.motivo}).</p>
+            <ListaClausulas clausulas={texto.clausulas ?? []} />
+          </div>
+        )}
+      </Modal>
     </div>
   );
+}
+
+/** Histórico de workflow (RN-071): de → para, parecer, usuário e papel. */
+function AbaWorkflow({ registros }: { registros: RegistroWorkflow[] }) {
+  const lista = [...registros].reverse().sort((a, b) => b.data.slice(0, 10).localeCompare(a.data.slice(0, 10)));
+  const NOME: Record<RegistroWorkflow["workflow"], string> = { aprovacao: "Aprovação", assinatura: "Assinatura", ciclo: "Ciclo de vida" };
+  return (
+    <Secao titulo="Histórico de workflow" icone="fa-diagram-project">
+      <p className="text-sm text-brand-purple-dark/70">Cada transição de aprovação, assinatura e ciclo de vida, do mais recente ao mais antigo.</p>
+      {lista.length === 0 ? (
+        <EmptyStateCard icon="fa-diagram-project" text="Sem transições registradas" />
+      ) : (
+        <div className="overflow-x-auto">
+          <Table
+            id="ficha-workflow"
+            rows={lista}
+            rowId={(w) => w.id}
+            col={[
+              { label: "Data", render: (w) => <span className="whitespace-nowrap">{dataHora(w.data)}</span> },
+              { label: "Workflow", render: (w) => NOME[w.workflow] },
+              { label: "Transição", render: (w) => <span className="whitespace-nowrap">{w.de} <Icon name="fa-arrow-right" className="mx-1 text-brand-purple-dark/40" /> <strong>{w.para}</strong></span> },
+              { label: "Parecer", className: "min-w-56", render: (w) => <span className="text-sm">{w.parecer ?? "—"}</span> },
+              { label: "Usuário", render: (w) => w.usuario },
+              { label: "Papel", render: (w) => <span className="text-sm">{w.papel}</span> },
+            ]}
+          />
+        </div>
+      )}
+    </Secao>
+  );
+}
+
+/**
+ * Eventos da Linha do Tempo (RN-067): os do contrato mais versões, aditivos,
+ * documentos do dossiê já anexados, cobranças e sincronizações com o ERP,
+ * sem repetir o que já está em `contrato.eventos`.
+ */
+function linhaDoTempo(data: ContratosData, c: Contrato, aditivos: Aditivo[]): Evento[] {
+  const lista = [...c.eventos];
+  const tem = (tipo: EventoTipo, trecho: string) => lista.some((e) => e.tipo === tipo && e.titulo.includes(trecho));
+  for (const v of c.versoes.slice(1)) {
+    if (!tem("versao", v.versao)) lista.push({ id: `dv-${v.versao}`, data: v.data === TODAY ? agora() : `${v.data}T18:00`, tipo: "versao", titulo: `Versão ${v.versao} registrada · ${v.motivo}`, autor: v.revisor, detalhe: v.resumo });
+  }
+  for (const a of aditivos) {
+    // Os eventos de aditivo das fixtures nem sempre citam o código: o mesmo dia já conta como registrado.
+    if (!tem("aditivo", a.codigo) && !lista.some((e) => e.tipo === "aditivo" && e.data.startsWith(a.data))) {
+      lista.push({ id: `da-${a.id}`, data: a.data === TODAY ? agora() : `${a.data}T09:30`, tipo: "aditivo", titulo: `${rotuloAditivo(a)} · ${a.codigo}`, autor: "Gestão de Contratos", detalhe: `${a.tipo}: ${a.impacto}` });
+    }
+  }
+  const criado = c.versoes[0]?.data ?? c.inicio;
+  for (const d of dossieDe(data, c.id).filter((i) => i.arquivo)) {
+    const dia = d.protocolo ?? criado;
+    if (!lista.some((e) => e.tipo === "dossie" && e.data.startsWith(dia)) && !tem("dossie", d.documento)) {
+      lista.push({ id: `dd-${d.id}`, data: `${dia}T08:00`, tipo: "dossie", titulo: `${d.documento} anexado ao dossiê · ${d.codigo}`, autor: d.auditor ?? "Conformidade", detalhe: CONFORMIDADE[d.conformidade].label });
+    }
+  }
+  for (const b of data.cobrancas.filter((x) => x.contratoId === c.id)) {
+    if (!tem("cobranca", b.numero)) lista.push({ id: `db-${b.id}`, data: `${b.competencia}-01` > TODAY ? agora() : `${b.competencia}-01T08:00`, tipo: "cobranca", titulo: `${b.tipo} ${b.numero} recebida · ${b.codigo}`, autor: b.autoDetectado ? "Sistema" : "Financeiro", detalhe: `Competência ${competencia(b.competencia)}` });
+    if (b.erp.status === "sincronizado" && b.erp.titulo && !tem("erp", `#${b.erp.titulo}`)) {
+      lista.push({ id: `de-${b.id}`, data: b.erp.data ?? `${b.competencia}-01T09:00`, tipo: "erp", titulo: `Omie ERP Sincronizado: Título #${b.erp.titulo}`, autor: "Sistema", detalhe: ERP.sincronizado.label });
+    }
+  }
+  if (c.encerramento && !lista.some((e) => e.tipo === "encerramento")) {
+    lista.push({ id: "denc", data: `${c.encerramento.data}T14:00`, tipo: "encerramento", titulo: "Encerramento & Distrato Formal", autor: "Ciclo de Vida", detalhe: `[${c.encerramento.tipo}] ${c.encerramento.motivo}` });
+  }
+  return lista;
 }
 
 function AbaLinhaDoTempo({ eventos }: { eventos: Evento[] }) {
@@ -954,7 +1198,7 @@ function AbaLinhaDoTempo({ eventos }: { eventos: Evento[] }) {
   const lista = tipo ? ordenados.filter((e) => e.tipo === tipo) : ordenados;
   return (
     <Secao titulo="Linha do Tempo Forense" icone="fa-timeline">
-      <p className="text-sm text-brand-purple-dark/70">Trilha de auditoria do contrato, do mais recente ao mais antigo. Nenhum evento é apagado ou editado.</p>
+      <p className="text-sm text-brand-purple-dark/70">Criação, workflow, versões, aditivos, dossiê, cobranças, ERP e encerramento, do mais recente ao mais antigo. Nenhum evento é apagado ou editado.</p>
       <div className="flex flex-wrap items-center gap-2" aria-label="Filtrar por tipo">
         <button type="button" onClick={() => setTipo(null)} aria-pressed={tipo == null} className={cx("rounded-full px-3 py-1 text-sm font-bold", tipo == null ? "bg-brand-blue/30 text-brand-blue-dark" : "bg-brand-purple-dark/5 text-brand-purple-dark/60")}>
           Todos {ordenados.length}
@@ -969,11 +1213,11 @@ function AbaLinhaDoTempo({ eventos }: { eventos: Evento[] }) {
         <TimelineList
           item={lista.map((e) => ({
             icon: EVENTO[e.tipo].icon,
-            color: e.tipo === "encerramento" || e.tipo === "cobranca" || e.tipo === "erp" ? "green" : "blue",
+            color: corEvento(e) === "green" ? "green" : "blue",
             children: (
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Tag item={EVENTO[e.tipo].label} variant={EVENTO[e.tipo].variant} />
+                  <Tag item={EVENTO[e.tipo].label} variant={corEvento(e)} />
                   <time className="text-sm text-brand-purple-dark/60">{dataHora(e.data)}</time>
                 </div>
                 <p className="font-bold text-brand-purple-dark">{e.titulo}</p>
@@ -984,6 +1228,34 @@ function AbaLinhaDoTempo({ eventos }: { eventos: Evento[] }) {
           }))}
         />
       </div>
+    </Secao>
+  );
+}
+
+/** Trilha de auditoria do contrato (FR-042, RN-068): só inclusões, só deste contrato. */
+function AbaAuditoria({ c }: { c: Contrato }) {
+  const lista: RegistroAuditoria[] = [...c.auditoria].reverse().sort((a, b) => b.data.localeCompare(a.data));
+  return (
+    <Secao titulo="Trilha de auditoria" icone="fa-shield-halved">
+      <p className="text-sm text-brand-purple-dark/70">Toda gravação deste contrato, com usuário, perfil, ação e detalhes. A auditoria só recebe inclusões: nada é alterado nem apagado.</p>
+      {lista.length === 0 ? (
+        <EmptyStateCard icon="fa-shield-halved" text="Sem registros de auditoria" />
+      ) : (
+        <div className="overflow-x-auto">
+          <Table
+            id="ficha-auditoria"
+            rows={lista}
+            rowId={(a) => a.id}
+            col={[
+              { label: "Data", render: (a) => <span className="whitespace-nowrap">{dataHora(a.data)}</span> },
+              { label: "Usuário", render: (a) => a.usuario },
+              { label: "Perfil", render: (a) => <span className="text-sm">{a.perfil}</span> },
+              { label: "Ação", render: (a) => <span className="whitespace-nowrap font-mono text-sm">{a.acao}</span> },
+              { label: "Detalhes", className: "min-w-64", render: (a) => <span className="whitespace-pre-line break-words text-sm">{a.detalhes}</span> },
+            ]}
+          />
+        </div>
+      )}
     </Secao>
   );
 }
@@ -1122,9 +1394,10 @@ function ModalBloqueio({ show, c, papel, onCancel }: { show: boolean; c: Contrat
   return (
     <Modal id="modal-bloqueio" show={show} title="Bloqueio de Governança" onCancel={onCancel} variant="small">
       <div className="space-y-6">
-        <Aviso tom="risco" icone="fa-lock" titulo={`${c.id} não pode ir para assinatura`}>
+        <Aviso tom="risco" icone="fa-lock" titulo={BLOQUEIO_GOVERNANCA}>
           <p>
-            Motivo: a aprovação está <strong>{APROVACAO[c.aprovacao].label}</strong>. Nenhum contrato vai para assinatura sem aprovação com parecer.
+            {c.id} {c.versao}. 
+Motivo: a aprovação está <strong>{APROVACAO[c.aprovacao].label}</strong> e a assinatura, <strong>{ASSINATURA[c.assinatura].label}</strong>.
           </p>
           <p className="mt-2">O que fazer: {fazer}</p>
         </Aviso>
@@ -1201,8 +1474,7 @@ function ModalRevisao({
             </p>
           </div>
         </div>
-        {c.aprovacao === "aprovado" && <Aviso tom="atencao" titulo="A aprovação volta para o início">O texto aprovado vai mudar: o contrato volta para Em Elaboração e precisa ser submetido de novo antes da assinatura.</Aviso>}
-        <p className="text-sm text-brand-purple-dark/60">Minor para ajustes de texto; major quando muda objeto, valor ou partes. O número é calculado, nunca digitado.</p>
+        <p className="text-sm text-brand-purple-dark/60">Minor (padrão) para ajustes de texto; major quando muda objeto, valor ou partes. O número é calculado, nunca digitado, e a versão guarda a cópia das cláusulas de agora.</p>
         <Input type="select" id="revisao-fase" label="Fase" prompt="Selecione a fase" value={fase} options={FASES.map((f) => ({ label: f.label, value: f.label }))} onChange={(v) => { setFase(v ?? ""); limpa(); }} errors={err(e.fase)} />
         <Input id="revisao-motivo" label="Motivo" placeholder="ex.: Ajuste pedido pelo aprovador" value={motivo} onChange={(ev) => { setMotivo(ev.target.value); limpa(); }} errors={err(e.motivo)} />
         <Input type="textarea" id="revisao-resumo" label="Resumo da mudança" value={resumo} onChange={(ev) => { setResumo(ev.target.value); limpa(); }} errors={err(e.resumo)} />
@@ -1226,33 +1498,37 @@ function ModalEncerrar({
   c: Contrato;
   tipos: string[];
   onCancel: () => void;
-  onSave: (tipo: string, motivo: string, distrato: Arquivo) => void;
+  onSave: (data: string, tipo: string, motivo: string, distrato?: Arquivo) => void;
 }) {
+  const [dataEnc, setDataEnc] = useState(TODAY);
   const [tipo, setTipo] = useState("");
   const [motivo, setMotivo] = useState("");
   const [distrato, setDistrato] = useState<Arquivo>();
   const [e, setE] = useState<Record<string, string | undefined>>({});
   const salvar = () => {
     const x = {
+      data: dataEnc ? undefined : "Informe a data do encerramento.",
       tipo: tipo ? undefined : "Escolha o tipo de encerramento.",
       motivo: motivo.trim() ? undefined : "Explique o motivo do encerramento.",
-      distrato: distrato ? undefined : "Anexe o distrato ou termo de encerramento assinado.",
+      distrato: distrato ? validarAnexo(distrato) ?? undefined : undefined,
     };
     if (Object.values(x).some(Boolean)) return setE(x);
-    onSave(tipo, motivo.trim(), distrato!);
+    onSave(dataEnc, tipo, motivo.trim(), distrato);
   };
   return (
     <DrawerModal id="modal-encerrar" show={show} title={`Encerrar ${c.id}`} onCancel={onCancel} variant="medium" contentClass={CONTEUDO_DRAWER}>
       <div className="space-y-6">
-        <Aviso tom="atencao" titulo="Encerramento é o estado final">Depois de encerrado, o contrato não recebe aditivos, reajustes nem cobranças novas.</Aviso>
-        <Input type="date" id="encerrar-data" label="Data do encerramento (hoje)" value={TODAY} readOnly disabled />
+        <Aviso tom="atencao" titulo="Encerramento é o estado final">
+          {c.id} está {STATUS[c.status].label}. Depois de encerrado, nada o reabre: o contrato vai para {faseNumerada("encerramento")} e não recebe aditivos, reajustes nem cobranças novas.
+        </Aviso>
+        <Input type="date" id="encerrar-data" label="Data do encerramento" value={dataEnc} onChange={(ev) => { setDataEnc(ev.target.value); setE({}); }} errors={err(e.data)} />
         <Input type="select" id="encerrar-tipo" label="Tipo" prompt="Selecione o tipo" value={tipo} options={tipos.map((t) => ({ label: t, value: t }))} onChange={(v) => { setTipo(v ?? ""); setE({}); }} errors={err(e.tipo)} />
-        <Input type="textarea" id="encerrar-motivo" label="Motivo" value={motivo} onChange={(ev) => { setMotivo(ev.target.value); setE({}); }} errors={err(e.motivo)} />
+        <Input type="textarea" id="encerrar-motivo" label="Motivo" hint={tipo && motivo.trim() ? `Registrado como "[${tipo}] ${motivo.trim()}"` : undefined} value={motivo} onChange={(ev) => { setMotivo(ev.target.value); setE({}); }} errors={err(e.motivo)} />
         <div>
-          <p className="mb-2 text-sm/4 font-bold text-brand-blue">Distrato anexo</p>
+          <p className="mb-2 text-sm/4 font-bold text-brand-blue">Distrato (opcional)</p>
           <FileUploader
             variant="simplified"
-            upload={{ ref: "encerrar-distrato", name: "distrato", accept: ".pdf", maxEntries: 1, maxFileSize: 10_000_000 }}
+            upload={{ ref: "encerrar-distrato", name: "distrato", accept: ANEXO_TIPOS.map((t) => `.${t}`).join(","), maxEntries: 1, maxFileSize: ANEXO_MAX }}
             onChange={(files) => { setDistrato(files[0] ? { nome: files[0].name, tamanho: files[0].size } : undefined); setE({}); }}
           />
           {e.distrato && <p className="mt-2 text-sm font-semibold text-red">{e.distrato}</p>}
@@ -1279,7 +1555,7 @@ function ModalClausula({ show, clausula, onCancel, onSave }: { show: boolean; cl
       <div className="space-y-6">
         <Input id="clausula-titulo" label="Título" placeholder="ex.: Cláusula 10ª — Da Confidencialidade" value={titulo} onChange={(ev) => { setTitulo(ev.target.value); setE({}); }} errors={err(e.titulo)} />
         <Input type="textarea" id="clausula-texto" label="Texto" value={texto} onChange={(ev) => { setTexto(ev.target.value); setE({}); }} errors={err(e.texto)} />
-        <Aviso tom="info">A cláusula alterada ganha o selo "Editada", para o aprovador ver o que saiu da minuta padrão.</Aviso>
+        <Aviso tom="info">{clausula ? 'A cláusula alterada ganha o selo "Editada"; a minuta de origem não muda.' : 'A cláusula nova entra no fim da lista, marcada como "Editada" e não obrigatória.'}</Aviso>
         <Rodape onCancel={onCancel}>
           <Button leftIcon="fa-check" onClick={salvar}>{clausula ? "Salvar cláusula" : "Adicionar"}</Button>
         </Rodape>

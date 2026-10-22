@@ -1,21 +1,29 @@
 /**
  * Gestão de Contratos — Tabelas de Apoio e Campos por Categoria (Administrador).
  *
- * As dez listas que alimentam os formulários do módulo (categoria, fluxo,
- * forma e condição de pagamento, índice, tipo de cobrança, natureza do dossiê,
- * tipo de aditivo, tipo de encerramento, unidade) e os campos extras que cada
- * categoria pede no Novo Contrato.
+ * As dez listas que alimentam os formulários do módulo (FR-088, RN-064:
+ * categoria, fluxo, forma e condição de pagamento, índice, tipo de cobrança,
+ * natureza do dossiê, tipo de aditivo, tipo de encerramento, unidade), com
+ * filtro por lista e "Mostrar Todas", e os campos extras que cada categoria
+ * pede no Novo Contrato (FR-093, RN-065).
  *
- * Opção em uso não se exclui: excluir quebraria os contratos que a usam, então
- * a tela avisa e oferece desativar (some dos formulários, os contratos
- * existentes continuam com ela).
+ * Opção nova nasce ativa, com ordem 10; o código, se vazio, vem da descrição em
+ * MAIÚSCULAS com "_" no lugar dos espaços e, se já existir na lista, ganha um
+ * sufixo de desempate (_2, _3…). Opção em uso não se exclui: excluir quebraria
+ * os contratos que a usam, então a tela avisa e oferece desativar (some dos
+ * formulários, os contratos existentes continuam com ela).
+ *
+ * Para as outras telas: `linkTabela` abre a lista já filtrada (FR-088),
+ * `adicionarOpcaoRapida` é a inclusão só com tipo e descrição (FR-090) e
+ * `opcoesAtivas` dá as opções ativas na ordem, com um conjunto padrão se a
+ * lista estiver vazia (FR-095).
  *
  * Feito na tela (componente novo): as etiquetas que escolhem a tabela e a
  * prévia do campo no Novo Contrato. O resto é `button_tabs` (controlado, `AbasBotao`), `table`, `input` (com `select` e `switch`), `modal`, `tag`,
  * `button` e `empty_state_card`.
  */
 import { useState } from "react";
-import type { ScreenProps } from "@brucesantos/design-space";
+import type { ScenarioContext, ScreenProps } from "@brucesantos/design-space";
 import { showToast } from "../components/Action.js";
 import { Button } from "../components/Button.js";
 import { Icon } from "../components/Icon.js";
@@ -25,7 +33,7 @@ import { DrawerModal, Modal } from "../components/Overlay.js";
 import { Table } from "../components/Table.js";
 import { Tag } from "../components/Tag.js";
 import type { CampoCategoria, ContratosData, OpcaoTabela, TabelaId } from "./gestao-de-contratos/model.js";
-import { ACOES_COMPACTAS, AbasBotao, Aviso, Bloco, ContratosShell, SeloLeitura, papelDe, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
+import { ACOES_COMPACTAS, AbasBotao, Aviso, Bloco, ContratosShell, ROTAS, SeloLeitura, papelDe, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 
 /** `curto` é o rótulo da etiqueta (cabem todas numa linha); `label`, o nome completo. */
 const TABELAS: { id: TabelaId; label: string; curto: string; icon: string }[] = [
@@ -40,6 +48,7 @@ const TABELAS: { id: TabelaId; label: string; curto: string; icon: string }[] = 
   { id: "tipo_encerramento", label: "Tipo de encerramento", curto: "Encerramento", icon: "fa-box-archive" },
   { id: "unidade", label: "Unidade", curto: "Unidade", icon: "fa-building" },
 ];
+const labelDe = (id: TabelaId) => TABELAS.find((t) => t.id === id)!.label;
 
 const TIPOS: { value: CampoCategoria["tipo"]; label: string; icon: string }[] = [
   { value: "texto", label: "Texto", icon: "fa-font" },
@@ -50,6 +59,66 @@ const TIPOS: { value: CampoCategoria["tipo"]; label: string; icon: string }[] = 
 const tipoDe = (t: CampoCategoria["tipo"]) => TIPOS.find((x) => x.value === t)!;
 
 const contratosLabel = (n: number) => `${n} contrato${n === 1 ? "" : "s"}`;
+
+/* ------------------------------------------------------------------ */
+/* Regras das listas (RN-064, FR-089, FR-090, FR-095)                  */
+/* ------------------------------------------------------------------ */
+
+/** Código padrão: a descrição em MAIÚSCULAS, com espaços trocados por "_". */
+export const codigoDe = (descricao: string) => descricao.trim().toUpperCase().replace(/\s+/g, "_");
+
+/** Código único na lista: em colisão, recebe sufixo de desempate (_2, _3…). */
+export function codigoUnico(codigo: string, opcoes: OpcaoTabela[]) {
+  const usados = new Set(opcoes.map((o) => o.codigo));
+  if (!usados.has(codigo)) return codigo;
+  let n = 2;
+  while (usados.has(`${codigo}_${n}`)) n++;
+  return `${codigo}_${n}`;
+}
+
+/** Nova opção: nasce ativa, ordem 10 por padrão, código derivado da descrição se vazio. */
+export function novaOpcao(lista: TabelaId, opcoes: OpcaoTabela[], d: { descricao: string; codigo?: string; ordem?: number }): OpcaoTabela {
+  const descricao = d.descricao.trim();
+  return {
+    id: `${lista}-${Date.now()}`,
+    ordem: d.ordem ?? 10,
+    codigo: codigoUnico((d.codigo?.trim() ? d.codigo.trim().toUpperCase() : codigoDe(descricao)), opcoes),
+    descricao,
+    ativo: true,
+    emUso: 0,
+  };
+}
+
+/** Inclusão rápida das outras telas (FR-090): só tipo e descrição; a descrição é aparada. */
+export function adicionarOpcaoRapida(lista: TabelaId, opcoes: OpcaoTabela[], descricao: string): { opcao: OpcaoTabela } | { erro: string } {
+  if (!descricao.trim()) return { erro: "Descrição obrigatória" };
+  return { opcao: novaOpcao(lista, opcoes, { descricao }) };
+}
+
+/** Conjunto padrão quando a lista está vazia (FR-095). */
+const PADROES: Record<TabelaId, string[]> = {
+  categoria: ["PJ Assistencial", "CLT Trabalho", "Operadora Saúde", "Paciente Particular", "Locação Imobiliária", "TI / Software / SaaS", "Consultoria Projetos"],
+  fluxo: ["Receita (Atendimento)", "Despesa (Contratação)", "Despesa (Pessoal)"],
+  forma_pagamento: ["PIX", "TED / Transferência Bancária", "Boleto Bancário"],
+  condicao_pagamento: ["À vista", "30 dias direto", "30 dias após a nota"],
+  indice: ["IPCA (IBGE)", "IGP-M (FGV)", "Dissídio CCT", "Sem Reajuste / Fixo"],
+  tipo_cobranca: ["NFS-e", "NF-e", "Boleto Bancário", "Fatura"],
+  natureza_dossie: ["Jurídica / Societária", "Fiscal / Habilitação", "Regulatória / Técnica"],
+  tipo_aditivo: ["Prorrogação", "Reajuste Financeiro", "Alteração de valor"],
+  tipo_encerramento: ["Término de vigência", "Distrato amigável", "Rescisão unilateral"],
+  unidade: ["Unidade Jardim"],
+};
+
+/** Opções que as listas de seleção mostram: só ativas, pela ordem e pela descrição (FR-095). */
+export function opcoesAtivas(tabelas: ContratosData["tabelas"], lista: TabelaId) {
+  const ativas = tabelas[lista].filter((o) => o.ativo).sort((a, b) => a.ordem - b.ordem || a.descricao.localeCompare(b.descricao)).map((o) => o.descricao);
+  return ativas.length ? ativas : PADROES[lista];
+}
+
+/** Abre as Tabelas de Apoio já filtradas na lista (links de outras telas, FR-088). */
+export function linkTabela(context: ScenarioContext, lista: TabelaId) {
+  context.navigate(ROTAS.tabelas, { controls: { area: "tabelas", lista } });
+}
 
 type Area = "tabelas" | "campos";
 const AREAS: { id: Area; titulo: string }[] = [
@@ -91,22 +160,32 @@ function Tabelas({ data, controls, admin }: { data: ContratosData; controls: Rec
 /* Tabelas de apoio                                                    */
 /* ------------------------------------------------------------------ */
 
-type ModalTabela = { tipo: "nova" } | { tipo: "excluir"; id: string } | null;
+type Filtro = TabelaId | "todas";
+type Linha = OpcaoTabela & { lista: TabelaId };
+type ModalTabela = { tipo: "nova" } | { tipo: "excluir"; lista: TabelaId; id: string } | null;
 
 function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls: Record<string, string>; admin: boolean }) {
   const [tabelas, setTabelas] = useState(data.tabelas);
-  const [lista, setLista] = useState<TabelaId>(TABELAS.some((t) => t.id === controls.lista) ? (controls.lista as TabelaId) : "categoria");
-  const emUsoInicial = tabelas[lista].find((o) => o.emUso > 0);
+  const [filtro, setFiltro] = useState<Filtro>(controls.lista === "todas" || TABELAS.some((t) => t.id === controls.lista) ? (controls.lista as Filtro) : "categoria");
+  const listaInicial: TabelaId = filtro === "todas" ? "categoria" : filtro;
+  const emUsoInicial = tabelas[listaInicial].find((o) => o.emUso > 0);
   const [modal, setModal] = useState<ModalTabela>(
-    !admin ? null : controls.modal === "nova-opcao" ? { tipo: "nova" } : controls.modal === "excluir-em-uso" && emUsoInicial ? { tipo: "excluir", id: emUsoInicial.id } : null,
+    !admin ? null : controls.modal === "nova-opcao" ? { tipo: "nova" } : controls.modal === "excluir-em-uso" && emUsoInicial ? { tipo: "excluir", lista: listaInicial, id: emUsoInicial.id } : null,
   );
+  const [rapida, setRapida] = useState<{ lista: TabelaId; descricao: string; erro?: string }>({ lista: listaInicial, descricao: "" });
 
-  const atual = TABELAS.find((t) => t.id === lista)!;
-  const opcoes = [...tabelas[lista]].sort((a, b) => a.ordem - b.ordem || a.descricao.localeCompare(b.descricao));
-  const mudar = (fn: (l: OpcaoTabela[]) => OpcaoTabela[]) => setTabelas((t) => ({ ...t, [lista]: fn(t[lista]) }));
+  const todas = filtro === "todas";
+  const ordenar = (l: OpcaoTabela[]) => [...l].sort((a, b) => a.ordem - b.ordem || a.descricao.localeCompare(b.descricao));
+  const linhas: Linha[] = (todas ? TABELAS.map((t) => t.id) : [filtro]).flatMap((id) => ordenar(tabelas[id]).map((o) => ({ ...o, lista: id })));
+  const mudar = (lista: TabelaId, fn: (l: OpcaoTabela[]) => OpcaoTabela[]) => setTabelas((t) => ({ ...t, [lista]: fn(t[lista]) }));
+  const incluir = (lista: TabelaId, o: OpcaoTabela) => {
+    mudar(lista, (l) => [...l, o]);
+    showToast({ type: "success", title: "Opção incluída", content: `${o.descricao} (${o.codigo}) já aparece em ${labelDe(lista)}, ativa.`, closeTime: 4000 });
+  };
 
-  const alternar = (o: OpcaoTabela, ativo: boolean) => {
-    mudar((l) => l.map((x) => (x.id === o.id ? { ...x, ativo } : x)));
+  // Ativar/desativar fica na mesma lista (ou em Todas), a de origem (FR-091).
+  const alternar = (o: Linha, ativo: boolean) => {
+    mudar(o.lista, (l) => l.map((x) => (x.id === o.id ? { ...x, ativo } : x)));
     showToast({
       type: "success",
       title: ativo ? "Opção ativada" : "Opção desativada",
@@ -117,24 +196,32 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
     });
   };
 
-  const emExclusao = modal?.tipo === "excluir" ? tabelas[lista].find((o) => o.id === modal.id) : undefined;
+  const adicionarRapido = () => {
+    const r = adicionarOpcaoRapida(rapida.lista, tabelas[rapida.lista], rapida.descricao);
+    if ("erro" in r) return setRapida((x) => ({ ...x, erro: r.erro }));
+    incluir(rapida.lista, r.opcao);
+    setRapida((x) => ({ ...x, descricao: "", erro: undefined }));
+  };
+
+  const emExclusao: Linha | undefined = modal?.tipo === "excluir" ? linhaDe(tabelas, modal.lista, modal.id) : undefined;
 
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* As dez tabelas em etiquetas: um clique troca a lista. */}
+        {/* As dez tabelas em etiquetas, mais "Mostrar Todas": um clique troca a lista. */}
         <div className="flex flex-wrap items-start justify-between gap-3">
           <ul className="flex flex-1 flex-wrap gap-2" aria-label="Tabelas de apoio">
-            {TABELAS.map((t) => {
-              const sel = t.id === lista;
+            {[{ id: "todas" as const, label: "Mostrar Todas", curto: "Mostrar Todas", icon: "fa-layer-group" }, ...TABELAS].map((t) => {
+              const sel = t.id === filtro;
+              const n = t.id === "todas" ? TABELAS.reduce((s, x) => s + tabelas[x.id].length, 0) : tabelas[t.id].length;
               return (
                 <li key={t.id}>
                   <button
                     type="button"
                     aria-pressed={sel}
                     title={t.label}
-                    aria-label={`${t.label}, ${tabelas[t.id].length} opções`}
-                    onClick={() => setLista(t.id)}
+                    aria-label={`${t.label}, ${n} opções`}
+                    onClick={() => { setFiltro(t.id); if (t.id !== "todas") setRapida((x) => ({ ...x, lista: t.id as TabelaId, erro: undefined })); }}
                     className={cx(
                       "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-semibold transition-colors",
                       sel ? "bg-brand-blue/30 text-brand-blue-dark ring-1 ring-brand-blue" : "bg-brand-purple-dark/5 text-brand-purple-dark/70 hover:bg-brand-blue/15",
@@ -142,7 +229,7 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
                   >
                     <Icon name={t.icon} className="text-xs" />
                     {t.curto}
-                    <span className="rounded-full bg-white px-1.5 text-xs tabular-nums">{tabelas[t.id].length}</span>
+                    <span className="rounded-full bg-white px-1.5 text-xs tabular-nums">{n}</span>
                   </button>
                 </li>
               );
@@ -150,26 +237,37 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
           </ul>
           {admin && <Button leftIcon="fa-plus" onClick={() => setModal({ tipo: "nova" })}>Nova opção</Button>}
         </div>
-        {opcoes.length === 0 ? (
+
+        {/* Inclusão rápida (FR-090): a mesma que as outras telas usam, só tipo e descrição. */}
+        {admin && (
+          <div className="flex flex-wrap items-start gap-3 rounded-xl border border-dashed border-brand-blue/40 bg-brand-blue/5 p-4">
+            <Input type="select" id="rapida-lista" clear={false} label="Adição rápida · tipo" value={rapida.lista} options={TABELAS.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => v && setRapida((x) => ({ ...x, lista: v as TabelaId, erro: undefined }))} className="w-full sm:w-56" />
+            <Input id="rapida-descricao" label="Descrição" placeholder="Ex.: Consultoria" value={rapida.descricao} onChange={(e) => setRapida((x) => ({ ...x, descricao: e.target.value, erro: undefined }))} errors={rapida.erro ? [rapida.erro] : []} className="min-w-56 flex-1" />
+            <Button variant="tint" leftIcon="fa-bolt" onClick={adicionarRapido} className="sm:mt-7">Adicionar</Button>
+          </div>
+        )}
+
+        {linhas.length === 0 ? (
           <EmptyStateCard icon="fa-table-list" text="Nenhuma opção nesta tabela">
-            <p>Inclua a primeira opção para ela aparecer nos formulários.</p>
+            <p>Inclua a primeira opção para ela aparecer nos formulários. Enquanto isso, os formulários mostram um conjunto padrão.</p>
           </EmptyStateCard>
         ) : (
           <Table
             className={ACOES_COMPACTAS}
-            id={`tabela-${lista}`}
-            rows={opcoes}
-            rowId={(o) => o.id}
+            id={`tabela-${filtro}`}
+            rows={linhas}
+            rowId={(o) => `${o.lista}-${o.id}`}
             col={[
-              { label: "Ordem", className: "w-20", render: (o) => <span className="tabular-nums">{o.ordem}</span> },
-              { label: "Código", render: (o) => <span className="text-sm font-bold tracking-wide">{o.codigo}</span> },
-              { label: "Descrição", className: "min-w-48", render: (o) => <span className={cx("font-semibold", o.ativo ? "text-brand-purple-dark" : "text-brand-purple-dark/50")}>{o.descricao}</span> },
+              ...(todas ? [{ label: "Lista", render: (o: Linha) => <span className="text-sm whitespace-nowrap">{labelDe(o.lista)}</span> }] : []),
+              { label: "Ordem", className: "w-20", render: (o: Linha) => <span className="tabular-nums">{o.ordem}</span> },
+              { label: "Código", render: (o: Linha) => <span className="text-sm font-bold tracking-wide">{o.codigo}</span> },
+              { label: "Descrição", className: "min-w-48", render: (o: Linha) => <span className={cx("font-semibold", o.ativo ? "text-brand-purple-dark" : "text-brand-purple-dark/50")}>{o.descricao}</span> },
               {
                 label: "Status",
-                render: (o) =>
+                render: (o: Linha) =>
                   admin ? (
                     <div className="flex items-center gap-2">
-                      <Input type="switch" id={`ativo-${o.id}`} value={o.ativo} aria-label={`${o.ativo ? "Desativar" : "Ativar"} ${o.descricao}`} onChange={(e) => alternar(o, e.target.checked)} />
+                      <Input type="switch" id={`ativo-${o.lista}-${o.id}`} value={o.ativo} aria-label={`${o.ativo ? "Desativar" : "Ativar"} ${o.descricao}`} onChange={(e) => alternar(o, e.target.checked)} />
                       <span className="text-sm">{o.ativo ? "Ativo" : "Inativo"}</span>
                     </div>
                   ) : (
@@ -178,7 +276,7 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
               },
               {
                 label: "Em uso",
-                render: (o) => (o.emUso ? <span className="text-sm whitespace-nowrap">em uso em {contratosLabel(o.emUso)}</span> : <span className="text-sm text-brand-purple-dark/40">sem uso</span>),
+                render: (o: Linha) => (o.emUso ? <span className="text-sm whitespace-nowrap">em uso em {contratosLabel(o.emUso)}</span> : <span className="text-sm text-brand-purple-dark/40">sem uso</span>),
               },
             ]}
             action={
@@ -186,7 +284,7 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
                 ? [
                     (o) => (
                       <span className="inline-flex pr-3">
-                        <Button size="small" variant="ghost" color="red" title="Excluir" aria-label={`Excluir ${o.descricao}`} onClick={() => setModal({ tipo: "excluir", id: o.id })}>
+                        <Button size="small" variant="ghost" color="red" title="Excluir" aria-label={`Excluir ${o.descricao}`} onClick={() => setModal({ tipo: "excluir", lista: o.lista, id: o.id })}>
                           <Icon name="fa-trash-can" />
                         </Button>
                       </span>
@@ -200,13 +298,12 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
 
       {modal?.tipo === "nova" && (
         <ModalNovaOpcao
-          tabela={atual.label}
-          opcoes={tabelas[lista]}
+          inicial={todas ? "categoria" : filtro}
+          tabelas={tabelas}
           onCancel={() => setModal(null)}
-          onSalvar={(o) => {
-            mudar((l) => [...l, { ...o, id: `${lista}-${Date.now()}` }]);
+          onSalvar={(lista, o) => {
+            incluir(lista, o);
             setModal(null);
-            showToast({ type: "success", title: "Opção incluída", content: `${o.descricao} já aparece em ${atual.label}.`, closeTime: 4000 });
           }}
         />
       )}
@@ -222,7 +319,7 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
               </Aviso>
             ) : (
               <p className="text-brand-purple-dark/80">
-                Excluir <b>{emExclusao.descricao}</b> ({emExclusao.codigo}) de {atual.label}? Nenhum contrato usa esta opção. A exclusão não pode ser desfeita.
+                Excluir <b>{emExclusao.descricao}</b> ({emExclusao.codigo}) de {labelDe(emExclusao.lista)}? Nenhum contrato usa esta opção. A exclusão não pode ser desfeita.
               </p>
             )}
             <div className="flex flex-col-reverse sm:flex-row justify-end gap-3">
@@ -231,9 +328,9 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
                 emExclusao.ativo && <Button leftIcon="fa-toggle-off" onClick={() => { alternar(emExclusao, false); setModal(null); }}>Desativar</Button>
               ) : (
                 <Button color="red" leftIcon="fa-trash-can" onClick={() => {
-                  mudar((l) => l.filter((x) => x.id !== emExclusao.id));
+                  mudar(emExclusao.lista, (l) => l.filter((x) => x.id !== emExclusao.id));
                   setModal(null);
-                  showToast({ type: "success", title: "Opção excluída", content: `${emExclusao.descricao} saiu de ${atual.label}.`, closeTime: 4000 });
+                  showToast({ type: "success", title: "Opção excluída", content: `${emExclusao.descricao} saiu de ${labelDe(emExclusao.lista)}.`, closeTime: 4000 });
                 }}>Excluir</Button>
               )}
             </div>
@@ -244,40 +341,48 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
   );
 }
 
-function ModalNovaOpcao({ tabela, opcoes, onCancel, onSalvar }: { tabela: string; opcoes: OpcaoTabela[]; onCancel: () => void; onSalvar: (o: Omit<OpcaoTabela, "id">) => void }) {
+function linhaDe(tabelas: ContratosData["tabelas"], lista: TabelaId, id: string): Linha | undefined {
+  const o = tabelas[lista].find((x) => x.id === id);
+  return o && { ...o, lista };
+}
+
+function ModalNovaOpcao({ inicial, tabelas, onCancel, onSalvar }: { inicial: TabelaId; tabelas: ContratosData["tabelas"]; onCancel: () => void; onSalvar: (lista: TabelaId, o: OpcaoTabela) => void }) {
+  const [lista, setLista] = useState<TabelaId>(inicial);
   const [descricao, setDescricao] = useState("");
   const [codigo, setCodigo] = useState("");
   const [ordem, setOrdem] = useState("10");
-  const [erros, setErros] = useState<{ descricao?: string; codigo?: string; ordem?: string }>({});
-  const codigoAuto = descricao.normalize("NFD").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase();
+  const [erros, setErros] = useState<{ descricao?: string; ordem?: string }>({});
+  const opcoes = tabelas[lista];
+  const base = codigo.trim() ? codigo.trim().toUpperCase() : codigoDe(descricao);
+  const final = base ? codigoUnico(base, opcoes) : "";
 
   const salvar = () => {
     const e: typeof erros = {};
-    const d = descricao.trim();
-    const cod = (codigo.trim() || codigoAuto).toUpperCase();
-    if (!d) e.descricao = "Informe a descrição: é o texto que aparece nos formulários.";
-    else if (opcoes.some((o) => o.descricao.toLowerCase() === d.toLowerCase())) e.descricao = `"${d}" já existe em ${tabela}. Se estiver inativa, ative a existente.`;
-    if (d && opcoes.some((o) => o.codigo === cod)) e.codigo = `O código ${cod} já é usado em ${tabela}. Escolha outro.`;
+    if (!descricao.trim()) e.descricao = "Descrição obrigatória";
     if (!(Number(ordem) >= 0) || ordem.trim() === "") e.ordem = "Informe a ordem (número inteiro).";
     setErros(e);
     if (Object.keys(e).length) return;
-    onSalvar({ ordem: Number(ordem), codigo: cod, descricao: d, ativo: true, emUso: 0 });
+    onSalvar(lista, novaOpcao(lista, opcoes, { descricao, codigo, ordem: Number(ordem) }));
   };
 
   return (
-    <DrawerModal id="nova-opcao" show title={`Nova opção · ${tabela}`} variant="small" onCancel={onCancel} contentClass={CONTEUDO_DRAWER}>
+    <DrawerModal id="nova-opcao" show title="Nova opção" variant="small" onCancel={onCancel} contentClass={CONTEUDO_DRAWER}>
       <div className="flex flex-col gap-6">
+        <Input type="select" id="op-lista" clear={false} label="Tipo (lista)" value={lista} options={TABELAS.map((t) => ({ value: t.id, label: t.label }))} onChange={(v) => v && setLista(v as TabelaId)} />
         <Input id="op-descricao" label="Descrição" placeholder="Ex.: Consultoria" value={descricao} onChange={(e) => { setDescricao(e.target.value); setErros((x) => ({ ...x, descricao: undefined })); }} errors={erros.descricao ? [erros.descricao] : []} />
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Input id="op-codigo" label="Código" placeholder={codigoAuto || "Ex.: CON"} value={codigo} onChange={(e) => { setCodigo(e.target.value); setErros((x) => ({ ...x, codigo: undefined })); }} errors={erros.codigo ? [erros.codigo] : []} />
-            {!erros.codigo && <p className="mt-1 text-xs text-brand-purple-dark/50">Vazio: usa {codigoAuto || "as 3 primeiras letras"}.</p>}
+            <Input id="op-codigo" label="Código (opcional)" placeholder={codigoDe(descricao) || "Ex.: CONSULTORIA"} value={codigo} onChange={(e) => setCodigo(e.target.value)} />
+            <p className="mt-1 text-xs text-brand-purple-dark/50">
+              {final && final !== base ? `${base} já existe nesta lista: fica ${final}.` : `Vazio: usa a descrição em maiúsculas${final ? ` (${final})` : ""}.`}
+            </p>
           </div>
           <div>
             <Input type="number" id="op-ordem" label="Ordem" min={0} step={10} value={ordem} onChange={(e) => setOrdem(e.target.value)} errors={erros.ordem ? [erros.ordem] : []} />
             {!erros.ordem && <p className="mt-1 text-xs text-brand-purple-dark/50">Menor aparece primeiro.</p>}
           </div>
         </div>
+        <p className="text-sm text-brand-purple-dark/60">A opção nasce ativa e já aparece nos formulários de {labelDe(lista)}.</p>
         <div className={RODAPE_DRAWER}>
           <Button variant="outline" onClick={onCancel}>Cancelar</Button>
           <Button leftIcon="fa-check" onClick={salvar}>Incluir</Button>
@@ -294,14 +399,21 @@ function ModalNovaOpcao({ tabela, opcoes, onCancel, onSalvar }: { tabela: string
 type Rascunho = { rotulo: string; tipo: CampoCategoria["tipo"] | ""; opcoes: string; ajuda: string };
 const VAZIO: Rascunho = { rotulo: "", tipo: "", opcoes: "", ajuda: "" };
 const opcoesDe = (s: string) => s.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+/** Nome do campo gerado do rótulo: minúsculas, sem acento, "_" no lugar do resto (FR-093). */
+export const nomeDoCampo = (rotulo: string) =>
+  rotulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+const nomeDe = (c: CampoCategoria) => c.nome ?? nomeDoCampo(c.rotulo);
 
 function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: Record<string, string>; admin: boolean }) {
-  const categorias = data.tabelas.categoria.filter((o) => o.ativo).map((o) => o.descricao);
+  // Só as categorias ativas oferecem campos (RN-065), na ordem da tabela.
+  const categorias = opcoesAtivas(data.tabelas, "categoria");
   const [campos, setCampos] = useState(data.camposCategoria);
   const [categoria, setCategoria] = useState(categorias.includes(controls.categoria ?? "") ? controls.categoria! : categorias[0] ?? "");
   const [rascunho, setRascunho] = useState<Rascunho>(VAZIO);
   const [erros, setErros] = useState<{ rotulo?: string; tipo?: string; opcoes?: string }>({});
   const lista = campos[categoria] ?? [];
+  /** As 7 categorias padrão vêm com campos predefinidos (FR-093). */
+  const padrao = (data.camposCategoria[categoria]?.length ?? 0) > 0;
   const emUso = data.tabelas.categoria.find((o) => o.descricao === categoria)?.emUso ?? 0;
 
   const set = <K extends keyof Rascunho>(k: K, v: Rascunho[K]) => { setRascunho((r) => ({ ...r, [k]: v })); setErros((e) => ({ ...e, [k]: undefined })); };
@@ -310,13 +422,14 @@ function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: 
     const e: typeof erros = {};
     const rotulo = rascunho.rotulo.trim();
     if (!rotulo) e.rotulo = "Informe o rótulo do campo.";
-    else if (lista.some((c) => c.rotulo.toLowerCase() === rotulo.toLowerCase())) e.rotulo = `${categoria} já tem o campo "${rotulo}".`;
+    else if (lista.some((c) => nomeDe(c) === nomeDoCampo(rotulo))) e.rotulo = `${categoria} já tem um campo com o nome ${nomeDoCampo(rotulo)}.`;
     if (!rascunho.tipo) e.tipo = "Escolha o tipo do campo.";
     if (rascunho.tipo === "lista" && opcoesDe(rascunho.opcoes).length < 2) e.opcoes = "Lista precisa de ao menos 2 opções, uma por linha.";
     setErros(e);
     if (Object.keys(e).length) return;
     const novo: CampoCategoria = {
       id: `f${Date.now()}`,
+      nome: nomeDoCampo(rotulo),
       rotulo,
       tipo: rascunho.tipo as CampoCategoria["tipo"],
       ...(rascunho.tipo === "lista" && { opcoes: opcoesDe(rascunho.opcoes) }),
@@ -346,6 +459,11 @@ function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: 
     <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_380px]">
       <div className="flex flex-col gap-4">
         <Input type="select" id="campos-categoria" clear={false} label="Categoria" value={categoria} options={categorias.map((c) => ({ value: c, label: c }))} onChange={(v) => { if (v) { setCategoria(v); setRascunho(VAZIO); setErros({}); } }} className="max-w-sm" />
+        {padrao && (
+          <p className="text-sm text-brand-purple-dark/60">
+            <Icon name="fa-wand-magic-sparkles" className="mr-1 text-brand-blue" />Categoria padrão: já vem com campos predefinidos. O que o Administrador muda aqui fica valendo; os predefinidos não voltam por cima.
+          </p>
+        )}
 
         {lista.length === 0 ? (
           <EmptyStateCard icon="fa-input-text" text={`${categoria} não tem campos extras`}>
@@ -359,6 +477,7 @@ function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: 
             rowId={(c) => c.id}
             col={[
               { label: "Rótulo", render: (c) => <span className="font-semibold text-brand-purple-dark">{c.rotulo}</span> },
+              { label: "Nome", render: (c) => <span className="text-sm font-mono whitespace-nowrap">{nomeDe(c)}</span> },
               { label: "Tipo", render: (c) => <Tag item={tipoDe(c.tipo).label} variant="dark-blue" leftIcon={tipoDe(c.tipo).icon} /> },
               {
                 label: "Opções",
@@ -386,7 +505,10 @@ function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: 
           <div className="flex flex-col gap-4 rounded-xl border border-dashed border-brand-blue/40 bg-brand-blue/5 p-4">
             <p className="font-bold text-brand-purple-dark">Novo campo</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input id="campo-rotulo" label="Rótulo" placeholder="Ex.: Seguro do imóvel" value={rascunho.rotulo} onChange={(e) => set("rotulo", e.target.value)} errors={erros.rotulo ? [erros.rotulo] : []} />
+              <div>
+                <Input id="campo-rotulo" label="Rótulo" placeholder="Ex.: Seguro do imóvel" value={rascunho.rotulo} onChange={(e) => set("rotulo", e.target.value)} errors={erros.rotulo ? [erros.rotulo] : []} />
+                {!erros.rotulo && <p className="mt-1 text-xs text-brand-purple-dark/50">Nome gerado: {nomeDoCampo(rascunho.rotulo) || "—"}</p>}
+              </div>
               <Input type="select" id="campo-tipo" label="Tipo" prompt="Escolha o tipo" value={rascunho.tipo} options={TIPOS.map((t) => ({ value: t.value, label: t.label }))} onChange={(v) => set("tipo", (v ?? "") as Rascunho["tipo"])} errors={erros.tipo ? [erros.tipo] : []} />
             </div>
             {rascunho.tipo === "lista" && (
