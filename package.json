@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@babel/core": "^8.0.7",
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
     "@react-dev-inspector/babel-plugin": "^2.0.1",
     "@rolldown/plugin-babel": "^0.2.4",
     "@tailwindcss/vite": "^4.1.11",
@@ -36,6 +36,6 @@
     "tailwindcss": "^4.1.11",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   }
 }
