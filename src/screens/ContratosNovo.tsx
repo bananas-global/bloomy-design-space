@@ -299,7 +299,8 @@ function Novo({ data, controls, papel, navigate }: { data: ContratosData; contro
     return o;
   });
   const [preview, setPreview] = useState(false);
-  const [drawerParte, setDrawerParte] = useState(0);
+  // O cenário pode abrir o cadastro rápido de parte já aberto.
+  const [drawerParte, setDrawerParte] = useState(controls.parte === "rapido" ? 1 : 0);
   const [nova, setNova] = useState<{ lista: Lista; descricao: string; erro?: string } | null>(null);
 
   const erros: Erros = enviado ? validar(data, partes, f) : {};
@@ -752,6 +753,7 @@ function Novo({ data, controls, papel, navigate }: { data: ContratosData; contro
         <DrawerParte
           key={drawerParte}
           show
+          modo="rapido"
           trocarTipo
           permitido
           partes={partes}
@@ -767,7 +769,7 @@ function Novo({ data, controls, papel, navigate }: { data: ContratosData; contro
             if (parteElegivel(p)) setF((s) => preencherParte(s, p));
             showToast(
               parteElegivel(p)
-                ? { type: "success", title: atualizou ? "Cadastro atualizado" : "Parte cadastrada", content: `${p.codigo} · ${p.nome} já está selecionada no contrato.`, closeTime: 4000 }
+                ? { type: "success", title: atualizou ? "Cadastro atualizado" : "Parte cadastrada", content: `${p.codigo} · ${p.nome} já está selecionada no contrato. Complete o cadastro depois em Partes.`, closeTime: 4000 }
                 : { type: "info", title: "Parte cadastrada, mas não selecionada", content: `${p.codigo} está inativa ou não homologada. Ative/homologue em Partes para contratar.`, closeTime: 6000 },
             );
           }}

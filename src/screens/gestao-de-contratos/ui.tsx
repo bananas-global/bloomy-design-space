@@ -132,7 +132,7 @@ export function ContratosShell({
    * Página em modo foco (formulários longos): sem o menu lateral nem o
    * cabeçalho do backoffice, só uma barra com o voltar e o título.
    */
-  foco?: { voltar: string; rotuloVoltar: string };
+  foco?: { voltar: string; rotuloVoltar: string; /** Volta sem trocar de rota (formulário aberto na própria tela). */ onVoltar?: () => void };
   children: (data: ContratosData) => ReactNode;
 }) {
   // Tela aberta pela lista, sem cenário, não tem fixture: usa a carteira de exemplo.
@@ -149,7 +149,7 @@ export function ContratosShell({
         {/* A barra ocupa a largura toda: desfaz o padding do `main` do layout. */}
         <div className="sticky top-0 z-40 -mx-4 -mt-4 mb-6 lg:-mx-8 lg:-mt-8 bg-white shadow-main px-4 lg:px-8 py-4">
           <div className="mx-auto max-w-6xl flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Button variant="ghost" leftIcon="fa-arrow-left" onClick={() => context.navigate(foco.voltar, { controls: {} })}>
+            <Button variant="ghost" leftIcon="fa-arrow-left" onClick={() => (foco.onVoltar ? foco.onVoltar() : context.navigate(foco.voltar, { controls: {} }))}>
               {foco.rotuloVoltar}
             </Button>
             <span className="hidden h-8 w-px bg-brand-purple-dark/10 sm:block" aria-hidden="true" />

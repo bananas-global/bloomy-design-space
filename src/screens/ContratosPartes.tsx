@@ -2,8 +2,10 @@
  * Gestão de Contratos — Cadastro de Partes (FR-083 a FR-087).
  *
  * A lista de clientes (receita) e fornecedores & pessoal (despesa), com visões,
- * filtros PJ/PF, contagens, busca e exportação, e o cadastro lateral
- * (`drawer_modal`) com campos por subtipo (cliente) ou categoria (fornecedor).
+ * filtros PJ/PF, contagens, busca e exportação. "Novo cliente", "Novo
+ * fornecedor" e o clique na linha abrem o cadastro completo em página, no modo
+ * foco (como o Novo Contrato), com campos por subtipo (cliente) ou categoria
+ * (fornecedor).
  *
  * Código automático (CLI-0000 / FOR-0000, do sequencial) ou manual / legado;
  * código manual já usado é recusado com "Código já utilizado". Os valores
@@ -15,11 +17,14 @@
  * salvar atualiza o existente só com os campos preenchidos pelo usuário: os
  * demais (como os dados bancários) ficam como estavam.
  *
- * O cadastro (`DrawerParte`) também abre do Novo Contrato, em "Cadastrar Nova
- * Parte", para não sair do formulário do contrato.
+ * O mesmo formulário (`DrawerParte`) abre no Novo Contrato como cadastro
+ * rápido (`modo="rapido"`), num `drawer_modal` só com os obrigatórios da
+ * RN-063, para não sair do contrato; o resto se completa aqui.
  *
  * Feito na tela (componente novo): as pílulas de visão/filtro e as seções do
- * cadastro. O resto é `drawer_modal`, `table`, `input`, `radio_selector`,
+ * cadastro, a página do cadastro em modo foco (cartões numerados, índice das
+ * seções à esquerda e rodapé fixo, como o Novo Contrato). O resto é
+ * `drawer_modal`, `table`, `input`, `radio_selector`,
  * `tag`, `button` e `empty_state_card`.
  */
 import { useMemo, useState, type ChangeEvent, type ReactNode } from "react";
@@ -28,14 +33,14 @@ import { showToast } from "../components/Action.js";
 import { FormGrid } from "../components/BackofficeComponents.js";
 import { Button } from "../components/Button.js";
 import { RadioGroup } from "../components/Choice.js";
-import { Input } from "../components/Input.js";
+import { Input, cx } from "../components/Input.js";
 import { EmptyStateCard } from "../components/Layout.js";
 import { DrawerModal } from "../components/Overlay.js";
 import { Table } from "../components/Table.js";
 import { Tag } from "../components/Tag.js";
-import { FLUXO, SUBTIPO, SUBTIPOS_CLIENTE, SUBTIPOS_FORNECEDOR, type ContratosData, type Papel, type Parte, type ParteSubtipo, type ParteTipo } from "./gestao-de-contratos/model.js";
+import { FLUXO, SUBTIPO, SUBTIPOS_CLIENTE, SUBTIPOS_FORNECEDOR, type Papel, type Parte, type ParteSubtipo, type ParteTipo } from "./gestao-de-contratos/model.js";
 import { opcoesAtivas } from "./ContratosTabelas.js";
-import { Aviso, Bloco, ContratosShell, AbasBotao, Etiquetas, Selo, exportarPlanilha, papelDe, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
+import { Aviso, Bloco, ContratosShell, ROTAS, AbasBotao, Etiquetas, Selo, exportarPlanilha, papelDe, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 
 /* ------------------------------------------------------------------ */
 /* Regras do cadastro                                                  */
@@ -280,10 +285,17 @@ export function DrawerParte({
   permitido,
   proximo,
   trocarTipo = false,
+  modo = "drawer",
   onCancel,
   onSave,
 }: {
   show: boolean;
+  /**
+   * `pagina`: cadastro completo em modo foco (tela Partes). `rapido`: drawer só
+   * com os obrigatórios (RN-063), para o atalho do Novo Contrato. `drawer`: o
+   * formulário completo no drawer.
+   */
+  modo?: "drawer" | "rapido" | "pagina";
   /** Força a permissão (atalho do Novo Contrato); sem ele, vale o papel. */
   permitido?: boolean;
   /** Mostra a escolha cliente/fornecedor (atalho do Novo Contrato). */
@@ -331,7 +343,9 @@ export function DrawerParte({
   const codigoAuto = editando ? f.codigo : proximoCodigoParte(partes, f.tipo, proximo?.[f.tipo]);
   const cliente = f.tipo === "cliente";
   const docLabel = pessoa === "PJ" ? "CNPJ" : "CPF";
-  const visiveis = camposDe(f.subtipo, f.tipo);
+  const rapido = modo === "rapido";
+  // No cadastro rápido, só os obrigatórios do subtipo; o resto se completa em Partes.
+  const visiveis = camposDe(f.subtipo, f.tipo).filter((c) => !rapido || c.obrigatorio);
   const original = editando ? partes.find((p) => p.id === f.id) : undefined;
 
   const salvar = () => {
@@ -430,12 +444,28 @@ export function DrawerParte({
       />
     );
   const nErros = Object.keys(erros).length;
-  const titulo = editando ? `${f.codigo} · ${f.nome}` : cliente ? "Novo cliente" : "Novo fornecedor";
+  const titulo = rapido ? "Cadastro rápido de parte" : editando ? `${f.codigo} · ${f.nome}` : cliente ? "Novo cliente" : "Novo fornecedor";
   const liminar = f.subtipo === "liminar";
 
-  return (
-    <DrawerModal id="drawer-parte" show={show} title={titulo} onCancel={onCancel} variant="medium" contentClass={CONTEUDO_DRAWER}>
-      <div className="space-y-6">
+  /* Página: cada seção num cartão numerado, com o índice à esquerda (como o Novo Contrato). */
+  const pagina = modo === "pagina";
+  const tituloPagamento = rapido ? (cliente ? "Recebimento" : "Pagamento") : cliente ? "Faturamento e recebimento" : "Pagamento e dados bancários";
+  const ordem = ["Identificação", ...SECOES[f.subtipo].map((x) => x.titulo), tituloPagamento, "Endereço e contato", ...(existente ? [] : ["Situação"])];
+  const idSecao = (t: string) => `sec-parte-${ordem.indexOf(t) + 1}`;
+  const pag = (t: string) => (pagina ? { id: idSecao(t), n: ordem.indexOf(t) + 1, icone: ICONE_SECAO[t] ?? "fa-list" } : undefined);
+  /** Em que seção cai cada erro, para o contador do índice. */
+  const secaoDoErro = (k: string) =>
+    ["nome", "documento", "codigo"].includes(k) ? "Identificação"
+    : SECOES[f.subtipo].find((x) => x.campos.some((c) => c.k === k))?.titulo
+      ?? (["forma", "condicao", "E-mail de faturamento", ...CHAVES_BANCO].includes(k) ? tituloPagamento : "Endereço e contato");
+
+  const corpo = (
+    <>
+        {rapido && (
+          <Aviso tom="info" titulo="Cadastro rápido">
+            Só os campos obrigatórios, para não sair do contrato. Depois, complete o cadastro em Partes: documentos, dados bancários, endereço e contato.
+          </Aviso>
+        )}
         {!pode && (
           <Aviso tom="neutro" titulo={`Só leitura para ${cliente ? "clientes" : "fornecedores"}`}>
             {cliente ? "Clientes são cadastrados pelo Comercial / Faturamento." : "Fornecedores e pessoal são cadastrados por Compras / RH-DP."} Peça a alteração a eles ou ao Administrador.
@@ -450,8 +480,8 @@ export function DrawerParte({
           </Aviso>
         )}
 
-        <fieldset disabled={!pode} className="space-y-8">
-          <SecaoForm titulo="Identificação">
+        <fieldset disabled={!pode} className={pagina ? "space-y-6" : "space-y-8"}>
+          <SecaoForm titulo="Identificação" pagina={pag("Identificação")}>
             {!editando && trocarTipo && (
               <RadioGroup
                 label="Parte"
@@ -506,25 +536,29 @@ export function DrawerParte({
             </FormGrid>
           </SecaoForm>
 
-          {SECOES[f.subtipo].map((s) => (
-            <SecaoForm key={s.titulo} titulo={s.titulo}>
-              <FormGrid variant="small" className="mt-0! gap-y-8">{s.campos.map(campo)}</FormGrid>
-            </SecaoForm>
-          ))}
+          {SECOES[f.subtipo].map((s) => {
+            const campos = s.campos.filter((c) => !rapido || c.obrigatorio);
+            return campos.length ? (
+              <SecaoForm key={s.titulo} titulo={s.titulo} pagina={pag(s.titulo)}>
+                <FormGrid variant="small" className="mt-0! gap-y-8">{campos.map(campo)}</FormGrid>
+              </SecaoForm>
+            ) : null;
+          })}
 
-          <SecaoForm titulo={cliente ? "Faturamento e recebimento" : "Pagamento e dados bancários"}>
+          <SecaoForm titulo={tituloPagamento} pagina={pag(tituloPagamento)}>
             <FormGrid variant="small" className="mt-0! gap-y-8">
               <Input type="select" id="parte-forma" label={`Forma de ${cliente ? "recebimento" : "pagamento"}${existente ? "" : " *"}`} prompt="Selecione" value={f.forma} options={comAtual(formas, f.forma).map((o) => ({ label: o, value: o }))} onChange={(v) => up({ forma: v ?? "" })} errors={err("forma")} />
               <Input type="select" id="parte-condicao" label={existente ? "Condição" : "Condição *"} prompt="Selecione" value={f.condicao} options={comAtual(condicoes, f.condicao).map((o) => ({ label: o, value: o }))} onChange={(v) => up({ condicao: v ?? "" })} errors={err("condicao")} />
-              {cliente && campo({ k: "E-mail de faturamento", tipo: "email" })}
-              {bancarios(cliente).map(campo)}
+              {!rapido && cliente && campo({ k: "E-mail de faturamento", tipo: "email" })}
+              {!rapido && bancarios(cliente).map(campo)}
             </FormGrid>
-            {original?.banco && !CHAVES_BANCO.some((k) => original.extras[k]) && (
+            {!rapido && original?.banco && !CHAVES_BANCO.some((k) => original.extras[k]) && (
               <p className="text-sm text-brand-purple-dark/60">Dados bancários atuais: {original.banco}. Deixe em branco para manter.</p>
             )}
           </SecaoForm>
 
-          <SecaoForm titulo="Endereço e contato">
+          {!rapido && (
+          <SecaoForm titulo="Endereço e contato" pagina={pag("Endereço e contato")}>
             <FormGrid variant="small" className="mt-0! gap-y-8">
               {campo({ k: "CEP", placeholder: "00000-000" })}
               <Input id="parte-endereco" label="Endereço completo" placeholder="Logradouro, número, bairro, cidade/UF" value={f.endereco} onChange={(e) => up({ endereco: e.target.value })} />
@@ -533,9 +567,10 @@ export function DrawerParte({
               <Input type="tel" id="parte-telefone" label={cliente ? "Telefone / WhatsApp" : "Telefone"} placeholder="(00) 00000-0000" value={f.telefone} onChange={(e) => up({ telefone: e.target.value })} />
             </FormGrid>
           </SecaoForm>
+          )}
 
-          {!existente && (
-            <SecaoForm titulo="Situação">
+          {!existente && !rapido && (
+            <SecaoForm titulo="Situação" pagina={pag("Situação")}>
               <div className="flex flex-wrap gap-x-10 gap-y-4">
                 <label className="flex items-center gap-3">
                   <Input type="switch" id="parte-ativo" value={f.ativo} onChange={(e) => up({ ativo: e.target.checked })} />
@@ -554,21 +589,86 @@ export function DrawerParte({
             </SecaoForm>
           )}
         </fieldset>
+    </>
+  );
+  const botoes = (
+    <>
+      <Button variant="ghost" onClick={onCancel}>{pode ? "Cancelar" : "Fechar"}</Button>
+      {pode && (
+        <Button leftIcon={existente ? "fa-rotate" : "fa-floppy-disk"} onClick={salvar}>
+          {existente ? "Atualizar cadastro" : editando ? "Salvar alterações" : rapido ? "Cadastrar e selecionar" : cliente ? "Cadastrar cliente" : "Cadastrar fornecedor"}
+        </Button>
+      )}
+    </>
+  );
 
-        <div className={RODAPE_DRAWER}>
-          <Button variant="ghost" onClick={onCancel}>{pode ? "Cancelar" : "Fechar"}</Button>
-          {pode && (
-            <Button leftIcon={existente ? "fa-rotate" : "fa-floppy-disk"} onClick={salvar}>
-              {existente ? "Atualizar cadastro" : editando ? "Salvar alterações" : cliente ? "Cadastrar cliente" : "Cadastrar fornecedor"}
-            </Button>
-          )}
+  if (modo === "pagina") {
+    // Cadastro completo em modo foco, como o Novo Contrato: índice das seções à esquerda e rodapé fixo com a largura toda.
+    return (
+      <div className="mx-auto grid w-full max-w-6xl gap-6 pb-24 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <nav aria-label="Seções do cadastro" className="hidden lg:block">
+          <ol className="sticky top-28 space-y-1 rounded-2xl bg-white p-3 shadow-main">
+            {ordem.map((t, i) => {
+              const n = Object.keys(erros).filter((k) => secaoDoErro(k) === t).length;
+              return (
+                <li key={t}>
+                  <a
+                    href={`#${idSecao(t)}`}
+                    onClick={(e) => { e.preventDefault(); document.getElementById(idSecao(t))?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-bold text-brand-purple-dark/70 hover:bg-brand-purple-dark/5 hover:text-brand-blue-dark"
+                  >
+                    <span className={cx("flex h-6 w-6 items-center justify-center rounded-full text-xs", n ? "bg-red-light text-red" : "bg-brand-blue/20 text-brand-blue-dark")}>{i + 1}</span>
+                    <span className="flex-1">{t}</span>
+                    {n > 0 && <span className="rounded-full bg-red px-1.5 text-xs text-white tabular-nums">{n}</span>}
+                  </a>
+                </li>
+              );
+            })}
+          </ol>
+        </nav>
+        <div className="min-w-0 space-y-6">{corpo}</div>
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-brand-purple-dark/10 bg-white px-4 lg:px-8 py-4 shadow-main">
+          <div className="mx-auto max-w-6xl flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">{botoes}</div>
         </div>
+      </div>
+    );
+  }
+  return (
+    <DrawerModal id="drawer-parte" show={show} title={titulo} onCancel={onCancel} variant="medium" contentClass={CONTEUDO_DRAWER}>
+      <div className="space-y-6">
+        {corpo}
+        <div className={RODAPE_DRAWER}>{botoes}</div>
       </div>
     </DrawerModal>
   );
 }
 
-function SecaoForm({ titulo, children }: { titulo: string; children: ReactNode }) {
+/** Ícone do cartão de cada seção na página do cadastro. */
+const ICONE_SECAO: Record<string, string> = {
+  "Identificação": "fa-id-card",
+  "Dados empresariais": "fa-building",
+  "Habilitação técnica": "fa-user-doctor",
+  "Operadora ANS": "fa-hospital",
+  "Paciente vinculado": "fa-user-group",
+  "Paciente e responsável legal": "fa-user-group",
+  "Liminar judicial": "fa-gavel",
+  "Documentos pessoais": "fa-id-badge",
+  "Vínculo e jornada": "fa-briefcase",
+  "Faturamento e recebimento": "fa-money-bill-wave",
+  "Pagamento e dados bancários": "fa-money-bill-wave",
+  "Endereço e contato": "fa-location-dot",
+  "Situação": "fa-toggle-on",
+};
+
+/** Seção do cadastro: no drawer, um título; na página, um cartão numerado (`pagina`). */
+function SecaoForm({ titulo, pagina, children }: { titulo: string; pagina?: { id: string; n: number; icone: string }; children: ReactNode }) {
+  if (pagina) {
+    return (
+      <Bloco id={pagina.id} titulo={`${pagina.n}. ${titulo}`} icone={pagina.icone} className="scroll-mt-28">
+        {children}
+      </Bloco>
+    );
+  }
   return (
     <section className="space-y-4">
       <h3 className="text-sm font-extrabold uppercase tracking-wide text-brand-purple-dark/60">{titulo}</h3>
@@ -604,28 +704,75 @@ function formDoControle(form: string | undefined): FormParte | null {
 }
 
 export function ContratosPartes({ context }: ScreenProps) {
-  const papel = papelDe(context, "administrador");
-  return (
-    <ContratosShell context={context} secao="partes" titulo="Cadastro de Partes" subtitulo="Clientes (receita) e fornecedores & pessoal (despesa) que podem assinar contratos.">
-      {(data) => <Partes key={JSON.stringify(context.controls)} data={data} controls={context.controls} papel={papel} />}
-    </ContratosShell>
-  );
+  return <TelaPartes key={JSON.stringify(context.controls)} context={context} />;
 }
 
-function Partes({ data, controls, papel }: { data: ContratosData; controls: Record<string, string>; papel: Papel }) {
-  const [partes, setPartes] = useState(data.partes);
-  const [visao, setVisao] = useState<Visao>(VISOES.some((v) => v.id === controls.visao) ? (controls.visao as Visao) : "todas");
-  const [pessoa, setPessoa] = useState<"PJ" | "PF" | null>(null);
-  const [busca, setBusca] = useState("");
-  const [form, setForm] = useState<FormParte | null>(formDoControle(controls.form));
+/**
+ * A lista e o cadastro completo na mesma tela: com o cadastro aberto, a tela
+ * entra em modo foco (como o Novo Contrato) e "Voltar" devolve à lista, que
+ * já mostra a parte salva. O estado fica aqui para sobreviver à troca.
+ */
+function TelaPartes({ context }: { context: ScreenProps["context"] }) {
+  const papel = papelDe(context, "administrador");
+  const [partes, setPartes] = useState<Parte[] | null>(null);
+  const [form, setForm] = useState<FormParte | null>(formDoControle(context.controls.form));
   const [formKey, setFormKey] = useState(0);
   /** Último cadastro atualizado por documento repetido (RN-061): aviso acima da lista. */
   const [atualizada, setAtualizada] = useState<Parte | null>(null);
   const abrir = (f: FormParte) => { setForm(f); setFormKey((k) => k + 1); };
 
-  // Só opções ativas, pela ordem e pela descrição (FR-095).
-  const formas = opcoesAtivas(data.tabelas, "forma_pagamento");
-  const condicoes = opcoesAtivas(data.tabelas, "condicao_pagamento");
+  const salvar = (p: Parte, atualizou: boolean, base: Parte[]) => {
+    setPartes(base.some((x) => x.id === p.id) ? base.map((x) => (x.id === p.id ? p : x)) : [...base, p]);
+    setAtualizada(atualizou ? p : null);
+    showToast({
+      type: "success",
+      title: atualizou ? "Cadastro atualizado" : form?.id ? "Alterações salvas" : p.tipo === "cliente" ? "Cliente cadastrado" : "Fornecedor cadastrado",
+      content: atualizou ? `${p.codigo} · ${p.nome}: só os campos preenchidos foram atualizados; os demais foram preservados.` : `${p.codigo} · ${p.nome}.`,
+      closeTime: 4000,
+    });
+    setForm(null);
+  };
+
+  const tituloForm = form?.id ? `${form.codigo} · ${form.nome}` : form?.tipo === "cliente" ? "Novo cliente" : "Novo fornecedor";
+  return (
+    <ContratosShell
+      context={context}
+      secao="partes"
+      titulo={form ? tituloForm : "Cadastro de Partes"}
+      subtitulo={form ? (form.tipo === "cliente" ? "Cliente de receita: operadora, empresa, particular ou liminar." : "Fornecedor ou pessoal de despesa: PJ, locador, CLT, autônomo ou consultor.") : "Clientes (receita) e fornecedores & pessoal (despesa) que podem assinar contratos."}
+      foco={form ? { voltar: ROTAS.partes, rotuloVoltar: "Voltar para Partes", onVoltar: () => setForm(null) } : undefined}
+    >
+      {(data) => {
+        const lista = partes ?? data.partes;
+        // Só opções ativas, pela ordem e pela descrição (FR-095).
+        const formas = opcoesAtivas(data.tabelas, "forma_pagamento");
+        const condicoes = opcoesAtivas(data.tabelas, "condicao_pagamento");
+        return form ? (
+          <DrawerParte
+            key={formKey}
+            modo="pagina"
+            show
+            partes={lista}
+            proximo={{ cliente: data.proximoCliente, fornecedor: data.proximoFornecedor }}
+            formas={formas}
+            condicoes={condicoes}
+            inicial={form}
+            papel={papel}
+            onCancel={() => setForm(null)}
+            onSave={(p, atualizou) => salvar(p, atualizou, lista)}
+          />
+        ) : (
+          <Partes partes={lista} controls={context.controls} papel={papel} atualizada={atualizada} abrir={abrir} />
+        );
+      }}
+    </ContratosShell>
+  );
+}
+
+function Partes({ partes, controls, papel, atualizada, abrir }: { partes: Parte[]; controls: Record<string, string>; papel: Papel; atualizada: Parte | null; abrir: (f: FormParte) => void }) {
+  const [visao, setVisao] = useState<Visao>(VISOES.some((v) => v.id === controls.visao) ? (controls.visao as Visao) : "todas");
+  const [pessoa, setPessoa] = useState<"PJ" | "PF" | null>(null);
+  const [busca, setBusca] = useState("");
 
   const tipoDaVisao = VISOES.find((v) => v.id === visao)!.tipo;
   const daVisao = (v: Visao) => partes.filter((p) => { const t = VISOES.find((x) => x.id === v)!.tipo; return !t || p.tipo === t; });
@@ -651,18 +798,6 @@ function Partes({ data, controls, papel }: { data: ContratosData; controls: Reco
       ["Código", "Nome", "Documento", "Subtipo", "Fluxo", "Contato", "E-mail", "Telefone", "Status", "Homologado"],
       lista.map((p) => [p.codigo, p.nome, p.documento, SUBTIPO[p.subtipo], FLUXO[p.fluxo].label, p.contato.nome, p.contato.email, p.contato.telefone, p.ativo ? "Ativo" : "Inativo", p.tipo === "fornecedor" ? (p.homologado ? "Sim" : "Não") : "—"]),
     );
-
-  const salvar = (p: Parte, atualizou: boolean) => {
-    setPartes((ps) => (ps.some((x) => x.id === p.id) ? ps.map((x) => (x.id === p.id ? p : x)) : [...ps, p]));
-    setForm(null);
-    setAtualizada(atualizou ? p : null);
-    showToast({
-      type: "success",
-      title: atualizou ? "Cadastro atualizado" : form?.id ? "Alterações salvas" : p.tipo === "cliente" ? "Cliente cadastrado" : "Fornecedor cadastrado",
-      content: atualizou ? `${p.codigo} · ${p.nome}: só os campos preenchidos foram atualizados; os demais foram preservados.` : `${p.codigo} · ${p.nome}.`,
-      closeTime: 4000,
-    });
-  };
 
   const botoes = (
     <>
@@ -754,10 +889,6 @@ function Partes({ data, controls, papel }: { data: ContratosData; controls: Reco
           />
         )}
       </Bloco>
-
-      {form && (
-        <DrawerParte key={formKey} show partes={partes} proximo={{ cliente: data.proximoCliente, fornecedor: data.proximoFornecedor }} formas={formas} condicoes={condicoes} inicial={form} papel={papel} onCancel={() => setForm(null)} onSave={salvar} />
-      )}
     </div>
   );
 }

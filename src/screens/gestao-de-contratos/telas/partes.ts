@@ -3,7 +3,7 @@ import { ContratosPartes } from "../../ContratosPartes.js";
 import { ROTAS, papelControl } from "../ui.js";
 import { FLOW, cenario } from "./comum.js";
 
-const COMPONENTS = ["core.table", "core.input", "core.drawer-modal", "core.radio-group", "core.form-grid", "core.empty-state-card", "core.toast-wrapper"];
+const COMPONENTS = ["core.table", "core.input", "core.radio-group", "core.form-grid", "core.empty-state-card", "core.toast-wrapper"];
 const c = cenario(COMPONENTS);
 
 export const partes: Feature = {
@@ -44,7 +44,7 @@ export const partes: Feature = {
       expected: [
         "Visões Todas, Clientes (receita) e Fornecedores & Pessoal (despesa) com contagem; filtro Pessoa PJ/PF com contagem; busca; etiquetas e Exportar planilha.",
         "Comercial vê só Novo cliente; Compras / RH-DP vê só Novo fornecedor; Administrador vê os dois; os demais papéis só consultam.",
-        "Clicar na linha abre o cadastro para edição no painel lateral.",
+        "Clicar na linha abre o cadastro completo para edição em página no modo foco (sem menu lateral, Voltar para Partes e rodapé fixo).",
         "Código automático do sequencial (CLI-0006, FOR-0009) ou manual / legado; código manual já usado é recusado com \"Código já utilizado\".",
         "CNPJ/CPF comparado só pelos dígitos: documento repetido atualiza o cadastro existente só com os campos preenchidos e mostra o aviso Cadastro atualizado.",
       ],
@@ -72,7 +72,7 @@ export const partes: Feature = {
       controls: { form: "cliente", visao: "clientes" },
       intent: "Comercial abre o cadastro de cliente com os valores padrão da RN-062.",
       expected: [
-        "Painel lateral Novo cliente, subtipo Particular PJ · PJ marcado entre Particular PJ, Operadora ANS, Empresa Corporativa (PJ), Particular PF e Liminar Judicial (PF).",
+        "Página Novo cliente em modo foco (Voltar para Partes, rodapé fixo); subtipo Particular PJ · PJ marcado entre Particular PJ, Operadora ANS, Empresa Corporativa (PJ), Particular PF e Liminar Judicial (PF).",
         "Código CLI-0006 com selo Automático e o link Informar código manual / legado (selo muda para Manual / Legado).",
         "Seções: Identificação (Razão social, CNPJ), Dados empresariais (Nome fantasia, Inscrição municipal, Inscrição estadual), Paciente vinculado (Paciente/beneficiário *, CPF do paciente), Faturamento e recebimento, Endereço e contato, Situação.",
         "Recebimento já vem Boleto Bancário e condição 30 dias direto; Situação Ativo.",
@@ -123,7 +123,7 @@ export const partes: Feature = {
       controls: { form: "fornecedor-pj", visao: "fornecedores", papel: "compras" },
       intent: "Compras cadastra uma clínica parceira como fornecedor PJ Assistencial.",
       expected: [
-        "Painel lateral Novo fornecedor, categoria PJ Assistencial · PJ entre PJ Assistencial, PJ Corporativo, PJ Específico (Locador), Colaborador CLT, Autônomo / RPA e Consultor PF; código FOR-0009 Automático.",
+        "Página Novo fornecedor em modo foco (Voltar para Partes, rodapé fixo); categoria categoria PJ Assistencial · PJ entre PJ Assistencial, PJ Corporativo, PJ Específico (Locador), Colaborador CLT, Autônomo / RPA e Consultor PF; código FOR-0009 Automático.",
         "Dados empresariais: Nome fantasia, inscrições, Natureza jurídica, Regime tributário (Simples Nacional), CNAE, Retenções aplicáveis, E-mail financeiro; Habilitação técnica: Responsável técnico e Conselho.",
         "Pagamento e dados bancários: PIX, condição 30 dias direto, Banco, Agência, Conta, Tipo de conta (Corrente) e Chave Pix; Situação Ativo e Homologado para contratar ligados.",
         "Na lista, o papel Compras vê só Novo fornecedor.",
