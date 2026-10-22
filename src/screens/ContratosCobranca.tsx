@@ -512,7 +512,7 @@ function CobrancaTela({ data, context }: { data: ContratosData; context: Scenari
               {modoErp === "sandbox" && <Tag item="Omie: SANDBOX / SIMULAÇÃO HOMOLOGADA" variant="dark-purple" leftIcon="fa-flask" title="Sem credenciais do ERP configuradas: o envio gera um título fictício OMIE-{n}." className="whitespace-nowrap" />}
               {!opera && <SeloLeitura motivo="Cobrança, conferência e envio ao ERP são do Financeiro / Controladoria. Para protocolar ou conferir um documento, peça a quem tem esse papel." />}
               <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar}>Exportar planilha</Button>
-              {opera && <Button variant="outline" leftIcon="fa-file-circle-plus" onClick={() => setProtocolo({ form: {}, auto: {} })}>Protocolar documento</Button>}
+              {opera && <Button leftIcon="fa-file-circle-plus" onClick={() => setProtocolo({ form: {}, auto: {} })}>Protocolar documento</Button>}
             </div>
           </div>
           <Etiquetas itens={etiquetas} onLimpar={limpar} />

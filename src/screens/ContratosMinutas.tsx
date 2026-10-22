@@ -39,7 +39,7 @@ import {
   BLOCOS_JURIDICOS, TAGS_MINUTA, TODAY, br, parteDe, proximaVersao, rotuloAditivo, simular,
   type Clausula, type Contrato, type ContratosData, type Minuta,
 } from "./gestao-de-contratos/model.js";
-import { ACOES_COMPACTAS, AbasBotao, Aviso, Bloco, ContratosShell, Etiquetas, FolhaA4, ROTAS, TagMinuta, TextoComTags, exportarPlanilha, irFicha, paginar, papelDe, SeloLeitura, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
+import { ACOES_COMPACTAS, Aviso, Bloco, ContratosShell, Etiquetas, FolhaA4, ROTAS, TagMinuta, TextoComTags, exportarPlanilha, irFicha, paginar, papelDe, SeloLeitura, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 import { ModalAdequacao, anteriorA, gerarAdequacao, impactadosPor } from "./ContratosDiff.js";
 
 type Modo = "catalogo" | "editor" | "simulacao";
@@ -400,7 +400,7 @@ function Catalogo({
                       ? [
                           (c) => (
                             <span className="inline-flex pr-3">
-                              <Button size="small" variant="outline" leftIcon="fa-file-plus" onClick={(e) => { e.stopPropagation(); adequar(c); }}>Gerar Termo Aditivo</Button>
+                              <Button size="small" variant="tint" leftIcon="fa-file-plus" onClick={(e) => { e.stopPropagation(); adequar(c); }}>Gerar Termo Aditivo</Button>
                             </span>
                           ),
                         ]
@@ -415,19 +415,19 @@ function Catalogo({
 
       <Bloco>
         <div className="flex flex-col gap-4">
-          {/* `button_tabs`: um filtro por vez (FR-059), com a contagem no título. */}
-          <AbasBotao<FiltroId | "todas">
-            id="minutas-filtro"
-            className="self-start"
-            ativa={filtros.size === 1 ? [...filtros][0]! : "todas"}
-            onChange={(id) => setFiltros(id === "todas" ? new Set() : new Set([id]))}
-            abas={[
-              { id: "todas", titulo: `Todas (${minutas.length})` },
-              ...FILTROS.map((f) => ({ id: f.id, titulo: `${f.label} (${minutas.filter((m) => passa(m, new Set([f.id]))).length})` })),
-            ]}
-          />
+          {/* Busca e filtro em `select` (FR-059), como as outras listas do módulo, com a contagem no rótulo. */}
           <div className="flex flex-wrap items-end gap-3">
             <Input type="search" id="minutas-busca" placeholder="Buscar código, título ou revisor" leftIcon="fa-magnifying-glass" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full sm:w-72" inputClass="text-ellipsis" />
+            <Input
+              type="select"
+              id="minutas-filtro"
+              label="Filtro"
+              prompt={`Todas (${minutas.length})`}
+              value={filtros.size === 1 ? [...filtros][0] : ""}
+              options={FILTROS.map((f) => ({ label: `${f.label} (${minutas.filter((m) => passa(m, new Set([f.id]))).length})`, value: f.id }))}
+              onChange={(v) => setFiltros(v ? new Set([v as FiltroId]) : new Set())}
+              className="w-full sm:w-64"
+            />
             <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
               {!podeEditar && <SeloLeitura motivo="Só o Jurídico / Compliance cria, revisa e clona minutas. Você pode comparar versões no Diff Jurídico." />}
               <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar}>Exportar planilha</Button>

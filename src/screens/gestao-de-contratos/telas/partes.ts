@@ -57,7 +57,7 @@ export const partes: Feature = {
       route: ROTAS.partes,
       intent: "Consultar clientes e fornecedores e abrir um cadastro.",
       expected: [
-        "Visões em button_tabs: Todas (13), Clientes (receita) (5), Fornecedores & Pessoal (despesa) (8); busca à esquerda e select Pessoa: PJ (9) e PF (4).",
+        "Select Parte (visões): Todas (13), Clientes (receita) (5), Fornecedores & Pessoal (despesa) (8); busca à esquerda e select Pessoa: PJ (9) e PF (4).",
         "Tabela por código: CLI-0001 Vida Plena Saúde S.A. … FOR-0008 Gráfica Pontual Ltda.; colunas código, nome, documento, subtipo · pessoa, fluxo, contato e status.",
         "Subtipos do glossário: Operadora ANS, Particular PJ, Particular PF, Liminar Judicial; PJ Assistencial, PJ Específico (Locador), PJ Corporativo, Colaborador CLT, Autônomo / RPA.",
         "CLI-0005 Pedro Henrique Sales com selo Liminar; FOR-0008 Gráfica Pontual Inativo e Não homologado; demais fornecedores Homologado.",

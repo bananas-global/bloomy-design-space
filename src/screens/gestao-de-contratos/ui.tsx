@@ -453,25 +453,6 @@ export function AbasBotao<T extends string>({ id, abas, ativa, onChange, classNa
   );
 }
 
-/** Botão de filtro rápido (pílula liga/desliga). */
-export function Filtro({ ativo, onClick, children, contagem, icone }: { ativo: boolean; onClick: () => void; children: ReactNode; contagem?: number; icone?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={ativo}
-      onClick={onClick}
-      className={cx(
-        "inline-flex items-center gap-2 rounded-lg px-3 h-9 text-sm font-bold transition-colors whitespace-nowrap",
-        ativo ? "bg-brand-blue/30 text-brand-blue-dark shadow-top-inset" : "bg-brand-purple-dark/5 text-brand-purple-dark/60 hover:bg-brand-purple-dark/10",
-      )}
-    >
-      {icone && <Icon name={icone} />}
-      {children}
-      {contagem != null && <span className={cx("rounded-full px-1.5 text-xs tabular-nums", ativo ? "bg-white/70" : "bg-white")}>{contagem}</span>}
-    </button>
-  );
-}
-
 /**
  * Documento como folha A4, com "Página X de Y" no rodapé. Usado em minutas,
  * simulação, comparação e PDF: o Jurídico revisa vendo o que vai ser assinado.

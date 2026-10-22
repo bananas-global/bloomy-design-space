@@ -225,7 +225,7 @@ export const ficha: Feature = {
       expected: [
         "Eventos do contrato mais versões, aditivos, documentos do dossiê já anexados e cobranças/ERP: \"Omie ERP Sincronizado: Título #88412\" (09/07/2026) perto do topo e a criação a partir da MIN-PJA v2.0 (20/07/2025) no fim.",
         "Cores por tipo (RN-067): workflow aprovado/assinado verde e demais âmbar, criação azul, versão roxo, aditivo laranja (o `tag` não tem rosa), dossiê ciano, cobrança âmbar, ERP verde, distrato vermelho.",
-        "Pílulas por tipo filtram a linha; Todos volta.",
+        "Select Tipo de evento (com a contagem de cada tipo) filtra a linha; Todos volta.",
       ],
     }),
     c({

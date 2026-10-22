@@ -46,7 +46,7 @@ export const tabelas: Feature = {
       ],
       expected: [
         "Um cartão só, com o button_tabs no topo: Tabelas de apoio e Campos por categoria.",
-        "Tabelas: as dez listas em etiquetas (com a contagem de opções de cada uma) mais Mostrar Todas; um clique troca a lista; cada opção com ordem, código, descrição, status (switch) e \"em uso em N contratos\".",
+        "Tabelas: select Tabela com as dez listas (com a contagem de opções de cada uma) mais Mostrar Todas; escolher troca a lista; cada opção com ordem, código, descrição, status (switch) e \"em uso em N contratos\".",
         "Nova opção: tipo (lista), descrição obrigatória, código opcional (vazio = descrição em MAIÚSCULAS com \"_\"; repetido ganha sufixo _2) e ordem 10; nasce ativa, com toast.",
         "Adição rápida: só tipo e descrição; vazia é recusada com \"Descrição obrigatória\".",
         "Ativar e desativar sem sair da lista; excluir com confirmação. Opção em uso não se exclui: o modal avisa e oferece Desativar.",

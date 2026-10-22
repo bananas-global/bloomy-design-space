@@ -1199,16 +1199,17 @@ function AbaLinhaDoTempo({ eventos }: { eventos: Evento[] }) {
   return (
     <Secao titulo="Linha do Tempo Forense" icone="fa-timeline">
       <p className="text-sm text-brand-purple-dark/70">Criação, workflow, versões, aditivos, dossiê, cobranças, ERP e encerramento, do mais recente ao mais antigo. Nenhum evento é apagado ou editado.</p>
-      <div className="flex flex-wrap items-center gap-2" aria-label="Filtrar por tipo">
-        <button type="button" onClick={() => setTipo(null)} aria-pressed={tipo == null} className={cx("rounded-full px-3 py-1 text-sm font-bold", tipo == null ? "bg-brand-blue/30 text-brand-blue-dark" : "bg-brand-purple-dark/5 text-brand-purple-dark/60")}>
-          Todos {ordenados.length}
-        </button>
-        {presentes.map((t) => (
-          <button key={t} type="button" onClick={() => setTipo(tipo === t ? null : t)} aria-pressed={tipo === t} className={cx("rounded-full transition-opacity", tipo && tipo !== t && "opacity-40")}>
-            <Tag item={`${EVENTO[t].label} ${ordenados.filter((e) => e.tipo === t).length}`} variant={EVENTO[t].variant} leftIcon={EVENTO[t].icon} pill />
-          </button>
-        ))}
-      </div>
+      {/* Filtro por tipo num `select`, como os filtros das listas; a cor de cada tipo fica no selo do evento. */}
+      <Input
+        type="select"
+        id="linha-do-tempo-tipo"
+        label="Tipo de evento"
+        prompt={`Todos (${ordenados.length})`}
+        value={tipo ?? ""}
+        options={presentes.map((t) => ({ label: `${EVENTO[t].label} (${ordenados.filter((e) => e.tipo === t).length})`, value: t }))}
+        onChange={(v) => setTipo((v || null) as EventoTipo | null)}
+        className="w-full sm:w-64"
+      />
       <div className="pl-4 pt-2">
         <TimelineList
           item={lista.map((e) => ({

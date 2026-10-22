@@ -23,7 +23,7 @@ import { EmptyStateCard } from "../components/Layout.js";
 import { Modal } from "../components/Overlay.js";
 import { Tag } from "../components/Tag.js";
 import { FASES, type Fase } from "./gestao-de-contratos/model.js";
-import { Aviso, Bloco, ContratosShell, Etiquetas, Filtro, ROTAS } from "./gestao-de-contratos/ui.js";
+import { Aviso, Bloco, ContratosShell, Etiquetas, ROTAS } from "./gestao-de-contratos/ui.js";
 
 /* ------------------------------------------------------------------ */
 /* Conteúdo                                                            */
@@ -584,7 +584,7 @@ export function ContratosManual({ context }: ScreenProps) {
       secao="manual"
       titulo="Manual do Usuário"
       subtitulo="Procedimentos (POPs) e fluxogramas dos 13 módulos, do cadastro da parte ao encerramento."
-      acoes={<Button variant="outline" leftIcon="fa-certificate" onClick={() => setLicenca(true)}>Direitos & Licença</Button>}
+      acoes={<Button variant="tint" leftIcon="fa-certificate" onClick={() => setLicenca(true)}>Direitos & Licença</Button>}
     >
       {() => (
         <>
@@ -639,7 +639,7 @@ function Manual({ context }: { context: ScenarioContext }) {
     <div className="space-y-6">
       <Bloco>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="flex flex-wrap items-end gap-3">
             <div className="relative w-full sm:w-96">
               <Input
                 type="search"
@@ -671,56 +671,59 @@ function Manual({ context }: { context: ScenarioContext }) {
                 </ul>
               )}
             </div>
+            {/* Oito opções: `select`, como os filtros das listas do módulo. */}
+            <Input
+              type="select"
+              id="manual-fase"
+              label="Fase do ciclo de vida"
+              prompt={`Todas as fases (${MODULOS.length})`}
+              value={fase ?? ""}
+              options={FASES.map((f) => ({ label: `${f.n}. ${f.label} (${MODULOS.filter((m) => m.fases.includes(f.id)).length})`, value: f.id }))}
+              onChange={(v) => setFase((v || null) as typeof fase)}
+              className="w-full sm:w-80"
+            />
             {busca && <Button variant="ghost" leftIcon="fa-xmark" onClick={limparBusca}>Limpar busca</Button>}
             <div className="ml-auto flex gap-2">
-              <Button variant="outline" leftIcon={todosAbertos ? "fa-angles-up" : "fa-angles-down"} onClick={() => setAbertos(todosAbertos ? new Set() : new Set(visiveis.map((m) => m.id)))} disabled={visiveis.length === 0}>
+              <Button variant="tint" leftIcon={todosAbertos ? "fa-angles-up" : "fa-angles-down"} onClick={() => setAbertos(todosAbertos ? new Set() : new Set(visiveis.map((m) => m.id)))} disabled={visiveis.length === 0}>
                 {todosAbertos ? "Recolher todos" : "Expandir todos"}
               </Button>
             </div>
           </div>
+          {/* Só aparece durante a busca: o aviso das 2 letras ou o resultado. */}
+          {(termo.length === 1 || buscando) && (
           <p className="text-sm text-brand-purple-dark/60" aria-live="polite">
             {termo.length === 1
               ? `Digite pelo menos ${MIN_BUSCA} letras para buscar.`
-              : buscando
-                ? `${ocorrenciasTotal} trecho(s) com "${termo}" em ${visiveis.length} módulo(s).`
-                : "Busque por um termo ou filtre pela fase do ciclo de vida."}
+              : `${ocorrenciasTotal} trecho(s) com "${termo}" em ${visiveis.length} módulo(s).`}
           </p>
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrar por fase do ciclo de vida">
-            <Filtro ativo={!fase} onClick={() => setFase(null)} contagem={MODULOS.length}>Todas as fases</Filtro>
-            {FASES.map((f) => (
-              <Filtro key={f.id} ativo={fase === f.id} icone={f.icon} onClick={() => setFase(fase === f.id ? null : f.id)} contagem={MODULOS.filter((m) => m.fases.includes(f.id)).length}>
-                {f.n}. {f.label}
-              </Filtro>
-            ))}
-          </div>
+          )}
           <Etiquetas
             itens={[
               ...(fase ? [{ id: "fase", label: `Fase: ${FASES.find((f) => f.id === fase)!.label}`, onRemove: () => setFase(null) }] : []),
               ...(buscando ? [{ id: "busca", label: `Busca: "${termo}"`, onRemove: limparBusca }] : []),
             ]}
-            total={visiveis.length}
+            total={fase || buscando ? visiveis.length : undefined}
             singular="módulo"
             onLimpar={() => { setFase(null); limparBusca(); }}
           />
         </div>
-      </Bloco>
 
-      {visiveis.length === 0 ? (
-        <Bloco>
+        {/* Os módulos ficam no mesmo cartão da busca e do filtro, como a lista das outras telas. */}
+        {visiveis.length === 0 ? (
           <EmptyStateCard icon="fa-book-open" text={buscando ? `Nada encontrado para "${termo}"` : "Nenhum módulo nesta fase"}>
             <p>Tente outro termo ou outra fase do ciclo de vida.</p>
             <div className="mt-6 flex justify-center">
               <Button variant="outline" leftIcon="fa-xmark" onClick={() => { setFase(null); limparBusca(); }}>Limpar busca e filtro</Button>
             </div>
           </EmptyStateCard>
-        </Bloco>
-      ) : (
-        <div className="space-y-4">
-          {visiveis.map((m) => (
-            <CartaoModulo key={m.id} modulo={m} numero={MODULOS.indexOf(m) + 1} aberto={abertos.has(m.id)} onAlternar={() => alternar(m.id)} termo={buscando ? termo : ""} context={context} />
-          ))}
-        </div>
-      )}
+        ) : (
+          <div className="space-y-3">
+            {visiveis.map((m) => (
+              <CartaoModulo key={m.id} modulo={m} numero={MODULOS.indexOf(m) + 1} aberto={abertos.has(m.id)} onAlternar={() => alternar(m.id)} termo={buscando ? termo : ""} context={context} />
+            ))}
+          </div>
+        )}
+      </Bloco>
     </div>
   );
 }
@@ -733,7 +736,7 @@ function CartaoModulo({ modulo: m, numero, aberto, onAlternar, termo, context }:
   const D = ({ t }: { t: string }) => <Destaque texto={t} termo={termo} />;
   const corpo = `manual-${m.id}-corpo`;
   return (
-    <section id={`manual-${m.id}`} className="scroll-mt-24 rounded-2xl bg-white shadow-main">
+    <section id={`manual-${m.id}`} className="scroll-mt-24 rounded-xl border border-brand-purple-dark/10 bg-white">
       <button type="button" onClick={onAlternar} aria-expanded={aberto} aria-controls={corpo} className="flex w-full items-start gap-4 p-6 text-left">
         <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-brand-blue/20 text-brand-blue-dark">
           <Icon name={m.icone} type="solid" />

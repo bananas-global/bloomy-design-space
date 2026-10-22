@@ -21,7 +21,7 @@
  * rápido (`modo="rapido"`), num `drawer_modal` só com os obrigatórios da
  * RN-063, para não sair do contrato; o resto se completa aqui.
  *
- * Feito na tela (componente novo): as pílulas de visão/filtro e as seções do
+ * Feito na tela (componente novo): as seções do
  * cadastro, a página do cadastro em modo foco (cartões numerados, índice das
  * seções à esquerda e rodapé fixo, como o Novo Contrato). O resto é
  * `drawer_modal`, `table`, `input`, `radio_selector`,
@@ -40,7 +40,7 @@ import { Table } from "../components/Table.js";
 import { Tag } from "../components/Tag.js";
 import { FLUXO, SUBTIPO, SUBTIPOS_CLIENTE, SUBTIPOS_FORNECEDOR, type Papel, type Parte, type ParteSubtipo, type ParteTipo } from "./gestao-de-contratos/model.js";
 import { opcoesAtivas } from "./ContratosTabelas.js";
-import { Aviso, Bloco, ContratosShell, ROTAS, AbasBotao, Etiquetas, Selo, exportarPlanilha, papelDe, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
+import { Aviso, Bloco, ContratosShell, ROTAS, Etiquetas, Selo, exportarPlanilha, papelDe, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 
 /* ------------------------------------------------------------------ */
 /* Regras do cadastro                                                  */
@@ -815,12 +815,19 @@ function Partes({ partes, controls, papel, atualizada, abrir }: { partes: Parte[
       )}
       <Bloco>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <AbasBotao id="partes-visao" abas={VISOES.map((v) => ({ id: v.id, titulo: `${v.label} (${daVisao(v.id).length})` }))} ativa={visao} onChange={setVisao} />
-            <div className="ml-auto flex flex-wrap items-center gap-3">{botoes}</div>
-          </div>
+          {/* Busca e filtros em `select`, como as outras listas do módulo; ações à direita. */}
           <div className="flex flex-wrap items-end gap-3">
             <Input type="search" id="partes-busca" placeholder="Buscar nome, código ou documento" leftIcon="fa-magnifying-glass" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full sm:w-72" inputClass="text-ellipsis" />
+            <Input
+              type="select"
+              id="partes-visao"
+              label="Parte"
+              prompt={`Todas (${partes.length})`}
+              value={visao === "todas" ? "" : visao}
+              options={VISOES.filter((v) => v.id !== "todas").map((v) => ({ label: `${v.label} (${daVisao(v.id).length})`, value: v.id }))}
+              onChange={(v) => setVisao((v || "todas") as Visao)}
+              className="w-full sm:w-72"
+            />
             <Input
               type="select"
               id="partes-pessoa"
@@ -831,7 +838,10 @@ function Partes({ partes, controls, papel, atualizada, abrir }: { partes: Parte[
               onChange={(v) => setPessoa((v || null) as "PJ" | "PF" | null)}
               className="w-full sm:w-48"
             />
-            <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar} className="ml-auto">Exportar planilha</Button>
+            <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
+              <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar}>Exportar planilha</Button>
+              {botoes}
+            </div>
           </div>
           <Etiquetas itens={etiquetas} onLimpar={limpar} />
         </div>

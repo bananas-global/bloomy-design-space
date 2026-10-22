@@ -26,7 +26,6 @@ import { Input } from "../components/Input.js";
 import { EmptyStateCard } from "../components/Layout.js";
 import { DrawerModal } from "../components/Overlay.js";
 import { Table } from "../components/Table.js";
-import { ButtonTabs, titleToSlug } from "../components/Tabs.js";
 import { Tag } from "../components/Tag.js";
 import { ModalAditivo } from "./gestao-de-contratos/FormAditivo.js";
 import {
@@ -34,7 +33,7 @@ import {
   indiceDe, janelaAberta, parteDe, proximaVersao, proximoAditivo, rotuloAditivo, valorReajustado,
   type Aditivo, type Contrato, type ContratosData, type Faixa, type Papel,
 } from "./gestao-de-contratos/model.js";
-import { ACOES_COMPACTAS, Aviso, Bloco, Dados, ContratosShell, Etiquetas, Selo, Valor, exportarPlanilha, papelDe, SeloLeitura, irFicha, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
+import { ACOES_COMPACTAS, AbasBotao, Aviso, Bloco, Dados, ContratosShell, Etiquetas, Selo, Valor, exportarPlanilha, papelDe, SeloLeitura, irFicha, CONTEUDO_DRAWER, RODAPE_DRAWER } from "./gestao-de-contratos/ui.js";
 
 type Aba = "radar" | "reajustes" | "aditivos";
 const ABAS: Aba[] = ["radar", "reajustes", "aditivos"];
@@ -103,14 +102,7 @@ function Vigencia({ data, context }: { data: ContratosData; context: ScenarioCon
   const [aditivos, setAditivos] = useState(data.aditivos);
   const [contratoId, setContratoId] = useState(data.contratos.some((c) => c.id === ctl.contrato) ? ctl.contrato! : "");
   const aba: Aba = ABAS.includes(ctl.aba as Aba) ? (ctl.aba as Aba) : ctl.modal === "aditivo" ? "aditivos" : ctl.modal === "aplicar-reajuste" ? "reajustes" : "radar";
-  // O cenário escolhe a aba inicial; ButtonTabs lê a escolha da URL ao montar.
-  useState(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const titulo = { radar: "Radar", reajustes: "Reajustes", aditivos: "Aditivos" }[aba];
-    params.set("vigenciaTab", `vigencia-abas|${titleToSlug(titulo)}`);
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}?${params.toString()}${window.location.hash}`);
-  });
+  const [abaAtual, setAbaAtual] = useState<Aba>(aba);
 
   const atual = { ...data, contratos, aditivos };
   const vigentesTodos = contratos.filter((c) => c.status === "vigente");
@@ -205,22 +197,24 @@ function Vigencia({ data, context }: { data: ContratosData; context: ScenarioCon
   );
 
   const alvo = contratos.find((c) => c.id === reajuste);
+  const abasVigencia = (
+    <AbasBotao<Aba>
+      id="vigencia-abas"
+      abas={[{ id: "radar", titulo: "Radar" }, { id: "reajustes", titulo: "Reajustes" }, { id: "aditivos", titulo: "Aditivos" }]}
+      ativa={abaAtual}
+      onChange={setAbaAtual}
+    />
+  );
 
   return (
     <>
       <Bloco>
         {/* Sem contrato filtrado o cabeçalho fica vazio e não pode ocupar o espaço do topo. */}
         {filtrado && header}
-        <ButtonTabs
-          id="vigencia-abas"
-          trackerId="vigenciaTab"
-          size="small"
-          tab={[
-            { title: "Radar", content: <Radar data={atual} vs={vs} faixaInicial={ctl.faixa} abrir={(id) => irFicha(context, id, "vigencia")} /> },
-            { title: "Reajustes", content: <Reajustes data={atual} vs={vs} papel={papel} onAplicar={setReajuste} /> },
-            { title: "Aditivos", content: <Aditivos data={atual} contratoId={contratoId} papel={papel} onNovo={!naoVigente && vigentesTodos.length ? () => setNovoAditivo(true) : undefined} /> },
-          ]}
-        />
+        {/* `button_tabs` controlado, na mesma linha dos filtros e botões de cada aba. */}
+        {abaAtual === "radar" && <Radar abas={abasVigencia} data={atual} vs={vs} faixaInicial={ctl.faixa} abrir={(id) => irFicha(context, id, "vigencia")} />}
+        {abaAtual === "reajustes" && <Reajustes abas={abasVigencia} data={atual} vs={vs} papel={papel} onAplicar={setReajuste} />}
+        {abaAtual === "aditivos" && <Aditivos abas={abasVigencia} data={atual} contratoId={contratoId} papel={papel} onNovo={!naoVigente && vigentesTodos.length ? () => setNovoAditivo(true) : undefined} />}
       </Bloco>
       {alvo && <ModalReajuste data={atual} contrato={alvo} onCancel={() => setReajuste(undefined)} onAplicar={aplicar} />}
       {novoAditivo && (
@@ -268,7 +262,7 @@ function passaRadar(c: Contrato, f: FiltroRadar | "") {
   return f === "critico" ? fx === "critico" || fx === "vencido" : fx === f;
 }
 
-function Radar({ data, vs, faixaInicial, abrir }: { data: ContratosData; vs: Contrato[]; faixaInicial?: string; abrir: (id: string) => void }) {
+function Radar({ data, vs, faixaInicial, abrir, abas }: { data: ContratosData; vs: Contrato[]; faixaInicial?: string; abrir: (id: string) => void; abas: ReactNode }) {
   const [filtro, setFiltro] = useState<FiltroRadar | "">(FILTROS_RADAR.some((f) => f.id === faixaInicial) ? (faixaInicial as FiltroRadar) : "");
   const lista = useMemo(() => vs.filter((c) => passaRadar(c, filtro)).sort((a, b) => a.fim.localeCompare(b.fim)), [vs, filtro]);
   const contagem = (id: FiltroRadar) => vs.filter((c) => passaRadar(c, id)).length;
@@ -284,6 +278,8 @@ function Radar({ data, vs, faixaInicial, abrir }: { data: ContratosData; vs: Con
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        {abas}
+        <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
         <Input
           type="select"
           id="radar-filtro"
@@ -294,9 +290,10 @@ function Radar({ data, vs, faixaInicial, abrir }: { data: ContratosData; vs: Con
           onChange={(v) => setFiltro((v as FiltroRadar | undefined) ?? "")}
           className="w-full sm:w-64"
         />
-        <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar} className="ml-auto">
+        <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar}>
           Exportar planilha
         </Button>
+        </div>
       </div>
       <Etiquetas itens={rotulo ? [{ id: filtro, label: rotulo, onRemove: () => setFiltro("") }] : []} onLimpar={() => setFiltro("")} />
       {vs.length === 0 ? (
@@ -379,7 +376,7 @@ const AGUARDANDO = "Aguardando Data-Base";
 type FiltroIndice = "IPCA" | "IGP-M" | "CCT";
 const INDICES_FILTRO: FiltroIndice[] = ["IPCA", "IGP-M", "CCT"];
 
-function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Contrato[]; papel: Papel; onAplicar: (id: string) => void }) {
+function Reajustes({ data, vs, papel, onAplicar, abas }: { data: ContratosData; vs: Contrato[]; papel: Papel; onAplicar: (id: string) => void; abas: ReactNode }) {
   const [soAberta, setSoAberta] = useState(false);
   const [indice, setIndice] = useState<FiltroIndice | "">("");
   const passa = (c: Contrato, janela: boolean, ind: FiltroIndice | "") => (!janela || aberta(c)) && (!ind || indiceDe(data, c.indice).indice?.codigo === ind);
@@ -401,6 +398,8 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
+        {abas}
+        <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
         <Input
           type="select"
           id="reajuste-janela"
@@ -421,9 +420,10 @@ function Reajustes({ data, vs, papel, onAplicar }: { data: ContratosData; vs: Co
           onChange={(v) => setIndice((v as FiltroIndice | undefined) ?? "")}
           className="w-full sm:w-56"
         />
-        <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar} className="ml-auto">
+        <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar}>
           Exportar planilha
         </Button>
+        </div>
       </div>
       <Etiquetas
         itens={[
@@ -638,7 +638,7 @@ function ModalReajuste({ data, contrato, onCancel, onAplicar }: { data: Contrato
 /* Aditivos                                                            */
 /* ------------------------------------------------------------------ */
 
-function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; contratoId: string; papel: Papel; onNovo?: () => void }) {
+function Aditivos({ data, contratoId, papel, onNovo, abas }: { data: ContratosData; contratoId: string; papel: Papel; onNovo?: () => void; abas: ReactNode }) {
   const [tipo, setTipo] = useState("");
   const [busca, setBusca] = useState("");
   const tipos = data.tabelas.tipo_aditivo.map((o) => o.descricao);
@@ -674,9 +674,10 @@ function Aditivos({ data, contratoId, papel, onNovo }: { data: ContratosData; co
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <Input type="search" id="aditivo-busca" placeholder="Buscar código, contrato, parte ou impacto" leftIcon="fa-magnifying-glass" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full sm:w-72" inputClass="text-ellipsis" />
-        <Input type="select" id="aditivo-filtro-tipo" label="Tipo" prompt="Todos os tipos" value={tipo} options={tipos.map((t) => ({ label: t, value: t }))} onChange={(v) => setTipo(v ?? "")} className="w-full sm:w-56" />
-        <div className="ml-auto flex flex-wrap gap-2">
+        {abas}
+        <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
+          <Input type="search" id="aditivo-busca" placeholder="Buscar código, contrato, parte ou impacto" leftIcon="fa-magnifying-glass" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-full sm:w-72" inputClass="text-ellipsis" />
+          <Input type="select" id="aditivo-filtro-tipo" label="Tipo" prompt="Todos os tipos" value={tipo} options={tipos.map((t) => ({ label: t, value: t }))} onChange={(v) => setTipo(v ?? "")} className="w-full sm:w-56" />
           <Button variant="tint" leftIcon="fa-file-spreadsheet" onClick={exportar}>Exportar planilha</Button>
           {pode && onNovo && <Button leftIcon="fa-file-plus" onClick={onNovo}>Novo aditivo</Button>}
         </div>

@@ -22,7 +22,7 @@
  * prévia do campo no Novo Contrato. O resto é `button_tabs` (controlado, `AbasBotao`), `table`, `input` (com `select` e `switch`), `modal`, `tag`,
  * `button` e `empty_state_card`.
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ScenarioContext, ScreenProps } from "@brucesantos/design-space";
 import { showToast } from "../components/Action.js";
 import { Button } from "../components/Button.js";
@@ -144,13 +144,11 @@ function Tabelas({ data, controls, admin }: { data: ContratosData; controls: Rec
   const [area, setArea] = useState<Area>(controls.area === "campos" ? "campos" : "tabelas");
   return (
     <div className="space-y-6">
-      {/* As duas áreas num cartão só: o `button_tabs` fica dentro dele, no topo. */}
+      {/* As duas áreas num cartão só: o `button_tabs` fica na mesma linha do filtro e dos botões de cada área. */}
       <Bloco>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <AbasBotao id="tabelas-area" abas={AREAS} ativa={area} onChange={setArea} />
-          {!admin && <SeloLeitura motivo="Tabelas de apoio e campos por categoria são mantidos pelo Administrador. Para incluir ou mudar uma opção, peça a ele." />}
-        </div>
-        {area === "tabelas" ? <AreaTabelas data={data} controls={controls} admin={admin} /> : <AreaCampos data={data} controls={controls} admin={admin} />}
+        {area === "tabelas"
+          ? <AreaTabelas abas={<AbasBotao id="tabelas-area" abas={AREAS} ativa={area} onChange={setArea} />} data={data} controls={controls} admin={admin} />
+          : <AreaCampos abas={<AbasBotao id="tabelas-area" abas={AREAS} ativa={area} onChange={setArea} />} data={data} controls={controls} admin={admin} />}
       </Bloco>
     </div>
   );
@@ -164,7 +162,10 @@ type Filtro = TabelaId | "todas";
 type Linha = OpcaoTabela & { lista: TabelaId };
 type ModalTabela = { tipo: "nova" } | { tipo: "excluir"; lista: TabelaId; id: string } | null;
 
-function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls: Record<string, string>; admin: boolean }) {
+/** Selo de quem só consulta as tabelas (não é Administrador). */
+const SELO_LEITURA = <SeloLeitura motivo="Tabelas de apoio e campos por categoria são mantidos pelo Administrador. Para incluir ou mudar uma opção, peça a ele." />;
+
+function AreaTabelas({ data, controls, admin, abas }: { data: ContratosData; controls: Record<string, string>; admin: boolean; abas: ReactNode }) {
   const [tabelas, setTabelas] = useState(data.tabelas);
   const [filtro, setFiltro] = useState<Filtro>(controls.lista === "todas" || TABELAS.some((t) => t.id === controls.lista) ? (controls.lista as Filtro) : "categoria");
   const listaInicial: TabelaId = filtro === "todas" ? "categoria" : filtro;
@@ -208,34 +209,26 @@ function AreaTabelas({ data, controls, admin }: { data: ContratosData; controls:
   return (
     <>
       <div className="flex flex-col gap-4">
-        {/* As dez tabelas em etiquetas, mais "Mostrar Todas": um clique troca a lista. */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <ul className="flex flex-1 flex-wrap gap-2" aria-label="Tabelas de apoio">
-            {[{ id: "todas" as const, label: "Mostrar Todas", curto: "Mostrar Todas", icon: "fa-layer-group" }, ...TABELAS].map((t) => {
-              const sel = t.id === filtro;
-              const n = t.id === "todas" ? TABELAS.reduce((s, x) => s + tabelas[x.id].length, 0) : tabelas[t.id].length;
-              return (
-                <li key={t.id}>
-                  <button
-                    type="button"
-                    aria-pressed={sel}
-                    title={t.label}
-                    aria-label={`${t.label}, ${n} opções`}
-                    onClick={() => { setFiltro(t.id); if (t.id !== "todas") setRapida((x) => ({ ...x, lista: t.id as TabelaId, erro: undefined })); }}
-                    className={cx(
-                      "inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-semibold transition-colors",
-                      sel ? "bg-brand-blue/30 text-brand-blue-dark ring-1 ring-brand-blue" : "bg-brand-purple-dark/5 text-brand-purple-dark/70 hover:bg-brand-blue/15",
-                    )}
-                  >
-                    <Icon name={t.icon} className="text-xs" />
-                    {t.curto}
-                    <span className="rounded-full bg-white px-1.5 text-xs tabular-nums">{n}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+        {/* As dez tabelas e "Mostrar Todas" num `select`, como os filtros das listas do módulo. */}
+        <div className="flex flex-wrap items-end gap-3">
+          {abas}
+          <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
+          {!admin && SELO_LEITURA}
+          <Input
+            type="select"
+            id="tabelas-lista"
+            clear={false}
+            label="Tabela"
+            value={filtro}
+            options={[{ id: "todas" as const, label: "Mostrar Todas" }, ...TABELAS].map((t) => ({
+              label: `${t.label} (${t.id === "todas" ? TABELAS.reduce((s, x) => s + tabelas[x.id].length, 0) : tabelas[t.id].length})`,
+              value: t.id,
+            }))}
+            onChange={(v) => { const id = (v || "todas") as Filtro; setFiltro(id); if (id !== "todas") setRapida((x) => ({ ...x, lista: id, erro: undefined })); }}
+            className="w-full sm:w-80"
+          />
           {admin && <Button leftIcon="fa-plus" onClick={() => setModal({ tipo: "nova" })}>Nova opção</Button>}
+          </div>
         </div>
 
         {/* Inclusão rápida (FR-090): a mesma que as outras telas usam, só tipo e descrição. */}
@@ -404,7 +397,7 @@ export const nomeDoCampo = (rotulo: string) =>
   rotulo.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 const nomeDe = (c: CampoCategoria) => c.nome ?? nomeDoCampo(c.rotulo);
 
-function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: Record<string, string>; admin: boolean }) {
+function AreaCampos({ data, controls, admin, abas }: { data: ContratosData; controls: Record<string, string>; admin: boolean; abas: ReactNode }) {
   // Só as categorias ativas oferecem campos (RN-065), na ordem da tabela.
   const categorias = opcoesAtivas(data.tabelas, "categoria");
   const [campos, setCampos] = useState(data.camposCategoria);
@@ -456,9 +449,16 @@ function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: 
   ];
 
   return (
+    <div className="space-y-6">
+    <div className="flex flex-wrap items-end gap-3">
+      {abas}
+      <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
+        {!admin && SELO_LEITURA}
+        <Input type="select" id="campos-categoria" clear={false} label="Categoria" value={categoria} options={categorias.map((c) => ({ value: c, label: c }))} onChange={(v) => { if (v) { setCategoria(v); setRascunho(VAZIO); setErros({}); } }} className="w-full sm:w-80" />
+      </div>
+    </div>
     <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[1fr_380px]">
       <div className="flex flex-col gap-4">
-        <Input type="select" id="campos-categoria" clear={false} label="Categoria" value={categoria} options={categorias.map((c) => ({ value: c, label: c }))} onChange={(v) => { if (v) { setCategoria(v); setRascunho(VAZIO); setErros({}); } }} className="max-w-sm" />
         {padrao && (
           <p className="text-sm text-brand-purple-dark/60">
             <Icon name="fa-wand-magic-sparkles" className="mr-1 text-brand-blue" />Categoria padrão: já vem com campos predefinidos. O que o Administrador muda aqui fica valendo; os predefinidos não voltam por cima.
@@ -541,6 +541,7 @@ function AreaCampos({ data, controls, admin }: { data: ContratosData; controls: 
           </div>
         )}
       </aside>
+    </div>
     </div>
   );
 }
