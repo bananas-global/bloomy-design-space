@@ -39,9 +39,10 @@ e escreve `<.button variant="outline" color="red">` sem pensar.
 - Mesmo nome, mesmos atributos e valores do `attr` Phoenix; slots viram props.
 - Mesmo markup e mesmas classes Tailwind do HEEx.
 - Só os tokens do monólito. Não crie cor, variante ou tamanho que lá não existe.
-- Precisa de algo que o sistema não tem? Crie na tela do PR e diga isso no PR,
-  para o dev saber que é componente novo. Só entra em `src/components/` depois
-  que existir no Phoenix.
+- Precisa de algo que o sistema não tem? Crie na tela do PR e registre no
+  `expected` da rota, numa linha que comece por "Componente novo:", para o dev
+  saber que é componente novo. Só entra em `src/components/` depois que existir
+  no Phoenix.
 
 ## Fluxo: do Claude Design para o PR
 
@@ -55,11 +56,23 @@ e escreve `<.button variant="outline" color="red">` sem pensar.
    (vazio, com dados, erro…), cada um com `id`, `title`, `route`, `fixture` e, se
    o menu importar, `persona`. Os dados ficam em `fixtures`, sintéticos. O
    `product.ts` junta os registros sozinho: não edite ele num PR de tela.
-4. Abra o PR com o modelo de `.github/pull_request_template.md`. Cada push no PR
-   publica um preview (workflow `deploy.yml`, com o token da Vercel) e aponta para
-   ele o link fixo da branch, `bloomy-ds-<branch>.vercel.app`. Um comentário no
-   PR traz esse link e um link por cenário novo ou alterado. O endereço não muda
-   entre pushes e mostra sempre a última versão: é ele que vai para os devs.
+   Cada cenário traz também o critério de aceite, que é o que os devs e os
+   agentes de validação vão ler no PR:
+   - `intent`: o que o estado mostra; `preconditions` e `actions`, quando
+     ajudarem; `rules`, os ids das regras que valem ali.
+   - `expected`: uma linha por comportamento que dá para conferir na tela.
+     Descreva o comportamento, não o dado da fixture: "o cabeçalho mostra o
+     nome da operadora e o registro ANS", não "Unimed, ANS 999901". Quem valida
+     confere o sistema real, onde esses valores não existem.
+   - `ticket`: o link do card, quando houver.
+4. Abra o PR e não escreva a descrição. Cada push publica um preview (workflow
+   `deploy.yml`, com o token da Vercel) no link fixo da branch,
+   `bloomy-ds-<branch>.vercel.app`, e o motor reescreve a descrição com os
+   critérios de aceite gerados do registro: as telas que o PR cria ou altera, com
+   um link por cenário, o comportamento esperado, as regras e os componentes
+   (decisão 0018 do motor). Nada na descrição se preenche à mão: para mudar um
+   critério, mude o `registro.ts` e faça push. O endereço do preview não muda
+   entre pushes e mostra sempre a última versão; o PR é o que vai para os devs.
 5. Depois de implementada, a tela continua aqui como registro do design
    combinado no handoff. Ela não acompanha o sistema: ajustes feitos depois,
    direto no Phoenix, não voltam para cá sem passar por design. Se remover as

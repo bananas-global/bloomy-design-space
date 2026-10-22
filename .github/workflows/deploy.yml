@@ -137,26 +137,6 @@ jobs:
           vercel alias set "$URL" "$alias" --scope="$VERCEL_ORG_ID" --token=${{ secrets.VERCEL_TOKEN }}
           echo "url=https://${alias}" >> "$GITHUB_OUTPUT"
 
-      # Os cenários novos ou alterados no PR, cada um com seu link: rota mais os
-      # parâmetros que reproduzem o estado. Os que já estão na base ficam de fora.
-      - name: Listar os cenários do PR
-        id: cenarios
-        if: steps.alias.outputs.url != ''
-        # Sem a lista, o comentário sai só com o link da branch.
-        continue-on-error: true
-        env:
-          ORIGIN: ${{ steps.alias.outputs.url }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          base=""
-          if [ -n "$BASE_SHA" ] && git fetch --depth=1 origin "$BASE_SHA" \
-            && git worktree add --detach ../base FETCH_HEAD; then
-            ln -s "$PWD/node_modules" ../base/node_modules
-            base="../base"
-          fi
-          node scripts/preview-links.mjs "$ORIGIN" $base > "$RUNNER_TEMP/cenarios.json"
-          cat "$RUNNER_TEMP/cenarios.json"
-
       # O link aparece no resumo da execução, para não ter que caçar na saída dos
       # comandos. É o endereço que circula em revisão.
       - name: Mostrar o link
@@ -170,34 +150,21 @@ jobs:
             echo "Componentes e layouts na raiz."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # O link vai para o próprio PR, num comentário só, reescrito a cada push:
-      # o alias da branch e um link por cenário. É o que o designer manda para os
-      # devs, e é o mesmo endereço do primeiro ao último push.
-      - name: Comentar o preview no PR
+      # A descrição do PR é escrita pelo motor a partir do registro, a cada push:
+      # as telas que o PR cria ou altera, com o link de cada cenário no alias da
+      # branch, o comportamento esperado, as regras e os componentes (decisão 0018
+      # do motor). É onde os devs e os agentes de validação leem o critério.
+      #
+      # O workflow vem do merge com a main, mas o checkout é o commit da branch:
+      # um PR que ainda não trouxe a main não tem o comando, e aqui só avisa.
+      - name: Critérios de aceite na descrição do PR
         if: github.event_name == 'pull_request' && steps.alias.outputs.url != ''
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
-          URL: ${{ steps.alias.outputs.url }}
+          ORIGIN: ${{ steps.alias.outputs.url }}
         run: |
-          marker="<!-- design-space-preview -->"
-          body="$(node -e '
-            const fs = require("fs");
-            const [marker, url, sha, file] = process.argv.slice(1);
-            let links = [];
-            try { links = JSON.parse(fs.readFileSync(file, "utf8")); } catch {}
-            const lines = [marker, `**Preview:** ${url}`, ""];
-            if (links.length) {
-              lines.push("| Cenário | Link |", "| --- | --- |");
-              for (const l of links) lines.push(`| ${l.title.replace(/\|/g, "\\|")} | [abrir](${l.url}) |`);
-              lines.push("");
-            }
-            lines.push(`Mostra sempre o último push (commit \`${sha.slice(0, 7)}\`).`);
-            console.log(lines.join("\n"));
-          ' "$marker" "$URL" "$SHA" "$RUNNER_TEMP/cenarios.json")"
-          existing="$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" --paginate --jq ".[] | select(.body | startswith(\"${marker}\")) | .id" | head -n1)"
-          if [ -n "$existing" ]; then
-            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" -f body="$body" > /dev/null
-          else
-            gh api --method POST "repos/${GITHUB_REPOSITORY}/issues/${PR}/comments" -f body="$body" > /dev/null
+          if [ ! -x node_modules/.bin/design-space-pr ]; then
+            echo "::notice title=Critérios de aceite::Esta branch usa um motor anterior à 0.14. Traga a main para a branch e o próximo push escreve os critérios na descrição do PR."
+            exit 0
           fi
+          pnpm exec design-space-pr --origin "$ORIGIN"
