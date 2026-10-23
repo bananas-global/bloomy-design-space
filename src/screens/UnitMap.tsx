@@ -61,7 +61,7 @@ function Options({
   const hasPeriod = type === "professional" || type === "room";
   const range = weekOf(day);
   return (
-    <div className="flex items-end justify-between mb-8">
+    <div className="flex items-end justify-between">
       <p className="font-bold text-brand-purple-dark text-lg uppercase">Mapa da Unidades</p>
 
       {/* Nas visões por dia (Profissional e Sala), a navegação é dia a dia; nas outras, semana a semana. */}
@@ -173,7 +173,11 @@ function UnitMapScreen({ context }: { context: ScenarioContext }) {
       flash={flash && <FlashGroup key={flash.id} flash={{ info: flash.message }} />}
     >
       <Card>
-        <form onSubmit={(event) => event.preventDefault()}>
+        {/* Cabeçalho fixo: gruda no topo ao rolar, por cima das grades (que usam z-10 na coluna fixa). */}
+        <form
+          onSubmit={(event) => event.preventDefault()}
+          className="sticky top-0 z-30 -mx-6 -mt-6 mb-8 rounded-t-2xl border-b border-brand-purple-dark/10 bg-white px-6 pt-6 pb-4"
+        >
           <Options
             type={type}
             view={view}
