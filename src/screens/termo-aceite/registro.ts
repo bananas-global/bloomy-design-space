@@ -16,8 +16,10 @@ const cases = [
 export const feature: Feature = {
   fixtures: TERM_FIXTURES,
   routes: [{ path: PATH, screen: Reports, name: 'Termo de Aceite Eletrônico', group: 'Relatórios do paciente', description: 'Emissão e conferência de termos por responsável legal.', expected: [
+    'A conclusão da geração usa o toast de sucesso do catálogo, com fechamento após cinco segundos; erros usam o toast de erro. Não há aviso permanente de sucesso acima da tabela.',
+    'Responsáveis usam Table; bloqueio sem aceite usa FieldError; anexos e declarações usam Card e Header. Os dados de cada anexo ficam visíveis, sem expansor próprio.',
     'Reutiliza o modal de Novo relatório e a listagem da aba Relatórios, com a permissão patients.generate_report.',
-  ], components: ['layout.backoffice', 'layout.patient', 'core.header', 'core.button', 'core.input', 'core.table', 'core.tag', 'core.modal'] }],
+  ], components: ['layout.backoffice', 'layout.patient', 'core.header', 'core.button', 'core.input', 'core.table', 'core.tag', 'core.modal', 'core.card', 'core.error', 'core.toast-wrapper'] }],
   scenarios: [
     ...cases.map(([id, title, intent, expected]) => ({ id: `aceite.${id}`, title, intent, expected: [...expected], route: PATH, fixture: `aceite.${id}`, persona: 'admin', ticket })),
     { id: 'aceite.sem-permissao', title: 'Sem permissão para gerar', intent: 'Manter a política dos demais relatórios.', route: PATH, fixture: 'aceite.misto', persona: 'admin', permissions: [], ticket, expected: ['Novo relatório e geração não estão disponíveis sem a permissão patients.generate_report.'] },

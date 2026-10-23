@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ScreenProps } from '@brucesantos/design-space';
 import { Button } from '../../components/Button.js';
-import { Input } from '../../components/Input.js';
+import { Input, FieldError } from '../../components/Input.js';
 import { Header } from '../../components/Layout.js';
 import { Modal } from '../../components/Overlay.js';
 import { Table } from '../../components/Table.js';
@@ -33,7 +33,6 @@ function ReportsScreen({ context }: ScreenProps) {
   const [reports, setReports] = useState<Report[]>(() => fixture.initialStatus ? createReports(fixture.guardians, REFERENCE_DATE).map((r) => ({ ...r, status: fixture.initialStatus! })) : []);
   const [running, setRunning] = useState(false);
   const [failedOnce, setFailedOnce] = useState(false);
-  const [message, setMessage] = useState('');
   const busy = running || reports.some((report) => report.status === 'generating');
   useEffect(() => {
     if (!running) return;
@@ -42,17 +41,16 @@ function ReportsScreen({ context }: ScreenProps) {
       setReports((items) => items.map((r) => r.status === 'generating' ? { ...r, status: fails ? 'error' : 'ready' } : r));
       setFailedOnce(true);
       setRunning(false);
-      setMessage(fails ? 'Não foi possível gerar os termos. Tente novamente.' : 'Termos gerados para os responsáveis com aceite registrado.');
+      showToast({ title: fails ? 'Falha!' : 'Sucesso!', content: fails ? 'Não foi possível gerar os termos. Tente novamente.' : 'Termos gerados para os responsáveis com aceite registrado.', type: fails ? 'error' : 'success', closeTime: 5000 });
     }, 900);
     return () => window.clearTimeout(timer);
   }, [running, fixture.fail, failedOnce]);
   function generate() {
     if (!allowed || busy || type !== 'legal_acceptance_term') return;
     const next = createReports(fixture.guardians, new Date().toISOString());
-    if (!next.length) { setMessage(NO_ACCEPTANCE); return; }
+    if (!next.length) { showToast({ title: 'Falha!', content: NO_ACCEPTANCE, type: 'error', closeTime: 5000 }); return; }
     setReports(next);
     setOpen(false);
-    setMessage('Gerando um termo por responsável com aceite registrado.');
     setRunning(true);
   }
   function retry(guardianId: string) {
@@ -63,7 +61,6 @@ function ReportsScreen({ context }: ScreenProps) {
   }
   const content = <div className="space-y-6">
     <Header actions={allowed ? <Button rightIcon="fa-plus" onClick={() => setOpen(true)} disabled={busy}>Novo relatório</Button> : undefined}>Relatórios</Header>
-    {message && <p role="status" className="rounded-lg bg-blue-light p-4 text-blue-dark">{message}</p>}
     <Table id="termos-relatorios" rows={reports} emptyMessage="Nenhum relatório relacionado ao paciente" col={[
       { label: 'Nome', render: (r) => `${TYPE} — ${r.guardian.name}` },
       { label: 'Status', render: (r) => <Tag item={STATUS[r.status]} variant={r.status === 'ready' ? 'green' : r.status === 'error' ? 'red' : 'yellow'} /> },
@@ -81,20 +78,19 @@ function ReportsScreen({ context }: ScreenProps) {
         <Input id="tipo-termo" name="report_type" type="select" label="Tipo" value={type} options={[[TYPE, 'legal_acceptance_term']]} onChange={(value) => setType(value ?? '')} />
         <p>Será gerado um PDF por responsável legal com aceite registrado, reunindo os documentos que ele aceitou.</p>
         <div className="space-y-3">
-          <h2 className="text-lg font-bold text-brand-purple-dark">Responsáveis do paciente</h2>
-          {fixture.guardians.map((guardian) => {
-            const hasAcceptance = eligible.some((g) => g.id === guardian.id);
-            return <div key={guardian.id} className="rounded-lg border border-brand-purple-dark/10 p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-              <div><p className="font-bold text-brand-purple-dark">{guardian.name}</p><p className="text-sm">{guardian.relation}{guardian.main ? ' · responsável principal' : ''}</p>
-                <div className="mt-2"><Tag item={hasAcceptance ? `${groupAcceptances(guardian.acceptances).length} aceite(s) registrado(s)` : 'Sem aceite registrado'} variant={hasAcceptance ? 'green' : 'yellow'} /></div>
+          <Header variant="small">Responsáveis do paciente</Header>
+          <Table id="responsaveis-termo" rows={fixture.guardians} emptyMessage="Nenhum responsável legal vinculado ao paciente." col={[
+            { label: 'Responsável', render: (guardian) => <div><p className="font-bold">{guardian.name}</p><p className="text-sm">{guardian.relation}{guardian.main ? ' · responsável principal' : ''}</p></div> },
+            { label: 'Aceites', render: (guardian) => {
+              const hasAcceptance = eligible.some((g) => g.id === guardian.id);
+              return <div><Tag item={hasAcceptance ? `${groupAcceptances(guardian.acceptances).length} aceite(s) registrado(s)` : 'Sem aceite registrado'} variant={hasAcceptance ? 'green' : 'yellow'} />
                 {!hasAcceptance && <p className="text-sm mt-2">Não será emitido termo para este responsável.</p>}
-              </div>
-              <Button variant="outline" size="medium" disabled={!hasAcceptance} onClick={() => setSelected(guardian)} aria-label={`Conferir aceites de ${guardian.name}`}>Conferir aceites</Button>
-            </div>;
-          })}
-          {!fixture.guardians.length && <p>Nenhum responsável legal vinculado ao paciente.</p>}
+              </div>;
+            } },
+            { label: 'Ações', render: (guardian) => <Button variant="outline" size="medium" disabled={!eligible.some((g) => g.id === guardian.id)} onClick={() => setSelected(guardian)} aria-label={`Conferir aceites de ${guardian.name}`}>Conferir aceites</Button> },
+          ]} />
         </div>
-        {!eligible.length && <p role="alert" className="rounded-lg bg-yellow/20 text-yellow-dark p-4">{NO_ACCEPTANCE}</p>}
+        {!eligible.length && <div role="alert"><FieldError message={NO_ACCEPTANCE} /></div>}
         <div className="flex flex-col md:flex-row justify-between gap-3">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button disabled={!eligible.length || busy || type !== 'legal_acceptance_term'} onClick={generate}>Gerar {eligible.length === 1 ? '1 termo' : `${eligible.length} termos`}</Button>

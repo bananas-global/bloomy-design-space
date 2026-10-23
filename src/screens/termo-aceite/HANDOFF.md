@@ -28,3 +28,7 @@ Cenários registrados em registro.ts são a fonte dos critérios para revisão. 
 - Navegador: agrupamento v2 com dois IDs, emissão somente para o responsável elegível, bloqueio sem aceites, ausência de geração sem permissão e nova tentativa após falha conferidos. Formulário inspecionado em desktop e largura de celular.
 - Corrigida incompatibilidade preexistente da main: react 19.3.1 / react-dom 19.3.0 deixava a aplicação em branco apesar do build passar. react-dom e lockfile alinhados para 19.3.1; funcionamento confirmado no navegador.
 - O build mantém aviso de bundle maior que 500 kB; não impede a compilação.
+
+## Revisão de aderência ao catálogo
+
+Confirmação de geração usa showToast/ToastWrapper, tipo success, por cinco segundos; falhas usam error. Processamento fica apenas no status da tabela, sem banner próprio. O bloqueio no formulário usa FieldError, a relação de responsáveis usa Table, e anexos e declarações usam Card/Header. Removidos os expansores details/summary próprios; os dados dos anexos ficam visíveis. Restam elementos HTML de conteúdo e organização (parágrafos, seções e agrupamentos), sem novos controles ou superfícies visuais fora do catálogo. Nenhum componente compartilhado foi alterado.
