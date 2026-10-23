@@ -24,6 +24,10 @@ import { permissionsByRole } from "../personas/permissions.js";
  * `:if` de cada item: por policy (`context.can`) ou pela lista de papéis do
  * layout (`context.persona.id`). Sem `context`, é a visão do Admin.
  * `SignatureNotificationModal` não foi portado.
+ *
+ * `menu` substitui os itens do menu lateral. Não existe no Phoenix: serve para
+ * telas de módulo novo que ainda não têm item no `backoffice.html.heex` (ex.:
+ * Gestão de Contratos). Sem ele, o menu é o do Phoenix.
  */
 
 export type LayoutContext = Pick<ScenarioContext, "navigate" | "can" | "persona">;
@@ -86,6 +90,7 @@ export function BackofficeLayout({
   notifications,
   universityEnabled = false,
   flash,
+  menu,
   children,
 }: {
   /** Numa tela de feature, o `context` que ela recebe do motor. */
@@ -108,6 +113,8 @@ export function BackofficeLayout({
   universityEnabled?: boolean;
   /** Onde o `flash_group/1` do layout fica. */
   flash?: ReactNode;
+  /** Itens do menu lateral no lugar dos do Phoenix (módulo novo, ainda sem item no layout). */
+  menu?: DrawerItem[];
   children: ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(true);
@@ -117,7 +124,7 @@ export function BackofficeLayout({
   const role = context?.persona?.id ?? "admin";
   const roleLabel = context?.persona?.name ?? "Admin";
   const can = context ? context.can : (permission: string) => (permissionsByRole.admin as readonly string[]).includes(permission);
-  const items = BACKOFFICE_MENU.filter((item) => item.visible(role, can));
+  const items = menu ?? BACKOFFICE_MENU.filter((item) => item.visible(role, can));
   const unitName = currentUnit ?? currentUser.units[0] ?? "";
   const roles = currentUser.roles.length ? currentUser.roles : [roleLabel];
   const link = (href: string) => ({
