@@ -17,6 +17,12 @@ updates:
       design-space-engine:
         patterns:
           - "@brucesantos/design-space"
+      # `react` e `react-dom` sobem juntos: com versões diferentes, o React 19 se
+      # recusa a montar, e o merge automático publicaria a tela em branco.
+      react:
+        patterns:
+          - react
+          - react-dom
       dev-tooling:
         patterns:
           - "*"
