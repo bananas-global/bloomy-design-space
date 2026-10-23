@@ -19,7 +19,7 @@
     "flatpickr": "^4.6.13",
     "quill": "^2.0.3",
     "react": "^19.3.1",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
     "@babel/core": "^8.0.7",
