@@ -17,7 +17,6 @@ export const feature: Feature = {
   fixtures: TERM_FIXTURES,
   routes: [{ path: PATH, screen: Reports, name: 'Termo de Aceite Eletrônico', group: 'Relatórios do paciente', description: 'Emissão e conferência de termos por responsável legal.', expected: [
     'Reutiliza o modal de Novo relatório e a listagem da aba Relatórios, com a permissão patients.generate_report.',
-    'Geração e download são simulados no Design Space; o PDF jurídico será implementado no Phoenix.',
   ], components: ['layout.backoffice', 'layout.patient', 'core.header', 'core.button', 'core.input', 'core.table', 'core.tag', 'core.modal'] }],
   scenarios: [
     ...cases.map(([id, title, intent, expected]) => ({ id: `aceite.${id}`, title, intent, expected: [...expected], route: PATH, fixture: `aceite.${id}`, persona: 'admin', ticket })),

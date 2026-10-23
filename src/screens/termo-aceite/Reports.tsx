@@ -63,7 +63,6 @@ function ReportsScreen({ context }: ScreenProps) {
   }
   const content = <div className="space-y-6">
     <Header actions={allowed ? <Button rightIcon="fa-plus" onClick={() => setOpen(true)} disabled={busy}>Novo relatório</Button> : undefined}>Relatórios</Header>
-    <p className="text-sm text-brand-purple-dark/70">Demonstração com dados fictícios. A emissão e o download de PDFs são simulados.</p>
     {message && <p role="status" className="rounded-lg bg-blue-light p-4 text-blue-dark">{message}</p>}
     <Table id="termos-relatorios" rows={reports} emptyMessage="Nenhum relatório relacionado ao paciente" col={[
       { label: 'Nome', render: (r) => `${TYPE} — ${r.guardian.name}` },
@@ -73,7 +72,7 @@ function ReportsScreen({ context }: ScreenProps) {
       { label: 'Ações', render: (r) => <div className="flex flex-wrap gap-2">
         {r.status === 'error' ? allowed && <Button size="small" variant="outline" disabled={busy} onClick={() => retry(r.guardian.id)}>Tentar novamente</Button> : <>
           <Button size="small" variant="ghost" disabled={r.status !== 'ready'} onClick={() => setSelected(r.guardian)} aria-label={`Visualizar termo de ${r.guardian.name}`}>Visualizar</Button>
-          <Button size="small" variant="ghost" disabled={r.status !== 'ready'} onClick={() => showToast({ title: 'Demonstração', content: 'No sistema, esta ação baixa o PDF deste responsável. Nenhum documento foi emitido neste protótipo.', type: 'info' })} aria-label={`Baixar termo de ${r.guardian.name}`}>Baixar</Button>
+          <Button size="small" variant="ghost" disabled={r.status !== 'ready'} onClick={() => showToast({ title: 'Download indisponível', content: 'Não foi possível baixar o relatório. Tente novamente mais tarde.', type: 'error' })} aria-label={`Baixar termo de ${r.guardian.name}`}>Baixar</Button>
         </>}
       </div> },
     ]} />
@@ -103,7 +102,6 @@ function ReportsScreen({ context }: ScreenProps) {
       </div>
     </Modal>
     <Modal id="conferencia-termo" show={Boolean(selected)} onCancel={() => setSelected(null)} title="Conferir termo de aceite" variant="medium">
-      <p className="mb-6 text-sm text-brand-purple-dark/70">Prévia de conferência com dados e hashes ilustrativos. O PDF final contém a declaração completa e o inteiro teor dos anexos.</p>
       {selected && <AcceptanceDetails guardian={selected} />}
     </Modal>
   </div>;

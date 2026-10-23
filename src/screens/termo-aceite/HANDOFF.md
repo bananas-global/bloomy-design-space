@@ -14,7 +14,7 @@ V1 possui três anexos. V2 possui quatro, com a Política de Assiduidade como An
 
 ## Limites e implementação no Phoenix
 
-Este repositório demonstra UX, com dados e hashes sintéticos. Não consulta pacientes, não registra consentimento, não cria relatórios reais, não gera PDF e não baixa arquivo. “Baixar” explica a simulação. A prévia mostra registros, anexos e declarações do app; não é o layout jurídico integral.
+Este repositório demonstra UX, com dados e hashes sintéticos. Não consulta pacientes, não registra consentimento, não cria relatórios reais, não gera PDF e não baixa arquivo. “Baixar” apresenta um erro de indisponibilidade, pois não há arquivo real associado. Avisos sobre dados fictícios, demonstração ou simulação não fazem parte da interface; essa limitação fica somente nesta documentação técnica. A prévia mostra registros, anexos e declarações do app; não é o layout jurídico integral.
 
 O backend deve validar a elegibilidade novamente, manter um patient_report por responsável, usar os textos históricos corretos e as versões aceitas do sistema novo (content_html sanitizado, content_hash e assinatura). Incluir no PDF todas as seções pedidas na issue: identificação, declaração, registros, documentos, histórico, autenticidade, fechamento e anexos completos; cabeçalho/rodapé, SHA-256 persistido, datas de Brasília e quebra de página por anexo. Não cadastrar documentos legados em legal_documents nem disparar novos pedidos de aceite.
 
